@@ -1050,9 +1050,11 @@ components:
         orderItemId:
           type: integer
         ingredientId:
-          type: integer
+          type: ["integer", "null"]
         optionId:
-          type: integer
+          type: ["integer", "null"]
+        typeVolumeId:
+          type: ["integer", "null"]
         consumedQty:
           type: number
         addedCost:
@@ -1064,8 +1066,6 @@ components:
       required:
         - id
         - orderItemId
-        - ingredientId
-        - optionId
         - consumedQty
         - addedCost
         - slotLabel

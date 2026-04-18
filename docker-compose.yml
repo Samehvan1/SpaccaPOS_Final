@@ -19,7 +19,7 @@ services:
     container_name: spacca-api
     restart: always
     environment:
-      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-mero1901}@db:5432/${DB_NAME:-spacca_prod}
+      DATABASE_URL: postgresql://postgres:mero1901@db:5432/spacca_prod
       PORT: 8080
       NODE_ENV: production
     depends_on:

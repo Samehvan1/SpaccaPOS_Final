@@ -604,8 +604,9 @@ export const GetOrderResponse = zod
             zod.object({
               id: zod.number(),
               orderItemId: zod.number(),
-              ingredientId: zod.number(),
-              optionId: zod.number(),
+              ingredientId: zod.number().nullish(),
+              optionId: zod.number().nullish(),
+              typeVolumeId: zod.number().nullish(),
               consumedQty: zod.number(),
               addedCost: zod.number(),
               slotLabel: zod.string(),
@@ -749,8 +750,9 @@ export const GetActiveOrdersResponseItem = zod
             zod.object({
               id: zod.number(),
               orderItemId: zod.number(),
-              ingredientId: zod.number(),
-              optionId: zod.number(),
+              ingredientId: zod.number().nullish(),
+              optionId: zod.number().nullish(),
+              typeVolumeId: zod.number().nullish(),
               consumedQty: zod.number(),
               addedCost: zod.number(),
               slotLabel: zod.string(),

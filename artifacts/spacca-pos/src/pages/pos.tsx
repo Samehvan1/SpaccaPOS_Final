@@ -528,7 +528,7 @@ export default function PosTerminal() {
                     </div>
                     <div className="text-xs text-muted-foreground space-y-0.5 mb-2">
                       {item.selections.map(s => (
-                        <div key={s.ingredientId} className="flex justify-between">
+                        <div key={s.slotLabel} className="flex justify-between">
                           <span>{s.optionLabel}</span>
                           {s.extraCost > 0 && <span>+{fmt(s.extraCost)}</span>}
                         </div>

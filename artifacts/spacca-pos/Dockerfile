@@ -7,7 +7,7 @@ RUN npm install -g pnpm
 WORKDIR /app
 
 # Copy workspace configuration
-COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
+COPY pnpm-workspace.yaml pnpm-lock.yaml package.json tsconfig.base.json ./
 
 # Copy lib packages (needed for the build)
 COPY lib/ ./lib/
@@ -21,12 +21,14 @@ COPY artifacts/spacca-pos/src/ ./artifacts/spacca-pos/src/
 COPY artifacts/spacca-pos/public/ ./artifacts/spacca-pos/public/
 
 # Install dependencies
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --no-frozen-lockfile
 
 # Build the frontend
 # We pass the production API URL here
 ARG VITE_API_URL
 ENV VITE_API_URL=$VITE_API_URL
+ENV PORT=3000
+ENV BASE_PATH=/
 
 WORKDIR /app/artifacts/spacca-pos
 RUN pnpm run build
@@ -39,7 +41,7 @@ FROM nginx:alpine
 COPY artifacts/spacca-pos/nginx.conf /etc/nginx/conf.d/default.conf
 
 # Copy build files from builder
-COPY --from=builder /app/artifacts/spacca-pos/dist /usr/share/nginx/html
+COPY --from=builder /app/artifacts/spacca-pos/dist/public /usr/share/nginx/html
 
 EXPOSE 80
 

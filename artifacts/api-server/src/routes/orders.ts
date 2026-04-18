@@ -13,6 +13,11 @@ import {
   drinkIngredientSlotsTable,
   stockMovementsTable,
   usersTable,
+  drinkSlotTypeOptionsTable,
+  ingredientTypesTable,
+  ingredientTypeVolumesTable,
+  drinkSlotVolumesTable,
+  ingredientVolumesTable,
 } from "@workspace/db";
 import {
   ListOrdersQueryParams,
@@ -148,12 +153,21 @@ router.post("/orders", async (req, res): Promise<void> => {
     ),
   ];
 
-  const [drinks, slots, options] = await Promise.all([
+  const allTypeVolumeIds = [
+    ...new Set(orderItems.flatMap((i) => i.selections.map((s: any) => s.typeVolumeId).filter(Boolean))),
+  ];
+
+  const [drinks, slots, options, typeVolumes, slotVolumes, volumes] = await Promise.all([
     db.select().from(drinksTable).where(inArray(drinksTable.id, drinkIds)),
     db.select().from(drinkIngredientSlotsTable).where(inArray(drinkIngredientSlotsTable.drinkId, drinkIds)),
     allOptionIds.length > 0
       ? db.select().from(ingredientOptionsTable).where(inArray(ingredientOptionsTable.id, allOptionIds))
       : Promise.resolve([]),
+    allTypeVolumeIds.length > 0
+      ? db.select().from(ingredientTypeVolumesTable).where(inArray(ingredientTypeVolumesTable.id, allTypeVolumeIds))
+      : Promise.resolve([]),
+    db.select().from(drinkSlotVolumesTable).where(inArray(drinkSlotVolumesTable.slotId, slots.map(s => s.id))),
+    db.select().from(ingredientVolumesTable),
   ]);
 
   const drinkMap = new Map(drinks.map((d) => [d.id, d]));
@@ -164,12 +178,30 @@ router.post("/orders", async (req, res): Promise<void> => {
     slotsByDrink.set(s.drinkId, list);
   }
   const optionMap = new Map(options.map((o) => [o.id, o]));
+  const typeVolumeMap = new Map(typeVolumes.map((tv) => [tv.id, tv]));
+  const slotVolumeMap = new Map<string, typeof slotVolumes[0]>(); // key: slotId_typeVolumeId
+  for (const sv of slotVolumes) {
+    slotVolumeMap.set(`${sv.slotId}_${sv.typeVolumeId}`, sv);
+  }
+
+  // Pre-fetch ingredient types for the catalog volumes to find inventory IDs
+  const allTypeIds = [...new Set(typeVolumes.map(tv => tv.ingredientTypeId))];
+  const ingredientTypes = allTypeIds.length > 0
+    ? await db.select().from(ingredientTypesTable).where(inArray(ingredientTypesTable.id, allTypeIds))
+    : [];
+  const typeToInventoryMap = new Map(ingredientTypes.map(it => [it.id, it.inventoryIngredientId]));
+  const typeNameMap = new Map(ingredientTypes.map(it => [it.id, it.name]));
+  const volumeMap = new Map(volumes.map(v => [v.id, v.name]));
 
   // ── Compute totals & customizations ────────────────────────────────────────
   type Customization = {
-    ingredientId: number; optionId: number;
-    consumedQty: number; addedCost: number;
-    slotLabel: string; optionLabel: string;
+    ingredientId: number | null;
+    optionId: number | null;
+    typeVolumeId: number | null;
+    consumedQty: number;
+    addedCost: number;
+    slotLabel: string;
+    optionLabel: string;
   };
   type ItemDetail = {
     drinkId: number; drinkName: string; quantity: number;
@@ -188,40 +220,81 @@ router.post("/orders", async (req, res): Promise<void> => {
     let extraCost = 0;
     const customizations: Customization[] = [];
 
-    for (const sel of item.selections) {
-      if (!sel.ingredientId || !sel.optionId) continue;
-      const slot = drinkSlots.find((s) => s.ingredientId === sel.ingredientId);
-      if (!slot) continue;
-      const option = optionMap.get(sel.optionId);
-      if (!option) continue;
+    for (const selection of item.selections) {
+      const sel = selection as any;
+      let slot: (typeof slots)[0] | undefined;
 
-      if (option.linkedIngredientId && sel.subOptionId) {
-        const sub = optionMap.get(sel.subOptionId);
-        if (sub) {
-          const cost = parseFloat(sub.extraCost);
-          extraCost += cost;
-          customizations.push({
-            ingredientId: option.linkedIngredientId,
-            optionId: sel.subOptionId,
-            consumedQty: parseFloat(sub.processedQty) * item.quantity,
-            addedCost: cost,
-            slotLabel: slot.slotLabel,
-            optionLabel: `${option.label} · ${sub.label}`,
-          });
-        }
+      // 1. Identify slot
+      if (sel.slotId) {
+        slot = drinkSlots.find((s) => s.id === sel.slotId);
+      } else if (sel.ingredientId) {
+        slot = drinkSlots.find((s) => s.ingredientId === sel.ingredientId);
+      } else if (sel.ingredientTypeId) {
+        slot = drinkSlots.find((s) => s.ingredientTypeId === sel.ingredientTypeId);
+      }
+      if (!slot) continue;
+
+      // 2. Process selection (Typed vs Legacy)
+      if (sel.typeVolumeId) {
+        const typeVol = typeVolumeMap.get(sel.typeVolumeId);
+        if (!typeVol) continue;
+
+        const sv = slotVolumeMap.get(`${slot.id}_${sel.typeVolumeId}`);
+        const cost = parseFloat(sv?.extraCost ?? typeVol.extraCost);
+        const processedQty = parseFloat(sv?.processedQty ?? typeVol.processedQty ?? "0");
+        const typeName = typeNameMap.get(typeVol.ingredientTypeId) ?? "";
+        const volumeName = volumeMap.get(typeVol.volumeId) ?? "";
+        const inventoryId = typeToInventoryMap.get(typeVol.ingredientTypeId);
+        const optionLabel = typeName && volumeName ? `${typeName} · ${volumeName}` : typeName || volumeName || "Catalog Item";
+
+        extraCost += cost;
+        customizations.push({
+          ingredientId: inventoryId ?? null,
+          optionId: null,
+          typeVolumeId: sel.typeVolumeId,
+          consumedQty: processedQty * item.quantity,
+          addedCost: cost,
+          slotLabel: slot.slotLabel,
+          optionLabel,
+        });
         continue;
       }
 
-      const cost = parseFloat(option.extraCost);
-      extraCost += cost;
-      customizations.push({
-        ingredientId: sel.ingredientId,
-        optionId: sel.optionId,
-        consumedQty: parseFloat(option.processedQty) * item.quantity,
-        addedCost: cost,
-        slotLabel: slot.slotLabel,
-        optionLabel: option.label,
-      });
+      // Legacy selection
+      if (sel.optionId) {
+        const option = optionMap.get(sel.optionId);
+        if (!option) continue;
+
+        if (option.linkedIngredientId && sel.subOptionId) {
+          const sub = optionMap.get(sel.subOptionId);
+          if (sub) {
+            const cost = parseFloat(sub.extraCost);
+            extraCost += cost;
+            customizations.push({
+              ingredientId: option.linkedIngredientId,
+              optionId: sel.subOptionId,
+              typeVolumeId: null,
+              consumedQty: parseFloat(sub.processedQty) * item.quantity,
+              addedCost: cost,
+              slotLabel: slot.slotLabel,
+              optionLabel: `${option.label} · ${sub.label}`,
+            });
+          }
+          continue;
+        }
+
+        const cost = parseFloat(option.extraCost);
+        extraCost += cost;
+        customizations.push({
+          ingredientId: sel.ingredientId ?? slot.ingredientId ?? null,
+          optionId: sel.optionId,
+          typeVolumeId: null,
+          consumedQty: parseFloat(option.processedQty) * item.quantity,
+          addedCost: cost,
+          slotLabel: slot.slotLabel,
+          optionLabel: option.label,
+        });
+      }
     }
 
     const unitPrice = parseFloat(drink.basePrice) + extraCost;
@@ -254,7 +327,7 @@ router.post("/orders", async (req, res): Promise<void> => {
 
     // Pre-fetch ingredient stock levels for all ingredients in one query
     const allIngredientIds = [
-      ...new Set(itemDetails.flatMap((d) => d.customizations.map((c) => c.ingredientId))),
+      ...new Set(itemDetails.flatMap((d) => d.customizations.map((c) => c.ingredientId).filter((id): id is number => id !== null))),
     ];
     const ingredientRows = allIngredientIds.length > 0
       ? await tx.select({ id: ingredientsTable.id, stockQuantity: ingredientsTable.stockQuantity })
@@ -281,6 +354,7 @@ router.post("/orders", async (req, res): Promise<void> => {
             orderItemId: orderItem.id,
             ingredientId: c.ingredientId,
             optionId: c.optionId,
+            typeVolumeId: c.typeVolumeId,
             consumedQty: String(c.consumedQty),
             addedCost: String(c.addedCost),
             slotLabel: c.slotLabel,
@@ -292,7 +366,7 @@ router.post("/orders", async (req, res): Promise<void> => {
       // Batch stock deductions: compute new quantities, then do 1 update + 1 insert per ingredient
       const stockUpdates: Array<{ id: number; newQty: number; delta: number }> = [];
       for (const c of item.customizations) {
-        if (c.consumedQty === 0) continue;
+        if (!c.ingredientId || c.consumedQty === 0) continue;
         const current = stockMap.get(c.ingredientId) ?? 0;
         const newQty = Math.max(0, current - c.consumedQty);
         stockMap.set(c.ingredientId, newQty);
@@ -348,6 +422,7 @@ router.post("/orders", async (req, res): Promise<void> => {
           customizations: item.customizations.map((c) => ({
             ingredientId: c.ingredientId,
             optionId: c.optionId,
+            typeVolumeId: c.typeVolumeId,
             consumedQty: c.consumedQty,
             addedCost: c.addedCost,
             slotLabel: c.slotLabel,
