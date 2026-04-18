@@ -157,7 +157,8 @@ router.post("/orders", async (req, res): Promise<void> => {
     ...new Set(orderItems.flatMap((i) => i.selections.map((s: any) => s.typeVolumeId).filter(Boolean))),
   ];
 
-  const [drinks, slots, options, typeVolumes, slotVolumes, volumes] = await Promise.all([
+  // Step 1: Fetch drinks, slots, options, typeVolumes, and volumes in parallel
+  const [drinks, slots, options, typeVolumes, volumes] = await Promise.all([
     db.select().from(drinksTable).where(inArray(drinksTable.id, drinkIds)),
     db.select().from(drinkIngredientSlotsTable).where(inArray(drinkIngredientSlotsTable.drinkId, drinkIds)),
     allOptionIds.length > 0
@@ -166,9 +167,14 @@ router.post("/orders", async (req, res): Promise<void> => {
     allTypeVolumeIds.length > 0
       ? db.select().from(ingredientTypeVolumesTable).where(inArray(ingredientTypeVolumesTable.id, allTypeVolumeIds))
       : Promise.resolve([]),
-    db.select().from(drinkSlotVolumesTable).where(inArray(drinkSlotVolumesTable.slotId, slots.map(s => s.id))),
     db.select().from(ingredientVolumesTable),
   ]);
+
+  // Step 2: Now that slots is resolved, fetch slot-level volume overrides
+  const slotIds = slots.map(s => s.id);
+  const slotVolumes = slotIds.length > 0
+    ? await db.select().from(drinkSlotVolumesTable).where(inArray(drinkSlotVolumesTable.slotId, slotIds))
+    : [];
 
   const drinkMap = new Map(drinks.map((d) => [d.id, d]));
   const slotsByDrink = new Map<number, typeof slots>();
