@@ -551,6 +551,7 @@ export const CreateOrderBody = zod.object({
           subOptionId: zod.number().optional(),
           slotId: zod.number().optional(),
           typeVolumeId: zod.number().optional(),
+          ingredientTypeId: zod.number().optional(),
         }),
       ),
     }),

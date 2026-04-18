@@ -46,7 +46,17 @@ type CartItem = {
   quantity: number;
   basePrice: number;
   totalPrice: number;
-  selections: { ingredientId: number; optionId: number; subOptionId?: number; optionLabel: string; slotLabel: string; extraCost: number }[];
+  selections: {
+    ingredientId: number;
+    optionId: number;
+    subOptionId?: number;
+    slotId?: number;
+    typeVolumeId?: number;
+    ingredientTypeId?: number;
+    optionLabel: string;
+    slotLabel: string;
+    extraCost: number;
+  }[];
   specialNotes?: string;
 };
 
@@ -269,12 +279,16 @@ export default function PosTerminal() {
         const typeOpt = typeOptions.find((to: any) => to.ingredientTypeId === selectedTypeId);
         const vol = typeOpt?.volumes?.find((v: any) => v.id === typeVolumeId);
         const extra = (priceBreakdown as any).extras?.find((e: any) => e.slotLabel === slot.slotLabel);
-        const typePart = typeOpt?.typeName ? `${typeOpt.typeName} · ` : "";
+        const typePart = typeOpt?.typeName ?? "";
+        const volPart = vol?.volumeName ? ` · ${vol.volumeName}` : "";
         return {
           ingredientId: 0,
           optionId: 0,
           subOptionId: undefined,
-          optionLabel: `${typePart}${vol?.volumeName ?? ""}`.trim(),
+          slotId: slot.id,
+          typeVolumeId,
+          ingredientTypeId: selectedTypeId,
+          optionLabel: `${typePart}${volPart}`.trim() || "",
           slotLabel: slot.slotLabel,
           extraCost: extra?.extraCost ?? vol?.extraCost ?? 0,
         };
@@ -365,7 +379,14 @@ export default function PosTerminal() {
           drinkId: item.drinkId,
           quantity: item.quantity,
           specialNotes: item.specialNotes,
-          selections: item.selections.map(s => ({ ingredientId: s.ingredientId, optionId: s.optionId, subOptionId: s.subOptionId })),
+          selections: item.selections.map(s => ({
+            ingredientId: s.ingredientId || undefined,
+            optionId: s.optionId || undefined,
+            subOptionId: s.subOptionId || undefined,
+            slotId: s.slotId || undefined,
+            typeVolumeId: s.typeVolumeId || undefined,
+            ingredientTypeId: s.ingredientTypeId || undefined,
+          })),
         })),
       },
     });
@@ -529,7 +550,7 @@ export default function PosTerminal() {
                     <div className="text-xs text-muted-foreground space-y-0.5 mb-2">
                       {item.selections.map(s => (
                         <div key={s.slotLabel} className="flex justify-between">
-                          <span>{s.optionLabel}</span>
+                          <span><span className="text-muted-foreground/60">{s.slotLabel}:</span> {s.optionLabel}</span>
                           {s.extraCost > 0 && <span>+{fmt(s.extraCost)}</span>}
                         </div>
                       ))}

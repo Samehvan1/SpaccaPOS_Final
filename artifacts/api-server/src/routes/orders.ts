@@ -266,6 +266,30 @@ router.post("/orders", async (req, res): Promise<void> => {
         continue;
       }
 
+      // Typed slot with NO volume (type-only selection e.g. Sugar, Flavour with no size options)
+      if (sel.ingredientTypeId) {
+        // Already fetched from ingredientTypes, use it directly
+        let ingType = ingredientTypes.find(it => it.id === sel.ingredientTypeId);
+        if (!ingType) {
+          // Fetch on demand if not already loaded (edge case)
+          const [fetched] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, sel.ingredientTypeId));
+          ingType = fetched;
+        }
+        if (ingType) {
+          const inventoryId = ingType.inventoryIngredientId ?? null;
+          customizations.push({
+            ingredientId: inventoryId,
+            optionId: null,
+            typeVolumeId: null,
+            consumedQty: 0,
+            addedCost: 0,
+            slotLabel: slot.slotLabel,
+            optionLabel: ingType.name,
+          });
+        }
+        continue;
+      }
+
       // Legacy selection
       if (sel.optionId) {
         const option = optionMap.get(sel.optionId);
