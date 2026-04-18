@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "YoIeQ9DQYBlZMe8beftVI"
+uri = "file://LOCAL_SETUP.md"
+type = "text"
+title = "Local Setup Guide — Windows 11"

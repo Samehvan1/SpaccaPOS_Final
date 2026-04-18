@@ -1,0 +1,1 @@
+{"version":3,"file":"stockAdjustmentBody.d.ts","sourceRoot":"","sources":["../../../src/generated/types/stockAdjustmentBody.ts"],"names":[],"mappings":"AAAA;;;;;;GAMG;AACH,OAAO,KAAK,EAAE,+BAA+B,EAAE,MAAM,mCAAmC,CAAC;AAEzF,MAAM,WAAW,mBAAmB;IAClC,YAAY,EAAE,MAAM,CAAC;IACrB,YAAY,EAAE,+BAA+B,CAAC;IAC9C,QAAQ,EAAE,MAAM,CAAC;IACjB,IAAI,CAAC,EAAE,MAAM,CAAC;CACf"}

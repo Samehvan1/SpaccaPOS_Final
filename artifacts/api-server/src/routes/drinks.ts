@@ -1,0 +1,679 @@
+import { Router, type IRouter } from "express";
+import { eq, and, inArray, asc } from "drizzle-orm";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
+import {
+  db,
+  drinksTable,
+  drinkIngredientSlotsTable,
+  drinkSlotVolumesTable,
+  drinkSlotTypeOptionsTable,
+  ingredientsTable,
+  ingredientOptionsTable,
+  ingredientTypesTable,
+  ingredientTypeVolumesTable,
+  ingredientVolumesTable,
+  ingredientCategoriesTable,
+} from "@workspace/db";
+import { serializeDates } from "../lib/serialize";
+
+// ── Image upload: store in <cwd>/uploads/ ────────────────────────────────────
+const uploadsDir = path.join(process.cwd(), "uploads");
+if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+
+const storage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, uploadsDir),
+  filename: (_req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    cb(null, `drink-${Date.now()}${ext}`);
+  },
+});
+const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } });
+// ─────────────────────────────────────────────────────────────────────────────
+import {
+  ListDrinksQueryParams,
+  ListDrinksResponse,
+  CreateDrinkBody,
+  GetDrinkParams,
+  GetDrinkResponse,
+  UpdateDrinkParams,
+  UpdateDrinkBody,
+  UpdateDrinkResponse,
+  DeleteDrinkParams,
+  CalculateDrinkPriceParams,
+  CalculateDrinkPriceBody,
+  CalculateDrinkPriceResponse,
+} from "@workspace/api-zod";
+
+const router: IRouter = Router();
+
+async function buildDrinkDetail(drinkId: number) {
+  const [drink] = await db.select().from(drinksTable).where(eq(drinksTable.id, drinkId));
+  if (!drink) return null;
+
+  const slots = await db
+    .select()
+    .from(drinkIngredientSlotsTable)
+    .where(eq(drinkIngredientSlotsTable.drinkId, drinkId))
+    .orderBy(drinkIngredientSlotsTable.sortOrder);
+
+  // Helper: build merged volumes for a type + slot-level overrides
+  async function buildTypeVolumes(typeId: number, slotId: number) {
+    const typeVolumes = await db.select().from(ingredientTypeVolumesTable)
+      .where(eq(ingredientTypeVolumesTable.ingredientTypeId, typeId))
+      .orderBy(ingredientTypeVolumesTable.sortOrder);
+
+    const allSlotVols = await db.select().from(drinkSlotVolumesTable)
+      .where(eq(drinkSlotVolumesTable.slotId, slotId));
+    const slotVolumeMap = new Map(allSlotVols.map((sv) => [sv.typeVolumeId, sv]));
+
+    const volIds = typeVolumes.map((tv) => tv.volumeId);
+    const volRows = volIds.length > 0
+      ? await db.select().from(ingredientVolumesTable).where(inArray(ingredientVolumesTable.id, volIds))
+      : [];
+    const volMap = new Map(volRows.map((v) => [v.id, v]));
+
+    return typeVolumes.map((tv) => {
+      const override = slotVolumeMap.get(tv.id);
+      const vol = volMap.get(tv.volumeId);
+      return {
+        id: tv.id,
+        volumeId: tv.volumeId,
+        volumeName: vol?.name ?? "",
+        processedQty: parseFloat(override?.processedQty ?? tv.processedQty ?? vol?.processedQty ?? "0"),
+        producedQty: parseFloat(override?.producedQty ?? tv.producedQty ?? vol?.producedQty ?? "0"),
+        unit: override?.unit ?? tv.unit ?? vol?.unit ?? "ml",
+        extraCost: parseFloat(override?.extraCost ?? tv.extraCost),
+        isDefault: override?.isDefault ?? tv.isDefault,
+        isEnabled: override?.isEnabled ?? true,
+        sortOrder: override?.sortOrder ?? tv.sortOrder,
+        hasSlotOverride: !!override,
+      };
+    }).filter((v) => v.isEnabled);
+  }
+
+  const slotsWithDetails = await Promise.all(
+    slots.map(async (slot) => {
+      // ── New-style slot: check for multi-type options first ────────────────
+      const typeOptions = await db.select().from(drinkSlotTypeOptionsTable)
+        .where(eq(drinkSlotTypeOptionsTable.slotId, slot.id))
+        .orderBy(drinkSlotTypeOptionsTable.sortOrder);
+
+      // Multi-type OR single-type (fall back to ingredientTypeId on slot)
+      const effectiveTypeOptions = typeOptions.length > 0
+        ? typeOptions
+        : slot.ingredientTypeId
+          ? [{ id: 0, slotId: slot.id, ingredientTypeId: slot.ingredientTypeId, isDefault: true, sortOrder: 0 }]
+          : [];
+
+      if (effectiveTypeOptions.length > 0) {
+        const typeOptionsWithVolumes = await Promise.all(
+          effectiveTypeOptions.map(async (to) => {
+            const [ingType] = await db.select().from(ingredientTypesTable)
+              .where(eq(ingredientTypesTable.id, to.ingredientTypeId));
+            const [category] = ingType
+              ? await db.select().from(ingredientCategoriesTable)
+                  .where(eq(ingredientCategoriesTable.id, ingType.categoryId))
+              : [null];
+            const volumes = await buildTypeVolumes(to.ingredientTypeId, slot.id);
+            return {
+              typeOptionId: to.id,
+              ingredientTypeId: to.ingredientTypeId,
+              typeName: ingType?.name ?? "",
+              categoryName: category?.name ?? "",
+              isDefault: to.isDefault,
+              sortOrder: to.sortOrder,
+              volumes,
+            };
+          })
+        );
+
+        return {
+          ...slot,
+          slotStyle: "typed" as const,
+          typeOptions: typeOptionsWithVolumes,
+          // Legacy compat fields
+          ingredient: null,
+          volumes: typeOptionsWithVolumes[0]?.volumes ?? [],
+          ingredientType: null,
+        };
+      }
+
+      // ── Old-style slot: ingredientId set ─────────────────────────────────
+      if (!slot.ingredientId) return { ...slot, slotStyle: "legacy" as const, ingredient: null, volumes: [] };
+
+      const [ingredient] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, slot.ingredientId));
+      const options = await db
+        .select()
+        .from(ingredientOptionsTable)
+        .where(eq(ingredientOptionsTable.ingredientId, slot.ingredientId))
+        .orderBy(ingredientOptionsTable.sortOrder);
+
+      const enrichedOptions = await Promise.all(
+        options.map(async (o) => {
+          let linkedIngredient: { id: number; name: string; options: any[] } | null = null;
+          if (o.linkedIngredientId) {
+            const [linked] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, o.linkedIngredientId));
+            if (linked) {
+              const linkedOpts = await db
+                .select()
+                .from(ingredientOptionsTable)
+                .where(eq(ingredientOptionsTable.ingredientId, o.linkedIngredientId))
+                .orderBy(ingredientOptionsTable.sortOrder);
+              linkedIngredient = {
+                id: linked.id,
+                name: linked.name,
+                options: linkedOpts.map((lo) => ({
+                  ...lo,
+                  processedQty: parseFloat(lo.processedQty),
+                  producedQty: parseFloat(lo.producedQty),
+                  extraCost: parseFloat(lo.extraCost),
+                })),
+              };
+            }
+          }
+          return {
+            ...o,
+            processedQty: parseFloat(o.processedQty),
+            producedQty: parseFloat(o.producedQty),
+            extraCost: parseFloat(o.extraCost),
+            linkedIngredientId: o.linkedIngredientId ?? null,
+            linkedIngredient,
+          };
+        })
+      );
+
+      return {
+        ...slot,
+        slotStyle: "legacy" as const,
+        ingredient: ingredient ? {
+          ...ingredient,
+          costPerUnit: parseFloat(ingredient.costPerUnit),
+          stockQuantity: parseFloat(ingredient.stockQuantity),
+          lowStockThreshold: parseFloat(ingredient.lowStockThreshold),
+          options: enrichedOptions,
+        } : null,
+        volumes: [],
+        ingredientType: null,
+      };
+    })
+  );
+
+  return {
+    ...drink,
+    basePrice: parseFloat(drink.basePrice),
+    slots: slotsWithDetails,
+  };
+}
+
+async function computeDefaultPrice(drinkId: number, basePrice: number): Promise<number> {
+  const slots = await db
+    .select()
+    .from(drinkIngredientSlotsTable)
+    .where(eq(drinkIngredientSlotsTable.drinkId, drinkId));
+
+  let extras = 0;
+  for (const slot of slots) {
+    if (slot.ingredientTypeId) {
+      // New-style: find the default type volume (with slot override if any)
+      const typeVolumes = await db.select().from(ingredientTypeVolumesTable)
+        .where(eq(ingredientTypeVolumesTable.ingredientTypeId, slot.ingredientTypeId))
+        .orderBy(ingredientTypeVolumesTable.sortOrder);
+      const slotVolumes = await db.select().from(drinkSlotVolumesTable)
+        .where(eq(drinkSlotVolumesTable.slotId, slot.id));
+      const slotVolumeMap = new Map(slotVolumes.map((sv) => [sv.typeVolumeId, sv]));
+
+      // Find default volume
+      const defaultTv = typeVolumes.find((tv) => {
+        const sv = slotVolumeMap.get(tv.id);
+        return sv ? sv.isDefault : tv.isDefault;
+      }) ?? typeVolumes[0];
+
+      if (defaultTv) {
+        const sv = slotVolumeMap.get(defaultTv.id);
+        extras += parseFloat(sv?.extraCost ?? defaultTv.extraCost);
+      }
+      continue;
+    }
+
+    if (!slot.defaultOptionId) continue;
+    const [option] = await db.select().from(ingredientOptionsTable).where(eq(ingredientOptionsTable.id, slot.defaultOptionId));
+    if (!option) continue;
+
+    if (option.linkedIngredientId) {
+      const linkedOpts = await db.select().from(ingredientOptionsTable)
+        .where(eq(ingredientOptionsTable.ingredientId, option.linkedIngredientId))
+        .orderBy(ingredientOptionsTable.sortOrder);
+      const subDefault = linkedOpts.find((o) => o.isDefault) ?? linkedOpts[0];
+      if (subDefault) extras += parseFloat(subDefault.extraCost);
+    } else {
+      extras += parseFloat(option.extraCost);
+    }
+  }
+
+  return basePrice + extras;
+}
+
+router.get("/drinks", async (req, res): Promise<void> => {
+  const params = ListDrinksQueryParams.safeParse(req.query);
+  const conditions = [];
+  if (params.success && params.data.active !== undefined) {
+    conditions.push(eq(drinksTable.isActive, params.data.active));
+  }
+
+  const drinks = conditions.length
+    ? await db.select().from(drinksTable).where(and(...conditions))
+    : await db.select().from(drinksTable);
+
+  let filtered = drinks;
+  if (params.success && params.data.category) {
+    filtered = drinks.filter((d) => d.category === params.data.category);
+  }
+
+  // Sort: by linked category's sortOrder first, then drink's own sortOrder
+  const { drinkCategoriesTable: catTable } = await import("@workspace/db");
+  const allCats = await db.select().from(catTable).orderBy(asc(catTable.sortOrder));
+  const catOrderMap = new Map(allCats.map((c, i) => [c.id, i]));
+
+  filtered = [...filtered].sort((a, b) => {
+    const catA = a.categoryId != null ? (catOrderMap.get(a.categoryId) ?? 999) : 999;
+    const catB = b.categoryId != null ? (catOrderMap.get(b.categoryId) ?? 999) : 999;
+    if (catA !== catB) return catA - catB;
+    return (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
+  });
+
+  const drinksWithDefaultPrice = await Promise.all(
+    filtered.map(async (d) => {
+      const base = parseFloat(d.basePrice);
+      const defaultPrice = await computeDefaultPrice(d.id, base);
+      return { ...d, basePrice: base, defaultPrice };
+    })
+  );
+
+  res.json(ListDrinksResponse.parse(serializeDates(drinksWithDefaultPrice)));
+});
+
+router.post("/drinks", async (req, res): Promise<void> => {
+  const parsed = CreateDrinkBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  const { slots: slotDefs, ...drinkData } = parsed.data;
+
+  const [drink] = await db
+    .insert(drinksTable)
+    .values({
+      name: drinkData.name,
+      description: drinkData.description ?? null,
+      category: drinkData.category,
+      basePrice: String(drinkData.basePrice),
+      imageUrl: drinkData.imageUrl ?? null,
+      isActive: drinkData.isActive ?? true,
+      prepTimeSeconds: drinkData.prepTimeSeconds ?? 180,
+      kitchenStation: drinkData.kitchenStation ?? "main",
+    })
+    .returning();
+
+  if (slotDefs && slotDefs.length > 0) {
+    await db.insert(drinkIngredientSlotsTable).values(
+      slotDefs.map((s) => ({
+        drinkId: drink.id,
+        ingredientId: s.ingredientId ?? null,
+        slotLabel: s.slotLabel,
+        isRequired: s.isRequired ?? true,
+        defaultOptionId: s.defaultOptionId ?? null,
+        sortOrder: s.sortOrder ?? 0,
+      }))
+    );
+  }
+
+  const detail = await buildDrinkDetail(drink.id);
+  res.status(201).json(serializeDates(detail));
+});
+
+router.get("/drinks/:id", async (req, res): Promise<void> => {
+  const params = GetDrinkParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  const detail = await buildDrinkDetail(params.data.id);
+  if (!detail) {
+    res.status(404).json({ error: "Drink not found" });
+    return;
+  }
+
+  // Note: we bypass GetDrinkResponse.parse() here because typed (catalog) slots
+  // have null ingredientId/ingredient which the generated Zod schema doesn't accept.
+  res.json(serializeDates(detail));
+});
+
+router.patch("/drinks/:id", async (req, res): Promise<void> => {
+  const params = UpdateDrinkParams.safeParse(req.params);
+  if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
+
+  const parsed = UpdateDrinkBody.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+
+  const updateData: Record<string, unknown> = {};
+  if (parsed.data.name !== undefined) updateData.name = parsed.data.name;
+  if (parsed.data.description !== undefined) updateData.description = parsed.data.description;
+  if (parsed.data.category !== undefined) updateData.category = parsed.data.category;
+  if ((parsed.data as any).categoryId !== undefined) updateData.categoryId = (parsed.data as any).categoryId;
+  if ((parsed.data as any).sortOrder !== undefined) updateData.sortOrder = (parsed.data as any).sortOrder;
+  if (parsed.data.basePrice !== undefined) updateData.basePrice = String(parsed.data.basePrice);
+  if (parsed.data.imageUrl !== undefined) updateData.imageUrl = parsed.data.imageUrl;
+  if (parsed.data.isActive !== undefined) updateData.isActive = parsed.data.isActive;
+  if (parsed.data.prepTimeSeconds !== undefined) updateData.prepTimeSeconds = parsed.data.prepTimeSeconds;
+  if (parsed.data.kitchenStation !== undefined) updateData.kitchenStation = parsed.data.kitchenStation;
+
+  const [drink] = await db.update(drinksTable).set(updateData).where(eq(drinksTable.id, params.data.id)).returning();
+  if (!drink) { res.status(404).json({ error: "Drink not found" }); return; }
+
+  res.json(UpdateDrinkResponse.parse(serializeDates({ ...drink, basePrice: parseFloat(drink.basePrice) })));
+});
+
+// POST /drinks/:id/image — upload a drink image
+router.post("/drinks/:id/image", upload.single("image"), async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id as string);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+
+  if (!req.file) { res.status(400).json({ error: "No image file provided" }); return; }
+
+  const imageUrl = `/uploads/${req.file.filename}`;
+  const [drink] = await db
+    .update(drinksTable)
+    .set({ imageUrl })
+    .where(eq(drinksTable.id, id))
+    .returning();
+
+  if (!drink) {
+    // Clean up orphaned file
+    fs.unlink(req.file.path, () => {});
+    res.status(404).json({ error: "Drink not found" });
+    return;
+  }
+
+  res.json({ imageUrl });
+});
+
+// PUT /drinks/:id/slots — replace all ingredient slots for a drink
+// Supports both old-style (ingredientId) and new-style (ingredientTypeId + slotVolumes) slots
+router.put("/drinks/:id/slots", async (req, res): Promise<void> => {
+  const idParsed = GetDrinkParams.safeParse(req.params);
+  if (!idParsed.success) { res.status(400).json({ error: idParsed.error.message }); return; }
+  const drinkId = idParsed.data.id;
+
+  if (!Array.isArray(req.body)) {
+    res.status(400).json({ error: "Body must be an array of slot definitions" });
+    return;
+  }
+
+  const rawSlots = req.body as any[];
+  for (const s of rawSlots) {
+    const hasLegacy = typeof s.ingredientId === "number";
+    const hasTyped = typeof s.ingredientTypeId === "number";
+    const hasMultiType = Array.isArray(s.slotTypeOptions) && s.slotTypeOptions.length > 0;
+    if (!hasLegacy && !hasTyped && !hasMultiType) {
+      res.status(400).json({ error: "Each slot must have either ingredientId, ingredientTypeId, or slotTypeOptions" });
+      return;
+    }
+    if (typeof s.slotLabel !== "string") {
+      res.status(400).json({ error: "Each slot must have a string slotLabel" });
+      return;
+    }
+  }
+
+  const cupSizeMl = req.query.cupSizeMl ? parseInt(req.query.cupSizeMl as string) : undefined;
+  if (cupSizeMl !== undefined) {
+    await db.update(drinksTable).set({ cupSizeMl }).where(eq(drinksTable.id, drinkId));
+  }
+
+  // Replace all slots (cascade deletes slot volumes)
+  await db.delete(drinkIngredientSlotsTable).where(eq(drinkIngredientSlotsTable.drinkId, drinkId));
+
+  if (rawSlots.length > 0) {
+    const insertedSlots = await db.insert(drinkIngredientSlotsTable).values(
+      rawSlots.map((s: any, i: number) => ({
+        drinkId,
+        ingredientId: s.ingredientId ?? null,
+        ingredientTypeId: s.ingredientTypeId ?? null,
+        slotLabel: s.slotLabel,
+        isRequired: s.isRequired ?? true,
+        isDynamic: s.isDynamic ?? false,
+        defaultOptionId: s.defaultOptionId ?? null,
+        sortOrder: s.sortOrder ?? i,
+      }))
+    ).returning();
+
+    // Insert slot type options and volume overrides for new-style slots
+    const slotTypeOptionRows: any[] = [];
+    const slotVolumeRows: any[] = [];
+
+    for (let i = 0; i < rawSlots.length; i++) {
+      const s = rawSlots[i];
+      const slot = insertedSlots[i];
+
+      // --- New multi-type-option style ---
+      if (Array.isArray(s.slotTypeOptions) && s.slotTypeOptions.length > 0) {
+        for (let j = 0; j < s.slotTypeOptions.length; j++) {
+          const to = s.slotTypeOptions[j];
+          if (!to.ingredientTypeId) continue;
+          slotTypeOptionRows.push({
+            slotId: slot.id,
+            ingredientTypeId: to.ingredientTypeId,
+            isDefault: to.isDefault ?? j === 0,
+            sortOrder: to.sortOrder ?? j,
+          });
+          // Volume overrides per type option (all keyed by slotId + typeVolumeId)
+          if (Array.isArray(to.slotVolumes)) {
+            for (const sv of to.slotVolumes) {
+              if (!sv.typeVolumeId) continue;
+              slotVolumeRows.push({
+                slotId: slot.id,
+                typeVolumeId: sv.typeVolumeId,
+                processedQty: sv.processedQty ?? null,
+                producedQty: sv.producedQty ?? null,
+                unit: sv.unit ?? null,
+                extraCost: sv.extraCost ?? null,
+                isDefault: sv.isDefault ?? false,
+                isEnabled: sv.isEnabled ?? true,
+                sortOrder: sv.sortOrder ?? 0,
+              });
+            }
+          }
+        }
+      }
+      // --- Legacy single-type style (backward compat) ---
+      else if (s.ingredientTypeId && Array.isArray(s.slotVolumes)) {
+        for (const sv of s.slotVolumes) {
+          if (!sv.typeVolumeId) continue;
+          slotVolumeRows.push({
+            slotId: slot.id,
+            typeVolumeId: sv.typeVolumeId,
+            processedQty: sv.processedQty ?? null,
+            producedQty: sv.producedQty ?? null,
+            unit: sv.unit ?? null,
+            extraCost: sv.extraCost ?? null,
+            isDefault: sv.isDefault ?? false,
+            isEnabled: sv.isEnabled ?? true,
+            sortOrder: sv.sortOrder ?? 0,
+          });
+        }
+      }
+    }
+
+    if (slotTypeOptionRows.length > 0) {
+      await db.insert(drinkSlotTypeOptionsTable).values(slotTypeOptionRows);
+    }
+    if (slotVolumeRows.length > 0) {
+      await db.insert(drinkSlotVolumesTable).values(slotVolumeRows);
+    }
+  }
+
+  const detail = await buildDrinkDetail(drinkId);
+  if (!detail) { res.status(404).json({ error: "Drink not found" }); return; }
+  res.json(serializeDates(detail));
+});
+
+router.delete("/drinks/:id", async (req, res): Promise<void> => {
+  const params = DeleteDrinkParams.safeParse(req.params);
+  if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
+  const [drink] = await db.delete(drinksTable).where(eq(drinksTable.id, params.data.id)).returning();
+  if (!drink) { res.status(404).json({ error: "Drink not found" }); return; }
+  res.sendStatus(204);
+});
+
+router.post("/drinks/:id/price", async (req, res): Promise<void> => {
+  const params = CalculateDrinkPriceParams.safeParse(req.params);
+  if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
+
+  // Accept both legacy (ingredientId+optionId) and catalog (ingredientTypeId+typeVolumeId) selections.
+  const rawBody = req.body as { selections?: unknown[] };
+  if (!rawBody?.selections || !Array.isArray(rawBody.selections)) {
+    res.status(400).json({ error: "selections must be an array" });
+    return;
+  }
+  const parsed = { data: { selections: rawBody.selections as any[] } };
+
+  const [drink] = await db.select().from(drinksTable).where(eq(drinksTable.id, params.data.id));
+  if (!drink) { res.status(404).json({ error: "Drink not found" }); return; }
+
+  const slots = await db.select().from(drinkIngredientSlotsTable).where(eq(drinkIngredientSlotsTable.drinkId, params.data.id));
+
+  const extras = [];
+  let totalExtras = 0;
+  let usedVolumeMl = 0;
+  let dynamicInfo: { slotLabel: string; ingredientName: string; filledMl: number; cost: number } | null = null;
+
+  for (const selection of parsed.data.selections) {
+    const sel = selection as any;
+    let slot: (typeof slots)[0] | undefined;
+
+    // Identify slot: prefer explicit slotId, then ingredientTypeId, then ingredientId
+    if (sel.slotId) {
+      slot = slots.find((s) => s.id === sel.slotId);
+    } else if (sel.ingredientTypeId) {
+      slot = slots.find((s) => s.ingredientTypeId === sel.ingredientTypeId);
+    } else {
+      slot = slots.find((s) => s.ingredientId === sel.ingredientId);
+    }
+    if (!slot || slot.isDynamic) continue;
+
+    // New-style slot: typed selection (slotId + typeVolumeId)
+    if (sel.typeVolumeId) {
+      const [typeVol] = await db.select().from(ingredientTypeVolumesTable)
+        .where(eq(ingredientTypeVolumesTable.id, sel.typeVolumeId));
+      if (!typeVol) continue;
+
+      // Look up slot-level override keyed by (slotId, typeVolumeId)
+      const [slotVol] = await db.select().from(drinkSlotVolumesTable)
+        .where(and(
+          eq(drinkSlotVolumesTable.slotId, slot.id),
+          eq(drinkSlotVolumesTable.typeVolumeId, sel.typeVolumeId)
+        ));
+
+      const extraCost = parseFloat(slotVol?.extraCost ?? typeVol.extraCost);
+      totalExtras += extraCost;
+      const producedQty = parseFloat(slotVol?.producedQty ?? typeVol.producedQty ?? "0");
+      usedVolumeMl += producedQty;
+      extras.push({ ingredientTypeId: typeVol.ingredientTypeId, slotLabel: slot.slotLabel, optionLabel: "", extraCost });
+      continue;
+    }
+
+    // Old-style slot
+    const [option] = await db.select().from(ingredientOptionsTable).where(eq(ingredientOptionsTable.id, selection.optionId));
+    if (!option) continue;
+
+    if (option.linkedIngredientId && selection.subOptionId) {
+      const [subOption] = await db.select().from(ingredientOptionsTable).where(eq(ingredientOptionsTable.id, selection.subOptionId));
+      if (subOption) {
+        const extraCost = parseFloat(subOption.extraCost);
+        totalExtras += extraCost;
+        usedVolumeMl += parseFloat(subOption.producedQty);
+        extras.push({ ingredientId: option.linkedIngredientId, slotLabel: slot.slotLabel, optionLabel: `${option.label} · ${subOption.label}`, extraCost });
+      }
+      continue;
+    }
+
+    const extraCost = parseFloat(option.extraCost);
+    totalExtras += extraCost;
+    usedVolumeMl += parseFloat(option.producedQty);
+    extras.push({ ingredientId: selection.ingredientId, slotLabel: slot.slotLabel, optionLabel: option.label, extraCost });
+  }
+
+  // Dynamic slot (Legacy OR Catalog)
+  const dynamicSlot = slots.find((s) => s.isDynamic);
+  if (dynamicSlot && drink.cupSizeMl) {
+    const filledMl = Math.max(0, drink.cupSizeMl - usedVolumeMl);
+
+    // --- Case A: Catalog Dynamic Slot ---
+    if (dynamicSlot.ingredientTypeId || slots.some(s => s.id === dynamicSlot.id && s.ingredientTypeId)) {
+      const dynamicSelection = parsed.data.selections.find((s: any) => s.slotId === dynamicSlot.id);
+      let typeVolumeId = dynamicSelection?.typeVolumeId;
+
+      // If no explicit typeVolumeId selected, we need to find one to get the conversion rate
+      if (!typeVolumeId) {
+        const typeOptions = await db.select().from(drinkSlotTypeOptionsTable)
+          .where(eq(drinkSlotTypeOptionsTable.slotId, dynamicSlot.id));
+        const defType = typeOptions.find(to => to.isDefault) ?? typeOptions[0];
+        const effectiveTypeId = defType?.ingredientTypeId;
+
+        if (effectiveTypeId) {
+          const typeVolumes = await db.select().from(ingredientTypeVolumesTable)
+            .where(eq(ingredientTypeVolumesTable.ingredientTypeId, effectiveTypeId));
+          const defVol = typeVolumes.find(tv => tv.isDefault) ?? typeVolumes[0];
+          typeVolumeId = defVol?.id;
+        }
+      }
+
+      if (typeVolumeId) {
+        const [typeVolume] = await db.select().from(ingredientTypeVolumesTable).where(eq(ingredientTypeVolumesTable.id, typeVolumeId));
+        const [ingredientType] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, typeVolume.ingredientTypeId));
+
+        if (typeVolume && ingredientType?.inventoryIngredientId) {
+          const [ingredient] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, ingredientType.inventoryIngredientId));
+          if (ingredient) {
+            const processedQty = parseFloat(typeVolume.processedQty ?? "0");
+            const producedQty = parseFloat(typeVolume.producedQty ?? "0");
+            const conversionRate = producedQty > 0 ? processedQty / producedQty : 1;
+            const cost = filledMl * conversionRate * parseFloat(ingredient.costPerUnit);
+            totalExtras += cost;
+            dynamicInfo = { slotLabel: dynamicSlot.slotLabel, ingredientName: ingredientType.name, filledMl, cost };
+            extras.push({ ingredientTypeId: typeVolume.ingredientTypeId, slotLabel: dynamicSlot.slotLabel, optionLabel: `Dynamic (${Math.round(filledMl)}${typeVolume.unit ?? "ml"})`, extraCost: cost });
+          }
+        }
+      }
+    }
+    // --- Case B: Legacy Dynamic Slot ---
+    else if (dynamicSlot.ingredientId) {
+      const dynamicSelection = parsed.data.selections.find((s: any) => s.ingredientId === dynamicSlot.ingredientId);
+      const optionId = dynamicSelection?.optionId ?? dynamicSlot.defaultOptionId;
+      if (optionId) {
+        const [[option], [ingredient]] = await Promise.all([
+          db.select().from(ingredientOptionsTable).where(eq(ingredientOptionsTable.id, optionId)),
+          db.select().from(ingredientsTable).where(eq(ingredientsTable.id, dynamicSlot.ingredientId)),
+        ]);
+        if (option && ingredient) {
+          const processedQty = parseFloat(option.processedQty);
+          const producedQty = parseFloat(option.producedQty);
+          const conversionRate = producedQty > 0 ? processedQty / producedQty : 1;
+          const cost = filledMl * conversionRate * parseFloat(ingredient.costPerUnit);
+          totalExtras += cost;
+          dynamicInfo = { slotLabel: dynamicSlot.slotLabel, ingredientName: ingredient.name, filledMl, cost };
+          extras.push({ ingredientId: dynamicSlot.ingredientId, slotLabel: dynamicSlot.slotLabel, optionLabel: option.label, extraCost: cost });
+        }
+      }
+    }
+  }
+
+  const basePrice = parseFloat(drink.basePrice);
+  // Skip CalculateDrinkPriceResponse.parse() — it doesn't accept ingredientTypeId extras from catalog slots
+  res.json({ basePrice, extras, dynamicInfo, total: basePrice + totalExtras });
+});
+
+export default router;

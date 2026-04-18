@@ -1,0 +1,915 @@
+import { useEffect, useState, useMemo, useRef } from "react";
+import { useAuth } from "@/hooks/use-auth";
+import {
+  useListDrinks,
+  useGetDrink,
+  useCalculateDrinkPrice,
+  useCreateOrder,
+  Drink,
+} from "@workspace/api-client-react";
+import { useQuery } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { useToast } from "@/hooks/use-toast";
+import { Coffee, Minus, Plus, ShoppingCart, Trash2, X, ChevronRight, Droplets, Printer, FileText, Receipt } from "lucide-react";
+import { fmt } from "@/lib/currency";
+import { printCustomerReceipt, printAgentReceipts } from "@/components/receipt-printer";
+
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "/api";
+
+type DrinkCategory = {
+  id: number;
+  name: string;
+  sortOrder: number;
+  isActive: boolean;
+};
+
+function useDrinkCategories() {
+  return useQuery<DrinkCategory[]>({
+    queryKey: ["pos-drink-categories"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/drink-categories`);
+      if (!res.ok) throw new Error("Failed to fetch categories");
+      return res.json();
+    },
+    staleTime: 60_000,
+  });
+}
+
+type CartItem = {
+  id: string;
+  drinkId: number;
+  drinkName: string;
+  quantity: number;
+  basePrice: number;
+  totalPrice: number;
+  selections: { ingredientId: number; optionId: number; subOptionId?: number; optionLabel: string; slotLabel: string; extraCost: number }[];
+  specialNotes?: string;
+};
+
+function detectSubcategory(name: string): string {
+  const words = name.split(" ");
+  return words[words.length - 1];
+}
+
+function buildSubcategories(drinks: Drink[]): Record<string, Drink[]> {
+  const groups: Record<string, Drink[]> = {};
+  drinks.forEach(d => {
+    const sub = detectSubcategory(d.name);
+    if (!groups[sub]) groups[sub] = [];
+    groups[sub].push(d);
+  });
+  return groups;
+}
+
+export default function PosTerminal() {
+  const { user } = useAuth();
+  const { toast } = useToast();
+
+  const { data: drinks, isLoading: isLoadingDrinks } = useListDrinks({ active: true });
+  const { data: allCategories = [] } = useDrinkCategories();
+
+  // Only show active categories that have the sort order from admin
+  const categories = useMemo(() => {
+    return allCategories.filter(c => c.isActive);
+  }, [allCategories]);
+
+  // selectedCategory is now a DrinkCategory id (number) or null for "All"
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
+  const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null);
+
+  const categoryDrinks = useMemo(() => {
+    if (!drinks) return [];
+    if (selectedCategoryId === null) return drinks;
+    return drinks.filter(d => {
+      // Match by categoryId if available, else fall back to category name
+      const cat = categories.find(c => c.id === selectedCategoryId);
+      if ((d as any).categoryId === selectedCategoryId) return true;
+      if (cat && d.category === cat.name) return true;
+      return false;
+    });
+  }, [drinks, selectedCategoryId, categories]);
+
+  const subcategoryGroups = useMemo(() => buildSubcategories(categoryDrinks), [categoryDrinks]);
+
+  const visibleSubcategories = useMemo(() => {
+    return Object.entries(subcategoryGroups)
+      .filter(([, items]) => items.length >= 2)
+      .map(([sub]) => sub);
+  }, [subcategoryGroups]);
+
+  const filteredDrinks = useMemo(() => {
+    if (!selectedSubcategory) return categoryDrinks;
+    return categoryDrinks.filter(d => detectSubcategory(d.name) === selectedSubcategory);
+  }, [categoryDrinks, selectedSubcategory]);
+
+  const groupedDrinks = useMemo(() => {
+    if (selectedSubcategory) return null;
+    const groups: { label: string; drinks: Drink[] }[] = [];
+    const added = new Set<number>();
+    visibleSubcategories.forEach(sub => {
+      const items = subcategoryGroups[sub] || [];
+      if (items.length >= 2) {
+        groups.push({ label: sub, drinks: items });
+        items.forEach(d => added.add(d.id));
+      }
+    });
+    const rest = categoryDrinks.filter(d => !added.has(d.id));
+    if (rest.length > 0) {
+      groups.unshift({ label: "", drinks: rest });
+    }
+    return groups;
+  }, [selectedSubcategory, categoryDrinks, visibleSubcategories, subcategoryGroups]);
+
+  const handleCategoryChange = (catId: number | null) => {
+    setSelectedCategoryId(catId);
+    setSelectedSubcategory(null);
+  };
+
+  const handleSubcategoryChange = (sub: string | null) => {
+    setSelectedSubcategory(sub);
+  };
+
+  // Customization dialog
+  const [activeDrink, setActiveDrink] = useState<Drink | null>(null);
+  const [isCustomizing, setIsCustomizing] = useState(false);
+  const { data: drinkDetail, isLoading: isLoadingDrinkDetail } = useGetDrink(
+    activeDrink?.id || 0,
+    { query: { enabled: !!activeDrink } } as any
+  );
+
+  const [selections, setSelections] = useState<Record<number, number>>({});
+  // subSelections: slotId → sub-option id (for two-level type→volume slots)
+  const [subSelections, setSubSelections] = useState<Record<number, number>>({});
+  const [notes, setNotes] = useState("");
+
+  useEffect(() => {
+    if (drinkDetail) {
+      const initial: Record<number, number> = {};
+      const initialSub: Record<number, number> = {};
+      (drinkDetail.slots as any[]).forEach(slot => {
+        // Typed (catalog) slot — pick default type option + default volume
+        if (slot.slotStyle === "typed") {
+          const typeOptions: any[] = slot.typeOptions ?? [];
+          const defTypeOpt = typeOptions.find((to: any) => to.isDefault) ?? typeOptions[0];
+          if (defTypeOpt) {
+            initial[slot.id] = defTypeOpt.ingredientTypeId; // selections = which type
+            const defVol = (defTypeOpt.volumes ?? []).find((v: any) => v.isDefault) ?? defTypeOpt.volumes?.[0];
+            if (defVol) initialSub[slot.id] = defVol.id; // subSelections = typeVolumeId
+          }
+          return;
+        }
+        // Legacy slot
+        let selectedOptionId: number | undefined;
+        if (slot.defaultOptionId) {
+          selectedOptionId = slot.defaultOptionId;
+        } else if (slot.ingredient?.options?.length > 0) {
+          const def = slot.ingredient.options.find((o: any) => o.isDefault) || slot.ingredient.options[0];
+          selectedOptionId = def.id;
+        }
+        if (selectedOptionId !== undefined) {
+          initial[slot.id] = selectedOptionId;
+          const selOpt = slot.ingredient?.options?.find((o: any) => o.id === selectedOptionId);
+          if (selOpt?.linkedIngredient?.options?.length) {
+            const defSub = selOpt.linkedIngredient.options.find((o: any) => o.isDefault) || selOpt.linkedIngredient.options[0];
+            if (defSub) initialSub[slot.id] = defSub.id;
+          }
+        }
+      });
+      setSelections(initial);
+      setSubSelections(initialSub);
+      setNotes("");
+    }
+  }, [drinkDetail]);
+
+  const currentSelectionsArray = useMemo(() => {
+    if (!drinkDetail) return [];
+    return Object.entries(selections).map(([slotIdStr, selectionVal]) => {
+      const slotId = parseInt(slotIdStr);
+      const slot = (drinkDetail.slots as any[]).find(s => s.id === slotId);
+      if (!slot) return null;
+      // Typed slot — send slotId + typeVolumeId (slotId identifies the slot, typeVolumeId identifies type+volume)
+      if (slot.slotStyle === "typed") {
+        const typeVolumeId = subSelections[slotId];
+        if (!typeVolumeId) return null;
+        return { slotId: slot.id, typeVolumeId };
+      }
+      // Legacy slot
+      const optionId = selectionVal;
+      const option = slot.ingredient?.options?.find((o: any) => o.id === optionId);
+      const subOptionId = option?.linkedIngredientId ? (subSelections[slotId] ?? undefined) : undefined;
+      return { ingredientId: slot.ingredientId || 0, optionId, subOptionId };
+    }).filter((s): s is NonNullable<typeof s> => s !== null && ('typeVolumeId' in s || (s as any).ingredientId > 0));
+  }, [selections, subSelections, drinkDetail]);
+
+  const { mutate: calculatePrice, data: priceBreakdown, isPending: isCalculating } = useCalculateDrinkPrice();
+  const calcRef = useRef(calculatePrice);
+  calcRef.current = calculatePrice;
+
+  // displayPrice holds the last confirmed price and never flickers back to basePrice
+  // while a recalculation is in flight. It only resets when a new drink is opened.
+  const [displayPrice, setDisplayPrice] = useState<number>(0);
+
+  useEffect(() => {
+    if (activeDrink) {
+      setDisplayPrice((activeDrink as any).defaultPrice ?? activeDrink.basePrice ?? 0);
+    }
+  }, [activeDrink?.id]);
+
+  useEffect(() => {
+    if (priceBreakdown?.total !== undefined) {
+      setDisplayPrice(priceBreakdown.total);
+    }
+  }, [priceBreakdown]);
+
+  useEffect(() => {
+    if (activeDrink && currentSelectionsArray.length > 0) {
+      calcRef.current(
+        { id: activeDrink.id, data: { selections: currentSelectionsArray } },
+        { onError: () => {} }
+      );
+    }
+  }, [activeDrink, currentSelectionsArray]);
+
+  const handleSelectDrink = (drink: Drink) => {
+    setActiveDrink(drink);
+    setIsCustomizing(true);
+  };
+
+  const handleCloseCustomization = () => {
+    setIsCustomizing(false);
+    setActiveDrink(null);
+    setSelections({});
+    setSubSelections({});
+    setNotes("");
+  };
+
+  // Cart
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [isCartOpen, setIsCartOpen] = useState(false);
+  const cartTotal = cart.reduce((sum, item) => sum + item.totalPrice * item.quantity, 0);
+  const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+
+  const handleAddToCart = () => {
+    if (!activeDrink || !drinkDetail || !priceBreakdown) return;
+
+    const formattedSelections = Object.entries(selections).map(([slotIdStr, selectionVal]) => {
+      const slotId = parseInt(slotIdStr);
+      const slot = (drinkDetail.slots as any[]).find(s => s.id === slotId);
+      if (!slot) return null;
+
+      // Typed (catalog) slot — two-level: type option + volume
+      if (slot.slotStyle === "typed") {
+        const selectedTypeId = selectionVal; // selections[slotId] = ingredientTypeId
+        const typeVolumeId = subSelections[slotId];
+        const typeOptions: any[] = slot.typeOptions ?? [];
+        const typeOpt = typeOptions.find((to: any) => to.ingredientTypeId === selectedTypeId);
+        const vol = typeOpt?.volumes?.find((v: any) => v.id === typeVolumeId);
+        const extra = (priceBreakdown as any).extras?.find((e: any) => e.slotLabel === slot.slotLabel);
+        const typePart = typeOpt?.typeName ? `${typeOpt.typeName} · ` : "";
+        return {
+          ingredientId: 0,
+          optionId: 0,
+          subOptionId: undefined,
+          optionLabel: `${typePart}${vol?.volumeName ?? ""}`.trim(),
+          slotLabel: slot.slotLabel,
+          extraCost: extra?.extraCost ?? vol?.extraCost ?? 0,
+        };
+      }
+
+      // Legacy slot
+      const optionId = selectionVal;
+      const option = slot.ingredient?.options?.find((o: any) => o.id === optionId);
+      const subOptionId = option?.linkedIngredientId ? (subSelections[slotId] ?? undefined) : undefined;
+      const effectiveIngredientId = option?.linkedIngredientId ?? slot.ingredientId ?? 0;
+      const extra = priceBreakdown.extras.find((e: any) => e.ingredientId === effectiveIngredientId && e.slotLabel === slot.slotLabel);
+
+      let optionLabel = option?.label || "";
+      if (subOptionId && option?.linkedIngredient) {
+        const subOpt = option.linkedIngredient.options.find((o: any) => o.id === subOptionId);
+        if (subOpt) optionLabel = `${option.label} · ${subOpt.label}`;
+      }
+
+      return {
+        ingredientId: slot.ingredientId,
+        optionId,
+        subOptionId,
+        optionLabel,
+        slotLabel: slot.slotLabel,
+        extraCost: extra?.extraCost || 0,
+      };
+    }).filter((s): s is NonNullable<typeof s> => s !== null);
+
+    setCart(prev => [...prev, {
+      id: Math.random().toString(36).substring(7),
+      drinkId: activeDrink.id,
+      drinkName: activeDrink.name,
+      quantity: 1,
+      basePrice: priceBreakdown.basePrice,
+      totalPrice: priceBreakdown.total,
+      selections: formattedSelections,
+      specialNotes: notes || undefined,
+    }]);
+
+    handleCloseCustomization();
+    setIsCartOpen(true);
+  };
+
+  const updateCartQuantity = (id: string, delta: number) => {
+    setCart(prev => prev.map(item =>
+      item.id === id ? { ...item, quantity: Math.max(1, item.quantity + delta) } : item
+    ));
+  };
+
+  const removeFromCart = (id: string) => {
+    setCart(prev => prev.filter(item => item.id !== id));
+  };
+
+  // Checkout
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [customerName, setCustomerName] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<"cash" | "card" | "wallet">("card");
+  const [amountTendered, setAmountTendered] = useState("");
+
+  const [completedOrder, setCompletedOrder] = useState<any>(null);
+  const [isReceiptOpen, setIsReceiptOpen] = useState(false);
+
+  const { mutate: createOrder, isPending: isCreatingOrder } = useCreateOrder({
+    mutation: {
+      onSuccess: (data) => {
+        setCompletedOrder(data);
+        setIsReceiptOpen(true);
+        setCart([]);
+        setIsCartOpen(false);
+        setIsCheckoutOpen(false);
+        setCustomerName("");
+        setAmountTendered("");
+      },
+      onError: () => {
+        toast({ variant: "destructive", title: "Error", description: "Failed to create order." });
+      },
+    },
+  });
+
+  const handleCheckout = () => {
+    if (cart.length === 0) return;
+    createOrder({
+      data: {
+        customerName: customerName || undefined,
+        paymentMethod,
+        amountTendered: paymentMethod === "cash" && amountTendered ? parseFloat(amountTendered) : undefined,
+        items: cart.map(item => ({
+          drinkId: item.drinkId,
+          quantity: item.quantity,
+          specialNotes: item.specialNotes,
+          selections: item.selections.map(s => ({ ingredientId: s.ingredientId, optionId: s.optionId, subOptionId: s.subOptionId })),
+        })),
+      },
+    });
+  };
+
+  const gridClass = user?.role === "frontdesk"
+    ? "grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-6"
+    : "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6";
+
+  return (
+    <div className="flex flex-col h-full w-full bg-muted/20 overflow-hidden">
+
+      {/* Top bar: category tabs + cart button */}
+      <div className="flex items-center gap-2 px-4 py-3 bg-background border-b shadow-sm z-10 shrink-0">
+        <div className="flex-1 flex gap-2 overflow-x-auto no-scrollbar">
+          <Button
+            variant={selectedCategoryId === null ? "default" : "outline"}
+            onClick={() => handleCategoryChange(null)}
+            className="rounded-full whitespace-nowrap shrink-0"
+            size="sm"
+          >
+            All Drinks
+          </Button>
+          {categories.map(cat => (
+            <Button
+              key={cat.id}
+              variant={selectedCategoryId === cat.id ? "default" : "outline"}
+              onClick={() => handleCategoryChange(cat.id)}
+              className="rounded-full whitespace-nowrap shrink-0 capitalize"
+              size="sm"
+            >
+              {cat.name}
+            </Button>
+          ))}
+        </div>
+
+        {/* Cart toggle button */}
+        <button
+          onClick={() => setIsCartOpen(true)}
+          className="relative shrink-0 flex items-center gap-2 bg-primary text-primary-foreground rounded-full px-4 py-2 font-semibold shadow-md hover:bg-primary/90 transition-colors"
+        >
+          <ShoppingCart className="h-4 w-4" />
+          <span>{fmt(cartTotal)}</span>
+          {cartCount > 0 && (
+            <span className="absolute -top-1.5 -right-1.5 bg-destructive text-destructive-foreground text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+              {cartCount}
+            </span>
+          )}
+        </button>
+      </div>
+
+      {/* Subcategory row */}
+      {visibleSubcategories.length > 0 && (
+        <div className="flex gap-2 px-4 py-2 bg-muted/40 border-b overflow-x-auto no-scrollbar shrink-0">
+          <button
+            onClick={() => handleSubcategoryChange(null)}
+            className={`px-3 py-1 rounded-full text-sm font-medium whitespace-nowrap transition-colors border ${
+              selectedSubcategory === null
+                ? "bg-foreground text-background border-foreground"
+                : "bg-background text-muted-foreground border-border hover:border-foreground/40"
+            }`}
+          >
+            All
+          </button>
+          {visibleSubcategories.map(sub => (
+            <button
+              key={sub}
+              onClick={() => handleSubcategoryChange(selectedSubcategory === sub ? null : sub)}
+              className={`px-3 py-1 rounded-full text-sm font-medium whitespace-nowrap transition-colors border ${
+                selectedSubcategory === sub
+                  ? "bg-foreground text-background border-foreground"
+                  : "bg-background text-muted-foreground border-border hover:border-foreground/40"
+              }`}
+            >
+              {sub}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Drink Grid — full width */}
+      <ScrollArea className="flex-1 p-4">
+        {isLoadingDrinks ? (
+          <div className={gridClass}>
+            {Array.from({ length: 10 }).map((_, i) => (
+              <div key={i} className="h-32 bg-muted animate-pulse rounded-lg border" />
+            ))}
+          </div>
+        ) : selectedSubcategory || !groupedDrinks ? (
+          <div className={gridClass}>
+            {filteredDrinks.map(drink => (
+              <DrinkCard key={drink.id} drink={drink} onClick={() => handleSelectDrink(drink)} />
+            ))}
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {groupedDrinks.map(group => (
+              <div key={group.label || "__singles__"}>
+                {group.label && (
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="text-sm font-bold uppercase tracking-widest text-muted-foreground">{group.label}</span>
+                    <div className="flex-1 h-px bg-border" />
+                  </div>
+                )}
+                <div className={gridClass}>
+                  {group.drinks.map(drink => (
+                    <DrinkCard key={drink.id} drink={drink} onClick={() => handleSelectDrink(drink)} />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </ScrollArea>
+
+      {/* Cart Slide-in Overlay */}
+      <>
+        {/* Backdrop */}
+        <div
+          className={`fixed inset-0 bg-black/40 z-40 transition-opacity duration-300 ${
+            isCartOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+          }`}
+          onClick={() => setIsCartOpen(false)}
+        />
+        {/* Cart panel */}
+        <div
+          className={`fixed top-0 right-0 h-full w-[340px] max-w-[90vw] bg-card shadow-2xl z-50 flex flex-col transition-transform duration-300 ease-in-out ${
+            isCartOpen ? "translate-x-0" : "translate-x-full"
+          }`}
+        >
+          <div className="flex items-center justify-between px-4 py-4 border-b bg-muted/30 shrink-0">
+            <h2 className="text-lg font-bold flex items-center gap-2">
+              <ShoppingCart className="h-5 w-5" />
+              Current Order
+              {cartCount > 0 && (
+                <span className="bg-primary text-primary-foreground px-2 py-0.5 rounded-full text-xs font-bold">
+                  {cartCount}
+                </span>
+              )}
+            </h2>
+            <button onClick={() => setIsCartOpen(false)} className="p-1 rounded-md hover:bg-muted transition-colors">
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          <ScrollArea className="flex-1 p-3">
+            {cart.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-64 text-muted-foreground text-center space-y-3 p-6">
+                <ShoppingCart className="h-10 w-10 opacity-20" />
+                <p className="font-medium">No items yet</p>
+                <p className="text-sm">Tap a drink to add it to your order.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {cart.map(item => (
+                  <div key={item.id} className="p-3 border rounded-lg bg-background shadow-sm">
+                    <div className="flex justify-between items-start mb-1.5">
+                      <span className="font-bold text-sm leading-tight pr-2">{item.drinkName}</span>
+                      <span className="font-bold text-sm shrink-0">{fmt(item.totalPrice * item.quantity)}</span>
+                    </div>
+                    <div className="text-xs text-muted-foreground space-y-0.5 mb-2">
+                      {item.selections.map(s => (
+                        <div key={s.ingredientId} className="flex justify-between">
+                          <span>{s.optionLabel}</span>
+                          {s.extraCost > 0 && <span>+{fmt(s.extraCost)}</span>}
+                        </div>
+                      ))}
+                      {item.specialNotes && (
+                        <div className="italic text-primary/80">"{item.specialNotes}"</div>
+                      )}
+                    </div>
+                    <div className="flex items-center justify-between pt-2 border-t">
+                      <div className="flex items-center gap-1">
+                        <Button variant="outline" size="icon" className="h-6 w-6 rounded-full" onClick={() => updateCartQuantity(item.id, -1)}>
+                          <Minus className="h-3 w-3" />
+                        </Button>
+                        <span className="w-7 text-center font-bold text-sm">{item.quantity}</span>
+                        <Button variant="outline" size="icon" className="h-6 w-6 rounded-full" onClick={() => updateCartQuantity(item.id, 1)}>
+                          <Plus className="h-3 w-3" />
+                        </Button>
+                      </div>
+                      <button
+                        onClick={() => removeFromCart(item.id)}
+                        className="p-1 text-destructive hover:bg-destructive/10 rounded-md transition-colors"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </ScrollArea>
+
+          <div className="p-4 border-t bg-muted/30 shrink-0 space-y-3">
+            <div className="flex justify-between items-center text-lg font-bold">
+              <span>Total</span>
+              <span className="text-primary">{fmt(cartTotal)}</span>
+            </div>
+            <Button
+              className="w-full h-12 text-base font-bold shadow-md flex items-center gap-2"
+              disabled={cart.length === 0}
+              onClick={() => { setIsCartOpen(false); setIsCheckoutOpen(true); }}
+            >
+              Checkout <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </>
+
+      {/* Customization Dialog */}
+      <Dialog open={isCustomizing} onOpenChange={(open) => { if (!open) handleCloseCustomization(); }}>
+        <DialogContent className="sm:max-w-[420px] max-h-[85vh] flex flex-col p-0 gap-0">
+          <DialogHeader className="px-5 pt-5 pb-3 border-b shrink-0">
+            <DialogTitle className="text-xl">{activeDrink?.name}</DialogTitle>
+            <div className={`text-2xl font-bold text-primary mt-1 transition-opacity ${isCalculating ? "opacity-60" : "opacity-100"}`}>
+              {fmt(displayPrice)}
+            </div>
+          </DialogHeader>
+
+          <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4">
+            {isLoadingDrinkDetail ? (
+              <div className="space-y-4">
+                <div className="h-20 bg-muted animate-pulse rounded-md" />
+                <div className="h-20 bg-muted animate-pulse rounded-md" />
+              </div>
+            ) : (
+              <div className="space-y-5">
+                {(drinkDetail?.slots as any[])?.map(slot => {
+                  // ── Typed (catalog) slot: two-level — type option → volume ──
+                  if (slot.slotStyle === "typed") {
+                    const typeOptions: any[] = slot.typeOptions ?? [];
+                    const selectedTypeId = selections[slot.id];
+                    const activeTypeOpt = typeOptions.find((to: any) => to.ingredientTypeId === selectedTypeId) ?? typeOptions[0];
+                    const activeVolumes: any[] = activeTypeOpt?.volumes ?? [];
+                    const multiType = typeOptions.length > 1;
+
+                    return (
+                      <div key={slot.id} className="space-y-2">
+                        <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground block">
+                          {slot.slotLabel}
+                        </Label>
+
+                        {/* Level 1: Type option buttons (only shown if more than one type) */}
+                        {multiType && (
+                          <div className="grid grid-cols-2 gap-1.5">
+                            {typeOptions.map((typeOpt: any) => (
+                              <button
+                                key={typeOpt.ingredientTypeId}
+                                onClick={() => {
+                                  setSelections(prev => ({ ...prev, [slot.id]: typeOpt.ingredientTypeId }));
+                                  const defVol = (typeOpt.volumes ?? []).find((v: any) => v.isDefault) ?? typeOpt.volumes?.[0];
+                                  if (defVol) setSubSelections(prev => ({ ...prev, [slot.id]: defVol.id }));
+                                }}
+                                className={`px-3 py-2 rounded-lg border text-left transition-all text-sm ${
+                                  selectedTypeId === typeOpt.ingredientTypeId
+                                    ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                                    : "bg-background border-border hover:border-primary/50"
+                                }`}
+                              >
+                                <div className="font-medium truncate">{typeOpt.typeName}</div>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Level 2: Volume buttons for the selected type */}
+                        <div className={multiType ? "pl-3 border-l-2 border-primary/30" : ""}>
+                          {multiType && (
+                            <div className="text-xs text-muted-foreground mb-1.5 font-medium">Volume</div>
+                          )}
+                          <div className="grid grid-cols-2 gap-1.5">
+                            {activeVolumes.map((vol: any) => (
+                              <button
+                                key={vol.id}
+                                onClick={() => setSubSelections(prev => ({ ...prev, [slot.id]: vol.id }))}
+                                className={`px-3 py-2 rounded-lg border text-left transition-all text-sm ${
+                                  subSelections[slot.id] === vol.id
+                                    ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                                    : "bg-background border-border hover:border-primary/50"
+                                }`}
+                              >
+                                <div className="font-medium truncate">{vol.volumeName}</div>
+                                {vol.extraCost > 0 && (
+                                  <div className={`text-xs mt-0.5 ${subSelections[slot.id] === vol.id ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
+                                    +{fmt(vol.extraCost)}
+                                  </div>
+                                )}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  // ── Legacy slot: show ingredient options ───────────────────
+                  const options: any[] = slot.ingredient?.options ?? [];
+                  const isLinked = options.some(o => o.linkedIngredientId);
+                  const selectedTypeOpt = isLinked ? options.find(o => o.id === selections[slot.id]) : null;
+                  const subOptions: any[] = selectedTypeOpt?.linkedIngredient?.options ?? [];
+
+                  return (
+                  <div key={slot.id}>
+                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2 block">
+                      {slot.slotLabel}
+                    </Label>
+
+                    {/* Type picker (or regular option picker) */}
+                    <div className="grid grid-cols-2 gap-2">
+                      {options.map(option => (
+                        <button
+                          key={option.id}
+                          onClick={() => {
+                            setSelections(prev => ({ ...prev, [slot.id]: option.id }));
+                            // Auto-select first sub-option of newly selected type
+                            if (option.linkedIngredient?.options?.length) {
+                              const defSub = option.linkedIngredient.options.find((o: any) => o.isDefault) || option.linkedIngredient.options[0];
+                              setSubSelections(prev => ({ ...prev, [slot.id]: defSub.id }));
+                            }
+                          }}
+                          className={`px-3 py-2 rounded-lg border text-left transition-all text-sm ${
+                            selections[slot.id] === option.id
+                              ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                              : "bg-background border-border hover:border-primary/50"
+                          }`}
+                        >
+                          <div className="font-medium truncate">{option.label}</div>
+                          {!isLinked && option.extraCost > 0 && (
+                            <div className={`text-xs mt-0.5 ${selections[slot.id] === option.id ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
+                              +{fmt(option.extraCost)}
+                            </div>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Sub-option picker — volume / size (shown when type has linked ingredient) */}
+                    {isLinked && subOptions.length > 0 && (
+                      <div className="mt-2.5 pl-3 border-l-2 border-primary/30">
+                        <div className="text-xs text-muted-foreground mb-1.5 font-medium">Volume</div>
+                        <div className="grid grid-cols-3 gap-1.5">
+                          {subOptions.map(subOpt => (
+                            <button
+                              key={subOpt.id}
+                              onClick={() => setSubSelections(prev => ({ ...prev, [slot.id]: subOpt.id }))}
+                              className={`px-2 py-2 rounded-lg border text-center transition-all text-xs ${
+                                subSelections[slot.id] === subOpt.id
+                                  ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                                  : "bg-background border-border hover:border-primary/50"
+                              }`}
+                            >
+                              <div className="font-medium leading-tight">{subOpt.label}</div>
+                              {subOpt.extraCost > 0 && (
+                                <div className={`text-xs mt-0.5 ${subSelections[slot.id] === subOpt.id ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
+                                  +{fmt(subOpt.extraCost)}
+                                </div>
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  );
+                })}
+
+                {/* Dynamic ingredient indicator */}
+                {priceBreakdown?.dynamicInfo && (
+                  <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800">
+                    <Droplets className="h-4 w-4 text-blue-500 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                        {priceBreakdown.dynamicInfo.ingredientName}
+                      </span>
+                      <span className="text-xs text-blue-500 ml-1.5">
+                        fills {Math.round(priceBreakdown.dynamicInfo.filledMl)} ml
+                      </span>
+                    </div>
+                    <span className="text-sm font-semibold text-blue-600 dark:text-blue-400 shrink-0">
+                      +{fmt(priceBreakdown.dynamicInfo.cost)}
+                    </span>
+                  </div>
+                )}
+
+                <div className="pt-2 border-t">
+                  <Label htmlFor="notes" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                    Special Notes
+                  </Label>
+                  <Input
+                    id="notes"
+                    value={notes}
+                    onChange={e => setNotes(e.target.value)}
+                    placeholder="e.g., Extra hot, no foam"
+                    className="mt-2"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="px-5 pb-5 pt-3 border-t shrink-0">
+            <Button
+              className="w-full h-12 text-base font-bold shadow-md"
+              onClick={handleAddToCart}
+              disabled={isCalculating || isLoadingDrinkDetail}
+            >
+              <Plus className="mr-2 h-4 w-4" /> Add to Order
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Checkout Dialog */}
+      <Dialog open={isCheckoutOpen} onOpenChange={setIsCheckoutOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="text-2xl">Complete Order</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="customer">Customer Name (Optional)</Label>
+              <Input
+                id="customer"
+                value={customerName}
+                onChange={e => setCustomerName(e.target.value)}
+                placeholder="Name for the order"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label>Payment Method</Label>
+              <div className="grid grid-cols-3 gap-2">
+                {(["card", "cash", "wallet"] as const).map(method => (
+                  <Button
+                    key={method}
+                    variant={paymentMethod === method ? "default" : "outline"}
+                    onClick={() => setPaymentMethod(method)}
+                    className="capitalize"
+                  >
+                    {method}
+                  </Button>
+                ))}
+              </div>
+            </div>
+            {paymentMethod === "cash" && (
+              <div className="grid gap-2">
+                <Label htmlFor="amount">Amount Tendered</Label>
+                <Input
+                  id="amount"
+                  type="number"
+                  step="0.01"
+                  value={amountTendered}
+                  onChange={e => setAmountTendered(e.target.value)}
+                  placeholder={fmt(cartTotal)}
+                />
+              </div>
+            )}
+            <div className="flex justify-between items-center py-4 border-t border-b">
+              <span className="font-bold text-lg">Total Due</span>
+              <span className="font-bold text-2xl text-primary">{fmt(cartTotal)}</span>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsCheckoutOpen(false)} disabled={isCreatingOrder}>
+              Cancel
+            </Button>
+            <Button onClick={handleCheckout} disabled={isCreatingOrder} className="min-w-[120px]">
+              {isCreatingOrder ? "Processing..." : "Charge"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Receipt Options Dialog */}
+      <Dialog open={isReceiptOpen} onOpenChange={setIsReceiptOpen}>
+        <DialogContent className="sm:max-w-[380px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-xl">
+              <Receipt className="h-5 w-5 text-primary" />
+              Order #{completedOrder?.orderNumber}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-2 text-sm text-muted-foreground">
+            Order placed successfully. Select a receipt to print, or close to continue.
+          </div>
+          <div className="grid gap-3 py-2">
+            <Button
+              className="h-14 gap-3 text-base"
+              onClick={() => completedOrder && printCustomerReceipt(completedOrder)}
+            >
+              <FileText className="h-5 w-5" />
+              <div className="text-left">
+                <div className="font-bold">Customer Receipt</div>
+                <div className="text-xs opacity-75 font-normal">Full order summary with total</div>
+              </div>
+            </Button>
+            <Button
+              variant="outline"
+              className="h-14 gap-3 text-base"
+              onClick={() => completedOrder && printAgentReceipts(completedOrder)}
+            >
+              <Printer className="h-5 w-5" />
+              <div className="text-left">
+                <div className="font-bold">Barista Tickets</div>
+                <div className="text-xs text-muted-foreground font-normal">One ticket per drink with customizations</div>
+              </div>
+            </Button>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" className="w-full" onClick={() => setIsReceiptOpen(false)}>
+              Skip — No Receipt
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+function DrinkCard({ drink, onClick }: { drink: Drink; onClick: () => void }) {
+  const imageUrl = (drink as any).imageUrl as string | null | undefined;
+  return (
+    <button
+      onClick={onClick}
+      className="flex flex-col rounded-lg border bg-card text-card-foreground transition-all hover:border-primary/50 hover:shadow-md active:scale-95 h-40 overflow-hidden group w-full"
+    >
+      {/* Image area — grows to fill available space */}
+      <div className="flex-1 flex items-center justify-center overflow-hidden min-h-0">
+        {imageUrl ? (
+          <img
+            src={imageUrl}
+            alt={drink.name}
+            className="max-w-full max-h-full object-contain group-hover:scale-105 transition-transform duration-300"
+            onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
+          />
+        ) : (
+          <Coffee className="h-7 w-7 text-primary/80 shrink-0" />
+        )}
+      </div>
+      {/* Two-line label */}
+      <div className="flex flex-col items-center px-2 py-1.5 border-t bg-slate-100/5 shrink-0">
+        <span className="font-semibold text-[10px] sm:text-xs text-white leading-tight line-clamp-2 w-full text-center">{drink.name}</span>
+        <span className="text-[10px] sm:text-xs text-primary font-bold leading-tight">{fmt((drink as any).defaultPrice ?? drink.basePrice)}</span>
+      </div>
+    </button>
+  );
+}

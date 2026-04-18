@@ -1,0 +1,59 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: spacca-db
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-mero1901}
+      POSTGRES_DB: ${DB_NAME:-spacca_prod}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  api:
+    build:
+      context: .
+      dockerfile: artifacts/api-server/Dockerfile
+    container_name: spacca-api
+    restart: always
+    environment:
+      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-mero1901}@db:5432/${DB_NAME:-spacca_prod}
+      PORT: 8080
+      NODE_ENV: production
+    depends_on:
+      - db
+    volumes:
+      - ./artifacts/api-server/uploads:/app/uploads
+
+  frontend:
+    build:
+      context: .
+      dockerfile: artifacts/spacca-pos/Dockerfile
+      args:
+        VITE_API_URL: https://${DOMAIN_NAME:-31-97-157-159.sslip.io}/api
+    container_name: spacca-frontend
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - api
+    volumes:
+      # These will be used for the SSL certificates once generated
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - ./nginx/certbot/www:/var/www/certbot:ro
+      - ./nginx/certbot/conf:/etc/letsencrypt:ro
+
+  # This container handles the SSL certificate generation
+  certbot:
+    image: certbot/certbot
+    container_name: certbot
+    volumes:
+      - ./nginx/certbot/www:/var/www/certbot:rw
+      - ./nginx/certbot/conf:/etc/letsencrypt:rw
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+
+volumes:
+  postgres_data:

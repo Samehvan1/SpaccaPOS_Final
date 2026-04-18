@@ -1,0 +1,1 @@
+pnpm --filter @workspace/spacca-pos run dev
