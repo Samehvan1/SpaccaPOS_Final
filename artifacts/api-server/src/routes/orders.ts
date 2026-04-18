@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { eq, and, inArray, gte, sql } from "drizzle-orm";
 import { serializeDates } from "../lib/serialize";
 import { broadcastEvent } from "../lib/sse";
+import { calculateDrinkData } from "../lib/price-calculator";
 import {
   db,
   ordersTable,
@@ -153,52 +154,6 @@ router.post("/orders", async (req, res): Promise<void> => {
     ),
   ];
 
-  const allTypeVolumeIds = [
-    ...new Set(orderItems.flatMap((i) => i.selections.map((s: any) => s.typeVolumeId).filter(Boolean))),
-  ];
-
-  // Step 1: Fetch drinks, slots, options, typeVolumes, and volumes in parallel
-  const [drinks, slots, options, typeVolumes, volumes] = await Promise.all([
-    db.select().from(drinksTable).where(inArray(drinksTable.id, drinkIds)),
-    db.select().from(drinkIngredientSlotsTable).where(inArray(drinkIngredientSlotsTable.drinkId, drinkIds)),
-    allOptionIds.length > 0
-      ? db.select().from(ingredientOptionsTable).where(inArray(ingredientOptionsTable.id, allOptionIds))
-      : Promise.resolve([]),
-    allTypeVolumeIds.length > 0
-      ? db.select().from(ingredientTypeVolumesTable).where(inArray(ingredientTypeVolumesTable.id, allTypeVolumeIds))
-      : Promise.resolve([]),
-    db.select().from(ingredientVolumesTable),
-  ]);
-
-  // Step 2: Now that slots is resolved, fetch slot-level volume overrides
-  const slotIds = slots.map(s => s.id);
-  const slotVolumes = slotIds.length > 0
-    ? await db.select().from(drinkSlotVolumesTable).where(inArray(drinkSlotVolumesTable.slotId, slotIds))
-    : [];
-
-  const drinkMap = new Map(drinks.map((d) => [d.id, d]));
-  const slotsByDrink = new Map<number, typeof slots>();
-  for (const s of slots) {
-    const list = slotsByDrink.get(s.drinkId) ?? [];
-    list.push(s);
-    slotsByDrink.set(s.drinkId, list);
-  }
-  const optionMap = new Map(options.map((o) => [o.id, o]));
-  const typeVolumeMap = new Map(typeVolumes.map((tv) => [tv.id, tv]));
-  const slotVolumeMap = new Map<string, typeof slotVolumes[0]>(); // key: slotId_typeVolumeId
-  for (const sv of slotVolumes) {
-    slotVolumeMap.set(`${sv.slotId}_${sv.typeVolumeId}`, sv);
-  }
-
-  // Pre-fetch ingredient types for the catalog volumes to find inventory IDs
-  const allTypeIds = [...new Set(typeVolumes.map(tv => tv.ingredientTypeId))];
-  const ingredientTypes = allTypeIds.length > 0
-    ? await db.select().from(ingredientTypesTable).where(inArray(ingredientTypesTable.id, allTypeIds))
-    : [];
-  const typeToInventoryMap = new Map(ingredientTypes.map(it => [it.id, it.inventoryIngredientId]));
-  const typeNameMap = new Map(ingredientTypes.map(it => [it.id, it.name]));
-  const volumeMap = new Map(volumes.map(v => [v.id, v.name]));
-
   // ── Compute totals & customizations ────────────────────────────────────────
   type Customization = {
     ingredientId: number | null;
@@ -219,118 +174,38 @@ router.post("/orders", async (req, res): Promise<void> => {
   const itemDetails: ItemDetail[] = [];
 
   for (const item of orderItems) {
-    const drink = drinkMap.get(item.drinkId);
-    if (!drink) { res.status(400).json({ error: `Drink ${item.drinkId} not found` }); return; }
+    try {
+      const calcData = await calculateDrinkData(item.drinkId, item.selections as any[]);
+      
+      const customizations: Customization[] = calcData.customizations.map(c => ({
+        ingredientId: c.ingredientId,
+        optionId: c.optionId,
+        typeVolumeId: c.typeVolumeId,
+        consumedQty: c.consumedQty * item.quantity,
+        addedCost: c.addedCost,
+        slotLabel: c.slotLabel,
+        optionLabel: c.optionLabel
+      }));
 
-    const drinkSlots = slotsByDrink.get(item.drinkId) ?? [];
-    let extraCost = 0;
-    const customizations: Customization[] = [];
-
-    for (const selection of item.selections) {
-      const sel = selection as any;
-      let slot: (typeof slots)[0] | undefined;
-
-      // 1. Identify slot
-      if (sel.slotId) {
-        slot = drinkSlots.find((s) => s.id === sel.slotId);
-      } else if (sel.ingredientId) {
-        slot = drinkSlots.find((s) => s.ingredientId === sel.ingredientId);
-      } else if (sel.ingredientTypeId) {
-        slot = drinkSlots.find((s) => s.ingredientTypeId === sel.ingredientTypeId);
+      const unitPrice = calcData.totalPrice;
+      const lineTotal = unitPrice * item.quantity;
+      subtotal += lineTotal;
+      itemDetails.push({ 
+        drinkId: item.drinkId, 
+        drinkName: calcData.drink.name, 
+        quantity: item.quantity, 
+        unitPrice, 
+        lineTotal, 
+        specialNotes: item.specialNotes ?? null, 
+        customizations 
+      });
+    } catch (e: any) {
+      if (e.message === "Drink not found") {
+        res.status(400).json({ error: `Drink ${item.drinkId} not found` });
+        return;
       }
-      if (!slot) continue;
-
-      // 2. Process selection (Typed vs Legacy)
-      if (sel.typeVolumeId) {
-        const typeVol = typeVolumeMap.get(sel.typeVolumeId);
-        if (!typeVol) continue;
-
-        const sv = slotVolumeMap.get(`${slot.id}_${sel.typeVolumeId}`);
-        const cost = parseFloat(sv?.extraCost ?? typeVol.extraCost);
-        const processedQty = parseFloat(sv?.processedQty ?? typeVol.processedQty ?? "0");
-        const typeName = typeNameMap.get(typeVol.ingredientTypeId) ?? "";
-        const volumeName = volumeMap.get(typeVol.volumeId) ?? "";
-        const inventoryId = typeToInventoryMap.get(typeVol.ingredientTypeId);
-        const optionLabel = typeName && volumeName ? `${typeName} · ${volumeName}` : typeName || volumeName || "Catalog Item";
-
-        extraCost += cost;
-        customizations.push({
-          ingredientId: inventoryId ?? null,
-          optionId: null,
-          typeVolumeId: sel.typeVolumeId,
-          consumedQty: processedQty * item.quantity,
-          addedCost: cost,
-          slotLabel: slot.slotLabel,
-          optionLabel,
-        });
-        continue;
-      }
-
-      // Typed slot with NO volume (type-only selection e.g. Sugar, Flavour with no size options)
-      if (sel.ingredientTypeId) {
-        // Already fetched from ingredientTypes, use it directly
-        let ingType = ingredientTypes.find(it => it.id === sel.ingredientTypeId);
-        if (!ingType) {
-          // Fetch on demand if not already loaded (edge case)
-          const [fetched] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, sel.ingredientTypeId));
-          ingType = fetched;
-        }
-        if (ingType) {
-          const inventoryId = ingType.inventoryIngredientId ?? null;
-          customizations.push({
-            ingredientId: inventoryId,
-            optionId: null,
-            typeVolumeId: null,
-            consumedQty: 0,
-            addedCost: 0,
-            slotLabel: slot.slotLabel,
-            optionLabel: ingType.name,
-          });
-        }
-        continue;
-      }
-
-      // Legacy selection
-      if (sel.optionId) {
-        const option = optionMap.get(sel.optionId);
-        if (!option) continue;
-
-        if (option.linkedIngredientId && sel.subOptionId) {
-          const sub = optionMap.get(sel.subOptionId);
-          if (sub) {
-            const cost = parseFloat(sub.extraCost);
-            extraCost += cost;
-            customizations.push({
-              ingredientId: option.linkedIngredientId,
-              optionId: sel.subOptionId,
-              typeVolumeId: null,
-              consumedQty: parseFloat(sub.processedQty) * item.quantity,
-              addedCost: cost,
-              slotLabel: slot.slotLabel,
-              optionLabel: `${option.label} · ${sub.label}`,
-            });
-          }
-          continue;
-        }
-
-        const cost = parseFloat(option.extraCost);
-        extraCost += cost;
-        customizations.push({
-          ingredientId: sel.ingredientId ?? slot.ingredientId ?? null,
-          optionId: sel.optionId,
-          typeVolumeId: null,
-          consumedQty: parseFloat(option.processedQty) * item.quantity,
-          addedCost: cost,
-          slotLabel: slot.slotLabel,
-          optionLabel: option.label,
-        });
-      }
+      throw e;
     }
-
-    const unitPrice = parseFloat(drink.basePrice) + extraCost;
-    const lineTotal = unitPrice * item.quantity;
-    subtotal += lineTotal;
-    itemDetails.push({ drinkId: item.drinkId, drinkName: drink.name, quantity: item.quantity, unitPrice, lineTotal, specialNotes: item.specialNotes ?? null, customizations });
   }
 
   const discount = parsed.data.discount ?? 0;

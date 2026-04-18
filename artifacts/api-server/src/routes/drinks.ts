@@ -528,6 +528,8 @@ router.delete("/drinks/:id", async (req, res): Promise<void> => {
   res.sendStatus(204);
 });
 
+import { calculateDrinkData } from "../lib/price-calculator";
+
 router.post("/drinks/:id/price", async (req, res): Promise<void> => {
   const params = CalculateDrinkPriceParams.safeParse(req.params);
   if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
@@ -540,140 +542,31 @@ router.post("/drinks/:id/price", async (req, res): Promise<void> => {
   }
   const parsed = { data: { selections: rawBody.selections as any[] } };
 
-  const [drink] = await db.select().from(drinksTable).where(eq(drinksTable.id, params.data.id));
-  if (!drink) { res.status(404).json({ error: "Drink not found" }); return; }
+  try {
+    const data = await calculateDrinkData(params.data.id, parsed.data.selections);
+    
+    // Format extras for the response (without revealing backend schema complexities if not needed)
+    // The previous implementation mapped them out, we can return the Customizations
+    const extras = data.customizations.map(c => ({
+      ingredientId: c.ingredientId,
+      ingredientTypeId: c.ingredientTypeId,
+      slotLabel: c.slotLabel,
+      optionLabel: c.optionLabel,
+      extraCost: c.addedCost
+    }));
 
-  const slots = await db.select().from(drinkIngredientSlotsTable).where(eq(drinkIngredientSlotsTable.drinkId, params.data.id));
-
-  const extras = [];
-  let totalExtras = 0;
-  let usedVolumeMl = 0;
-  let dynamicInfo: { slotLabel: string; ingredientName: string; filledMl: number; cost: number } | null = null;
-
-  for (const selection of parsed.data.selections) {
-    const sel = selection as any;
-    let slot: (typeof slots)[0] | undefined;
-
-    // Identify slot: prefer explicit slotId, then ingredientTypeId, then ingredientId
-    if (sel.slotId) {
-      slot = slots.find((s) => s.id === sel.slotId);
-    } else if (sel.ingredientTypeId) {
-      slot = slots.find((s) => s.ingredientTypeId === sel.ingredientTypeId);
+    res.json({ 
+      basePrice: data.basePrice, 
+      extras, 
+      dynamicInfo: data.dynamicInfo, 
+      total: data.totalPrice 
+    });
+  } catch (error: any) {
+    if (error.message === "Drink not found") {
+      res.status(404).json({ error: error.message });
     } else {
-      slot = slots.find((s) => s.ingredientId === sel.ingredientId);
+      res.status(500).json({ error: error.message });
     }
-    if (!slot || slot.isDynamic) continue;
-
-    // New-style slot: typed selection (slotId + typeVolumeId)
-    if (sel.typeVolumeId) {
-      const [typeVol] = await db.select().from(ingredientTypeVolumesTable)
-        .where(eq(ingredientTypeVolumesTable.id, sel.typeVolumeId));
-      if (!typeVol) continue;
-
-      // Look up slot-level override keyed by (slotId, typeVolumeId)
-      const [slotVol] = await db.select().from(drinkSlotVolumesTable)
-        .where(and(
-          eq(drinkSlotVolumesTable.slotId, slot.id),
-          eq(drinkSlotVolumesTable.typeVolumeId, sel.typeVolumeId)
-        ));
-
-      const extraCost = parseFloat(slotVol?.extraCost ?? typeVol.extraCost);
-      totalExtras += extraCost;
-      const producedQty = parseFloat(slotVol?.producedQty ?? typeVol.producedQty ?? "0");
-      usedVolumeMl += producedQty;
-      extras.push({ ingredientTypeId: typeVol.ingredientTypeId, slotLabel: slot.slotLabel, optionLabel: "", extraCost });
-      continue;
-    }
-
-    // Old-style slot
-    const [option] = await db.select().from(ingredientOptionsTable).where(eq(ingredientOptionsTable.id, selection.optionId));
-    if (!option) continue;
-
-    if (option.linkedIngredientId && selection.subOptionId) {
-      const [subOption] = await db.select().from(ingredientOptionsTable).where(eq(ingredientOptionsTable.id, selection.subOptionId));
-      if (subOption) {
-        const extraCost = parseFloat(subOption.extraCost);
-        totalExtras += extraCost;
-        usedVolumeMl += parseFloat(subOption.producedQty);
-        extras.push({ ingredientId: option.linkedIngredientId, slotLabel: slot.slotLabel, optionLabel: `${option.label} · ${subOption.label}`, extraCost });
-      }
-      continue;
-    }
-
-    const extraCost = parseFloat(option.extraCost);
-    totalExtras += extraCost;
-    usedVolumeMl += parseFloat(option.producedQty);
-    extras.push({ ingredientId: selection.ingredientId, slotLabel: slot.slotLabel, optionLabel: option.label, extraCost });
-  }
-
-  // Dynamic slot (Legacy OR Catalog)
-  const dynamicSlot = slots.find((s) => s.isDynamic);
-  if (dynamicSlot && drink.cupSizeMl) {
-    const filledMl = Math.max(0, drink.cupSizeMl - usedVolumeMl);
-
-    // --- Case A: Catalog Dynamic Slot ---
-    if (dynamicSlot.ingredientTypeId || slots.some(s => s.id === dynamicSlot.id && s.ingredientTypeId)) {
-      const dynamicSelection = parsed.data.selections.find((s: any) => s.slotId === dynamicSlot.id);
-      let typeVolumeId = dynamicSelection?.typeVolumeId;
-
-      // If no explicit typeVolumeId selected, we need to find one to get the conversion rate
-      if (!typeVolumeId) {
-        const typeOptions = await db.select().from(drinkSlotTypeOptionsTable)
-          .where(eq(drinkSlotTypeOptionsTable.slotId, dynamicSlot.id));
-        const defType = typeOptions.find(to => to.isDefault) ?? typeOptions[0];
-        const effectiveTypeId = defType?.ingredientTypeId;
-
-        if (effectiveTypeId) {
-          const typeVolumes = await db.select().from(ingredientTypeVolumesTable)
-            .where(eq(ingredientTypeVolumesTable.ingredientTypeId, effectiveTypeId));
-          const defVol = typeVolumes.find(tv => tv.isDefault) ?? typeVolumes[0];
-          typeVolumeId = defVol?.id;
-        }
-      }
-
-      if (typeVolumeId) {
-        const [typeVolume] = await db.select().from(ingredientTypeVolumesTable).where(eq(ingredientTypeVolumesTable.id, typeVolumeId));
-        const [ingredientType] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, typeVolume.ingredientTypeId));
-
-        if (typeVolume && ingredientType?.inventoryIngredientId) {
-          const [ingredient] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, ingredientType.inventoryIngredientId));
-          if (ingredient) {
-            const processedQty = parseFloat(typeVolume.processedQty ?? "0");
-            const producedQty = parseFloat(typeVolume.producedQty ?? "0");
-            const conversionRate = producedQty > 0 ? processedQty / producedQty : 1;
-            const cost = filledMl * conversionRate * parseFloat(ingredient.costPerUnit);
-            totalExtras += cost;
-            dynamicInfo = { slotLabel: dynamicSlot.slotLabel, ingredientName: ingredientType.name, filledMl, cost };
-            extras.push({ ingredientTypeId: typeVolume.ingredientTypeId, slotLabel: dynamicSlot.slotLabel, optionLabel: `Dynamic (${Math.round(filledMl)}${typeVolume.unit ?? "ml"})`, extraCost: cost });
-          }
-        }
-      }
-    }
-    // --- Case B: Legacy Dynamic Slot ---
-    else if (dynamicSlot.ingredientId) {
-      const dynamicSelection = parsed.data.selections.find((s: any) => s.ingredientId === dynamicSlot.ingredientId);
-      const optionId = dynamicSelection?.optionId ?? dynamicSlot.defaultOptionId;
-      if (optionId) {
-        const [[option], [ingredient]] = await Promise.all([
-          db.select().from(ingredientOptionsTable).where(eq(ingredientOptionsTable.id, optionId)),
-          db.select().from(ingredientsTable).where(eq(ingredientsTable.id, dynamicSlot.ingredientId)),
-        ]);
-        if (option && ingredient) {
-          const processedQty = parseFloat(option.processedQty);
-          const producedQty = parseFloat(option.producedQty);
-          const conversionRate = producedQty > 0 ? processedQty / producedQty : 1;
-          const cost = filledMl * conversionRate * parseFloat(ingredient.costPerUnit);
-          totalExtras += cost;
-          dynamicInfo = { slotLabel: dynamicSlot.slotLabel, ingredientName: ingredient.name, filledMl, cost };
-          extras.push({ ingredientId: dynamicSlot.ingredientId, slotLabel: dynamicSlot.slotLabel, optionLabel: option.label, extraCost: cost });
-        }
-      }
-    }
-  }
-
-  const basePrice = parseFloat(drink.basePrice);
-  // Skip CalculateDrinkPriceResponse.parse() — it doesn't accept ingredientTypeId extras from catalog slots
-  res.json({ basePrice, extras, dynamicInfo, total: basePrice + totalExtras });
-});
+  }});
 
 export default router;

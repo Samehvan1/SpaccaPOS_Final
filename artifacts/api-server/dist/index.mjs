@@ -77148,6 +77148,195 @@ function serializeDates(obj) {
   return obj;
 }
 
+// src/lib/price-calculator.ts
+init_drizzle_orm();
+init_src();
+init_schema2();
+init_schema2();
+async function calculateDrinkData(drinkId, selections) {
+  const [drink] = await db.select().from(drinksTable).where(eq(drinksTable.id, drinkId));
+  if (!drink) throw new Error("Drink not found");
+  const slots = await db.select().from(drinkIngredientSlotsTable).where(eq(drinkIngredientSlotsTable.drinkId, drinkId));
+  const customizations = [];
+  let totalExtras = 0;
+  let usedVolumeMl = 0;
+  let dynamicInfo = null;
+  for (const selection of selections) {
+    const sel = selection;
+    let slot;
+    if (sel.slotId) {
+      slot = slots.find((s) => s.id === sel.slotId);
+    } else if (sel.ingredientTypeId) {
+      slot = slots.find((s) => s.ingredientTypeId === sel.ingredientTypeId);
+    } else {
+      slot = slots.find((s) => s.ingredientId === sel.ingredientId);
+    }
+    if (!slot || slot.isDynamic) continue;
+    if (sel.typeVolumeId) {
+      const [typeVol] = await db.select().from(ingredientTypeVolumesTable).where(eq(ingredientTypeVolumesTable.id, sel.typeVolumeId));
+      if (!typeVol) continue;
+      const [slotVol] = await db.select().from(drinkSlotVolumesTable).where(and(
+        eq(drinkSlotVolumesTable.slotId, slot.id),
+        eq(drinkSlotVolumesTable.typeVolumeId, sel.typeVolumeId)
+      ));
+      const [typeDef] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, typeVol.ingredientTypeId));
+      const inventoryId = typeDef?.inventoryIngredientId ?? null;
+      const extraCost2 = parseFloat(slotVol?.extraCost ?? typeVol.extraCost);
+      totalExtras += extraCost2;
+      const consumedQty = parseFloat(slotVol?.processedQty ?? typeVol.processedQty ?? "0");
+      const producedQty = parseFloat(slotVol?.producedQty ?? typeVol.producedQty ?? "0");
+      usedVolumeMl += producedQty;
+      customizations.push({
+        ingredientId: inventoryId,
+        optionId: null,
+        typeVolumeId: sel.typeVolumeId,
+        ingredientTypeId: typeVol.ingredientTypeId,
+        consumedQty,
+        addedCost: extraCost2,
+        slotLabel: slot.slotLabel,
+        optionLabel: ""
+        // Let the frontend formatting take precedence for standard items
+      });
+      continue;
+    }
+    if (sel.ingredientTypeId) {
+      const [ingType] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, sel.ingredientTypeId));
+      if (ingType) {
+        customizations.push({
+          ingredientId: ingType.inventoryIngredientId ?? null,
+          optionId: null,
+          typeVolumeId: null,
+          ingredientTypeId: sel.ingredientTypeId,
+          consumedQty: 0,
+          addedCost: 0,
+          slotLabel: slot.slotLabel,
+          optionLabel: ingType.name
+        });
+      }
+      continue;
+    }
+    if (!selection.optionId) continue;
+    const [option] = await db.select().from(ingredientOptionsTable).where(eq(ingredientOptionsTable.id, selection.optionId));
+    if (!option) continue;
+    if (option.linkedIngredientId && selection.subOptionId) {
+      const [subOption] = await db.select().from(ingredientOptionsTable).where(eq(ingredientOptionsTable.id, selection.subOptionId));
+      if (subOption) {
+        const extraCost2 = parseFloat(subOption.extraCost);
+        totalExtras += extraCost2;
+        usedVolumeMl += parseFloat(subOption.producedQty);
+        customizations.push({
+          ingredientId: option.linkedIngredientId,
+          optionId: selection.subOptionId,
+          typeVolumeId: null,
+          ingredientTypeId: null,
+          consumedQty: parseFloat(subOption.processedQty),
+          addedCost: extraCost2,
+          slotLabel: slot.slotLabel,
+          optionLabel: `${option.label} \xB7 ${subOption.label}`
+        });
+      }
+      continue;
+    }
+    const extraCost = parseFloat(option.extraCost);
+    totalExtras += extraCost;
+    usedVolumeMl += parseFloat(option.producedQty);
+    customizations.push({
+      ingredientId: selection.ingredientId ?? slot.ingredientId ?? null,
+      optionId: selection.optionId,
+      typeVolumeId: null,
+      ingredientTypeId: null,
+      consumedQty: parseFloat(option.processedQty),
+      addedCost: extraCost,
+      slotLabel: slot.slotLabel,
+      optionLabel: option.label
+    });
+  }
+  const dynamicSlot = slots.find((s) => s.isDynamic);
+  if (dynamicSlot && drink.cupSizeMl) {
+    const filledMl = Math.max(0, drink.cupSizeMl - usedVolumeMl);
+    if (dynamicSlot.ingredientTypeId || slots.some((s) => s.id === dynamicSlot.id && s.ingredientTypeId)) {
+      const dynamicSelection = selections.find((s) => s.slotId === dynamicSlot.id);
+      let typeVolumeId = dynamicSelection?.typeVolumeId;
+      if (!typeVolumeId) {
+        const typeOptions = await db.select().from(drinkSlotTypeOptionsTable).where(eq(drinkSlotTypeOptionsTable.slotId, dynamicSlot.id));
+        const defType = typeOptions.find((to) => to.isDefault) ?? typeOptions[0];
+        const effectiveTypeId = defType?.ingredientTypeId;
+        if (effectiveTypeId) {
+          const typeVolumes = await db.select().from(ingredientTypeVolumesTable).where(eq(ingredientTypeVolumesTable.ingredientTypeId, effectiveTypeId));
+          const defVol = typeVolumes.find((tv) => tv.isDefault) ?? typeVolumes[0];
+          typeVolumeId = defVol?.id;
+        }
+      }
+      if (typeVolumeId) {
+        const [typeVolume] = await db.select().from(ingredientTypeVolumesTable).where(eq(ingredientTypeVolumesTable.id, typeVolumeId));
+        if (typeVolume) {
+          const [ingredientType] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, typeVolume.ingredientTypeId));
+          if (ingredientType?.inventoryIngredientId) {
+            const [ingredient] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, ingredientType.inventoryIngredientId));
+            if (ingredient) {
+              const processedQty = parseFloat(typeVolume.processedQty ?? "0");
+              const producedQty = parseFloat(typeVolume.producedQty ?? "0");
+              const conversionRate = producedQty > 0 ? processedQty / producedQty : 1;
+              const consumedQty = filledMl * conversionRate;
+              const cost = consumedQty * parseFloat(ingredient.costPerUnit);
+              totalExtras += cost;
+              dynamicInfo = { slotLabel: dynamicSlot.slotLabel, ingredientName: ingredientType.name, filledMl, cost };
+              customizations.push({
+                ingredientId: ingredientType.inventoryIngredientId,
+                optionId: null,
+                typeVolumeId: typeVolume.id,
+                ingredientTypeId: typeVolume.ingredientTypeId,
+                consumedQty,
+                addedCost: cost,
+                slotLabel: dynamicSlot.slotLabel,
+                optionLabel: `Dynamic (${Math.round(filledMl)}${typeVolume.unit ?? "ml"})`
+              });
+            }
+          }
+        }
+      }
+    } else if (dynamicSlot.ingredientId) {
+      const dynamicSelection = selections.find((s) => s.ingredientId === dynamicSlot.ingredientId);
+      const optionId = dynamicSelection?.optionId ?? dynamicSlot.defaultOptionId;
+      if (optionId) {
+        const [[option], [ingredient]] = await Promise.all([
+          db.select().from(ingredientOptionsTable).where(eq(ingredientOptionsTable.id, optionId)),
+          db.select().from(ingredientsTable).where(eq(ingredientsTable.id, dynamicSlot.ingredientId))
+        ]);
+        if (option && ingredient) {
+          const processedQty = parseFloat(option.processedQty);
+          const producedQty = parseFloat(option.producedQty);
+          const conversionRate = producedQty > 0 ? processedQty / producedQty : 1;
+          const consumedQty = filledMl * conversionRate;
+          const cost = consumedQty * parseFloat(ingredient.costPerUnit);
+          totalExtras += cost;
+          dynamicInfo = { slotLabel: dynamicSlot.slotLabel, ingredientName: ingredient.name, filledMl, cost };
+          customizations.push({
+            ingredientId: dynamicSlot.ingredientId,
+            optionId,
+            typeVolumeId: null,
+            ingredientTypeId: null,
+            consumedQty,
+            addedCost: cost,
+            slotLabel: dynamicSlot.slotLabel,
+            optionLabel: `Dynamic (${Math.round(filledMl)}ml)`
+          });
+        }
+      }
+    }
+  }
+  const basePrice = parseFloat(drink.basePrice);
+  return {
+    drink,
+    basePrice,
+    totalExtras,
+    totalPrice: basePrice + totalExtras,
+    usedVolumeMl,
+    customizations,
+    dynamicInfo
+  };
+}
+
 // src/routes/drinks.ts
 var uploadsDir = path.join(process.cwd(), "uploads");
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
@@ -77558,112 +77747,28 @@ router3.post("/drinks/:id/price", async (req, res) => {
     return;
   }
   const parsed = { data: { selections: rawBody.selections } };
-  const [drink] = await db.select().from(drinksTable).where(eq(drinksTable.id, params.data.id));
-  if (!drink) {
-    res.status(404).json({ error: "Drink not found" });
-    return;
-  }
-  const slots = await db.select().from(drinkIngredientSlotsTable).where(eq(drinkIngredientSlotsTable.drinkId, params.data.id));
-  const extras = [];
-  let totalExtras = 0;
-  let usedVolumeMl = 0;
-  let dynamicInfo = null;
-  for (const selection of parsed.data.selections) {
-    const sel = selection;
-    let slot;
-    if (sel.slotId) {
-      slot = slots.find((s) => s.id === sel.slotId);
-    } else if (sel.ingredientTypeId) {
-      slot = slots.find((s) => s.ingredientTypeId === sel.ingredientTypeId);
+  try {
+    const data = await calculateDrinkData(params.data.id, parsed.data.selections);
+    const extras = data.customizations.map((c) => ({
+      ingredientId: c.ingredientId,
+      ingredientTypeId: c.ingredientTypeId,
+      slotLabel: c.slotLabel,
+      optionLabel: c.optionLabel,
+      extraCost: c.addedCost
+    }));
+    res.json({
+      basePrice: data.basePrice,
+      extras,
+      dynamicInfo: data.dynamicInfo,
+      total: data.totalPrice
+    });
+  } catch (error40) {
+    if (error40.message === "Drink not found") {
+      res.status(404).json({ error: error40.message });
     } else {
-      slot = slots.find((s) => s.ingredientId === sel.ingredientId);
-    }
-    if (!slot || slot.isDynamic) continue;
-    if (sel.typeVolumeId) {
-      const [typeVol] = await db.select().from(ingredientTypeVolumesTable).where(eq(ingredientTypeVolumesTable.id, sel.typeVolumeId));
-      if (!typeVol) continue;
-      const [slotVol] = await db.select().from(drinkSlotVolumesTable).where(and(
-        eq(drinkSlotVolumesTable.slotId, slot.id),
-        eq(drinkSlotVolumesTable.typeVolumeId, sel.typeVolumeId)
-      ));
-      const extraCost2 = parseFloat(slotVol?.extraCost ?? typeVol.extraCost);
-      totalExtras += extraCost2;
-      const producedQty = parseFloat(slotVol?.producedQty ?? typeVol.producedQty ?? "0");
-      usedVolumeMl += producedQty;
-      extras.push({ ingredientTypeId: typeVol.ingredientTypeId, slotLabel: slot.slotLabel, optionLabel: "", extraCost: extraCost2 });
-      continue;
-    }
-    const [option] = await db.select().from(ingredientOptionsTable).where(eq(ingredientOptionsTable.id, selection.optionId));
-    if (!option) continue;
-    if (option.linkedIngredientId && selection.subOptionId) {
-      const [subOption] = await db.select().from(ingredientOptionsTable).where(eq(ingredientOptionsTable.id, selection.subOptionId));
-      if (subOption) {
-        const extraCost2 = parseFloat(subOption.extraCost);
-        totalExtras += extraCost2;
-        usedVolumeMl += parseFloat(subOption.producedQty);
-        extras.push({ ingredientId: option.linkedIngredientId, slotLabel: slot.slotLabel, optionLabel: `${option.label} \xB7 ${subOption.label}`, extraCost: extraCost2 });
-      }
-      continue;
-    }
-    const extraCost = parseFloat(option.extraCost);
-    totalExtras += extraCost;
-    usedVolumeMl += parseFloat(option.producedQty);
-    extras.push({ ingredientId: selection.ingredientId, slotLabel: slot.slotLabel, optionLabel: option.label, extraCost });
-  }
-  const dynamicSlot = slots.find((s) => s.isDynamic);
-  if (dynamicSlot && drink.cupSizeMl) {
-    const filledMl = Math.max(0, drink.cupSizeMl - usedVolumeMl);
-    if (dynamicSlot.ingredientTypeId || slots.some((s) => s.id === dynamicSlot.id && s.ingredientTypeId)) {
-      const dynamicSelection = parsed.data.selections.find((s) => s.slotId === dynamicSlot.id);
-      let typeVolumeId = dynamicSelection?.typeVolumeId;
-      if (!typeVolumeId) {
-        const typeOptions = await db.select().from(drinkSlotTypeOptionsTable).where(eq(drinkSlotTypeOptionsTable.slotId, dynamicSlot.id));
-        const defType = typeOptions.find((to) => to.isDefault) ?? typeOptions[0];
-        const effectiveTypeId = defType?.ingredientTypeId;
-        if (effectiveTypeId) {
-          const typeVolumes = await db.select().from(ingredientTypeVolumesTable).where(eq(ingredientTypeVolumesTable.ingredientTypeId, effectiveTypeId));
-          const defVol = typeVolumes.find((tv) => tv.isDefault) ?? typeVolumes[0];
-          typeVolumeId = defVol?.id;
-        }
-      }
-      if (typeVolumeId) {
-        const [typeVolume] = await db.select().from(ingredientTypeVolumesTable).where(eq(ingredientTypeVolumesTable.id, typeVolumeId));
-        const [ingredientType] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, typeVolume.ingredientTypeId));
-        if (typeVolume && ingredientType?.inventoryIngredientId) {
-          const [ingredient] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, ingredientType.inventoryIngredientId));
-          if (ingredient) {
-            const processedQty = parseFloat(typeVolume.processedQty ?? "0");
-            const producedQty = parseFloat(typeVolume.producedQty ?? "0");
-            const conversionRate = producedQty > 0 ? processedQty / producedQty : 1;
-            const cost = filledMl * conversionRate * parseFloat(ingredient.costPerUnit);
-            totalExtras += cost;
-            dynamicInfo = { slotLabel: dynamicSlot.slotLabel, ingredientName: ingredientType.name, filledMl, cost };
-            extras.push({ ingredientTypeId: typeVolume.ingredientTypeId, slotLabel: dynamicSlot.slotLabel, optionLabel: `Dynamic (${Math.round(filledMl)}${typeVolume.unit ?? "ml"})`, extraCost: cost });
-          }
-        }
-      }
-    } else if (dynamicSlot.ingredientId) {
-      const dynamicSelection = parsed.data.selections.find((s) => s.ingredientId === dynamicSlot.ingredientId);
-      const optionId = dynamicSelection?.optionId ?? dynamicSlot.defaultOptionId;
-      if (optionId) {
-        const [[option], [ingredient]] = await Promise.all([
-          db.select().from(ingredientOptionsTable).where(eq(ingredientOptionsTable.id, optionId)),
-          db.select().from(ingredientsTable).where(eq(ingredientsTable.id, dynamicSlot.ingredientId))
-        ]);
-        if (option && ingredient) {
-          const processedQty = parseFloat(option.processedQty);
-          const producedQty = parseFloat(option.producedQty);
-          const conversionRate = producedQty > 0 ? processedQty / producedQty : 1;
-          const cost = filledMl * conversionRate * parseFloat(ingredient.costPerUnit);
-          totalExtras += cost;
-          dynamicInfo = { slotLabel: dynamicSlot.slotLabel, ingredientName: ingredient.name, filledMl, cost };
-          extras.push({ ingredientId: dynamicSlot.ingredientId, slotLabel: dynamicSlot.slotLabel, optionLabel: option.label, extraCost: cost });
-        }
-      }
+      res.status(500).json({ error: error40.message });
     }
   }
-  const basePrice = parseFloat(drink.basePrice);
-  res.json({ basePrice, extras, dynamicInfo, total: basePrice + totalExtras });
 });
 var drinks_default = router3;
 
@@ -78031,137 +78136,39 @@ router5.post("/orders", async (req, res) => {
       )
     )
   ];
-  const allTypeVolumeIds = [
-    ...new Set(orderItems.flatMap((i) => i.selections.map((s) => s.typeVolumeId).filter(Boolean)))
-  ];
-  const [drinks, slots, options, typeVolumes, volumes] = await Promise.all([
-    db.select().from(drinksTable).where(inArray(drinksTable.id, drinkIds)),
-    db.select().from(drinkIngredientSlotsTable).where(inArray(drinkIngredientSlotsTable.drinkId, drinkIds)),
-    allOptionIds.length > 0 ? db.select().from(ingredientOptionsTable).where(inArray(ingredientOptionsTable.id, allOptionIds)) : Promise.resolve([]),
-    allTypeVolumeIds.length > 0 ? db.select().from(ingredientTypeVolumesTable).where(inArray(ingredientTypeVolumesTable.id, allTypeVolumeIds)) : Promise.resolve([]),
-    db.select().from(ingredientVolumesTable)
-  ]);
-  const slotIds = slots.map((s) => s.id);
-  const slotVolumes = slotIds.length > 0 ? await db.select().from(drinkSlotVolumesTable).where(inArray(drinkSlotVolumesTable.slotId, slotIds)) : [];
-  const drinkMap = new Map(drinks.map((d) => [d.id, d]));
-  const slotsByDrink = /* @__PURE__ */ new Map();
-  for (const s of slots) {
-    const list = slotsByDrink.get(s.drinkId) ?? [];
-    list.push(s);
-    slotsByDrink.set(s.drinkId, list);
-  }
-  const optionMap = new Map(options.map((o) => [o.id, o]));
-  const typeVolumeMap = new Map(typeVolumes.map((tv) => [tv.id, tv]));
-  const slotVolumeMap = /* @__PURE__ */ new Map();
-  for (const sv of slotVolumes) {
-    slotVolumeMap.set(`${sv.slotId}_${sv.typeVolumeId}`, sv);
-  }
-  const allTypeIds = [...new Set(typeVolumes.map((tv) => tv.ingredientTypeId))];
-  const ingredientTypes = allTypeIds.length > 0 ? await db.select().from(ingredientTypesTable).where(inArray(ingredientTypesTable.id, allTypeIds)) : [];
-  const typeToInventoryMap = new Map(ingredientTypes.map((it) => [it.id, it.inventoryIngredientId]));
-  const typeNameMap = new Map(ingredientTypes.map((it) => [it.id, it.name]));
-  const volumeMap = new Map(volumes.map((v) => [v.id, v.name]));
   let subtotal = 0;
   const itemDetails = [];
   for (const item of orderItems) {
-    const drink = drinkMap.get(item.drinkId);
-    if (!drink) {
-      res.status(400).json({ error: `Drink ${item.drinkId} not found` });
-      return;
+    try {
+      const calcData = await calculateDrinkData(item.drinkId, item.selections);
+      const customizations = calcData.customizations.map((c) => ({
+        ingredientId: c.ingredientId,
+        optionId: c.optionId,
+        typeVolumeId: c.typeVolumeId,
+        consumedQty: c.consumedQty * item.quantity,
+        addedCost: c.addedCost,
+        slotLabel: c.slotLabel,
+        optionLabel: c.optionLabel
+      }));
+      const unitPrice = calcData.totalPrice;
+      const lineTotal = unitPrice * item.quantity;
+      subtotal += lineTotal;
+      itemDetails.push({
+        drinkId: item.drinkId,
+        drinkName: calcData.drink.name,
+        quantity: item.quantity,
+        unitPrice,
+        lineTotal,
+        specialNotes: item.specialNotes ?? null,
+        customizations
+      });
+    } catch (e) {
+      if (e.message === "Drink not found") {
+        res.status(400).json({ error: `Drink ${item.drinkId} not found` });
+        return;
+      }
+      throw e;
     }
-    const drinkSlots = slotsByDrink.get(item.drinkId) ?? [];
-    let extraCost = 0;
-    const customizations = [];
-    for (const selection of item.selections) {
-      const sel = selection;
-      let slot;
-      if (sel.slotId) {
-        slot = drinkSlots.find((s) => s.id === sel.slotId);
-      } else if (sel.ingredientId) {
-        slot = drinkSlots.find((s) => s.ingredientId === sel.ingredientId);
-      } else if (sel.ingredientTypeId) {
-        slot = drinkSlots.find((s) => s.ingredientTypeId === sel.ingredientTypeId);
-      }
-      if (!slot) continue;
-      if (sel.typeVolumeId) {
-        const typeVol = typeVolumeMap.get(sel.typeVolumeId);
-        if (!typeVol) continue;
-        const sv = slotVolumeMap.get(`${slot.id}_${sel.typeVolumeId}`);
-        const cost = parseFloat(sv?.extraCost ?? typeVol.extraCost);
-        const processedQty = parseFloat(sv?.processedQty ?? typeVol.processedQty ?? "0");
-        const typeName = typeNameMap.get(typeVol.ingredientTypeId) ?? "";
-        const volumeName = volumeMap.get(typeVol.volumeId) ?? "";
-        const inventoryId = typeToInventoryMap.get(typeVol.ingredientTypeId);
-        const optionLabel = typeName && volumeName ? `${typeName} \xB7 ${volumeName}` : typeName || volumeName || "Catalog Item";
-        extraCost += cost;
-        customizations.push({
-          ingredientId: inventoryId ?? null,
-          optionId: null,
-          typeVolumeId: sel.typeVolumeId,
-          consumedQty: processedQty * item.quantity,
-          addedCost: cost,
-          slotLabel: slot.slotLabel,
-          optionLabel
-        });
-        continue;
-      }
-      if (sel.ingredientTypeId) {
-        let ingType = ingredientTypes.find((it) => it.id === sel.ingredientTypeId);
-        if (!ingType) {
-          const [fetched] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, sel.ingredientTypeId));
-          ingType = fetched;
-        }
-        if (ingType) {
-          const inventoryId = ingType.inventoryIngredientId ?? null;
-          customizations.push({
-            ingredientId: inventoryId,
-            optionId: null,
-            typeVolumeId: null,
-            consumedQty: 0,
-            addedCost: 0,
-            slotLabel: slot.slotLabel,
-            optionLabel: ingType.name
-          });
-        }
-        continue;
-      }
-      if (sel.optionId) {
-        const option = optionMap.get(sel.optionId);
-        if (!option) continue;
-        if (option.linkedIngredientId && sel.subOptionId) {
-          const sub = optionMap.get(sel.subOptionId);
-          if (sub) {
-            const cost2 = parseFloat(sub.extraCost);
-            extraCost += cost2;
-            customizations.push({
-              ingredientId: option.linkedIngredientId,
-              optionId: sel.subOptionId,
-              typeVolumeId: null,
-              consumedQty: parseFloat(sub.processedQty) * item.quantity,
-              addedCost: cost2,
-              slotLabel: slot.slotLabel,
-              optionLabel: `${option.label} \xB7 ${sub.label}`
-            });
-          }
-          continue;
-        }
-        const cost = parseFloat(option.extraCost);
-        extraCost += cost;
-        customizations.push({
-          ingredientId: sel.ingredientId ?? slot.ingredientId ?? null,
-          optionId: sel.optionId,
-          typeVolumeId: null,
-          consumedQty: parseFloat(option.processedQty) * item.quantity,
-          addedCost: cost,
-          slotLabel: slot.slotLabel,
-          optionLabel: option.label
-        });
-      }
-    }
-    const unitPrice = parseFloat(drink.basePrice) + extraCost;
-    const lineTotal = unitPrice * item.quantity;
-    subtotal += lineTotal;
-    itemDetails.push({ drinkId: item.drinkId, drinkName: drink.name, quantity: item.quantity, unitPrice, lineTotal, specialNotes: item.specialNotes ?? null, customizations });
   }
   const discount = parsed.data.discount ?? 0;
   const total = subtotal - discount;
