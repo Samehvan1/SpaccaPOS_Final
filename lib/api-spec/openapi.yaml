@@ -1071,6 +1071,8 @@ components:
           type: string
         optionLabel:
           type: string
+        baristaSortOrder:
+          type: ["integer", "null"]
       required:
         - id
         - orderItemId
