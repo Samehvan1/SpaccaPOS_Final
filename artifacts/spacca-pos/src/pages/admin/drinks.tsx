@@ -119,7 +119,10 @@ export default function DrinksAdmin() {
         toast({ title: "Drink deleted" });
         refetch();
       },
-      onError: () => toast({ variant: "destructive", title: "Failed to delete drink" })
+      onError: (err: any) => {
+        const msg = err.data?.error || "Failed to delete drink";
+        toast({ variant: "destructive", title: "Deletion Failed", description: msg });
+      }
     }
   });
 

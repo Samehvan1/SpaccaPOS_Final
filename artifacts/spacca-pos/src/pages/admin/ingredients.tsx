@@ -32,6 +32,7 @@ type IngType = {
   id: number; categoryId: number; name: string; inventoryIngredientId: number | null;
   processedQty: string; producedQty: string; unit: string;
   isActive: boolean; sortOrder: number; category?: Category | null; inventoryIngredient?: { id: number; name: string; unit: string } | null;
+  drinkCount?: number;
 };
 type Volume = { id: number; name: string; processedQty: string; producedQty: string; unit: string; sortOrder: number };
 type TypeVolume = {
@@ -229,8 +230,14 @@ function TypesTab({ inventoryItems }: { inventoryItems: Ingredient[] }) {
 
   const handleDelete = async (id: number) => {
     if (!confirm("Delete this ingredient type?")) return;
-    try { await api(`/api/catalog/types/${id}`, { method: "DELETE" }); load(); toast({ title: "Type deleted" }); }
-    catch { toast({ variant: "destructive", title: "Failed to delete" }); }
+    try { 
+      await api(`/api/catalog/types/${id}`, { method: "DELETE" }); 
+      load(); 
+      toast({ title: "Type deleted" }); 
+    } catch (err: any) { 
+      const msg = err.data?.error || "Failed to delete";
+      toast({ variant: "destructive", title: "Deletion Failed", description: msg }); 
+    }
   };
 
   const openVolumes = async (t: IngType) => {
@@ -316,15 +323,16 @@ function TypesTab({ inventoryItems }: { inventoryItems: Ingredient[] }) {
               <TableHead>Name</TableHead>
               <TableHead>Category</TableHead>
               <TableHead>Inventory Item</TableHead>
+              <TableHead className="text-center">Drinks</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right w-32">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
-              <TableRow><TableCell colSpan={5} className="text-center py-8">Loading…</TableCell></TableRow>
+              <TableRow><TableCell colSpan={6} className="text-center py-8">Loading…</TableCell></TableRow>
             ) : filteredTypes.length === 0 ? (
-              <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No types found.</TableCell></TableRow>
+              <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">No types found.</TableCell></TableRow>
             ) : filteredTypes.map(t => (
               <TableRow key={t.id}>
                 <TableCell className="font-medium">{t.name}</TableCell>
@@ -335,6 +343,9 @@ function TypesTab({ inventoryItems }: { inventoryItems: Ingredient[] }) {
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground">
                   {t.inventoryIngredient ? t.inventoryIngredient.name : "—"}
+                </TableCell>
+                <TableCell className="text-center font-medium">
+                  <Badge variant="secondary" className="px-2">{t.drinkCount ?? 0}</Badge>
                 </TableCell>
                 <TableCell>
                   <Badge variant={t.isActive ? "default" : "secondary"}>{t.isActive ? "Active" : "Inactive"}</Badge>
@@ -539,8 +550,14 @@ function VolumesTab() {
 
   const handleDelete = async (id: number) => {
     if (!confirm("Delete this volume? It will be removed from all types.")) return;
-    try { await api(`/api/catalog/volumes/${id}`, { method: "DELETE" }); load(); toast({ title: "Volume deleted" }); }
-    catch { toast({ variant: "destructive", title: "Failed to delete" }); }
+    try { 
+      await api(`/api/catalog/volumes/${id}`, { method: "DELETE" }); 
+      load(); 
+      toast({ title: "Volume deleted" }); 
+    } catch (err: any) { 
+      const msg = err.data?.error || "Failed to delete";
+      toast({ variant: "destructive", title: "Deletion Failed", description: msg }); 
+    }
   };
 
   const filteredVolumes = volumes.filter(v => 

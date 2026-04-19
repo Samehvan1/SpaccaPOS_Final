@@ -523,9 +523,22 @@ router.put("/drinks/:id/slots", async (req, res): Promise<void> => {
 router.delete("/drinks/:id", async (req, res): Promise<void> => {
   const params = DeleteDrinkParams.safeParse(req.params);
   if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
-  const [drink] = await db.delete(drinksTable).where(eq(drinksTable.id, params.data.id)).returning();
-  if (!drink) { res.status(404).json({ error: "Drink not found" }); return; }
-  res.sendStatus(204);
+  
+  try {
+    const [drink] = await db.delete(drinksTable).where(eq(drinksTable.id, params.data.id)).returning();
+    if (!drink) { res.status(404).json({ error: "Drink not found" }); return; }
+    res.sendStatus(204);
+  } catch (error: any) {
+    // Handling foreign key constraint (Postgres error 23503)
+    if (error.message?.includes("foreign key constraint") || error.code === "23503") {
+      res.status(400).json({ 
+        error: "Cannot delete drink with order history. Please deactivate it instead to hide it from the menu." 
+      });
+    } else {
+      console.error("Delete Error:", error);
+      res.status(500).json({ error: "Failed to delete drink" });
+    }
+  }
 });
 
 import { calculateDrinkData } from "../lib/price-calculator";

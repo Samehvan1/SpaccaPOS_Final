@@ -10,6 +10,8 @@ import {
   ingredientVolumesTable,
   ingredientTypeVolumesTable,
   ingredientsTable,
+  drinkIngredientSlotsTable,
+  drinkSlotTypeOptionsTable,
 } from "@workspace/db";
 
 const router: IRouter = Router();
@@ -38,22 +40,44 @@ router.patch("/catalog/categories/:id", async (req, res): Promise<void> => {
 
 router.delete("/catalog/categories/:id", async (req, res): Promise<void> => {
   const id = parseInt(req.params.id);
-  await db.delete(ingredientCategoriesTable).where(eq(ingredientCategoriesTable.id, id));
-  res.sendStatus(204);
+  try {
+    await db.delete(ingredientCategoriesTable).where(eq(ingredientCategoriesTable.id, id));
+    res.sendStatus(204);
+  } catch (error: any) {
+    if (error.code === "23503") {
+      res.status(400).json({ error: "Cannot delete category while it contains ingredient types. Please remove the types first." });
+    } else {
+      res.status(500).json({ error: "Failed to delete category" });
+    }
+  }
 });
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
 router.get("/catalog/types", async (_req, res): Promise<void> => {
   const types = await db.select().from(ingredientTypesTable).orderBy(asc(ingredientTypesTable.categoryId), asc(ingredientTypesTable.sortOrder));
-  const [categories, inventoryItems] = await Promise.all([
+  const [categories, inventoryItems, slotLinks, optionLinks] = await Promise.all([
     db.select().from(ingredientCategoriesTable),
     db.select({ id: ingredientsTable.id, name: ingredientsTable.name, unit: ingredientsTable.unit }).from(ingredientsTable),
+    db.select({ drinkId: drinkIngredientSlotsTable.drinkId, typeId: drinkIngredientSlotsTable.ingredientTypeId }).from(drinkIngredientSlotsTable),
+    db.select({ drinkId: drinkIngredientSlotsTable.drinkId, typeId: drinkSlotTypeOptionsTable.ingredientTypeId })
+      .from(drinkSlotTypeOptionsTable)
+      .innerJoin(drinkIngredientSlotsTable, eq(drinkSlotTypeOptionsTable.slotId, drinkIngredientSlotsTable.id)),
   ]);
+
+  const typeDrinkMap = new Map<number, Set<number>>();
+  [...slotLinks, ...optionLinks].forEach(link => {
+    if (link.typeId) {
+      if (!typeDrinkMap.has(link.typeId)) typeDrinkMap.set(link.typeId, new Set());
+      typeDrinkMap.get(link.typeId)!.add(link.drinkId);
+    }
+  });
+
   const catMap = new Map(categories.map((c) => [c.id, c]));
   const invMap = new Map(inventoryItems.map((i) => [i.id, i]));
   res.json(types.map((t) => ({
     ...t,
+    drinkCount: typeDrinkMap.get(t.id)?.size ?? 0,
     category: catMap.get(t.categoryId) ?? null,
     inventoryIngredient: t.inventoryIngredientId ? invMap.get(t.inventoryIngredientId) ?? null : null,
   })));
@@ -121,8 +145,17 @@ router.patch("/catalog/types/:id", async (req, res): Promise<void> => {
 });
 
 router.delete("/catalog/types/:id", async (req, res): Promise<void> => {
-  await db.delete(ingredientTypesTable).where(eq(ingredientTypesTable.id, parseInt(req.params.id)));
-  res.sendStatus(204);
+  const id = parseInt(req.params.id);
+  try {
+    await db.delete(ingredientTypesTable).where(eq(ingredientTypesTable.id, id));
+    res.sendStatus(204);
+  } catch (error: any) {
+    if (error.code === "23503") {
+      res.status(400).json({ error: "Cannot delete ingredient type while it is used in drink recipes or has associated volume definitions." });
+    } else {
+      res.status(500).json({ error: "Failed to delete ingredient type" });
+    }
+  }
 });
 
 // ── Type Volumes (volumes attached to a type) ─────────────────────────────
@@ -208,8 +241,17 @@ router.patch("/catalog/volumes/:id", async (req, res): Promise<void> => {
 });
 
 router.delete("/catalog/volumes/:id", async (req, res): Promise<void> => {
-  await db.delete(ingredientVolumesTable).where(eq(ingredientVolumesTable.id, parseInt(req.params.id)));
-  res.sendStatus(204);
+  const id = parseInt(req.params.id);
+  try {
+    await db.delete(ingredientVolumesTable).where(eq(ingredientVolumesTable.id, id));
+    res.sendStatus(204);
+  } catch (error: any) {
+    if (error.code === "23503") {
+      res.status(400).json({ error: "Cannot delete volume while it is linked to ingredient types. Please remove it from those types first." });
+    } else {
+      res.status(500).json({ error: "Failed to delete volume" });
+    }
+  }
 });
 
 export default router;

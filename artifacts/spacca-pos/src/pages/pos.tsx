@@ -239,7 +239,7 @@ export default function PosTerminal() {
     if (activeDrink && currentSelectionsArray.length > 0) {
       calcRef.current(
         { id: activeDrink.id, data: { selections: currentSelectionsArray } },
-        { onError: () => {} }
+        { onError: () => { } }
       );
     }
   }, [activeDrink, currentSelectionsArray]);
@@ -443,11 +443,10 @@ export default function PosTerminal() {
         <div className="flex gap-2 px-4 py-2 bg-muted/40 border-b overflow-x-auto no-scrollbar shrink-0">
           <button
             onClick={() => handleSubcategoryChange(null)}
-            className={`px-3 py-1 rounded-full text-sm font-medium whitespace-nowrap transition-colors border ${
-              selectedSubcategory === null
+            className={`px-3 py-1 rounded-full text-sm font-medium whitespace-nowrap transition-colors border ${selectedSubcategory === null
                 ? "bg-foreground text-background border-foreground"
                 : "bg-background text-muted-foreground border-border hover:border-foreground/40"
-            }`}
+              }`}
           >
             All
           </button>
@@ -455,11 +454,10 @@ export default function PosTerminal() {
             <button
               key={sub}
               onClick={() => handleSubcategoryChange(selectedSubcategory === sub ? null : sub)}
-              className={`px-3 py-1 rounded-full text-sm font-medium whitespace-nowrap transition-colors border ${
-                selectedSubcategory === sub
+              className={`px-3 py-1 rounded-full text-sm font-medium whitespace-nowrap transition-colors border ${selectedSubcategory === sub
                   ? "bg-foreground text-background border-foreground"
                   : "bg-background text-muted-foreground border-border hover:border-foreground/40"
-              }`}
+                }`}
             >
               {sub}
             </button>
@@ -506,16 +504,14 @@ export default function PosTerminal() {
       <>
         {/* Backdrop */}
         <div
-          className={`fixed inset-0 bg-black/40 z-40 transition-opacity duration-300 ${
-            isCartOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
-          }`}
+          className={`fixed inset-0 bg-black/40 z-40 transition-opacity duration-300 ${isCartOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+            }`}
           onClick={() => setIsCartOpen(false)}
         />
         {/* Cart panel */}
         <div
-          className={`fixed top-0 right-0 h-full w-[340px] max-w-[90vw] bg-card shadow-2xl z-50 flex flex-col transition-transform duration-300 ease-in-out ${
-            isCartOpen ? "translate-x-0" : "translate-x-full"
-          }`}
+          className={`fixed top-0 right-0 h-full w-[340px] max-w-[90vw] bg-card shadow-2xl z-50 flex flex-col transition-transform duration-300 ease-in-out ${isCartOpen ? "translate-x-0" : "translate-x-full"
+            }`}
         >
           <div className="flex items-center justify-between px-4 py-4 border-b bg-muted/30 shrink-0">
             <h2 className="text-lg font-bold flex items-center gap-2">
@@ -646,11 +642,10 @@ export default function PosTerminal() {
                                     return next;
                                   });
                                 }}
-                                className={`px-3 py-2 rounded-lg border text-left transition-all text-sm ${
-                                  selectedTypeId === typeOpt.ingredientTypeId
+                                className={`px-3 py-2 rounded-lg border text-left transition-all text-sm ${selectedTypeId === typeOpt.ingredientTypeId
                                     ? "bg-primary text-primary-foreground border-primary shadow-sm"
                                     : "bg-background border-border hover:border-primary/50"
-                                }`}
+                                  }`}
                               >
                                 <div className="font-medium truncate">{typeOpt.typeName}</div>
                               </button>
@@ -668,11 +663,10 @@ export default function PosTerminal() {
                               <button
                                 key={vol.id}
                                 onClick={() => setSubSelections(prev => ({ ...prev, [slot.id]: vol.id }))}
-                                className={`px-3 py-2 rounded-lg border text-left transition-all text-sm ${
-                                  subSelections[slot.id] === vol.id
+                                className={`px-3 py-2 rounded-lg border text-left transition-all text-sm ${subSelections[slot.id] === vol.id
                                     ? "bg-primary text-primary-foreground border-primary shadow-sm"
                                     : "bg-background border-border hover:border-primary/50"
-                                }`}
+                                  }`}
                               >
                                 <div className="font-medium truncate">{vol.volumeName}</div>
                                 {vol.extraCost > 0 && (
@@ -695,73 +689,71 @@ export default function PosTerminal() {
                   const subOptions: any[] = selectedTypeOpt?.linkedIngredient?.options ?? [];
 
                   return (
-                  <div key={slot.id}>
-                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2 block">
-                      {slot.slotLabel}
-                    </Label>
+                    <div key={slot.id}>
+                      <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2 block">
+                        {slot.slotLabel}
+                      </Label>
 
-                    {/* Type picker (or regular option picker) */}
-                    <div className="grid grid-cols-2 gap-2">
-                      {options.map(option => (
-                        <button
-                          key={option.id}
-                          onClick={() => {
-                            setSelections(prev => ({ ...prev, [slot.id]: option.id }));
-                            // Auto-select first sub-option of newly selected type
-                            if (option.linkedIngredient?.options?.length) {
-                              const defSub = option.linkedIngredient.options.find((o: any) => o.isDefault) || option.linkedIngredient.options[0];
-                              setSubSelections(prev => ({ ...prev, [slot.id]: defSub.id }));
-                            } else {
-                              setSubSelections(prev => {
-                                const next = { ...prev };
-                                delete next[slot.id];
-                                return next;
-                              });
-                            }
-                          }}
-                          className={`px-3 py-2 rounded-lg border text-left transition-all text-sm ${
-                            selections[slot.id] === option.id
-                              ? "bg-primary text-primary-foreground border-primary shadow-sm"
-                              : "bg-background border-border hover:border-primary/50"
-                          }`}
-                        >
-                          <div className="font-medium truncate">{option.label}</div>
-                          {!isLinked && option.extraCost > 0 && (
-                            <div className={`text-xs mt-0.5 ${selections[slot.id] === option.id ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
-                              +{fmt(option.extraCost)}
-                            </div>
-                          )}
-                        </button>
-                      ))}
-                    </div>
-
-                    {/* Sub-option picker — volume / size (shown when type has linked ingredient) */}
-                    {isLinked && subOptions.length > 0 && (
-                      <div className="mt-2.5 pl-3 border-l-2 border-primary/30">
-                        <div className="text-xs text-muted-foreground mb-1.5 font-medium">Volume</div>
-                        <div className="grid grid-cols-3 gap-1.5">
-                          {subOptions.map(subOpt => (
-                            <button
-                              key={subOpt.id}
-                              onClick={() => setSubSelections(prev => ({ ...prev, [slot.id]: subOpt.id }))}
-                              className={`px-2 py-2 rounded-lg border text-center transition-all text-xs ${
-                                subSelections[slot.id] === subOpt.id
-                                  ? "bg-primary text-primary-foreground border-primary shadow-sm"
-                                  : "bg-background border-border hover:border-primary/50"
+                      {/* Type picker (or regular option picker) */}
+                      <div className="grid grid-cols-2 gap-2">
+                        {options.map(option => (
+                          <button
+                            key={option.id}
+                            onClick={() => {
+                              setSelections(prev => ({ ...prev, [slot.id]: option.id }));
+                              // Auto-select first sub-option of newly selected type
+                              if (option.linkedIngredient?.options?.length) {
+                                const defSub = option.linkedIngredient.options.find((o: any) => o.isDefault) || option.linkedIngredient.options[0];
+                                setSubSelections(prev => ({ ...prev, [slot.id]: defSub.id }));
+                              } else {
+                                setSubSelections(prev => {
+                                  const next = { ...prev };
+                                  delete next[slot.id];
+                                  return next;
+                                });
+                              }
+                            }}
+                            className={`px-3 py-2 rounded-lg border text-left transition-all text-sm ${selections[slot.id] === option.id
+                                ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                                : "bg-background border-border hover:border-primary/50"
                               }`}
-                            >
-                              <div className="font-medium leading-tight">{subOpt.label}</div>
-                              {subOpt.extraCost > 0 && (
-                                <div className={`text-xs mt-0.5 ${subSelections[slot.id] === subOpt.id ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
-                                  +{fmt(subOpt.extraCost)}
-                                </div>
-                              )}
-                            </button>
-                          ))}
-                        </div>
+                          >
+                            <div className="font-medium truncate">{option.label}</div>
+                            {!isLinked && option.extraCost > 0 && (
+                              <div className={`text-xs mt-0.5 ${selections[slot.id] === option.id ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
+                                +{fmt(option.extraCost)}
+                              </div>
+                            )}
+                          </button>
+                        ))}
                       </div>
-                    )}
-                  </div>
+
+                      {/* Sub-option picker — volume / size (shown when type has linked ingredient) */}
+                      {isLinked && subOptions.length > 0 && (
+                        <div className="mt-2.5 pl-3 border-l-2 border-primary/30">
+                          <div className="text-xs text-muted-foreground mb-1.5 font-medium">Volume</div>
+                          <div className="grid grid-cols-3 gap-1.5">
+                            {subOptions.map(subOpt => (
+                              <button
+                                key={subOpt.id}
+                                onClick={() => setSubSelections(prev => ({ ...prev, [slot.id]: subOpt.id }))}
+                                className={`px-2 py-2 rounded-lg border text-center transition-all text-xs ${subSelections[slot.id] === subOpt.id
+                                    ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                                    : "bg-background border-border hover:border-primary/50"
+                                  }`}
+                              >
+                                <div className="font-medium leading-tight">{subOpt.label}</div>
+                                {subOpt.extraCost > 0 && (
+                                  <div className={`text-xs mt-0.5 ${subSelections[slot.id] === subOpt.id ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
+                                    +{fmt(subOpt.extraCost)}
+                                  </div>
+                                )}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   );
                 })}
 
