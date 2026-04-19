@@ -15,6 +15,7 @@ export type CreateDrinkBodySlotsItem = {
   sortOrder?: number;
   baristaSortOrder?: number;
   customerSortOrder?: number;
+  isDynamic?: boolean;
   /** @nullable */
   affectsCupSize?: boolean | null;
 };

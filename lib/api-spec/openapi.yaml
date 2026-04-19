@@ -398,6 +398,16 @@ paths:
           schema:
             type: string
         - in: query
+          name: startDate
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: endDate
+          schema:
+            type: string
+            format: date
+        - in: query
           name: limit
           schema:
             type: integer
@@ -580,6 +590,16 @@ paths:
           name: days
           schema:
             type: integer
+        - in: query
+          name: startDate
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: endDate
+          schema:
+            type: string
+            format: date
       responses:
         "200":
           description: Sales by category
@@ -845,6 +865,8 @@ components:
           type: integer
         customerSortOrder:
           type: integer
+        isDynamic:
+          type: boolean
         affectsCupSize:
           type: ["boolean", "null"]
       required:
@@ -950,6 +972,8 @@ components:
                 type: integer
               customerSortOrder:
                 type: integer
+              isDynamic:
+                type: boolean
               affectsCupSize:
                 type: ["boolean", "null"]
             required:

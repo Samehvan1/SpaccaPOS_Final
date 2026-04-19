@@ -7,6 +7,8 @@
  */
 export type ListOrdersParams = {
     status?: string;
+    startDate?: Date;
+    endDate?: Date;
     limit?: number;
     offset?: number;
 };

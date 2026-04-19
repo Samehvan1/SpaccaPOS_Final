@@ -153,21 +153,30 @@ router.get("/dashboard/low-stock", async (_req, res): Promise<void> => {
 
 router.get("/dashboard/sales-by-category", async (req, res): Promise<void> => {
   const params = GetSalesByCategoryQueryParams.safeParse(req.query);
-  const days = (params.success && params.data.days) ? params.data.days : 30;
+  const conditions = [sql`${ordersTable.status} != 'cancelled'`];
 
-  const since = new Date();
-  since.setDate(since.getDate() - days);
-  since.setHours(0, 0, 0, 0);
+  if (params.success && params.data.startDate) {
+    conditions.push(gte(ordersTable.createdAt, new Date(params.data.startDate)));
+  }
+  if (params.success && params.data.endDate) {
+    const end = new Date(params.data.endDate);
+    end.setHours(23, 59, 59, 999);
+    conditions.push(lte(ordersTable.createdAt, end));
+  }
+
+  // Fallback to days if no range provided
+  if (!params.success || (!params.data.startDate && !params.data.endDate)) {
+    const days = (params.success && params.data.days) ? params.data.days : 30;
+    const since = new Date();
+    since.setDate(since.getDate() - days);
+    since.setHours(0, 0, 0, 0);
+    conditions.push(gte(ordersTable.createdAt, since));
+  }
 
   const orders = await db
     .select()
     .from(ordersTable)
-    .where(
-      and(
-        gte(ordersTable.createdAt, since),
-        sql`${ordersTable.status} != 'cancelled'`
-      )
-    );
+    .where(and(...conditions));
 
   const orderIds = orders.map((o) => o.id);
   if (orderIds.length === 0) {

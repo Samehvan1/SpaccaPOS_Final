@@ -11,5 +11,6 @@ export type CreateOrderBodyItemsItemSelectionsItem = {
     subOptionId?: number;
     slotId?: number;
     typeVolumeId?: number;
+    ingredientTypeId?: number;
 };
 //# sourceMappingURL=createOrderBodyItemsItemSelectionsItem.d.ts.map

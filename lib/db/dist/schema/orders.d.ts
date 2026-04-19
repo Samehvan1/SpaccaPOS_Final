@@ -466,7 +466,7 @@ export declare const orderItemCustomizationsTable: import("drizzle-orm/pg-core")
             columnType: "PgInteger";
             data: number;
             driverParam: string | number;
-            notNull: true;
+            notNull: false;
             hasDefault: false;
             isPrimaryKey: false;
             isAutoincrement: false;
@@ -483,7 +483,24 @@ export declare const orderItemCustomizationsTable: import("drizzle-orm/pg-core")
             columnType: "PgInteger";
             data: number;
             driverParam: string | number;
-            notNull: true;
+            notNull: false;
+            hasDefault: false;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: undefined;
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+        typeVolumeId: import("drizzle-orm/pg-core").PgColumn<{
+            name: "type_volume_id";
+            tableName: "order_item_customizations";
+            dataType: "number";
+            columnType: "PgInteger";
+            data: number;
+            driverParam: string | number;
+            notNull: false;
             hasDefault: false;
             isPrimaryKey: false;
             isAutoincrement: false;
@@ -557,6 +574,23 @@ export declare const orderItemCustomizationsTable: import("drizzle-orm/pg-core")
             isAutoincrement: false;
             hasRuntimeDefault: false;
             enumValues: [string, ...string[]];
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+        baristaSortOrder: import("drizzle-orm/pg-core").PgColumn<{
+            name: "barista_sort_order";
+            tableName: "order_item_customizations";
+            dataType: "number";
+            columnType: "PgInteger";
+            data: number;
+            driverParam: string | number;
+            notNull: true;
+            hasDefault: true;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: undefined;
             baseColumn: never;
             identity: undefined;
             generated: undefined;

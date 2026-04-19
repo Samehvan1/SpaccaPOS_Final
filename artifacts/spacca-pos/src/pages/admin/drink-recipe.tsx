@@ -159,7 +159,7 @@ export default function DrinkRecipe() {
           key: newKey(), style: "typed" as SlotStyle,
           slotLabel: s.slotLabel, isRequired: s.isRequired, expanded: true,
           typeOptions: typeOpts,
-          ingredientId: null, isDynamic: false, defaultOptionId: null,
+          ingredientId: null, isDynamic: s.isDynamic ?? false, defaultOptionId: null,
           baristaSortOrder: s.baristaSortOrder ?? s.sortOrder ?? 1,
           customerSortOrder: s.customerSortOrder ?? s.sortOrder ?? 1,
           affectsCupSize: s.affectsCupSize ?? null,
@@ -518,7 +518,7 @@ export default function DrinkRecipe() {
                   </div>
 
                     <div className="flex flex-wrap gap-4 pl-14 items-end">
-                      <div className="flex-1 grid gap-1.5">
+                      <div className="min-w-[280px] flex-[2] grid gap-1.5">
                         <Label className="text-xs">Slot Label</Label>
                         <Input
                           placeholder="e.g. Espresso, Milk, Syrup"

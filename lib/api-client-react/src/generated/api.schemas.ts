@@ -160,6 +160,7 @@ export interface DrinkIngredientSlot {
   sortOrder: number;
   baristaSortOrder: number;
   customerSortOrder: number;
+  isDynamic?: boolean;
   /** @nullable */
   affectsCupSize?: boolean | null;
 }
@@ -196,6 +197,7 @@ export type CreateDrinkBodySlotsItem = {
   sortOrder?: number;
   baristaSortOrder?: number;
   customerSortOrder?: number;
+  isDynamic?: boolean;
   /** @nullable */
   affectsCupSize?: boolean | null;
 };
@@ -464,6 +466,8 @@ export type ListIngredientsParams = {
 
 export type ListOrdersParams = {
   status?: string;
+  startDate?: string;
+  endDate?: string;
   limit?: number;
   offset?: number;
 };
@@ -476,6 +480,8 @@ export type ListStockMovementsParams = {
 
 export type GetSalesByCategoryParams = {
   days?: number;
+  startDate?: string;
+  endDate?: string;
 };
 
 export type GetTopDrinksParams = {

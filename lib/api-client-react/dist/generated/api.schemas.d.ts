@@ -136,7 +136,11 @@ export interface DrinkIngredientSlot {
     /** @nullable */
     defaultOptionId: number | null;
     sortOrder: number;
-    ingredient: IngredientDetail;
+    baristaSortOrder: number;
+    customerSortOrder: number;
+    isDynamic?: boolean;
+    /** @nullable */
+    affectsCupSize?: boolean | null;
 }
 export interface Drink {
     id: number;
@@ -166,6 +170,11 @@ export type CreateDrinkBodySlotsItem = {
     /** @nullable */
     defaultOptionId?: number | null;
     sortOrder?: number;
+    baristaSortOrder?: number;
+    customerSortOrder?: number;
+    isDynamic?: boolean;
+    /** @nullable */
+    affectsCupSize?: boolean | null;
 };
 export interface CreateDrinkBody {
     name: string;
@@ -219,12 +228,18 @@ export interface PriceBreakdown {
 export interface OrderItemCustomization {
     id: number;
     orderItemId: number;
-    ingredientId: number;
-    optionId: number;
+    /** @nullable */
+    ingredientId?: number | null;
+    /** @nullable */
+    optionId?: number | null;
+    /** @nullable */
+    typeVolumeId?: number | null;
     consumedQty: number;
     addedCost: number;
     slotLabel: string;
     optionLabel: string;
+    /** @nullable */
+    baristaSortOrder?: number | null;
 }
 export interface OrderItem {
     id: number;
@@ -288,6 +303,7 @@ export type CreateOrderBodyItemsItemSelectionsItem = {
     subOptionId?: number;
     slotId?: number;
     typeVolumeId?: number;
+    ingredientTypeId?: number;
 };
 export type CreateOrderBodyItemsItem = {
     drinkId: number;
@@ -384,6 +400,8 @@ export type ListIngredientsParams = {
 };
 export type ListOrdersParams = {
     status?: string;
+    startDate?: string;
+    endDate?: string;
     limit?: number;
     offset?: number;
 };
@@ -394,6 +412,8 @@ export type ListStockMovementsParams = {
 };
 export type GetSalesByCategoryParams = {
     days?: number;
+    startDate?: string;
+    endDate?: string;
 };
 export type GetTopDrinksParams = {
     limit?: number;

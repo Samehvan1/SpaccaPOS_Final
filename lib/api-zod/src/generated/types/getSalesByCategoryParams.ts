@@ -8,4 +8,6 @@
 
 export type GetSalesByCategoryParams = {
   days?: number;
+  startDate?: Date;
+  endDate?: Date;
 };

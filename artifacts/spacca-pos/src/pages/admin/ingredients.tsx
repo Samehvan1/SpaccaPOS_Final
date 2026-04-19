@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Plus, Search, Edit, Trash2, Link2, Star, StarOff, ChevronRight, Package, Tag, Layers, FlaskConical } from "lucide-react";
+import { ArrowLeft, Plus, Search, Edit, Trash2, Link2, Star, StarOff, ChevronRight, Package, Tag, Layers, FlaskConical, Check, X, Droplet, Droplets } from "lucide-react";
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 
@@ -185,7 +185,14 @@ function TypesTab({ inventoryItems }: { inventoryItems: Ingredient[] }) {
   const [loadingTypeVols, setLoadingTypeVols] = useState(false);
   const [addingVolumeId, setAddingVolumeId] = useState<string>("");
   const [addingExtraCost, setAddingExtraCost] = useState("0");
+  const [addingProcessedQty, setAddingProcessedQty] = useState("0");
+  const [addingProducedQty, setAddingProducedQty] = useState("0");
   const [addingIsDefault, setAddingIsDefault] = useState(false);
+
+  const [editingTypeVolId, setEditingTypeVolId] = useState<number | null>(null);
+  const [editingProcessedQty, setEditingProcessedQty] = useState("0");
+  const [editingProducedQty, setEditingProducedQty] = useState("0");
+  const [editingExtraCost, setEditingExtraCost] = useState("0");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -273,12 +280,34 @@ function TypesTab({ inventoryItems }: { inventoryItems: Ingredient[] }) {
     try {
       await api(`/api/catalog/types/${volTypeId}/volumes`, {
         method: "POST",
-        body: JSON.stringify({ volumeId: parseInt(addingVolumeId), extraCost: addingExtraCost, isDefault: addingIsDefault }),
+        body: JSON.stringify({ 
+          volumeId: parseInt(addingVolumeId), 
+          extraCost: addingExtraCost, 
+          isDefault: addingIsDefault,
+          processedQty: addingProcessedQty,
+          producedQty: addingProducedQty,
+        }),
       });
-      setAddingVolumeId(""); setAddingExtraCost("0"); setAddingIsDefault(false);
+      setAddingVolumeId(""); setAddingExtraCost("0"); setAddingProcessedQty("0"); setAddingProducedQty("0"); setAddingIsDefault(false);
       loadTypeVolumes(volTypeId);
       toast({ title: "Volume added to type" });
     } catch { toast({ variant: "destructive", title: "Failed to add volume" }); }
+  };
+
+  const handleUpdateTypeVolume = async (tvId: number) => {
+    try {
+      await api(`/api/catalog/type-volumes/${tvId}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          processedQty: editingProcessedQty,
+          producedQty: editingProducedQty,
+          extraCost: editingExtraCost,
+        }),
+      });
+      setEditingTypeVolId(null);
+      loadTypeVolumes(volTypeId!);
+      toast({ title: "Volume assignment updated" });
+    } catch { toast({ variant: "destructive", title: "Failed to update assignment" }); }
   };
 
   const handleDeleteTypeVolume = async (tvId: number) => {
@@ -474,31 +503,81 @@ function TypesTab({ inventoryItems }: { inventoryItems: Ingredient[] }) {
               <div className="border border-dashed rounded-md p-4 text-center text-sm text-muted-foreground">No volumes yet.</div>
             ) : (
               <div className="border rounded-md divide-y">
-                {typeVolumes.map(tv => (
-                  <div key={tv.id} className="flex items-center gap-3 px-3 py-2.5">
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium text-sm">{tv.volume?.name ?? `#${tv.volumeId}`}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {tv.volume && `${tv.volume.producedQty}${tv.volume.unit}`}
-                        {tv.extraCost !== "0" && ` · +${fmt(parseFloat(tv.extraCost))}`}
+                {typeVolumes.map(tv => {
+                  const isEditing = editingTypeVolId === tv.id;
+                  return (
+                    <div key={tv.id} className="flex flex-col px-3 py-2.5 bg-card">
+                      <div className="flex items-center gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-sm text-primary flex items-center gap-2">
+                            {tv.volume?.name ?? `#${tv.volumeId}`}
+                            {tv.isDefault && <Badge variant="secondary" className="px-1 py-0 h-4 text-[10px] font-bold uppercase">Default</Badge>}
+                          </div>
+                          {!isEditing && (
+                            <div className="text-[10px] text-muted-foreground flex items-center gap-2 mt-0.5">
+                              <span className="flex items-center gap-1"><Droplet className="h-3 w-3" /> Proc: {tv.processedQty ?? tv.volume?.processedQty ?? "0"}</span>
+                              <span className="flex items-center gap-1"><Droplets className="h-3 w-3" /> Prod: {tv.producedQty ?? tv.volume?.producedQty ?? "0"}</span>
+                              <span className="flex items-center gap-1 text-primary/80 font-medium">· +E£{fmt(parseFloat(tv.extraCost))}</span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          {isEditing ? (
+                            <>
+                              <Button size="icon" variant="ghost" className="h-7 w-7 text-green-600" onClick={() => handleUpdateTypeVolume(tv.id)}><Check className="h-4 w-4" /></Button>
+                              <Button size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground" onClick={() => setEditingTypeVolId(null)}><X className="h-4 w-4" /></Button>
+                            </>
+                          ) : (
+                            <>
+                               <Button 
+                                variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground"
+                                onClick={() => {
+                                  setEditingTypeVolId(tv.id);
+                                  setEditingProcessedQty(tv.processedQty ?? tv.volume?.processedQty ?? "0");
+                                  setEditingProducedQty(tv.producedQty ?? tv.volume?.producedQty ?? "0");
+                                  setEditingExtraCost(tv.extraCost);
+                                }}
+                              >
+                                <Edit className="h-3.5 w-3.5" />
+                              </Button>
+                              <button
+                                title={tv.isDefault ? "Remove as default" : "Set as default"}
+                                className="text-muted-foreground hover:text-primary transition-colors p-1"
+                                onClick={() => handleToggleDefault(tv)}
+                              >
+                                {tv.isDefault ? <Star className="h-4 w-4 fill-primary text-primary" /> : <StarOff className="h-4 w-4" />}
+                              </button>
+                              <button
+                                title="Remove"
+                                className="text-muted-foreground hover:text-destructive transition-colors p-1"
+                                onClick={() => handleDeleteTypeVolume(tv.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </>
+                          )}
+                        </div>
                       </div>
+                      
+                      {isEditing && (
+                        <div className="grid grid-cols-3 gap-2 mt-2 pt-2 border-t border-dashed">
+                          <div className="grid gap-1">
+                            <Label className="text-[10px] uppercase font-bold text-muted-foreground">Proc. Qty</Label>
+                            <Input type="number" step="0.1" className="h-7 text-xs" value={editingProcessedQty} onChange={e => setEditingProcessedQty(e.target.value)} />
+                          </div>
+                          <div className="grid gap-1">
+                            <Label className="text-[10px] uppercase font-bold text-muted-foreground">Prod. Qty</Label>
+                            <Input type="number" step="0.1" className="h-7 text-xs" value={editingProducedQty} onChange={e => setEditingProducedQty(e.target.value)} />
+                          </div>
+                          <div className="grid gap-1">
+                            <Label className="text-[10px] uppercase font-bold text-muted-foreground">Extra Cost</Label>
+                            <Input type="number" step="0.01" className="h-7 text-xs" value={editingExtraCost} onChange={e => setEditingExtraCost(e.target.value)} />
+                          </div>
+                        </div>
+                      )}
                     </div>
-                    <button
-                      title={tv.isDefault ? "Remove as default" : "Set as default"}
-                      className="text-muted-foreground hover:text-primary transition-colors p-1"
-                      onClick={() => handleToggleDefault(tv)}
-                    >
-                      {tv.isDefault ? <Star className="h-4 w-4 fill-primary text-primary" /> : <StarOff className="h-4 w-4" />}
-                    </button>
-                    <button
-                      title="Remove"
-                      className="text-muted-foreground hover:text-destructive transition-colors p-1"
-                      onClick={() => handleDeleteTypeVolume(tv.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
 
@@ -506,11 +585,18 @@ function TypesTab({ inventoryItems }: { inventoryItems: Ingredient[] }) {
             {availableVolumesToAdd.length > 0 && (
               <div className="border rounded-md p-3 space-y-3 bg-muted/20">
                 <div className="text-xs font-medium text-muted-foreground">Add Volume</div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-[1fr_5rem_5rem_5rem] gap-2">
                   <div className="grid gap-1.5">
                     <Label className="text-xs">Volume</Label>
-                    <Select value={addingVolumeId} onValueChange={setAddingVolumeId}>
-                      <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Pick volume…" /></SelectTrigger>
+                    <Select value={addingVolumeId} onValueChange={v => {
+                      setAddingVolumeId(v);
+                      const fullVol = allVolumes.find(av => String(av.id) === v);
+                      if (fullVol) {
+                        setAddingProcessedQty(fullVol.processedQty || "0");
+                        setAddingProducedQty(fullVol.producedQty || "0");
+                      }
+                    }}>
+                      <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Pick volume…" /></SelectTrigger>
                       <SelectContent>
                         {availableVolumesToAdd.map(v => (
                           <SelectItem key={v.id} value={String(v.id)}>{v.name}</SelectItem>
@@ -519,8 +605,16 @@ function TypesTab({ inventoryItems }: { inventoryItems: Ingredient[] }) {
                     </Select>
                   </div>
                   <div className="grid gap-1.5">
-                    <Label className="text-xs">Extra Cost (E£)</Label>
-                    <Input className="h-8 text-sm" type="number" step="0.01" value={addingExtraCost} onChange={e => setAddingExtraCost(e.target.value)} />
+                    <Label className="text-xs text-center">Proc.</Label>
+                    <Input className="h-8 text-xs text-center" type="number" step="0.1" value={addingProcessedQty} onChange={e => setAddingProcessedQty(e.target.value)} />
+                  </div>
+                   <div className="grid gap-1.5">
+                    <Label className="text-xs text-center">Prod.</Label>
+                    <Input className="h-8 text-xs text-center" type="number" step="0.1" value={addingProducedQty} onChange={e => setAddingProducedQty(e.target.value)} />
+                  </div>
+                  <div className="grid gap-1.5">
+                    <Label className="text-xs text-right">Cost (E£)</Label>
+                    <Input className="h-8 text-xs text-right" type="number" step="0.01" value={addingExtraCost} onChange={e => setAddingExtraCost(e.target.value)} />
                   </div>
                 </div>
                  <div className="flex flex-wrap gap-x-4 gap-y-2 pt-1">

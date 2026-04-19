@@ -12,5 +12,10 @@ export type CreateDrinkBodySlotsItem = {
     /** @nullable */
     defaultOptionId?: number | null;
     sortOrder?: number;
+    baristaSortOrder?: number;
+    customerSortOrder?: number;
+    isDynamic?: boolean;
+    /** @nullable */
+    affectsCupSize?: boolean | null;
 };
 //# sourceMappingURL=createDrinkBodySlotsItem.d.ts.map

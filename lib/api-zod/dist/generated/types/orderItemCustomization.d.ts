@@ -8,11 +8,17 @@
 export interface OrderItemCustomization {
     id: number;
     orderItemId: number;
-    ingredientId: number;
-    optionId: number;
+    /** @nullable */
+    ingredientId?: number | null;
+    /** @nullable */
+    optionId?: number | null;
+    /** @nullable */
+    typeVolumeId?: number | null;
     consumedQty: number;
     addedCost: number;
     slotLabel: string;
     optionLabel: string;
+    /** @nullable */
+    baristaSortOrder?: number | null;
 }
 //# sourceMappingURL=orderItemCustomization.d.ts.map

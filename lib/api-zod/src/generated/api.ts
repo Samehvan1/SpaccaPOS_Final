@@ -85,6 +85,7 @@ export const CreateDrinkBody = zod.object({
         sortOrder: zod.number().optional(),
         baristaSortOrder: zod.number().optional(),
         customerSortOrder: zod.number().optional(),
+        isDynamic: zod.boolean().optional(),
         affectsCupSize: zod.boolean().nullish(),
       }),
     )
@@ -127,6 +128,7 @@ export const GetDrinkResponse = zod
           sortOrder: zod.number(),
           baristaSortOrder: zod.number(),
           customerSortOrder: zod.number(),
+          isDynamic: zod.boolean().optional(),
           affectsCupSize: zod.boolean().nullish(),
         }),
       ),
@@ -466,6 +468,8 @@ export const RestockIngredientResponse = zod.object({
  */
 export const ListOrdersQueryParams = zod.object({
   status: zod.coerce.string().optional(),
+  startDate: zod.date().optional(),
+  endDate: zod.date().optional(),
   limit: zod.coerce.number().optional(),
   offset: zod.coerce.number().optional(),
 });
@@ -767,6 +771,8 @@ export const GetLowStockIngredientsResponse = zod.array(
  */
 export const GetSalesByCategoryQueryParams = zod.object({
   days: zod.coerce.number().optional(),
+  startDate: zod.date().optional(),
+  endDate: zod.date().optional(),
 });
 
 export const GetSalesByCategoryResponseItem = zod.object({

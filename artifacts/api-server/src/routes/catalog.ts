@@ -131,7 +131,7 @@ router.post("/catalog/types", async (req, res): Promise<void> => {
 
 router.patch("/catalog/types/:id", async (req, res): Promise<void> => {
   const id = parseInt(req.params.id);
-  const { categoryId, name, inventoryIngredientId, processedQty, producedQty, unit, isActive, sortOrder } = req.body;
+  const { categoryId, name, inventoryIngredientId, processedQty, producedQty, unit, isActive, affectsCupSize, sortOrder } = req.body;
   const patch: Record<string, unknown> = {};
   if (categoryId !== undefined) patch.categoryId = categoryId;
   if (name !== undefined) patch.name = name;

@@ -1,4 +1,3 @@
-import { z } from "zod/v4";
 export declare const ingredientsTable: import("drizzle-orm/pg-core").PgTableWithColumns<{
     name: "ingredients";
     schema: undefined;
@@ -557,8 +556,76 @@ export declare const ingredientTypesTable: import("drizzle-orm/pg-core").PgTable
             identity: undefined;
             generated: undefined;
         }, {}, {}>;
+        processedQty: import("drizzle-orm/pg-core").PgColumn<{
+            name: "processed_qty";
+            tableName: "ingredient_types";
+            dataType: "string";
+            columnType: "PgNumeric";
+            data: string;
+            driverParam: string;
+            notNull: true;
+            hasDefault: true;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: undefined;
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+        producedQty: import("drizzle-orm/pg-core").PgColumn<{
+            name: "produced_qty";
+            tableName: "ingredient_types";
+            dataType: "string";
+            columnType: "PgNumeric";
+            data: string;
+            driverParam: string;
+            notNull: true;
+            hasDefault: true;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: undefined;
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+        unit: import("drizzle-orm/pg-core").PgColumn<{
+            name: "unit";
+            tableName: "ingredient_types";
+            dataType: "string";
+            columnType: "PgText";
+            data: string;
+            driverParam: string;
+            notNull: true;
+            hasDefault: true;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: [string, ...string[]];
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
         isActive: import("drizzle-orm/pg-core").PgColumn<{
             name: "is_active";
+            tableName: "ingredient_types";
+            dataType: "boolean";
+            columnType: "PgBoolean";
+            data: boolean;
+            driverParam: boolean;
+            notNull: true;
+            hasDefault: true;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: undefined;
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+        affectsCupSize: import("drizzle-orm/pg-core").PgColumn<{
+            name: "affects_cup_size";
             tableName: "ingredient_types";
             dataType: "boolean";
             columnType: "PgBoolean";
@@ -906,10 +973,10 @@ export declare const ingredientTypeVolumesTable: import("drizzle-orm/pg-core").P
     };
     dialect: "pg";
 }>;
-export declare const insertIngredientSchema: z.ZodObject<{
-    name: z.ZodString;
-    slug: z.ZodString;
-    ingredientType: z.ZodEnum<{
+export declare const insertIngredientSchema: import("zod/v4").ZodObject<{
+    name: import("zod/v4").ZodString;
+    slug: import("zod/v4").ZodString;
+    ingredientType: import("zod/v4").ZodEnum<{
         coffee: "coffee";
         milk: "milk";
         syrup: "syrup";
@@ -919,71 +986,75 @@ export declare const insertIngredientSchema: z.ZodObject<{
         base: "base";
         other: "other";
     }>;
-    unit: z.ZodString;
-    costPerUnit: z.ZodString;
-    stockQuantity: z.ZodOptional<z.ZodString>;
-    lowStockThreshold: z.ZodOptional<z.ZodString>;
-    isActive: z.ZodOptional<z.ZodBoolean>;
+    unit: import("zod/v4").ZodString;
+    costPerUnit: import("zod/v4").ZodString;
+    stockQuantity: import("zod/v4").ZodOptional<import("zod/v4").ZodString>;
+    lowStockThreshold: import("zod/v4").ZodOptional<import("zod/v4").ZodString>;
+    isActive: import("zod/v4").ZodOptional<import("zod/v4").ZodBoolean>;
 }, {
     out: {};
     in: {};
 }>;
-export declare const insertIngredientOptionSchema: z.ZodObject<{
-    ingredientId: z.ZodInt;
-    label: z.ZodString;
-    processedQty: z.ZodString;
-    producedQty: z.ZodString;
-    producedUnit: z.ZodString;
-    extraCost: z.ZodOptional<z.ZodString>;
-    isDefault: z.ZodOptional<z.ZodBoolean>;
-    sortOrder: z.ZodOptional<z.ZodInt>;
-    linkedIngredientId: z.ZodOptional<z.ZodNullable<z.ZodInt>>;
+export declare const insertIngredientOptionSchema: import("zod/v4").ZodObject<{
+    ingredientId: import("zod/v4").ZodInt;
+    label: import("zod/v4").ZodString;
+    processedQty: import("zod/v4").ZodString;
+    producedQty: import("zod/v4").ZodString;
+    producedUnit: import("zod/v4").ZodString;
+    extraCost: import("zod/v4").ZodOptional<import("zod/v4").ZodString>;
+    isDefault: import("zod/v4").ZodOptional<import("zod/v4").ZodBoolean>;
+    sortOrder: import("zod/v4").ZodOptional<import("zod/v4").ZodInt>;
+    linkedIngredientId: import("zod/v4").ZodOptional<import("zod/v4").ZodNullable<import("zod/v4").ZodInt>>;
 }, {
     out: {};
     in: {};
 }>;
-export declare const insertIngredientCategorySchema: z.ZodObject<{
-    name: z.ZodString;
-    sortOrder: z.ZodOptional<z.ZodInt>;
+export declare const insertIngredientCategorySchema: import("zod/v4").ZodObject<{
+    name: import("zod/v4").ZodString;
+    sortOrder: import("zod/v4").ZodOptional<import("zod/v4").ZodInt>;
 }, {
     out: {};
     in: {};
 }>;
-export declare const insertIngredientTypeSchema: z.ZodObject<{
-    name: z.ZodString;
-    isActive: z.ZodOptional<z.ZodBoolean>;
-    sortOrder: z.ZodOptional<z.ZodInt>;
-    categoryId: z.ZodInt;
-    inventoryIngredientId: z.ZodOptional<z.ZodNullable<z.ZodInt>>;
+export declare const insertIngredientTypeSchema: import("zod/v4").ZodObject<{
+    name: import("zod/v4").ZodString;
+    unit: import("zod/v4").ZodOptional<import("zod/v4").ZodString>;
+    isActive: import("zod/v4").ZodOptional<import("zod/v4").ZodBoolean>;
+    processedQty: import("zod/v4").ZodOptional<import("zod/v4").ZodString>;
+    producedQty: import("zod/v4").ZodOptional<import("zod/v4").ZodString>;
+    sortOrder: import("zod/v4").ZodOptional<import("zod/v4").ZodInt>;
+    categoryId: import("zod/v4").ZodInt;
+    inventoryIngredientId: import("zod/v4").ZodOptional<import("zod/v4").ZodNullable<import("zod/v4").ZodInt>>;
+    affectsCupSize: import("zod/v4").ZodOptional<import("zod/v4").ZodBoolean>;
 }, {
     out: {};
     in: {};
 }>;
-export declare const insertIngredientVolumeSchema: z.ZodObject<{
-    name: z.ZodString;
-    unit: z.ZodOptional<z.ZodString>;
-    processedQty: z.ZodOptional<z.ZodString>;
-    producedQty: z.ZodOptional<z.ZodString>;
-    sortOrder: z.ZodOptional<z.ZodInt>;
+export declare const insertIngredientVolumeSchema: import("zod/v4").ZodObject<{
+    name: import("zod/v4").ZodString;
+    unit: import("zod/v4").ZodOptional<import("zod/v4").ZodString>;
+    processedQty: import("zod/v4").ZodOptional<import("zod/v4").ZodString>;
+    producedQty: import("zod/v4").ZodOptional<import("zod/v4").ZodString>;
+    sortOrder: import("zod/v4").ZodOptional<import("zod/v4").ZodInt>;
 }, {
     out: {};
     in: {};
 }>;
-export declare const insertIngredientTypeVolumeSchema: z.ZodObject<{
-    unit: z.ZodOptional<z.ZodNullable<z.ZodString>>;
-    processedQty: z.ZodOptional<z.ZodNullable<z.ZodString>>;
-    producedQty: z.ZodOptional<z.ZodNullable<z.ZodString>>;
-    extraCost: z.ZodOptional<z.ZodString>;
-    isDefault: z.ZodOptional<z.ZodBoolean>;
-    sortOrder: z.ZodOptional<z.ZodInt>;
-    ingredientTypeId: z.ZodInt;
-    volumeId: z.ZodInt;
+export declare const insertIngredientTypeVolumeSchema: import("zod/v4").ZodObject<{
+    unit: import("zod/v4").ZodOptional<import("zod/v4").ZodNullable<import("zod/v4").ZodString>>;
+    processedQty: import("zod/v4").ZodOptional<import("zod/v4").ZodNullable<import("zod/v4").ZodString>>;
+    producedQty: import("zod/v4").ZodOptional<import("zod/v4").ZodNullable<import("zod/v4").ZodString>>;
+    extraCost: import("zod/v4").ZodOptional<import("zod/v4").ZodString>;
+    isDefault: import("zod/v4").ZodOptional<import("zod/v4").ZodBoolean>;
+    sortOrder: import("zod/v4").ZodOptional<import("zod/v4").ZodInt>;
+    ingredientTypeId: import("zod/v4").ZodInt;
+    volumeId: import("zod/v4").ZodInt;
 }, {
     out: {};
     in: {};
 }>;
-export type InsertIngredient = z.infer<typeof insertIngredientSchema>;
-export type InsertIngredientOption = z.infer<typeof insertIngredientOptionSchema>;
+export type InsertIngredient = typeof ingredientsTable.$inferInsert;
+export type InsertIngredientOption = typeof ingredientOptionsTable.$inferInsert;
 export type Ingredient = typeof ingredientsTable.$inferSelect;
 export type IngredientOption = typeof ingredientOptionsTable.$inferSelect;
 export type IngredientCategory = typeof ingredientCategoriesTable.$inferSelect;

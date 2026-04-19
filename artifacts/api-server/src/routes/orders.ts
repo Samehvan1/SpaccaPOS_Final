@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, and, inArray, gte, sql } from "drizzle-orm";
+import { eq, and, inArray, gte, lte, sql, desc } from "drizzle-orm";
 import { serializeDates } from "../lib/serialize";
 import { broadcastEvent } from "../lib/sse";
 import { calculateDrinkData } from "../lib/price-calculator";
@@ -101,14 +101,23 @@ router.get("/orders", async (req, res): Promise<void> => {
   if (params.success && params.data.status) {
     conditions.push(eq(ordersTable.status, params.data.status as "pending" | "in_progress" | "ready" | "completed" | "cancelled"));
   }
-
-  const orders = conditions.length
-    ? await db.select().from(ordersTable).where(and(...conditions)).orderBy(ordersTable.createdAt)
-    : await db.select().from(ordersTable).orderBy(ordersTable.createdAt);
+  if (params.success && params.data.startDate) {
+    conditions.push(gte(ordersTable.createdAt, new Date(params.data.startDate)));
+  }
+  if (params.success && params.data.endDate) {
+    const end = new Date(params.data.endDate);
+    end.setHours(23, 59, 59, 999);
+    conditions.push(lte(ordersTable.createdAt, end));
+  }
 
   const limit = params.success && params.data.limit ? params.data.limit : 50;
   const offset = params.success && params.data.offset ? params.data.offset : 0;
-  const paginated = orders.slice(offset, offset + limit);
+
+  const ordersRaw = conditions.length
+    ? await db.select().from(ordersTable).where(and(...conditions)).orderBy(desc(ordersTable.createdAt))
+    : await db.select().from(ordersTable).orderBy(desc(ordersTable.createdAt));
+
+  const paginated = ordersRaw.slice(offset, offset + limit);
 
   const baristaIds = [...new Set(paginated.map((o) => o.baristaId))];
   const baristas = baristaIds.length > 0
