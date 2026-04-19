@@ -562,6 +562,7 @@ router.post("/drinks/:id/price", async (req, res): Promise<void> => {
       total: data.totalPrice 
     });
   } catch (error: any) {
+    console.error("Calculate Error:", error);
     if (error.message === "Drink not found") {
       res.status(404).json({ error: error.message });
     } else {

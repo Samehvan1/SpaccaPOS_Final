@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useBaristaLogin } from "@workspace/api-client-react";
 import { useAuth } from "@/hooks/use-auth";
@@ -8,14 +8,20 @@ import { Button } from "@/components/ui/button";
 export default function Login() {
   const [pin, setPin] = useState("");
   const [, setLocation] = useLocation();
-  const { refetchUser } = useAuth();
+  const { user, refetchUser } = useAuth();
   const { toast } = useToast();
+
+  useEffect(() => {
+    if (user) {
+      setLocation("/pos");
+    }
+  }, [user, setLocation]);
 
   const loginMutation = useBaristaLogin({
     mutation: {
       onSuccess: () => {
         refetchUser();
-        setLocation("/pos");
+        // The useEffect will handle redirect once user is set to avoid bounce
       },
       onError: () => {
         toast({

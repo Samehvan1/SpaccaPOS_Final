@@ -77181,11 +77181,15 @@ async function calculateDrinkData(drinkId, selections) {
       ));
       const [typeDef] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, typeVol.ingredientTypeId));
       const inventoryId = typeDef?.inventoryIngredientId ?? null;
+      const typeName = typeDef?.name ?? "";
+      const [volDef] = typeVol.volumeId ? await db.select().from(ingredientVolumesTable).where(eq(ingredientVolumesTable.id, typeVol.volumeId)) : [null];
+      const volumeName = volDef?.name ?? "";
       const extraCost2 = parseFloat(slotVol?.extraCost ?? typeVol.extraCost);
       totalExtras += extraCost2;
       const consumedQty = parseFloat(slotVol?.processedQty ?? typeVol.processedQty ?? "0");
       const producedQty = parseFloat(slotVol?.producedQty ?? typeVol.producedQty ?? "0");
       usedVolumeMl += producedQty;
+      const optionLabel = typeName && volumeName ? `${typeName} \xB7 ${volumeName}` : typeName || volumeName || "Catalog Item";
       customizations.push({
         ingredientId: inventoryId,
         optionId: null,
@@ -77194,8 +77198,7 @@ async function calculateDrinkData(drinkId, selections) {
         consumedQty,
         addedCost: extraCost2,
         slotLabel: slot.slotLabel,
-        optionLabel: ""
-        // Let the frontend formatting take precedence for standard items
+        optionLabel
       });
       continue;
     }
@@ -77254,74 +77257,90 @@ async function calculateDrinkData(drinkId, selections) {
   const dynamicSlot = slots.find((s) => s.isDynamic);
   if (dynamicSlot && drink.cupSizeMl) {
     const filledMl = Math.max(0, drink.cupSizeMl - usedVolumeMl);
-    if (dynamicSlot.ingredientTypeId || slots.some((s) => s.id === dynamicSlot.id && s.ingredientTypeId)) {
+    const typeOptions = await db.select().from(drinkSlotTypeOptionsTable).where(eq(drinkSlotTypeOptionsTable.slotId, dynamicSlot.id));
+    if (dynamicSlot.ingredientTypeId || typeOptions.length > 0) {
       const dynamicSelection = selections.find((s) => s.slotId === dynamicSlot.id);
-      let typeVolumeId = dynamicSelection?.typeVolumeId;
-      if (!typeVolumeId) {
-        const typeOptions = await db.select().from(drinkSlotTypeOptionsTable).where(eq(drinkSlotTypeOptionsTable.slotId, dynamicSlot.id));
+      let effectiveTypeId = dynamicSelection?.ingredientTypeId;
+      if (!effectiveTypeId) {
         const defType = typeOptions.find((to) => to.isDefault) ?? typeOptions[0];
-        const effectiveTypeId = defType?.ingredientTypeId;
-        if (effectiveTypeId) {
+        effectiveTypeId = defType?.ingredientTypeId ?? dynamicSlot.ingredientTypeId;
+      }
+      if (effectiveTypeId) {
+        const [ingredientType] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, effectiveTypeId));
+        let typeVolumeId = dynamicSelection?.typeVolumeId;
+        if (!typeVolumeId) {
           const typeVolumes = await db.select().from(ingredientTypeVolumesTable).where(eq(ingredientTypeVolumesTable.ingredientTypeId, effectiveTypeId));
           const defVol = typeVolumes.find((tv) => tv.isDefault) ?? typeVolumes[0];
           typeVolumeId = defVol?.id;
         }
-      }
-      if (typeVolumeId) {
-        const [typeVolume] = await db.select().from(ingredientTypeVolumesTable).where(eq(ingredientTypeVolumesTable.id, typeVolumeId));
-        if (typeVolume) {
-          const [ingredientType] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, typeVolume.ingredientTypeId));
-          if (ingredientType?.inventoryIngredientId) {
-            const [ingredient] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, ingredientType.inventoryIngredientId));
-            if (ingredient) {
-              const processedQty = parseFloat(typeVolume.processedQty ?? "0");
-              const producedQty = parseFloat(typeVolume.producedQty ?? "0");
-              const conversionRate = producedQty > 0 ? processedQty / producedQty : 1;
-              const consumedQty = filledMl * conversionRate;
-              const cost = consumedQty * parseFloat(ingredient.costPerUnit);
-              totalExtras += cost;
-              dynamicInfo = { slotLabel: dynamicSlot.slotLabel, ingredientName: ingredientType.name, filledMl, cost };
-              customizations.push({
-                ingredientId: ingredientType.inventoryIngredientId,
-                optionId: null,
-                typeVolumeId: typeVolume.id,
-                ingredientTypeId: typeVolume.ingredientTypeId,
-                consumedQty,
-                addedCost: cost,
-                slotLabel: dynamicSlot.slotLabel,
-                optionLabel: `Dynamic (${Math.round(filledMl)}${typeVolume.unit ?? "ml"})`
-              });
-            }
+        let conversionRate = 1;
+        let unit = "ml";
+        if (typeVolumeId) {
+          const [typeVolume] = await db.select().from(ingredientTypeVolumesTable).where(eq(ingredientTypeVolumesTable.id, typeVolumeId));
+          if (typeVolume) {
+            const processedQty = parseFloat(typeVolume.processedQty ?? "0");
+            const producedQty = parseFloat(typeVolume.producedQty ?? "0");
+            conversionRate = producedQty > 0 ? processedQty / producedQty : 1;
+            unit = typeVolume.unit ?? "ml";
           }
         }
+        const consumedQty = filledMl * conversionRate;
+        let cost = 0;
+        let inventoryId = null;
+        if (ingredientType?.inventoryIngredientId) {
+          inventoryId = ingredientType.inventoryIngredientId;
+          const [ingredient] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, inventoryId));
+          if (ingredient) {
+            cost = consumedQty * parseFloat(ingredient.costPerUnit);
+          }
+        }
+        totalExtras += cost;
+        const ingredientName = ingredientType?.name ?? "Dynamic";
+        dynamicInfo = { slotLabel: dynamicSlot.slotLabel, ingredientName, filledMl, cost };
+        customizations.push({
+          ingredientId: inventoryId,
+          optionId: null,
+          typeVolumeId: typeVolumeId ?? null,
+          ingredientTypeId: effectiveTypeId,
+          consumedQty,
+          addedCost: cost,
+          slotLabel: dynamicSlot.slotLabel,
+          optionLabel: ingredientType?.name ? `${ingredientType.name} (${Math.round(filledMl)}${unit})` : `Dynamic (${Math.round(filledMl)}${unit})`
+        });
       }
     } else if (dynamicSlot.ingredientId) {
       const dynamicSelection = selections.find((s) => s.ingredientId === dynamicSlot.ingredientId);
       const optionId = dynamicSelection?.optionId ?? dynamicSlot.defaultOptionId;
       if (optionId) {
-        const [[option], [ingredient]] = await Promise.all([
-          db.select().from(ingredientOptionsTable).where(eq(ingredientOptionsTable.id, optionId)),
-          db.select().from(ingredientsTable).where(eq(ingredientsTable.id, dynamicSlot.ingredientId))
-        ]);
-        if (option && ingredient) {
+        let cost = 0;
+        let consumedQty = 0;
+        let optionLabel = `Dynamic (${Math.round(filledMl)}ml)`;
+        let ingredientName = "Dynamic";
+        const [option] = await db.select().from(ingredientOptionsTable).where(eq(ingredientOptionsTable.id, optionId));
+        if (option) {
           const processedQty = parseFloat(option.processedQty);
           const producedQty = parseFloat(option.producedQty);
           const conversionRate = producedQty > 0 ? processedQty / producedQty : 1;
-          const consumedQty = filledMl * conversionRate;
-          const cost = consumedQty * parseFloat(ingredient.costPerUnit);
-          totalExtras += cost;
-          dynamicInfo = { slotLabel: dynamicSlot.slotLabel, ingredientName: ingredient.name, filledMl, cost };
-          customizations.push({
-            ingredientId: dynamicSlot.ingredientId,
-            optionId,
-            typeVolumeId: null,
-            ingredientTypeId: null,
-            consumedQty,
-            addedCost: cost,
-            slotLabel: dynamicSlot.slotLabel,
-            optionLabel: `Dynamic (${Math.round(filledMl)}ml)`
-          });
+          consumedQty = filledMl * conversionRate;
+          const [ingredient] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, dynamicSlot.ingredientId));
+          if (ingredient) {
+            cost = consumedQty * parseFloat(ingredient.costPerUnit);
+            ingredientName = ingredient.name;
+            optionLabel = `${ingredientName} (${Math.round(filledMl)}ml)`;
+          }
         }
+        totalExtras += cost;
+        dynamicInfo = { slotLabel: dynamicSlot.slotLabel, ingredientName, filledMl, cost };
+        customizations.push({
+          ingredientId: dynamicSlot.ingredientId,
+          optionId,
+          typeVolumeId: null,
+          ingredientTypeId: null,
+          consumedQty,
+          addedCost: cost,
+          slotLabel: dynamicSlot.slotLabel,
+          optionLabel: `Dynamic (${Math.round(filledMl)}ml)`
+        });
       }
     }
   }
@@ -77763,6 +77782,7 @@ router3.post("/drinks/:id/price", async (req, res) => {
       total: data.totalPrice
     });
   } catch (error40) {
+    console.error("Calculate Error:", error40);
     if (error40.message === "Drink not found") {
       res.status(404).json({ error: error40.message });
     } else {
