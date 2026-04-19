@@ -584,8 +584,7 @@ export default function DrinkRecipe() {
                         </Select>
                       </div>
                     </div>
-
-                  {/* ── CATALOG SLOT ── */}
+                                   {/* ── CATALOG SLOT ── */}
                   {slot.expanded && slot.style === "typed" && (
                     <div className="grid gap-3">
                       {/* Type Options list */}
@@ -696,77 +695,53 @@ export default function DrinkRecipe() {
                           </SelectContent>
                         </Select>
                       </div>
-
                       {slot.typeOptions.length === 0 && (
                         <p className="text-xs text-muted-foreground">Add at least one type option — e.g. Brazilian, Colombian, Special Roasted.</p>
                       )}
-
-                      {/* Required / Dynamic toggles */}
-                      <div className="flex flex-wrap gap-6">
-                        <div className="flex items-center gap-2.5">
-                          <Switch id={`req-${slot.key}`} checked={slot.isRequired} onCheckedChange={v => updateSlot(slot.key, { isRequired: v })} />
-                          <Label htmlFor={`req-${slot.key}`} className="cursor-pointer text-sm font-medium">Required</Label>
-                        </div>
-                        <div className="flex items-center gap-2.5">
-                          <Switch id={`dyn-${slot.key}`} checked={slot.isDynamic} onCheckedChange={v => updateSlot(slot.key, { isDynamic: v })} disabled={!slot.isDynamic && hasDynamicSlot} />
-                          <Label htmlFor={`dyn-${slot.key}`} className="cursor-pointer text-sm font-medium flex items-center gap-1.5">
-                            <Droplets className="h-4 w-4 text-blue-500" /> Dynamic fill
-                          </Label>
-                          {slot.isDynamic && (
-                            <Badge variant="secondary" className="text-blue-600 bg-blue-100 dark:bg-blue-900/30 text-xs font-semibold">
-                              fills remaining {cupSizeMl ? `${cupSizeMl}ml` : "cup"}
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
                     </div>
                   )}
 
                   {/* ── LEGACY SLOT ── */}
                   {slot.expanded && slot.style === "legacy" && (
-                    <>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="grid gap-1.5">
-                          <Label className="text-xs">Ingredient</Label>
-                          <Select
-                            value={slot.ingredientId?.toString() ?? ""}
-                            onValueChange={v => updateSlot(slot.key, { ingredientId: parseInt(v) })}
-                          >
-                            <SelectTrigger><SelectValue placeholder="Pick ingredient…" /></SelectTrigger>
-                            <SelectContent position="popper" side="bottom" sideOffset={4} className="max-h-[60vh] overflow-y-auto">
-                              {(ingredients ?? []).map(i => (
-                                <SelectItem key={i.id} value={i.id.toString()}>
-                                  <span className="capitalize">[{i.ingredientType}]</span> {i.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          {ing && <p className="text-xs text-muted-foreground">{options.length} option{options.length !== 1 ? "s" : ""} · unit: {ing.unit}</p>}
-                        </div>
-                        <div className="grid gap-1.5">
-                          <Label className="text-xs">Default Option</Label>
-                          <Select
-                            value={slot.defaultOptionId?.toString() ?? "none"}
-                            onValueChange={v => updateSlot(slot.key, { defaultOptionId: v === "none" ? null : parseInt(v) })}
-                            disabled={options.length === 0}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder={options.length === 0 ? "Select ingredient first" : "Choose default…"} />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="none">No default</SelectItem>
-                              {options.map((o: any) => (
-                                <SelectItem key={o.id} value={o.id.toString()}>
-                                  {o.label}{o.extraCost > 0 ? ` (+E£${Number(o.extraCost).toFixed(2)})` : ""}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="grid gap-1.5">
+                        <Label className="text-xs">Ingredient</Label>
+                        <Select
+                          value={slot.ingredientId?.toString() ?? ""}
+                          onValueChange={v => updateSlot(slot.key, { ingredientId: parseInt(v) })}
+                        >
+                          <SelectTrigger><SelectValue placeholder="Pick ingredient…" /></SelectTrigger>
+                          <SelectContent position="popper" side="bottom" sideOffset={4} className="max-h-[60vh] overflow-y-auto">
+                            {(ingredients ?? []).map(i => (
+                              <SelectItem key={i.id} value={i.id.toString()}>
+                                <span className="capitalize">[{i.ingredientType}]</span> {i.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {ing && <p className="text-xs text-muted-foreground">{options.length} option{options.length !== 1 ? "s" : ""} · unit: {ing.unit}</p>}
                       </div>
-
+                      <div className="grid gap-1.5">
+                        <Label className="text-xs">Default Option</Label>
+                        <Select
+                          value={slot.defaultOptionId?.toString() ?? "none"}
+                          onValueChange={v => updateSlot(slot.key, { defaultOptionId: v === "none" ? null : parseInt(v) })}
+                          disabled={options.length === 0}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder={options.length === 0 ? "Select ingredient first" : "Choose default…"} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">No default</SelectItem>
+                            {options.map((o: any) => (
+                              <SelectItem key={o.id} value={o.id.toString()}>
+                                {o.label}{o.extraCost > 0 ? ` (+E£${Number(o.extraCost).toFixed(2)})` : ""}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
-                    </>
+                    </div>
                   )}
                 </CardContent>
               </Card>
