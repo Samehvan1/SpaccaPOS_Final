@@ -5,7 +5,6 @@
  * Spacca POS API specification
  * OpenAPI spec version: 0.1.0
  */
-import type { IngredientDetail } from "./ingredientDetail";
 
 export interface DrinkIngredientSlot {
   id: number;
@@ -16,5 +15,6 @@ export interface DrinkIngredientSlot {
   /** @nullable */
   defaultOptionId: number | null;
   sortOrder: number;
-  ingredient: IngredientDetail;
+  baristaSortOrder: number;
+  customerSortOrder: number;
 }

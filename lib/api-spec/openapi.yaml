@@ -841,8 +841,10 @@ components:
           type: ["integer", "null"]
         sortOrder:
           type: integer
-        ingredient:
-          $ref: "#/components/schemas/IngredientDetail"
+        baristaSortOrder:
+          type: integer
+        customerSortOrder:
+          type: integer
       required:
         - id
         - drinkId
@@ -851,6 +853,8 @@ components:
         - isRequired
         - defaultOptionId
         - sortOrder
+        - baristaSortOrder
+        - customerSortOrder
         - ingredient
 
     Drink:
@@ -939,6 +943,10 @@ components:
               defaultOptionId:
                 type: ["integer", "null"]
               sortOrder:
+                type: integer
+              baristaSortOrder:
+                type: integer
+              customerSortOrder:
                 type: integer
             required:
               - ingredientId

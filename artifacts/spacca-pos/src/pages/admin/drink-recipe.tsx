@@ -588,7 +588,7 @@ export default function DrinkRecipe() {
                                 <div className="p-2">
                                   {to.slotVolumes.length > 0 ? (
                                     <div className="border rounded-md divide-y overflow-x-auto">
-                                      <div className="grid grid-cols-[auto_1fr_5rem_5rem_3.5rem_auto] items-center gap-2 px-3 py-1.5 text-xs font-medium text-muted-foreground border-b min-w-[540px]">
+                                      <div className="grid grid-cols-[auto_1fr_4rem_4rem_3.5rem_5rem_auto] items-center gap-2 px-3 py-1.5 text-xs font-medium text-muted-foreground border-b min-w-[540px]">
                                         <span>On</span>
                                         <span>Volume</span>
                                         <span className="text-right">Proc.</span>
@@ -598,7 +598,7 @@ export default function DrinkRecipe() {
                                         <span className="text-right pr-1">Def.</span>
                                       </div>
                                       {to.slotVolumes.map(sv => (
-                                        <div key={sv.typeVolumeId} className={`grid grid-cols-[auto_1fr_5rem_5rem_3.5rem_auto] items-center gap-2 px-3 py-2 min-w-[540px] ${!sv.isEnabled ? "opacity-50" : ""}`}>
+                                        <div key={sv.typeVolumeId} className={`grid grid-cols-[auto_1fr_4rem_4rem_3.5rem_5rem_auto] items-center gap-2 px-3 py-2 min-w-[540px] ${!sv.isEnabled ? "opacity-50" : ""}`}>
                                           <Checkbox
                                             checked={sv.isEnabled}
                                             onCheckedChange={v => updateTypeOptionVolume(slot.key, to.key, sv.typeVolumeId, { isEnabled: Boolean(v), isDefault: !v ? false : sv.isDefault })}

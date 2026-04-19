@@ -55553,6 +55553,7 @@ var init_ingredients = __esm({
       producedQty: numeric("produced_qty", { precision: 10, scale: 4 }).notNull().default("0"),
       unit: text("unit").notNull().default("ml"),
       isActive: boolean("is_active").notNull().default(true),
+      affectsCupSize: boolean("affects_cup_size").notNull().default(true),
       sortOrder: integer("sort_order").notNull().default(0),
       createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
     });
@@ -55575,6 +55576,7 @@ var init_ingredients = __esm({
       unit: text("unit"),
       extraCost: numeric("extra_cost", { precision: 8, scale: 4 }).notNull().default("0"),
       isDefault: boolean("is_default").notNull().default(false),
+      affectsCupSize: boolean("affects_cup_size").notNull().default(true),
       sortOrder: integer("sort_order").notNull().default(0)
     });
     insertIngredientSchema = createInsertSchema(ingredientsTable).omit({ id: true, createdAt: true, updatedAt: true });
@@ -55631,6 +55633,8 @@ var init_drinks = __esm({
       defaultOptionId: integer("default_option_id").references(() => ingredientOptionsTable.id, { onDelete: "set null" }),
       isDynamic: boolean("is_dynamic").notNull().default(false),
       sortOrder: integer("sort_order").notNull().default(0),
+      baristaSortOrder: integer("barista_sort_order").notNull().default(1),
+      customerSortOrder: integer("customer_sort_order").notNull().default(1),
       createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
       updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => /* @__PURE__ */ new Date())
     });
@@ -55652,6 +55656,7 @@ var init_drinks = __esm({
       extraCost: numeric("extra_cost", { precision: 8, scale: 4 }),
       isDefault: boolean("is_default").notNull().default(false),
       isEnabled: boolean("is_enabled").notNull().default(true),
+      affectsCupSize: boolean("affects_cup_size"),
       sortOrder: integer("sort_order").notNull().default(0)
     });
     insertDrinkSchema = createInsertSchema(drinksTable).omit({ id: true, createdAt: true, updatedAt: true });
@@ -55715,6 +55720,7 @@ var init_orders = __esm({
       addedCost: numeric("added_cost", { precision: 8, scale: 4 }).notNull(),
       slotLabel: text("slot_label").notNull(),
       optionLabel: text("option_label").notNull(),
+      baristaSortOrder: integer("barista_sort_order").notNull().default(1),
       createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
     });
     insertOrderSchema = createInsertSchema(ordersTable).omit({ id: true, createdAt: true, updatedAt: true });
@@ -77191,7 +77197,10 @@ async function calculateDrinkData(drinkId, selections) {
       totalExtras += extraCost2;
       const consumedQty = parseFloat(slotVol?.processedQty ?? typeVol.processedQty ?? "0");
       const producedQty = parseFloat(slotVol?.producedQty ?? typeVol.producedQty ?? "0");
-      usedVolumeMl += producedQty;
+      const isCountable = slotVol?.affectsCupSize ?? typeVol.affectsCupSize ?? typeDef?.affectsCupSize ?? true;
+      if (isCountable) {
+        usedVolumeMl += producedQty;
+      }
       const optionLabel = typeName && volumeName ? `${typeName} \xB7 ${volumeName}` : typeName || volumeName || "Catalog Item";
       customizations.push({
         ingredientId: inventoryId,
@@ -77201,7 +77210,8 @@ async function calculateDrinkData(drinkId, selections) {
         consumedQty,
         addedCost: extraCost2,
         slotLabel: slot.slotLabel,
-        optionLabel
+        optionLabel,
+        baristaSortOrder: slot.baristaSortOrder ?? 1
       });
       continue;
     }
@@ -77210,7 +77220,9 @@ async function calculateDrinkData(drinkId, selections) {
       if (ingType) {
         const consumedQty = parseFloat(ingType.processedQty ?? "0");
         const producedQty = parseFloat(ingType.producedQty ?? "0");
-        usedVolumeMl += producedQty;
+        if (ingType.affectsCupSize) {
+          usedVolumeMl += producedQty;
+        }
         const optionLabel = producedQty > 0 || consumedQty > 0 ? `${ingType.name} (${producedQty > 0 ? producedQty : consumedQty}${ingType.unit ?? "g"})` : ingType.name;
         customizations.push({
           ingredientId: ingType.inventoryIngredientId ?? null,
@@ -77220,7 +77232,8 @@ async function calculateDrinkData(drinkId, selections) {
           consumedQty,
           addedCost: 0,
           slotLabel: slot.slotLabel,
-          optionLabel
+          optionLabel,
+          baristaSortOrder: slot.baristaSortOrder ?? 1
         });
       }
       continue;
@@ -77242,7 +77255,8 @@ async function calculateDrinkData(drinkId, selections) {
           consumedQty: parseFloat(subOption.processedQty),
           addedCost: extraCost2,
           slotLabel: slot.slotLabel,
-          optionLabel: `${option.label} \xB7 ${subOption.label}`
+          optionLabel: `${option.label} \xB7 ${subOption.label}`,
+          baristaSortOrder: slot.baristaSortOrder ?? 1
         });
       }
       continue;
@@ -77258,7 +77272,8 @@ async function calculateDrinkData(drinkId, selections) {
       consumedQty: parseFloat(option.processedQty),
       addedCost: extraCost,
       slotLabel: slot.slotLabel,
-      optionLabel: option.label
+      optionLabel: option.label,
+      baristaSortOrder: slot.baristaSortOrder ?? 1
     });
   }
   const dynamicSlot = slots.find((s) => s.isDynamic);
@@ -77312,7 +77327,8 @@ async function calculateDrinkData(drinkId, selections) {
           consumedQty,
           addedCost: cost,
           slotLabel: dynamicSlot.slotLabel,
-          optionLabel: ingredientType?.name ? `${ingredientType.name} (${Math.round(filledMl)}${unit})` : `Dynamic (${Math.round(filledMl)}${unit})`
+          optionLabel: ingredientType?.name ? `${ingredientType.name} (${Math.round(filledMl)}${unit})` : `Dynamic (${Math.round(filledMl)}${unit})`,
+          baristaSortOrder: dynamicSlot.baristaSortOrder ?? 1
         });
       }
     } else if (dynamicSlot.ingredientId) {
@@ -77346,7 +77362,8 @@ async function calculateDrinkData(drinkId, selections) {
           consumedQty,
           addedCost: cost,
           slotLabel: dynamicSlot.slotLabel,
-          optionLabel: `Dynamic (${Math.round(filledMl)}ml)`
+          optionLabel: `Dynamic (${Math.round(filledMl)}ml)`,
+          baristaSortOrder: dynamicSlot.baristaSortOrder ?? 1
         });
       }
     }
@@ -77380,7 +77397,10 @@ async function buildDrinkDetail(drinkId) {
   if (!drink) return null;
   const slots = await db.select().from(drinkIngredientSlotsTable).where(eq(drinkIngredientSlotsTable.drinkId, drinkId)).orderBy(drinkIngredientSlotsTable.sortOrder);
   async function buildTypeVolumes(typeId, slotId) {
-    const typeVolumes = await db.select().from(ingredientTypeVolumesTable).where(eq(ingredientTypeVolumesTable.ingredientTypeId, typeId)).orderBy(ingredientTypeVolumesTable.sortOrder);
+    const [[typeDef], typeVolumes] = await Promise.all([
+      db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, typeId)),
+      db.select().from(ingredientTypeVolumesTable).where(eq(ingredientTypeVolumesTable.ingredientTypeId, typeId)).orderBy(ingredientTypeVolumesTable.sortOrder)
+    ]);
     const allSlotVols = await db.select().from(drinkSlotVolumesTable).where(eq(drinkSlotVolumesTable.slotId, slotId));
     const slotVolumeMap = new Map(allSlotVols.map((sv) => [sv.typeVolumeId, sv]));
     const volIds = typeVolumes.map((tv) => tv.volumeId);
@@ -77400,6 +77420,7 @@ async function buildDrinkDetail(drinkId) {
         isDefault: override?.isDefault ?? tv.isDefault,
         isEnabled: override?.isEnabled ?? true,
         sortOrder: override?.sortOrder ?? tv.sortOrder,
+        affectsCupSize: override?.affectsCupSize ?? tv.affectsCupSize ?? typeDef?.affectsCupSize ?? true,
         hasSlotOverride: !!override
       };
     }).filter((v) => v.isEnabled);
@@ -77573,7 +77594,9 @@ router3.post("/drinks", async (req, res) => {
         slotLabel: s.slotLabel,
         isRequired: s.isRequired ?? true,
         defaultOptionId: s.defaultOptionId ?? null,
-        sortOrder: s.sortOrder ?? 0
+        sortOrder: s.sortOrder ?? 0,
+        baristaSortOrder: s.baristaSortOrder ?? s.sortOrder ?? 1,
+        customerSortOrder: s.customerSortOrder ?? s.sortOrder ?? 1
       }))
     );
   }
@@ -77682,7 +77705,9 @@ router3.put("/drinks/:id/slots", async (req, res) => {
         isRequired: s.isRequired ?? true,
         isDynamic: s.isDynamic ?? false,
         defaultOptionId: s.defaultOptionId ?? null,
-        sortOrder: s.sortOrder ?? i
+        sortOrder: s.sortOrder ?? i,
+        baristaSortOrder: s.baristaSortOrder ?? s.sortOrder ?? 1,
+        customerSortOrder: s.customerSortOrder ?? s.sortOrder ?? 1
       }))
     ).returning();
     const slotTypeOptionRows = [];
@@ -77712,6 +77737,7 @@ router3.put("/drinks/:id/slots", async (req, res) => {
                 extraCost: sv.extraCost ?? null,
                 isDefault: sv.isDefault ?? false,
                 isEnabled: sv.isEnabled ?? true,
+                affectsCupSize: sv.affectsCupSize ?? null,
                 sortOrder: sv.sortOrder ?? 0
               });
             }
@@ -77729,6 +77755,7 @@ router3.put("/drinks/:id/slots", async (req, res) => {
             extraCost: sv.extraCost ?? null,
             isDefault: sv.isDefault ?? false,
             isEnabled: sv.isEnabled ?? true,
+            affectsCupSize: sv.affectsCupSize ?? null,
             sortOrder: sv.sortOrder ?? 0
           });
         }
@@ -77754,12 +77781,24 @@ router3.delete("/drinks/:id", async (req, res) => {
     res.status(400).json({ error: params.error.message });
     return;
   }
-  const [drink] = await db.delete(drinksTable).where(eq(drinksTable.id, params.data.id)).returning();
-  if (!drink) {
-    res.status(404).json({ error: "Drink not found" });
-    return;
+  try {
+    const [drink] = await db.delete(drinksTable).where(eq(drinksTable.id, params.data.id)).returning();
+    if (!drink) {
+      res.status(404).json({ error: "Drink not found" });
+      return;
+    }
+    res.sendStatus(204);
+  } catch (error40) {
+    const isForeignKeyError = error40.code === "23503" || error40.cause?.code === "23503" || error40.message?.includes("foreign key constraint") || error40.cause?.message?.includes("foreign key constraint");
+    if (isForeignKeyError) {
+      res.status(400).json({
+        error: "Cannot delete drink with order history. Please deactivate it instead to hide it from the menu."
+      });
+    } else {
+      console.error("Delete Error:", error40);
+      res.status(500).json({ error: "Failed to delete drink" });
+    }
   }
-  res.sendStatus(204);
 });
 router3.post("/drinks/:id/price", async (req, res) => {
   const params = CalculateDrinkPriceParams2.safeParse(req.params);
@@ -78175,7 +78214,8 @@ router5.post("/orders", async (req, res) => {
         consumedQty: c.consumedQty * item.quantity,
         addedCost: c.addedCost,
         slotLabel: c.slotLabel,
-        optionLabel: c.optionLabel
+        optionLabel: c.optionLabel,
+        baristaSortOrder: c.baristaSortOrder
       }));
       const unitPrice = calcData.totalPrice;
       const lineTotal = unitPrice * item.quantity;
@@ -78242,7 +78282,8 @@ router5.post("/orders", async (req, res) => {
             consumedQty: String(c.consumedQty),
             addedCost: String(c.addedCost),
             slotLabel: c.slotLabel,
-            optionLabel: c.optionLabel
+            optionLabel: c.optionLabel,
+            baristaSortOrder: c.baristaSortOrder
           }))
         );
       }
@@ -78625,19 +78666,38 @@ router8.patch("/catalog/categories/:id", async (req, res) => {
 });
 router8.delete("/catalog/categories/:id", async (req, res) => {
   const id = parseInt(req.params.id);
-  await db.delete(ingredientCategoriesTable).where(eq(ingredientCategoriesTable.id, id));
-  res.sendStatus(204);
+  try {
+    await db.delete(ingredientCategoriesTable).where(eq(ingredientCategoriesTable.id, id));
+    res.sendStatus(204);
+  } catch (error40) {
+    const isForeignKeyError = error40.code === "23503" || error40.cause?.code === "23503";
+    if (isForeignKeyError) {
+      res.status(400).json({ error: "Cannot delete category while it contains ingredient types. Please remove the types first." });
+    } else {
+      res.status(500).json({ error: "Failed to delete category" });
+    }
+  }
 });
 router8.get("/catalog/types", async (_req, res) => {
   const types3 = await db.select().from(ingredientTypesTable).orderBy(asc(ingredientTypesTable.categoryId), asc(ingredientTypesTable.sortOrder));
-  const [categories, inventoryItems] = await Promise.all([
+  const [categories, inventoryItems, slotLinks, optionLinks] = await Promise.all([
     db.select().from(ingredientCategoriesTable),
-    db.select({ id: ingredientsTable.id, name: ingredientsTable.name, unit: ingredientsTable.unit }).from(ingredientsTable)
+    db.select({ id: ingredientsTable.id, name: ingredientsTable.name, unit: ingredientsTable.unit }).from(ingredientsTable),
+    db.select({ drinkId: drinkIngredientSlotsTable.drinkId, typeId: drinkIngredientSlotsTable.ingredientTypeId }).from(drinkIngredientSlotsTable),
+    db.select({ drinkId: drinkIngredientSlotsTable.drinkId, typeId: drinkSlotTypeOptionsTable.ingredientTypeId }).from(drinkSlotTypeOptionsTable).innerJoin(drinkIngredientSlotsTable, eq(drinkSlotTypeOptionsTable.slotId, drinkIngredientSlotsTable.id))
   ]);
+  const typeDrinkMap = /* @__PURE__ */ new Map();
+  [...slotLinks, ...optionLinks].forEach((link) => {
+    if (link.typeId) {
+      if (!typeDrinkMap.has(link.typeId)) typeDrinkMap.set(link.typeId, /* @__PURE__ */ new Set());
+      typeDrinkMap.get(link.typeId).add(link.drinkId);
+    }
+  });
   const catMap = new Map(categories.map((c) => [c.id, c]));
   const invMap = new Map(inventoryItems.map((i) => [i.id, i]));
   res.json(types3.map((t) => ({
     ...t,
+    drinkCount: typeDrinkMap.get(t.id)?.size ?? 0,
     category: catMap.get(t.categoryId) ?? null,
     inventoryIngredient: t.inventoryIngredientId ? invMap.get(t.inventoryIngredientId) ?? null : null
   })));
@@ -78663,7 +78723,7 @@ router8.get("/catalog/types/:id", async (req, res) => {
   });
 });
 router8.post("/catalog/types", async (req, res) => {
-  const { categoryId, name, inventoryIngredientId, processedQty, producedQty, unit, isActive, sortOrder } = req.body;
+  const { categoryId, name, inventoryIngredientId, processedQty, producedQty, unit, isActive, affectsCupSize, sortOrder } = req.body;
   if (!categoryId || !name) {
     res.status(400).json({ error: "categoryId and name required" });
     return;
@@ -78676,6 +78736,7 @@ router8.post("/catalog/types", async (req, res) => {
     producedQty: producedQty ?? "0",
     unit: unit ?? "ml",
     isActive: isActive ?? true,
+    affectsCupSize: affectsCupSize ?? true,
     sortOrder: sortOrder ?? 0
   }).returning();
   res.status(201).json(row);
@@ -78700,8 +78761,18 @@ router8.patch("/catalog/types/:id", async (req, res) => {
   res.json(row);
 });
 router8.delete("/catalog/types/:id", async (req, res) => {
-  await db.delete(ingredientTypesTable).where(eq(ingredientTypesTable.id, parseInt(req.params.id)));
-  res.sendStatus(204);
+  const id = parseInt(req.params.id);
+  try {
+    await db.delete(ingredientTypesTable).where(eq(ingredientTypesTable.id, id));
+    res.sendStatus(204);
+  } catch (error40) {
+    const isForeignKeyError = error40.code === "23503" || error40.cause?.code === "23503";
+    if (isForeignKeyError) {
+      res.status(400).json({ error: "Cannot delete ingredient type while it is used in drink recipes or has associated volume definitions." });
+    } else {
+      res.status(500).json({ error: "Failed to delete ingredient type" });
+    }
+  }
 });
 router8.get("/catalog/types/:id/volumes", async (req, res) => {
   const id = parseInt(req.params.id);
@@ -78718,7 +78789,7 @@ router8.get("/catalog/types/:id/volumes", async (req, res) => {
 });
 router8.post("/catalog/types/:id/volumes", async (req, res) => {
   const ingredientTypeId = parseInt(req.params.id);
-  const { volumeId, processedQty, producedQty, unit, extraCost, isDefault, sortOrder } = req.body;
+  const { volumeId, processedQty, producedQty, unit, extraCost, isDefault, affectsCupSize, sortOrder } = req.body;
   if (!volumeId) {
     res.status(400).json({ error: "volumeId required" });
     return;
@@ -78731,19 +78802,21 @@ router8.post("/catalog/types/:id/volumes", async (req, res) => {
     unit: unit ?? null,
     extraCost: extraCost ?? "0",
     isDefault: isDefault ?? false,
+    affectsCupSize: affectsCupSize ?? true,
     sortOrder: sortOrder ?? 0
   }).returning();
   res.status(201).json(row);
 });
 router8.patch("/catalog/type-volumes/:id", async (req, res) => {
   const id = parseInt(req.params.id);
-  const { processedQty, producedQty, unit, extraCost, isDefault, sortOrder } = req.body;
+  const { processedQty, producedQty, unit, extraCost, isDefault, affectsCupSize, sortOrder } = req.body;
   const patch = {};
   if (processedQty !== void 0) patch.processedQty = processedQty;
   if (producedQty !== void 0) patch.producedQty = producedQty;
   if (unit !== void 0) patch.unit = unit;
   if (extraCost !== void 0) patch.extraCost = extraCost;
   if (isDefault !== void 0) patch.isDefault = isDefault;
+  if (affectsCupSize !== void 0) patch.affectsCupSize = affectsCupSize;
   if (sortOrder !== void 0) patch.sortOrder = sortOrder;
   const [row] = await db.update(ingredientTypeVolumesTable).set(patch).where(eq(ingredientTypeVolumesTable.id, id)).returning();
   if (!row) {
@@ -78786,8 +78859,18 @@ router8.patch("/catalog/volumes/:id", async (req, res) => {
   res.json(row);
 });
 router8.delete("/catalog/volumes/:id", async (req, res) => {
-  await db.delete(ingredientVolumesTable).where(eq(ingredientVolumesTable.id, parseInt(req.params.id)));
-  res.sendStatus(204);
+  const id = parseInt(req.params.id);
+  try {
+    await db.delete(ingredientVolumesTable).where(eq(ingredientVolumesTable.id, id));
+    res.sendStatus(204);
+  } catch (error40) {
+    const isForeignKeyError = error40.code === "23503" || error40.cause?.code === "23503";
+    if (isForeignKeyError) {
+      res.status(400).json({ error: "Cannot delete volume while it is linked to ingredient types. Please remove it from those types first." });
+    } else {
+      res.status(500).json({ error: "Failed to delete volume" });
+    }
+  }
 });
 var catalog_default = router8;
 

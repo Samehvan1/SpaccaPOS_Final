@@ -13,4 +13,6 @@ export type CreateDrinkBodySlotsItem = {
   /** @nullable */
   defaultOptionId?: number | null;
   sortOrder?: number;
+  baristaSortOrder?: number;
+  customerSortOrder?: number;
 };

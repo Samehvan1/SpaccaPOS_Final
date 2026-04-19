@@ -1,6 +1,6 @@
 import { pgTable, serial, text, numeric, boolean, integer, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
-import { z } from "zod/v4";
+import { z } from "zod";
 import { ingredientsTable, ingredientOptionsTable, ingredientTypesTable, ingredientTypeVolumesTable } from "./ingredients";
 
 export const drinkCategoriesTable = pgTable("drink_categories", {
@@ -85,9 +85,9 @@ export const insertDrinkSlotSchema = createInsertSchema(drinkIngredientSlotsTabl
 export const insertDrinkSlotVolumeSchema = createInsertSchema(drinkSlotVolumesTable).omit({ id: true });
 export const insertDrinkSlotTypeOptionSchema = createInsertSchema(drinkSlotTypeOptionsTable).omit({ id: true });
 
-export type InsertDrink = z.infer<typeof insertDrinkSchema>;
-export type InsertDrinkCategory = z.infer<typeof insertDrinkCategorySchema>;
-export type InsertDrinkSlot = z.infer<typeof insertDrinkSlotSchema>;
+export type InsertDrink = typeof drinksTable.$inferInsert;
+export type InsertDrinkCategory = typeof drinkCategoriesTable.$inferInsert;
+export type InsertDrinkSlot = typeof drinkIngredientSlotsTable.$inferInsert;
 export type Drink = typeof drinksTable.$inferSelect;
 export type DrinkCategory = typeof drinkCategoriesTable.$inferSelect;
 export type DrinkIngredientSlot = typeof drinkIngredientSlotsTable.$inferSelect;

@@ -158,7 +158,8 @@ export interface DrinkIngredientSlot {
   /** @nullable */
   defaultOptionId: number | null;
   sortOrder: number;
-  ingredient: IngredientDetail;
+  baristaSortOrder: number;
+  customerSortOrder: number;
 }
 
 export interface Drink {
@@ -191,6 +192,8 @@ export type CreateDrinkBodySlotsItem = {
   /** @nullable */
   defaultOptionId?: number | null;
   sortOrder?: number;
+  baristaSortOrder?: number;
+  customerSortOrder?: number;
 };
 
 export interface CreateDrinkBody {

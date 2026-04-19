@@ -83,6 +83,8 @@ export const CreateDrinkBody = zod.object({
         isRequired: zod.boolean().optional(),
         defaultOptionId: zod.number().nullish(),
         sortOrder: zod.number().optional(),
+        baristaSortOrder: zod.number().optional(),
+        customerSortOrder: zod.number().optional(),
       }),
     )
     .optional(),
@@ -122,47 +124,8 @@ export const GetDrinkResponse = zod
           isRequired: zod.boolean(),
           defaultOptionId: zod.number().nullable(),
           sortOrder: zod.number(),
-          ingredient: zod
-            .object({
-              id: zod.number(),
-              name: zod.string(),
-              slug: zod.string(),
-              ingredientType: zod.enum([
-                "coffee",
-                "milk",
-                "syrup",
-                "sauce",
-                "sweetener",
-                "topping",
-                "base",
-                "other",
-              ]),
-              unit: zod.string(),
-              costPerUnit: zod.number(),
-              stockQuantity: zod.number(),
-              lowStockThreshold: zod.number(),
-              isActive: zod.boolean(),
-              createdAt: zod.string(),
-              updatedAt: zod.string(),
-            })
-            .and(
-              zod.object({
-                options: zod.array(
-                  zod.object({
-                    id: zod.number(),
-                    ingredientId: zod.number(),
-                    label: zod.string(),
-                    processedQty: zod.number(),
-                    producedQty: zod.number(),
-                    producedUnit: zod.string(),
-                    extraCost: zod.number(),
-                    isDefault: zod.boolean(),
-                    linkedIngredientId: zod.number().nullish(),
-                    sortOrder: zod.number(),
-                  }),
-                ),
-              }),
-            ),
+          baristaSortOrder: zod.number(),
+          customerSortOrder: zod.number(),
         }),
       ),
     }),

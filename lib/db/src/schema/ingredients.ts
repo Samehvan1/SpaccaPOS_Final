@@ -1,6 +1,6 @@
 import { pgTable, serial, text, numeric, boolean, timestamp, integer } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
-import { z } from "zod/v4";
+import { z } from "zod";
 
 // ── Inventory items (unchanged — used for stock tracking) ─────────────────
 export const ingredientsTable = pgTable("ingredients", {
@@ -103,8 +103,8 @@ export const insertIngredientTypeSchema = createInsertSchema(ingredientTypesTabl
 export const insertIngredientVolumeSchema = createInsertSchema(ingredientVolumesTable).omit({ id: true, createdAt: true });
 export const insertIngredientTypeVolumeSchema = createInsertSchema(ingredientTypeVolumesTable).omit({ id: true });
 
-export type InsertIngredient = z.infer<typeof insertIngredientSchema>;
-export type InsertIngredientOption = z.infer<typeof insertIngredientOptionSchema>;
+export type InsertIngredient = typeof ingredientsTable.$inferInsert;
+export type InsertIngredientOption = typeof ingredientOptionsTable.$inferInsert;
 export type Ingredient = typeof ingredientsTable.$inferSelect;
 export type IngredientOption = typeof ingredientOptionsTable.$inferSelect;
 export type IngredientCategory = typeof ingredientCategoriesTable.$inferSelect;

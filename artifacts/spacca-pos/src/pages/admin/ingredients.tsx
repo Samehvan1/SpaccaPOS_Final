@@ -37,7 +37,14 @@ type IngType = {
 };
 type Volume = { id: number; name: string; processedQty: string; producedQty: string; unit: string; sortOrder: number };
 type TypeVolume = {
-  id: number; ingredientTypeId: number; volumeId: number; processedQty: string | null; producedQty: string | null; unit: string | null; extraCost: string; isDefault: boolean; 
+  id: number;
+  ingredientTypeId: number;
+  volumeId: number;
+  processedQty: string | null;
+  producedQty: string | null;
+  unit: string | null;
+  extraCost: string;
+  isDefault: boolean;
   sortOrder: number;
   volume?: Volume | null;
 };
@@ -231,6 +238,14 @@ function TypesTab({ inventoryItems }: { inventoryItems: Ingredient[] }) {
     finally { setSaving(false); }
   };
 
+  const loadTypeVolumes = useCallback(async (typeId: number) => {
+    try {
+      setTypeVolumes(await api(`/api/catalog/types/${typeId}/volumes`));
+    } catch {
+      toast({ variant: "destructive", title: "Failed to load volumes" });
+    }
+  }, [toast]);
+
   const handleDelete = async (id: number) => {
     if (!confirm("Delete this ingredient type?")) return;
     try { 
@@ -249,17 +264,19 @@ function TypesTab({ inventoryItems }: { inventoryItems: Ingredient[] }) {
     try { setTypeVolumes(await api(`/api/catalog/types/${t.id}/volumes`)); }
     catch { toast({ variant: "destructive", title: "Failed to load volumes" }); }
     finally { setLoadingTypeVols(false); }
+    setAddingVolumeId(""); setAddingExtraCost("0"); setAddingIsDefault(false);
+    loadTypeVolumes(t.id);
   };
 
   const handleAddTypeVolume = async () => {
     if (!volTypeId || !addingVolumeId) return;
     try {
-      const row = await api(`/api/catalog/types/${volTypeId}/volumes`, {
+      await api(`/api/catalog/types/${volTypeId}/volumes`, {
         method: "POST",
-        body: JSON.stringify({ volumeId: parseInt(addingVolumeId), extraCost: addingExtraCost, isDefault: addingIsDefault, sortOrder: typeVolumes.length }),
+        body: JSON.stringify({ volumeId: parseInt(addingVolumeId), extraCost: addingExtraCost, isDefault: addingIsDefault }),
       });
-      setTypeVolumes(prev => [...prev, { ...row, volume: allVolumes.find(v => v.id === row.volumeId) ?? null }]);
       setAddingVolumeId(""); setAddingExtraCost("0"); setAddingIsDefault(false);
+      loadTypeVolumes(volTypeId);
       toast({ title: "Volume added to type" });
     } catch { toast({ variant: "destructive", title: "Failed to add volume" }); }
   };
@@ -267,18 +284,16 @@ function TypesTab({ inventoryItems }: { inventoryItems: Ingredient[] }) {
   const handleDeleteTypeVolume = async (tvId: number) => {
     try {
       await api(`/api/catalog/type-volumes/${tvId}`, { method: "DELETE" });
-      setTypeVolumes(prev => prev.filter(v => v.id !== tvId));
+      loadTypeVolumes(volTypeId!);
       toast({ title: "Volume removed" });
     } catch { toast({ variant: "destructive", title: "Failed to remove volume" }); }
   };
 
   const handleToggleDefault = async (tv: TypeVolume) => {
     try {
-      const updated = await api(`/api/catalog/type-volumes/${tv.id}`, {
-        method: "PATCH", body: JSON.stringify({ isDefault: !tv.isDefault }),
-      });
-      setTypeVolumes(prev => prev.map(v => v.id === tv.id ? { ...v, isDefault: updated.isDefault } : { ...v, isDefault: false }));
-    } catch { toast({ variant: "destructive", title: "Failed to update" }); }
+      await api(`/api/catalog/type-volumes/${tv.id}`, { method: "PATCH", body: JSON.stringify({ isDefault: !tv.isDefault }) });
+      loadTypeVolumes(volTypeId!);
+    } catch { toast({ variant: "destructive", title: "Failed to update default" }); }
   };
 
   const availableVolumesToAdd = allVolumes.filter(v => !typeVolumes.some(tv => tv.volumeId === v.id));
