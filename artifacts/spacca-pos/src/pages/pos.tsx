@@ -201,11 +201,11 @@ export default function PosTerminal() {
       const slotId = parseInt(slotIdStr);
       const slot = (drinkDetail.slots as any[]).find(s => s.id === slotId);
       if (!slot) return null;
-      // Typed slot — send slotId + typeVolumeId (slotId identifies the slot, typeVolumeId identifies type+volume)
+      // Typed slot — send slotId + typeVolumeId + ingredientTypeId
       if (slot.slotStyle === "typed") {
         const typeVolumeId = subSelections[slotId];
-        if (!typeVolumeId) return null;
-        return { slotId: slot.id, typeVolumeId };
+        const ingredientTypeId = selectionVal;
+        return { slotId: slot.id, ingredientTypeId, typeVolumeId: typeVolumeId || undefined };
       }
       // Legacy slot
       const optionId = selectionVal;

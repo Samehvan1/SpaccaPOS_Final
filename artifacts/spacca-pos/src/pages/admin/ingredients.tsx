@@ -30,6 +30,7 @@ type IngredientOption = {
 type Category = { id: number; name: string; sortOrder: number };
 type IngType = {
   id: number; categoryId: number; name: string; inventoryIngredientId: number | null;
+  processedQty: string; producedQty: string; unit: string;
   isActive: boolean; sortOrder: number; category?: Category | null; inventoryIngredient?: { id: number; name: string; unit: string } | null;
 };
 type Volume = { id: number; name: string; processedQty: string; producedQty: string; unit: string; sortOrder: number };
@@ -159,6 +160,9 @@ function TypesTab({ inventoryItems }: { inventoryItems: Ingredient[] }) {
   const [categoryId, setCategoryId] = useState<string>("");
   const [inventoryIngId, setInventoryIngId] = useState<string>("none");
   const [isActive, setIsActive] = useState(true);
+  const [processedQty, setProcessedQty] = useState("0");
+  const [producedQty, setProducedQty] = useState("0");
+  const [unit, setUnit] = useState("ml");
   const [saving, setSaving] = useState(false);
 
   // Volume config dialog
@@ -185,10 +189,17 @@ function TypesTab({ inventoryItems }: { inventoryItems: Ingredient[] }) {
 
   useEffect(() => { load(); }, [load]);
 
-  const openAdd = () => { setEditId(null); setName(""); setCategoryId(""); setInventoryIngId("none"); setIsActive(true); setShowForm(true); };
+  const openAdd = () => { 
+    setEditId(null); setName(""); setCategoryId(""); setInventoryIngId("none"); 
+    setProcessedQty("0"); setProducedQty("0"); setUnit("ml");
+    setIsActive(true); setShowForm(true); 
+  };
   const openEdit = (t: IngType) => {
     setEditId(t.id); setName(t.name); setCategoryId(String(t.categoryId));
     setInventoryIngId(t.inventoryIngredientId ? String(t.inventoryIngredientId) : "none");
+    setProcessedQty(t.processedQty ?? "0");
+    setProducedQty(t.producedQty ?? "0");
+    setUnit(t.unit ?? "ml");
     setIsActive(t.isActive); setShowForm(true);
   };
 
@@ -199,6 +210,7 @@ function TypesTab({ inventoryItems }: { inventoryItems: Ingredient[] }) {
       const payload = {
         name: name.trim(), categoryId: parseInt(categoryId),
         inventoryIngredientId: inventoryIngId !== "none" ? parseInt(inventoryIngId) : null,
+        processedQty, producedQty, unit: unit || "ml",
         isActive,
       };
       if (editId) {
@@ -341,6 +353,21 @@ function TypesTab({ inventoryItems }: { inventoryItems: Ingredient[] }) {
                 </SelectContent>
               </Select>
             </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="grid gap-1.5">
+                <Label className="text-xs">Processed Qty</Label>
+                <Input type="number" step="0.1" value={processedQty} onChange={e => setProcessedQty(e.target.value)} />
+              </div>
+              <div className="grid gap-1.5">
+                <Label className="text-xs">Produced Qty</Label>
+                <Input type="number" step="0.1" value={producedQty} onChange={e => setProducedQty(e.target.value)} />
+              </div>
+              <div className="grid gap-1.5">
+                <Label className="text-xs">Unit</Label>
+                <Input value={unit} onChange={e => setUnit(e.target.value)} placeholder="ml, g" />
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">Base quantities to use if no volume is selected in the recipe.</p>
             <div className="flex items-center gap-2">
               <Switch id="type-active" checked={isActive} onCheckedChange={setIsActive} />
               <Label htmlFor="type-active" className="cursor-pointer">{isActive ? "Active" : "Inactive"}</Label>

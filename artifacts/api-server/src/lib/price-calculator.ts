@@ -95,15 +95,24 @@ export async function calculateDrinkData(drinkId: number, selections: any[]) {
     if (sel.ingredientTypeId) {
       const [ingType] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, sel.ingredientTypeId));
       if (ingType) {
+        const consumedQty = parseFloat(ingType.processedQty ?? "0");
+        const producedQty = parseFloat(ingType.producedQty ?? "0");
+        
+        usedVolumeMl += producedQty;
+        
+        const optionLabel = (producedQty > 0 || consumedQty > 0) 
+          ? `${ingType.name} (${producedQty > 0 ? producedQty : consumedQty}${ingType.unit ?? "g"})`
+          : ingType.name;
+
         customizations.push({
           ingredientId: ingType.inventoryIngredientId ?? null,
           optionId: null,
           typeVolumeId: null,
           ingredientTypeId: sel.ingredientTypeId,
-          consumedQty: 0,
+          consumedQty,
           addedCost: 0,
           slotLabel: slot.slotLabel,
-          optionLabel: ingType.name,
+          optionLabel,
         });
       }
       continue;

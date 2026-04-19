@@ -88,19 +88,31 @@ router.get("/catalog/types/:id", async (req, res): Promise<void> => {
 });
 
 router.post("/catalog/types", async (req, res): Promise<void> => {
-  const { categoryId, name, inventoryIngredientId, isActive, sortOrder } = req.body;
+  const { categoryId, name, inventoryIngredientId, processedQty, producedQty, unit, isActive, sortOrder } = req.body;
   if (!categoryId || !name) { res.status(400).json({ error: "categoryId and name required" }); return; }
-  const [row] = await db.insert(ingredientTypesTable).values({ categoryId, name, inventoryIngredientId: inventoryIngredientId ?? null, isActive: isActive ?? true, sortOrder: sortOrder ?? 0 }).returning();
+  const [row] = await db.insert(ingredientTypesTable).values({ 
+    categoryId, 
+    name, 
+    inventoryIngredientId: inventoryIngredientId ?? null, 
+    processedQty: processedQty ?? "0",
+    producedQty: producedQty ?? "0",
+    unit: unit ?? "ml",
+    isActive: isActive ?? true, 
+    sortOrder: sortOrder ?? 0 
+  }).returning();
   res.status(201).json(row);
 });
 
 router.patch("/catalog/types/:id", async (req, res): Promise<void> => {
   const id = parseInt(req.params.id);
-  const { categoryId, name, inventoryIngredientId, isActive, sortOrder } = req.body;
+  const { categoryId, name, inventoryIngredientId, processedQty, producedQty, unit, isActive, sortOrder } = req.body;
   const patch: Record<string, unknown> = {};
   if (categoryId !== undefined) patch.categoryId = categoryId;
   if (name !== undefined) patch.name = name;
   if (inventoryIngredientId !== undefined) patch.inventoryIngredientId = inventoryIngredientId;
+  if (processedQty !== undefined) patch.processedQty = processedQty;
+  if (producedQty !== undefined) patch.producedQty = producedQty;
+  if (unit !== undefined) patch.unit = unit;
   if (isActive !== undefined) patch.isActive = isActive;
   if (sortOrder !== undefined) patch.sortOrder = sortOrder;
   const [row] = await db.update(ingredientTypesTable).set(patch).where(eq(ingredientTypesTable.id, id)).returning();

@@ -55549,6 +55549,9 @@ var init_ingredients = __esm({
       categoryId: integer("category_id").notNull().references(() => ingredientCategoriesTable.id),
       name: text("name").notNull(),
       inventoryIngredientId: integer("inventory_ingredient_id").references(() => ingredientsTable.id, { onDelete: "set null" }),
+      processedQty: numeric("processed_qty", { precision: 10, scale: 4 }).notNull().default("0"),
+      producedQty: numeric("produced_qty", { precision: 10, scale: 4 }).notNull().default("0"),
+      unit: text("unit").notNull().default("ml"),
       isActive: boolean("is_active").notNull().default(true),
       sortOrder: integer("sort_order").notNull().default(0),
       createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
@@ -77205,15 +77208,19 @@ async function calculateDrinkData(drinkId, selections) {
     if (sel.ingredientTypeId) {
       const [ingType] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, sel.ingredientTypeId));
       if (ingType) {
+        const consumedQty = parseFloat(ingType.processedQty ?? "0");
+        const producedQty = parseFloat(ingType.producedQty ?? "0");
+        usedVolumeMl += producedQty;
+        const optionLabel = producedQty > 0 || consumedQty > 0 ? `${ingType.name} (${producedQty > 0 ? producedQty : consumedQty}${ingType.unit ?? "g"})` : ingType.name;
         customizations.push({
           ingredientId: ingType.inventoryIngredientId ?? null,
           optionId: null,
           typeVolumeId: null,
           ingredientTypeId: sel.ingredientTypeId,
-          consumedQty: 0,
+          consumedQty,
           addedCost: 0,
           slotLabel: slot.slotLabel,
-          optionLabel: ingType.name
+          optionLabel
         });
       }
       continue;
@@ -78656,21 +78663,33 @@ router8.get("/catalog/types/:id", async (req, res) => {
   });
 });
 router8.post("/catalog/types", async (req, res) => {
-  const { categoryId, name, inventoryIngredientId, isActive, sortOrder } = req.body;
+  const { categoryId, name, inventoryIngredientId, processedQty, producedQty, unit, isActive, sortOrder } = req.body;
   if (!categoryId || !name) {
     res.status(400).json({ error: "categoryId and name required" });
     return;
   }
-  const [row] = await db.insert(ingredientTypesTable).values({ categoryId, name, inventoryIngredientId: inventoryIngredientId ?? null, isActive: isActive ?? true, sortOrder: sortOrder ?? 0 }).returning();
+  const [row] = await db.insert(ingredientTypesTable).values({
+    categoryId,
+    name,
+    inventoryIngredientId: inventoryIngredientId ?? null,
+    processedQty: processedQty ?? "0",
+    producedQty: producedQty ?? "0",
+    unit: unit ?? "ml",
+    isActive: isActive ?? true,
+    sortOrder: sortOrder ?? 0
+  }).returning();
   res.status(201).json(row);
 });
 router8.patch("/catalog/types/:id", async (req, res) => {
   const id = parseInt(req.params.id);
-  const { categoryId, name, inventoryIngredientId, isActive, sortOrder } = req.body;
+  const { categoryId, name, inventoryIngredientId, processedQty, producedQty, unit, isActive, sortOrder } = req.body;
   const patch = {};
   if (categoryId !== void 0) patch.categoryId = categoryId;
   if (name !== void 0) patch.name = name;
   if (inventoryIngredientId !== void 0) patch.inventoryIngredientId = inventoryIngredientId;
+  if (processedQty !== void 0) patch.processedQty = processedQty;
+  if (producedQty !== void 0) patch.producedQty = producedQty;
+  if (unit !== void 0) patch.unit = unit;
   if (isActive !== void 0) patch.isActive = isActive;
   if (sortOrder !== void 0) patch.sortOrder = sortOrder;
   const [row] = await db.update(ingredientTypesTable).set(patch).where(eq(ingredientTypesTable.id, id)).returning();
