@@ -639,7 +639,12 @@ export default function PosTerminal() {
                                 onClick={() => {
                                   setSelections(prev => ({ ...prev, [slot.id]: typeOpt.ingredientTypeId }));
                                   const defVol = (typeOpt.volumes ?? []).find((v: any) => v.isDefault) ?? typeOpt.volumes?.[0];
-                                  if (defVol) setSubSelections(prev => ({ ...prev, [slot.id]: defVol.id }));
+                                  setSubSelections(prev => {
+                                    const next = { ...prev };
+                                    if (defVol) next[slot.id] = defVol.id;
+                                    else delete next[slot.id];
+                                    return next;
+                                  });
                                 }}
                                 className={`px-3 py-2 rounded-lg border text-left transition-all text-sm ${
                                   selectedTypeId === typeOpt.ingredientTypeId
@@ -706,6 +711,12 @@ export default function PosTerminal() {
                             if (option.linkedIngredient?.options?.length) {
                               const defSub = option.linkedIngredient.options.find((o: any) => o.isDefault) || option.linkedIngredient.options[0];
                               setSubSelections(prev => ({ ...prev, [slot.id]: defSub.id }));
+                            } else {
+                              setSubSelections(prev => {
+                                const next = { ...prev };
+                                delete next[slot.id];
+                                return next;
+                              });
                             }
                           }}
                           className={`px-3 py-2 rounded-lg border text-left transition-all text-sm ${

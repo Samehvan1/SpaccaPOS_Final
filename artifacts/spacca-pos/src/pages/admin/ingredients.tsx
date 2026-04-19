@@ -154,6 +154,8 @@ function TypesTab({ inventoryItems }: { inventoryItems: Ingredient[] }) {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterCategory, setFilterCategory] = useState<string>("all");
 
   // Form state
   const [name, setName] = useState("");
@@ -271,11 +273,40 @@ function TypesTab({ inventoryItems }: { inventoryItems: Ingredient[] }) {
 
   const availableVolumesToAdd = allVolumes.filter(v => !typeVolumes.some(tv => tv.volumeId === v.id));
 
+  const filteredTypes = types.filter(t => {
+    if (filterCategory !== "all" && String(t.categoryId) !== filterCategory) return false;
+    if (searchTerm && !t.name.toLowerCase().includes(searchTerm.toLowerCase())) return false;
+    return true;
+  });
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">Named ingredient kinds within a category, linked to an inventory item for stock tracking.</p>
         <Button size="sm" className="gap-2" onClick={openAdd}><Plus className="h-3.5 w-3.5" /> Add Type</Button>
+      </div>
+
+      <div className="flex gap-3 mb-4">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input 
+            placeholder="Search types..." 
+            className="pl-9" 
+            value={searchTerm} 
+            onChange={e => setSearchTerm(e.target.value)} 
+          />
+        </div>
+        <Select value={filterCategory} onValueChange={setFilterCategory}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="All Categories" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Categories</SelectItem>
+            {categories.map(c => (
+              <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="rounded-md border">
@@ -292,9 +323,9 @@ function TypesTab({ inventoryItems }: { inventoryItems: Ingredient[] }) {
           <TableBody>
             {loading ? (
               <TableRow><TableCell colSpan={5} className="text-center py-8">Loading…</TableCell></TableRow>
-            ) : types.length === 0 ? (
-              <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No types yet.</TableCell></TableRow>
-            ) : types.map(t => (
+            ) : filteredTypes.length === 0 ? (
+              <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No types found.</TableCell></TableRow>
+            ) : filteredTypes.map(t => (
               <TableRow key={t.id}>
                 <TableCell className="font-medium">{t.name}</TableCell>
                 <TableCell>
@@ -343,7 +374,7 @@ function TypesTab({ inventoryItems }: { inventoryItems: Ingredient[] }) {
               <Label>Inventory Item (for stock deduction)</Label>
               <Select value={inventoryIngId} onValueChange={setInventoryIngId}>
                 <SelectTrigger><SelectValue placeholder="Link to inventory item…" /></SelectTrigger>
-                <SelectContent>
+                <SelectContent className="max-h-[250px]">
                   <SelectItem value="none">No link</SelectItem>
                   {inventoryItems.map(i => (
                     <SelectItem key={i.id} value={String(i.id)}>
@@ -471,6 +502,7 @@ function VolumesTab() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
   const [name, setName] = useState("");
   const [processedQty, setProcessedQty] = useState("0");
   const [producedQty, setProducedQty] = useState("0");
@@ -511,11 +543,27 @@ function VolumesTab() {
     catch { toast({ variant: "destructive", title: "Failed to delete" }); }
   };
 
+  const filteredVolumes = volumes.filter(v => 
+    !searchTerm || v.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">Reusable volume definitions: Single Shot, Double Shot, 1 Pump, 150ml, etc.</p>
         <Button size="sm" className="gap-2" onClick={openAdd}><Plus className="h-3.5 w-3.5" /> Add Volume</Button>
+      </div>
+
+      <div className="flex gap-3 mb-4">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input 
+            placeholder="Search volumes..." 
+            className="pl-9" 
+            value={searchTerm} 
+            onChange={e => setSearchTerm(e.target.value)} 
+          />
+        </div>
       </div>
 
       <div className="rounded-md border">
@@ -532,9 +580,9 @@ function VolumesTab() {
           <TableBody>
             {loading ? (
               <TableRow><TableCell colSpan={5} className="text-center py-8">Loading…</TableCell></TableRow>
-            ) : volumes.length === 0 ? (
-              <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No volumes yet.</TableCell></TableRow>
-            ) : volumes.map(v => (
+            ) : filteredVolumes.length === 0 ? (
+              <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No volumes found.</TableCell></TableRow>
+            ) : filteredVolumes.map(v => (
               <TableRow key={v.id}>
                 <TableCell className="font-medium">{v.name}</TableCell>
                 <TableCell className="text-muted-foreground text-sm">{v.processedQty}</TableCell>
@@ -840,7 +888,7 @@ function InventoryTab() {
                           <div className="mt-2">
                             <Select value={String(opt.linkedIngredientId ?? "none")} onValueChange={v => handleSetLinked(opt, v === "none" ? null : parseInt(v))}>
                               <SelectTrigger className="h-7 text-xs max-w-[200px]"><SelectValue placeholder="Links to ingredient…" /></SelectTrigger>
-                              <SelectContent>
+                              <SelectContent className="max-h-[250px]">
                                 <SelectItem value="none">No link (plain option)</SelectItem>
                                 {ingredients?.filter(i => i.id !== editId).map(i => <SelectItem key={i.id} value={String(i.id)}>{i.name}</SelectItem>)}
                               </SelectContent>
@@ -890,7 +938,7 @@ function InventoryTab() {
                       <Label className="text-xs flex items-center gap-1"><Link2 className="h-3 w-3" /> Links to ingredient</Label>
                       <Select value={newOptLinkedId} onValueChange={setNewOptLinkedId}>
                         <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="No link (plain option)" /></SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="max-h-[250px]">
                           <SelectItem value="none">No link (plain option)</SelectItem>
                           {ingredients?.filter(i => i.id !== editId).map(i => <SelectItem key={i.id} value={String(i.id)}>{i.name}</SelectItem>)}
                         </SelectContent>

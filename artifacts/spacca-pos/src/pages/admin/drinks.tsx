@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { useListDrinks, useUpdateDrink, useCreateDrink } from "@workspace/api-client-react";
+import { useListDrinks, useUpdateDrink, useCreateDrink, useDeleteDrink } from "@workspace/api-client-react";
 import { fmt } from "@/lib/currency";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { ArrowLeft, Plus, Search, Edit, FlaskConical, Tag, Upload, X, ImageIcon } from "lucide-react";
+import { ArrowLeft, Plus, Search, Edit, FlaskConical, Tag, Upload, X, ImageIcon, Trash2 } from "lucide-react";
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
@@ -113,6 +113,16 @@ export default function DrinksAdmin() {
     }
   });
 
+  const { mutate: deleteDrink } = useDeleteDrink({
+    mutation: {
+      onSuccess: () => {
+        toast({ title: "Drink deleted" });
+        refetch();
+      },
+      onError: () => toast({ variant: "destructive", title: "Failed to delete drink" })
+    }
+  });
+
   const uploadImage = async (drinkId: number) => {
     if (!imageFile) return;
     setIsUploadingImage(true);
@@ -193,6 +203,12 @@ export default function DrinksAdmin() {
       createDrink({ data: payload });
     } else if (mode === "edit" && editId !== null) {
       updateDrink({ id: editId, data: payload });
+    }
+  };
+
+  const handleDelete = (id: number) => {
+    if (confirm("Are you sure you want to delete this drink? This action cannot be undone.")) {
+      deleteDrink({ id });
     }
   };
 
@@ -311,6 +327,9 @@ export default function DrinksAdmin() {
                           </Button>
                           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(drink as Drink)}>
                             <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDelete(drink.id)}>
+                            <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
                       </TableCell>
