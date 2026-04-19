@@ -160,6 +160,8 @@ export interface DrinkIngredientSlot {
   sortOrder: number;
   baristaSortOrder: number;
   customerSortOrder: number;
+  /** @nullable */
+  affectsCupSize?: boolean | null;
 }
 
 export interface Drink {
@@ -194,6 +196,8 @@ export type CreateDrinkBodySlotsItem = {
   sortOrder?: number;
   baristaSortOrder?: number;
   customerSortOrder?: number;
+  /** @nullable */
+  affectsCupSize?: boolean | null;
 };
 
 export interface CreateDrinkBody {

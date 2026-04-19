@@ -85,6 +85,7 @@ export const CreateDrinkBody = zod.object({
         sortOrder: zod.number().optional(),
         baristaSortOrder: zod.number().optional(),
         customerSortOrder: zod.number().optional(),
+        affectsCupSize: zod.boolean().nullish(),
       }),
     )
     .optional(),
@@ -126,6 +127,7 @@ export const GetDrinkResponse = zod
           sortOrder: zod.number(),
           baristaSortOrder: zod.number(),
           customerSortOrder: zod.number(),
+          affectsCupSize: zod.boolean().nullish(),
         }),
       ),
     }),

@@ -43,6 +43,7 @@ export const drinkIngredientSlotsTable = pgTable("drink_ingredient_slots", {
   sortOrder: integer("sort_order").notNull().default(0),
   baristaSortOrder: integer("barista_sort_order").notNull().default(1),
   customerSortOrder: integer("customer_sort_order").notNull().default(1),
+  affectsCupSize: boolean("affects_cup_size"), // null = inherit from type
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

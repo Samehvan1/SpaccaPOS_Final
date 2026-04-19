@@ -332,6 +332,7 @@ router.post("/drinks", async (req, res): Promise<void> => {
         sortOrder: s.sortOrder ?? 0,
         baristaSortOrder: s.baristaSortOrder ?? s.sortOrder ?? 1,
         customerSortOrder: s.customerSortOrder ?? s.sortOrder ?? 1,
+        affectsCupSize: s.affectsCupSize ?? null,
       }))
     );
   }
@@ -455,6 +456,7 @@ router.put("/drinks/:id/slots", async (req, res): Promise<void> => {
         sortOrder: s.sortOrder ?? i,
         baristaSortOrder: s.baristaSortOrder ?? s.sortOrder ?? 1,
         customerSortOrder: s.customerSortOrder ?? s.sortOrder ?? 1,
+        affectsCupSize: s.affectsCupSize ?? null,
       }))
     ).returning();
 

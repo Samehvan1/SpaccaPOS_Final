@@ -51,6 +51,7 @@ type SlotDraft = {
   defaultOptionId: number | null;
   baristaSortOrder: number;
   customerSortOrder: number;
+  affectsCupSize: boolean | null;
 };
 
 type Category = { id: number; name: string; sortOrder: number };
@@ -161,6 +162,7 @@ export default function DrinkRecipe() {
           ingredientId: null, isDynamic: false, defaultOptionId: null,
           baristaSortOrder: s.baristaSortOrder ?? s.sortOrder ?? 1,
           customerSortOrder: s.customerSortOrder ?? s.sortOrder ?? 1,
+          affectsCupSize: s.affectsCupSize ?? null,
         };
       }
       return {
@@ -171,6 +173,7 @@ export default function DrinkRecipe() {
         defaultOptionId: s.defaultOptionId ?? null,
         baristaSortOrder: s.baristaSortOrder ?? s.sortOrder ?? 1,
         customerSortOrder: s.customerSortOrder ?? s.sortOrder ?? 1,
+        affectsCupSize: s.affectsCupSize ?? null,
       };
     });
 
@@ -190,7 +193,7 @@ export default function DrinkRecipe() {
     setSlots(prev => [...prev, {
       key: newKey(), style, slotLabel: "", isRequired: true, expanded: true,
       typeOptions: [], ingredientId: null, isDynamic: false, defaultOptionId: null,
-      baristaSortOrder: 1, customerSortOrder: 1,
+      baristaSortOrder: 1, customerSortOrder: 1, affectsCupSize: null,
     }]);
     mark();
   };
@@ -544,6 +547,24 @@ export default function DrinkRecipe() {
                             updateSlot(slot.key, { baristaSortOrder: isNaN(val) ? 1 : val });
                           }}
                         />
+                      </div>
+                      <div className="w-36 grid gap-1.5">
+                        <Label className="text-xs">Countable</Label>
+                        <Select
+                          value={slot.affectsCupSize === null ? "inherit" : slot.affectsCupSize ? "yes" : "no"}
+                          onValueChange={v => updateSlot(slot.key, { 
+                            affectsCupSize: v === "inherit" ? null : v === "yes" 
+                          })}
+                        >
+                          <SelectTrigger className="h-10">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="inherit">Type Default</SelectItem>
+                            <SelectItem value="yes">Always Count</SelectItem>
+                            <SelectItem value="no">Never Count</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
 

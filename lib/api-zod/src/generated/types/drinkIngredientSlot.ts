@@ -17,4 +17,6 @@ export interface DrinkIngredientSlot {
   sortOrder: number;
   baristaSortOrder: number;
   customerSortOrder: number;
+  /** @nullable */
+  affectsCupSize?: boolean | null;
 }

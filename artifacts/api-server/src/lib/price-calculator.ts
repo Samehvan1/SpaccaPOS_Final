@@ -76,7 +76,8 @@ export async function calculateDrinkData(drinkId: number, selections: any[]) {
       const consumedQty = parseFloat(slotVol?.processedQty ?? typeVol.processedQty ?? "0");
       const producedQty = parseFloat(slotVol?.producedQty ?? typeVol.producedQty ?? "0");
       
-      if (typeDef?.affectsCupSize) {
+      const shouldCount = slot.affectsCupSize ?? typeDef?.affectsCupSize ?? true;
+      if (shouldCount) {
         usedVolumeMl += producedQty;
       }
 
@@ -103,7 +104,8 @@ export async function calculateDrinkData(drinkId: number, selections: any[]) {
         const consumedQty = parseFloat(ingType.processedQty ?? "0");
         const producedQty = parseFloat(ingType.producedQty ?? "0");
         
-        if (ingType.affectsCupSize) {
+        const shouldCount = slot.affectsCupSize ?? ingType.affectsCupSize ?? true;
+        if (shouldCount) {
           usedVolumeMl += producedQty;
         }
         
@@ -136,7 +138,10 @@ export async function calculateDrinkData(drinkId: number, selections: any[]) {
       if (subOption) {
         const extraCost = parseFloat(subOption.extraCost);
         totalExtras += extraCost;
-        usedVolumeMl += parseFloat(subOption.producedQty);
+        const shouldCount = slot.affectsCupSize ?? true;
+        if (shouldCount) {
+          usedVolumeMl += parseFloat(subOption.producedQty);
+        }
         customizations.push({
           ingredientId: option.linkedIngredientId,
           optionId: selection.subOptionId,
@@ -154,7 +159,10 @@ export async function calculateDrinkData(drinkId: number, selections: any[]) {
 
     const extraCost = parseFloat(option.extraCost);
     totalExtras += extraCost;
-    usedVolumeMl += parseFloat(option.producedQty);
+    const shouldCount = slot.affectsCupSize ?? true;
+    if (shouldCount) {
+      usedVolumeMl += parseFloat(option.producedQty);
+    }
     customizations.push({
       ingredientId: selection.ingredientId ?? slot.ingredientId ?? null,
       optionId: selection.optionId,

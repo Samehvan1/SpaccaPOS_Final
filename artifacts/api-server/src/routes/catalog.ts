@@ -140,6 +140,7 @@ router.patch("/catalog/types/:id", async (req, res): Promise<void> => {
   if (producedQty !== undefined) patch.producedQty = producedQty;
   if (unit !== undefined) patch.unit = unit;
   if (isActive !== undefined) patch.isActive = isActive;
+  if (affectsCupSize !== undefined) patch.affectsCupSize = affectsCupSize;
   if (sortOrder !== undefined) patch.sortOrder = sortOrder;
   const [row] = await db.update(ingredientTypesTable).set(patch).where(eq(ingredientTypesTable.id, id)).returning();
   if (!row) { res.status(404).json({ error: "Not found" }); return; }
