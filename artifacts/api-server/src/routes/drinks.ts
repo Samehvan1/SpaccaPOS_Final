@@ -326,6 +326,8 @@ router.post("/drinks", async (req, res): Promise<void> => {
         isRequired: s.isRequired ?? true,
         defaultOptionId: s.defaultOptionId ?? null,
         sortOrder: s.sortOrder ?? 0,
+        baristaSortOrder: s.baristaSortOrder ?? s.sortOrder ?? 0,
+        customerSortOrder: s.customerSortOrder ?? s.sortOrder ?? 0,
       }))
     );
   }
@@ -447,6 +449,8 @@ router.put("/drinks/:id/slots", async (req, res): Promise<void> => {
         isDynamic: s.isDynamic ?? false,
         defaultOptionId: s.defaultOptionId ?? null,
         sortOrder: s.sortOrder ?? i,
+        baristaSortOrder: s.baristaSortOrder ?? s.sortOrder ?? i,
+        customerSortOrder: s.customerSortOrder ?? s.sortOrder ?? i,
       }))
     ).returning();
 
@@ -482,6 +486,7 @@ router.put("/drinks/:id/slots", async (req, res): Promise<void> => {
                 extraCost: sv.extraCost ?? null,
                 isDefault: sv.isDefault ?? false,
                 isEnabled: sv.isEnabled ?? true,
+                affectsCupSize: sv.affectsCupSize ?? true,
                 sortOrder: sv.sortOrder ?? 0,
               });
             }
@@ -501,6 +506,7 @@ router.put("/drinks/:id/slots", async (req, res): Promise<void> => {
             extraCost: sv.extraCost ?? null,
             isDefault: sv.isDefault ?? false,
             isEnabled: sv.isEnabled ?? true,
+            affectsCupSize: sv.affectsCupSize ?? true,
             sortOrder: sv.sortOrder ?? 0,
           });
         }

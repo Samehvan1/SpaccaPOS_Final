@@ -611,7 +611,10 @@ export default function PosTerminal() {
               </div>
             ) : (
               <div className="space-y-5">
-                {(drinkDetail?.slots as any[])?.map(slot => {
+                {(drinkDetail?.slots as any[])
+                  ?.filter(s => (s.customerSortOrder ?? s.sortOrder ?? 0) >= 1)
+                  ?.sort((a, b) => (a.customerSortOrder ?? a.sortOrder ?? 0) - (b.customerSortOrder ?? b.sortOrder ?? 0))
+                  ?.map(slot => {
                   // ── Typed (catalog) slot: two-level — type option → volume ──
                   if (slot.slotStyle === "typed") {
                     const typeOptions: any[] = slot.typeOptions ?? [];
@@ -650,6 +653,13 @@ export default function PosTerminal() {
                                 <div className="font-medium truncate">{typeOpt.typeName}</div>
                               </button>
                             ))}
+                          </div>
+                        )}
+
+                        {/* Level 1.5: Status text for single type slots */}
+                        {!multiType && activeTypeOpt && (
+                          <div className="text-sm font-semibold text-primary/80 mb-1 px-1">
+                            {activeTypeOpt.typeName}
                           </div>
                         )}
 

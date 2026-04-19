@@ -58,6 +58,7 @@ export const ingredientTypesTable = pgTable("ingredient_types", {
   producedQty: numeric("produced_qty", { precision: 10, scale: 4 }).notNull().default("0"),
   unit: text("unit").notNull().default("ml"),
   isActive: boolean("is_active").notNull().default(true),
+  affectsCupSize: boolean("affects_cup_size").notNull().default(true),
   sortOrder: integer("sort_order").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -91,6 +92,7 @@ export const ingredientTypeVolumesTable = pgTable("ingredient_type_volumes", {
   unit: text("unit"),
   extraCost: numeric("extra_cost", { precision: 8, scale: 4 }).notNull().default("0"),
   isDefault: boolean("is_default").notNull().default(false),
+  affectsCupSize: boolean("affects_cup_size").notNull().default(true),
   sortOrder: integer("sort_order").notNull().default(0),
 });
 

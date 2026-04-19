@@ -163,6 +163,7 @@ router.post("/orders", async (req, res): Promise<void> => {
     addedCost: number;
     slotLabel: string;
     optionLabel: string;
+    baristaSortOrder: number;
   };
   type ItemDetail = {
     drinkId: number; drinkName: string; quantity: number;
@@ -184,7 +185,8 @@ router.post("/orders", async (req, res): Promise<void> => {
         consumedQty: c.consumedQty * item.quantity,
         addedCost: c.addedCost,
         slotLabel: c.slotLabel,
-        optionLabel: c.optionLabel
+        optionLabel: c.optionLabel,
+        baristaSortOrder: c.baristaSortOrder
       }));
 
       const unitPrice = calcData.totalPrice;
@@ -264,6 +266,7 @@ router.post("/orders", async (req, res): Promise<void> => {
             addedCost: String(c.addedCost),
             slotLabel: c.slotLabel,
             optionLabel: c.optionLabel,
+            baristaSortOrder: c.baristaSortOrder,
           }))
         );
       }

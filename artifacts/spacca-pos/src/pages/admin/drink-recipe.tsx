@@ -24,6 +24,7 @@ type SlotVolumeDraft = {
   extraCost: string;
   isDefault: boolean;
   isEnabled: boolean;
+  affectsCupSize: boolean;
 };
 
 type SlotTypeOptionDraft = {
@@ -49,6 +50,8 @@ type SlotDraft = {
   ingredientId: number | null;
   isDynamic: boolean;
   defaultOptionId: number | null;
+  baristaSortOrder: number;
+  customerSortOrder: number;
 };
 
 type Category = { id: number; name: string; sortOrder: number };
@@ -58,7 +61,7 @@ type IngType = {
 };
 type TypeVolume = {
   id: number; volumeId: number; processedQty: string | null; producedQty: string | null;
-  unit: string | null; extraCost: string; isDefault: boolean;
+  unit: string | null; extraCost: string; isDefault: boolean; affectsCupSize: boolean;
   volume?: { id: number; name: string; processedQty: string; producedQty: string; unit: string } | null;
 };
 
@@ -82,6 +85,7 @@ function makeVolumeDrafts(vols: TypeVolume[]): SlotVolumeDraft[] {
     extraCost: tv.extraCost ?? "0",
     isDefault: tv.isDefault,
     isEnabled: true,
+    affectsCupSize: tv.affectsCupSize ?? true,
   }));
 }
 
@@ -157,6 +161,8 @@ export default function DrinkRecipe() {
           slotLabel: s.slotLabel, isRequired: s.isRequired, expanded: true,
           typeOptions: typeOpts,
           ingredientId: null, isDynamic: false, defaultOptionId: null,
+          baristaSortOrder: s.baristaSortOrder ?? s.sortOrder ?? 0,
+          customerSortOrder: s.customerSortOrder ?? s.sortOrder ?? 0,
         };
       }
       return {
@@ -165,6 +171,8 @@ export default function DrinkRecipe() {
         typeOptions: [],
         ingredientId: s.ingredientId ?? null, isDynamic: s.isDynamic ?? false,
         defaultOptionId: s.defaultOptionId ?? null,
+        baristaSortOrder: s.baristaSortOrder ?? s.sortOrder ?? 0,
+        customerSortOrder: s.customerSortOrder ?? s.sortOrder ?? 0,
       };
     });
 
@@ -184,6 +192,7 @@ export default function DrinkRecipe() {
     setSlots(prev => [...prev, {
       key: newKey(), style, slotLabel: "", isRequired: true, expanded: true,
       typeOptions: [], ingredientId: null, isDynamic: false, defaultOptionId: null,
+      baristaSortOrder: slots.length + 1, customerSortOrder: slots.length + 1,
     }]);
     mark();
   };
@@ -306,8 +315,11 @@ export default function DrinkRecipe() {
                 extraCost: v.extraCost,
                 isDefault: v.isDefault,
                 isEnabled: v.isEnabled,
+                affectsCupSize: v.affectsCupSize,
               })),
             })),
+            baristaSortOrder: s.baristaSortOrder,
+            customerSortOrder: s.customerSortOrder,
           };
         }
         return {
@@ -317,6 +329,8 @@ export default function DrinkRecipe() {
           isDynamic: s.isDynamic,
           defaultOptionId: s.defaultOptionId ?? null,
           sortOrder: i,
+          baristaSortOrder: s.baristaSortOrder,
+          customerSortOrder: s.customerSortOrder,
         };
       });
 
@@ -503,17 +517,32 @@ export default function DrinkRecipe() {
                     </Button>
                   </div>
 
-                  {/* Slot label input — only shown when expanded */}
-                  {slot.expanded && (
-                    <div className="grid gap-1.5 pl-14">
-                      <Label className="text-xs">Slot Label</Label>
-                      <Input
-                        placeholder="e.g. Espresso, Milk, Syrup"
-                        value={slot.slotLabel}
-                        onChange={e => updateSlot(slot.key, { slotLabel: e.target.value })}
-                      />
+                    <div className="flex gap-4 pl-14">
+                      <div className="flex-1 grid gap-1.5">
+                        <Label className="text-xs">Slot Label</Label>
+                        <Input
+                          placeholder="e.g. Espresso, Milk, Syrup"
+                          value={slot.slotLabel}
+                          onChange={e => updateSlot(slot.key, { slotLabel: e.target.value })}
+                        />
+                      </div>
+                      <div className="w-24 grid gap-1.5">
+                        <Label className="text-xs">Cust. Index</Label>
+                        <Input
+                          type="number"
+                          value={slot.customerSortOrder}
+                          onChange={e => updateSlot(slot.key, { customerSortOrder: parseInt(e.target.value) || 0 })}
+                        />
+                      </div>
+                      <div className="w-24 grid gap-1.5">
+                        <Label className="text-xs">Barista Index</Label>
+                        <Input
+                          type="number"
+                          value={slot.baristaSortOrder}
+                          onChange={e => updateSlot(slot.key, { baristaSortOrder: parseInt(e.target.value) || 0 })}
+                        />
+                      </div>
                     </div>
-                  )}
 
                   {/* ── CATALOG SLOT ── */}
                   {slot.expanded && slot.style === "typed" && (
@@ -568,6 +597,7 @@ export default function DrinkRecipe() {
                                         <span className="text-right">Proc.</span>
                                         <span className="text-right">Prod.</span>
                                         <span className="text-center">Unit</span>
+                                        <span className="text-center">Count?</span>
                                         <span className="text-right">+Cost (E£)</span>
                                         <span className="text-right pr-1">Def.</span>
                                       </div>
@@ -581,6 +611,13 @@ export default function DrinkRecipe() {
                                           <Input type="number" step="0.1" className="h-7 text-sm text-right px-1.5" value={sv.processedQty} disabled={!sv.isEnabled} onChange={e => updateTypeOptionVolume(slot.key, to.key, sv.typeVolumeId, { processedQty: e.target.value })} />
                                           <Input type="number" step="0.1" className="h-7 text-sm text-right px-1.5" value={sv.producedQty} disabled={!sv.isEnabled} onChange={e => updateTypeOptionVolume(slot.key, to.key, sv.typeVolumeId, { producedQty: e.target.value })} />
                                           <Input type="text" className="h-7 text-sm text-center px-1" value={sv.unit} disabled={!sv.isEnabled} onChange={e => updateTypeOptionVolume(slot.key, to.key, sv.typeVolumeId, { unit: e.target.value })} />
+                                          <div className="flex justify-center">
+                                            <Checkbox
+                                              checked={sv.affectsCupSize}
+                                              onCheckedChange={v => updateTypeOptionVolume(slot.key, to.key, sv.typeVolumeId, { affectsCupSize: Boolean(v) })}
+                                              disabled={!sv.isEnabled}
+                                            />
+                                          </div>
                                           <Input type="number" step="0.01" className="h-7 text-sm text-right px-1.5" value={sv.extraCost} disabled={!sv.isEnabled} onChange={e => updateTypeOptionVolume(slot.key, to.key, sv.typeVolumeId, { extraCost: e.target.value })} />
                                           <div className="flex justify-end pr-1">
                                             <input type="radio" name={`default-vol-${slot.key}-${to.key}`} checked={sv.isDefault} disabled={!sv.isEnabled} onChange={() => updateTypeOptionVolume(slot.key, to.key, sv.typeVolumeId, { isDefault: true })} className="accent-primary h-3.5 w-3.5" />

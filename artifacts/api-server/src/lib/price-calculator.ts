@@ -23,6 +23,7 @@ export type CustomizationData = {
   addedCost: number; // The extra money to charge
   slotLabel: string;
   optionLabel: string;
+  baristaSortOrder: number;
 };
 
 export async function calculateDrinkData(drinkId: number, selections: any[]) {
@@ -74,7 +75,11 @@ export async function calculateDrinkData(drinkId: number, selections: any[]) {
 
       const consumedQty = parseFloat(slotVol?.processedQty ?? typeVol.processedQty ?? "0");
       const producedQty = parseFloat(slotVol?.producedQty ?? typeVol.producedQty ?? "0");
-      usedVolumeMl += producedQty;
+      
+      const affectsCupSize = slotVol?.affectsCupSize ?? typeVol.affectsCupSize ?? true;
+      if (affectsCupSize) {
+        usedVolumeMl += producedQty;
+      }
 
       const optionLabel = typeName && volumeName ? `${typeName} · ${volumeName}` : typeName || volumeName || "Catalog Item";
 
@@ -87,6 +92,7 @@ export async function calculateDrinkData(drinkId: number, selections: any[]) {
         addedCost: extraCost,
         slotLabel: slot.slotLabel,
         optionLabel,
+        baristaSortOrder: slot.baristaSortOrder ?? 0,
       });
       continue;
     }
@@ -98,7 +104,9 @@ export async function calculateDrinkData(drinkId: number, selections: any[]) {
         const consumedQty = parseFloat(ingType.processedQty ?? "0");
         const producedQty = parseFloat(ingType.producedQty ?? "0");
         
-        usedVolumeMl += producedQty;
+        if (ingType.affectsCupSize) {
+          usedVolumeMl += producedQty;
+        }
         
         const optionLabel = (producedQty > 0 || consumedQty > 0) 
           ? `${ingType.name} (${producedQty > 0 ? producedQty : consumedQty}${ingType.unit ?? "g"})`
@@ -113,6 +121,7 @@ export async function calculateDrinkData(drinkId: number, selections: any[]) {
           addedCost: 0,
           slotLabel: slot.slotLabel,
           optionLabel,
+          baristaSortOrder: slot.baristaSortOrder ?? 0,
         });
       }
       continue;
@@ -138,6 +147,7 @@ export async function calculateDrinkData(drinkId: number, selections: any[]) {
           addedCost: extraCost,
           slotLabel: slot.slotLabel,
           optionLabel: `${option.label} · ${subOption.label}`,
+          baristaSortOrder: slot.baristaSortOrder ?? 0,
         });
       }
       continue;
@@ -155,6 +165,7 @@ export async function calculateDrinkData(drinkId: number, selections: any[]) {
       addedCost: extraCost,
       slotLabel: slot.slotLabel,
       optionLabel: option.label,
+      baristaSortOrder: slot.baristaSortOrder ?? 0,
     });
   }
 
@@ -226,6 +237,7 @@ export async function calculateDrinkData(drinkId: number, selections: any[]) {
           addedCost: cost,
           slotLabel: dynamicSlot.slotLabel,
           optionLabel: ingredientType?.name ? `${ingredientType.name} (${Math.round(filledMl)}${unit})` : `Dynamic (${Math.round(filledMl)}${unit})`,
+          baristaSortOrder: dynamicSlot.baristaSortOrder ?? 0,
         });
       }
     }
@@ -267,6 +279,7 @@ export async function calculateDrinkData(drinkId: number, selections: any[]) {
           addedCost: cost,
           slotLabel: dynamicSlot.slotLabel,
           optionLabel: `Dynamic (${Math.round(filledMl)}ml)`,
+          baristaSortOrder: dynamicSlot.baristaSortOrder ?? 0,
         });
       }
     }

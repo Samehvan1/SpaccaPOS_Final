@@ -113,7 +113,7 @@ router.get("/catalog/types/:id", async (req, res): Promise<void> => {
 });
 
 router.post("/catalog/types", async (req, res): Promise<void> => {
-  const { categoryId, name, inventoryIngredientId, processedQty, producedQty, unit, isActive, sortOrder } = req.body;
+  const { categoryId, name, inventoryIngredientId, processedQty, producedQty, unit, isActive, affectsCupSize, sortOrder } = req.body;
   if (!categoryId || !name) { res.status(400).json({ error: "categoryId and name required" }); return; }
   const [row] = await db.insert(ingredientTypesTable).values({ 
     categoryId, 
@@ -123,6 +123,7 @@ router.post("/catalog/types", async (req, res): Promise<void> => {
     producedQty: producedQty ?? "0",
     unit: unit ?? "ml",
     isActive: isActive ?? true, 
+    affectsCupSize: affectsCupSize ?? true,
     sortOrder: sortOrder ?? 0 
   }).returning();
   res.status(201).json(row);
@@ -139,6 +140,7 @@ router.patch("/catalog/types/:id", async (req, res): Promise<void> => {
   if (producedQty !== undefined) patch.producedQty = producedQty;
   if (unit !== undefined) patch.unit = unit;
   if (isActive !== undefined) patch.isActive = isActive;
+  if (affectsCupSize !== undefined) patch.affectsCupSize = affectsCupSize;
   if (sortOrder !== undefined) patch.sortOrder = sortOrder;
   const [row] = await db.update(ingredientTypesTable).set(patch).where(eq(ingredientTypesTable.id, id)).returning();
   if (!row) { res.status(404).json({ error: "Not found" }); return; }
@@ -180,7 +182,7 @@ router.get("/catalog/types/:id/volumes", async (req, res): Promise<void> => {
 
 router.post("/catalog/types/:id/volumes", async (req, res): Promise<void> => {
   const ingredientTypeId = parseInt(req.params.id);
-  const { volumeId, processedQty, producedQty, unit, extraCost, isDefault, sortOrder } = req.body;
+  const { volumeId, processedQty, producedQty, unit, extraCost, isDefault, affectsCupSize, sortOrder } = req.body;
   if (!volumeId) { res.status(400).json({ error: "volumeId required" }); return; }
   const [row] = await db.insert(ingredientTypeVolumesTable).values({
     ingredientTypeId, volumeId,
@@ -189,6 +191,7 @@ router.post("/catalog/types/:id/volumes", async (req, res): Promise<void> => {
     unit: unit ?? null,
     extraCost: extraCost ?? "0",
     isDefault: isDefault ?? false,
+    affectsCupSize: affectsCupSize ?? true,
     sortOrder: sortOrder ?? 0,
   }).returning();
   res.status(201).json(row);
@@ -203,6 +206,7 @@ router.patch("/catalog/type-volumes/:id", async (req, res): Promise<void> => {
   if (unit !== undefined) patch.unit = unit;
   if (extraCost !== undefined) patch.extraCost = extraCost;
   if (isDefault !== undefined) patch.isDefault = isDefault;
+  if (affectsCupSize !== undefined) patch.affectsCupSize = affectsCupSize;
   if (sortOrder !== undefined) patch.sortOrder = sortOrder;
   const [row] = await db.update(ingredientTypeVolumesTable).set(patch).where(eq(ingredientTypeVolumesTable.id, id)).returning();
   if (!row) { res.status(404).json({ error: "Not found" }); return; }

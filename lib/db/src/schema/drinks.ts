@@ -41,6 +41,8 @@ export const drinkIngredientSlotsTable = pgTable("drink_ingredient_slots", {
   defaultOptionId: integer("default_option_id").references(() => ingredientOptionsTable.id, { onDelete: "set null" }),
   isDynamic: boolean("is_dynamic").notNull().default(false),
   sortOrder: integer("sort_order").notNull().default(0),
+  baristaSortOrder: integer("barista_sort_order").notNull().default(0),
+  customerSortOrder: integer("customer_sort_order").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });
@@ -74,6 +76,7 @@ export const drinkSlotVolumesTable = pgTable("drink_slot_volumes", {
   extraCost: numeric("extra_cost", { precision: 8, scale: 4 }),
   isDefault: boolean("is_default").notNull().default(false),
   isEnabled: boolean("is_enabled").notNull().default(true),
+  affectsCupSize: boolean("affects_cup_size").notNull().default(true),
   sortOrder: integer("sort_order").notNull().default(0),
 });
 
