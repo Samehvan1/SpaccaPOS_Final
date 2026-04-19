@@ -19,4 +19,6 @@ export interface OrderItemCustomization {
   addedCost: number;
   slotLabel: string;
   optionLabel: string;
+  /** @nullable */
+  baristaSortOrder?: number | null;
 }

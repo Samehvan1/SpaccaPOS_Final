@@ -209,7 +209,7 @@ export default function KitchenDisplay() {
                               {isThisStation && item.customizations.length > 0 && (
                                 <ul className="mt-2 space-y-1">
                                   {item.customizations
-                                    .filter((cust: any) => (cust.baristaSortOrder ?? 0) >= 1)
+                                    .filter((cust: any) => (cust.baristaSortOrder ?? 0) >= 0)
                                     .sort((a: any, b: any) => (a.baristaSortOrder ?? 0) - (b.baristaSortOrder ?? 0))
                                     .map((cust: any) => (
                                       <li key={cust.id} className="text-sm text-muted-foreground flex items-center gap-2">
