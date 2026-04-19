@@ -61,6 +61,7 @@ function useDrinkCategories() {
 
 export default function DrinksAdmin() {
   const [searchTerm, setSearchTerm] = useState("");
+  const [showInactive, setShowInactive] = useState(false);
   const { data: drinks, isLoading, refetch } = useListDrinks();
   const { data: categories = [] } = useDrinkCategories();
   const { toast } = useToast();
@@ -215,10 +216,12 @@ export default function DrinksAdmin() {
     }
   };
 
-  const filteredDrinks = drinks?.filter(d =>
-    d.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    d.category.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+   const filteredDrinks = drinks?.filter(d => {
+    const matchesSearch = d.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      d.category.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = d.isActive || showInactive;
+    return matchesSearch && matchesStatus;
+  });
 
   const isPending = isCreating || isUpdating || isUploadingImage;
 
@@ -251,14 +254,26 @@ export default function DrinksAdmin() {
 
       <Card>
         <CardHeader className="pb-4">
-          <div className="relative max-w-sm">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search drinks..."
-              className="pl-9"
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-            />
+          <div className="flex items-center justify-between gap-4">
+            <div className="relative max-w-sm flex-1">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search drinks..."
+                className="pl-9"
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+              />
+            </div>
+            <div className="flex items-center gap-2 px-2 py-1.5 rounded-md border bg-muted/20">
+              <Switch 
+                id="show-inactive-drinks" 
+                checked={showInactive} 
+                onCheckedChange={setShowInactive} 
+              />
+              <Label htmlFor="show-inactive-drinks" className="text-xs font-medium cursor-pointer">
+                Show Inactive
+              </Label>
+            </div>
           </div>
         </CardHeader>
         <CardContent>

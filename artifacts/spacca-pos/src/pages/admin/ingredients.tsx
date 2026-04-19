@@ -157,6 +157,7 @@ function TypesTab({ inventoryItems }: { inventoryItems: Ingredient[] }) {
   const [editId, setEditId] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCategory, setFilterCategory] = useState<string>("all");
+  const [showInactive, setShowInactive] = useState(false);
 
   // Form state
   const [name, setName] = useState("");
@@ -283,7 +284,7 @@ function TypesTab({ inventoryItems }: { inventoryItems: Ingredient[] }) {
   const filteredTypes = types.filter(t => {
     if (filterCategory !== "all" && String(t.categoryId) !== filterCategory) return false;
     if (searchTerm && !t.name.toLowerCase().includes(searchTerm.toLowerCase())) return false;
-    return true;
+    return t.isActive || showInactive;
   });
 
   return (
@@ -314,6 +315,16 @@ function TypesTab({ inventoryItems }: { inventoryItems: Ingredient[] }) {
             ))}
           </SelectContent>
         </Select>
+        <div className="flex items-center gap-2 px-3 py-2 rounded-md border bg-muted/20 h-10">
+          <Switch 
+            id="show-inactive-types" 
+            checked={showInactive} 
+            onCheckedChange={setShowInactive} 
+          />
+          <Label htmlFor="show-inactive-types" className="text-xs font-medium cursor-pointer">
+            Show Inactive
+          </Label>
+        </div>
       </div>
 
       <div className="rounded-md border">
