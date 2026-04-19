@@ -298,12 +298,19 @@ export default function DrinkRecipe() {
     setIsSaving(true);
     try {
       const body = slots.map((s, i) => {
+        const base = {
+          slotLabel: s.slotLabel.trim(),
+          isRequired: s.isRequired,
+          isDynamic: s.isDynamic,
+          affectsCupSize: s.affectsCupSize,
+          sortOrder: i,
+          baristaSortOrder: s.baristaSortOrder,
+          customerSortOrder: s.customerSortOrder,
+        };
+
         if (s.style === "typed") {
           return {
-            slotLabel: s.slotLabel.trim(),
-            isRequired: s.isRequired,
-            isDynamic: s.isDynamic,
-            sortOrder: i,
+            ...base,
             slotTypeOptions: s.typeOptions.map((to, j) => ({
               ingredientTypeId: to.ingredientTypeId,
               isDefault: to.isDefault,
@@ -318,19 +325,12 @@ export default function DrinkRecipe() {
                 isEnabled: v.isEnabled,
               })),
             })),
-            baristaSortOrder: s.baristaSortOrder,
-            customerSortOrder: s.customerSortOrder,
           };
         }
         return {
+          ...base,
           ingredientId: s.ingredientId!,
-          slotLabel: s.slotLabel.trim(),
-          isRequired: s.isRequired,
-          isDynamic: s.isDynamic,
           defaultOptionId: s.defaultOptionId ?? null,
-          sortOrder: i,
-          baristaSortOrder: s.baristaSortOrder,
-          customerSortOrder: s.customerSortOrder,
         };
       });
 
@@ -517,7 +517,7 @@ export default function DrinkRecipe() {
                     </Button>
                   </div>
 
-                    <div className="flex gap-4 pl-14">
+                    <div className="flex flex-wrap gap-4 pl-14 items-end">
                       <div className="flex-1 grid gap-1.5">
                         <Label className="text-xs">Slot Label</Label>
                         <Input
@@ -525,6 +525,23 @@ export default function DrinkRecipe() {
                           value={slot.slotLabel}
                           onChange={e => updateSlot(slot.key, { slotLabel: e.target.value })}
                         />
+                      </div>
+                      <div className="flex items-center gap-6 h-10 border rounded-md px-3 bg-muted/20">
+                        <div className="flex items-center gap-2">
+                          <Switch id={`req-${slot.key}`} checked={slot.isRequired} onCheckedChange={v => updateSlot(slot.key, { isRequired: v })} />
+                          <Label htmlFor={`req-${slot.key}`} className="cursor-pointer text-xs font-semibold">Required</Label>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Switch id={`dyn-${slot.key}`} checked={slot.isDynamic} onCheckedChange={v => updateSlot(slot.key, { isDynamic: v })} disabled={!slot.isDynamic && hasDynamicSlot} />
+                          <Label htmlFor={`dyn-${slot.key}`} className="cursor-pointer text-xs font-semibold flex items-center gap-1.5 whitespace-nowrap">
+                            <Droplets className="h-3.5 w-3.5 text-blue-500" /> Dynamic fill
+                          </Label>
+                          {slot.isDynamic && (
+                            <Badge variant="secondary" className="text-[10px] leading-none px-1.5 py-0.5 text-blue-600 bg-blue-100 dark:bg-blue-900/30 font-bold whitespace-nowrap">
+                              fills {cupSizeMl ? `${cupSizeMl}ml` : "cup"}
+                            </Badge>
+                          )}
+                        </div>
                       </div>
                       <div className="w-24 grid gap-1.5">
                         <Label className="text-xs">Cust. Index</Label>
@@ -748,22 +765,6 @@ export default function DrinkRecipe() {
                         </div>
                       </div>
 
-                      <div className="flex flex-wrap gap-6">
-                        <div className="flex items-center gap-2.5">
-                          <Switch id={`req-${slot.key}`} checked={slot.isRequired} onCheckedChange={v => updateSlot(slot.key, { isRequired: v })} />
-                          <Label htmlFor={`req-${slot.key}`} className="cursor-pointer text-sm">Required</Label>
-                        </div>
-                        <div className="flex items-center gap-2.5">
-                          <Switch id={`dyn-${slot.key}`} checked={slot.isDynamic} onCheckedChange={v => updateSlot(slot.key, { isDynamic: v })} disabled={!slot.isDynamic && hasDynamicSlot} />
-                          <Label htmlFor={`dyn-${slot.key}`} className="cursor-pointer text-sm flex items-center gap-1.5">
-                            <Droplets className="h-3.5 w-3.5 text-blue-500" /> Dynamic fill
-                          </Label>
-                          {slot.isDynamic && (
-                            <Badge variant="secondary" className="text-blue-600 bg-blue-100 dark:bg-blue-900/30 text-xs">
-                              fills remaining {cupSizeMl ? `${cupSizeMl}ml` : "cup"}
-                            </Badge>
-                          )}
-                        </div>
                       </div>
                     </>
                   )}
