@@ -37,9 +37,8 @@ type IngType = {
 };
 type Volume = { id: number; name: string; processedQty: string; producedQty: string; unit: string; sortOrder: number };
 type TypeVolume = {
-  id: number; ingredientTypeId: number; volumeId: number; processedQty: string | null;
-  producedQty: string | null; unit: string | null; extraCost: string; isDefault: boolean; 
-  affectsCupSize: boolean; sortOrder: number;
+  id: number; ingredientTypeId: number; volumeId: number; processedQty: string | null; producedQty: string | null; unit: string | null; extraCost: string; isDefault: boolean; 
+  sortOrder: number;
   volume?: Volume | null;
 };
 
@@ -168,6 +167,8 @@ function TypesTab({ inventoryItems }: { inventoryItems: Ingredient[] }) {
   const [unit, setUnit] = useState("ml");
   const [isActive, setIsActive] = useState(true);
   const [affectsCupSize, setAffectsCupSize] = useState(true);
+  const [processedQty, setProcessedQty] = useState("0");
+  const [producedQty, setProducedQty] = useState("0");
   const [saving, setSaving] = useState(false);
 
   // Volume config dialog
@@ -178,7 +179,6 @@ function TypesTab({ inventoryItems }: { inventoryItems: Ingredient[] }) {
   const [addingVolumeId, setAddingVolumeId] = useState<string>("");
   const [addingExtraCost, setAddingExtraCost] = useState("0");
   const [addingIsDefault, setAddingIsDefault] = useState(false);
-  const [addingAffectsCupSize, setAddingAffectsCupSize] = useState(true);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -245,7 +245,7 @@ function TypesTab({ inventoryItems }: { inventoryItems: Ingredient[] }) {
 
   const openVolumes = async (t: IngType) => {
     setVolTypeId(t.id); setVolTypeName(t.name);
-    setLoadingTypeVols(true); setAddingVolumeId(""); setAddingExtraCost("0"); setAddingIsDefault(false); setAddingAffectsCupSize(true);
+    setLoadingTypeVols(true); setAddingVolumeId(""); setAddingExtraCost("0"); setAddingIsDefault(false);
     try { setTypeVolumes(await api(`/api/catalog/types/${t.id}/volumes`)); }
     catch { toast({ variant: "destructive", title: "Failed to load volumes" }); }
     finally { setLoadingTypeVols(false); }
@@ -278,15 +278,6 @@ function TypesTab({ inventoryItems }: { inventoryItems: Ingredient[] }) {
         method: "PATCH", body: JSON.stringify({ isDefault: !tv.isDefault }),
       });
       setTypeVolumes(prev => prev.map(v => v.id === tv.id ? { ...v, isDefault: updated.isDefault } : { ...v, isDefault: false }));
-    } catch { toast({ variant: "destructive", title: "Failed to update" }); }
-  };
-  
-  const handleToggleAffectsCupSize = async (tv: TypeVolume) => {
-    try {
-      const updated = await api(`/api/catalog/type-volumes/${tv.id}`, {
-        method: "PATCH", body: JSON.stringify({ affectsCupSize: !tv.affectsCupSize }),
-      });
-      setTypeVolumes(prev => prev.map(v => v.id === tv.id ? { ...v, affectsCupSize: updated.affectsCupSize } : v));
     } catch { toast({ variant: "destructive", title: "Failed to update" }); }
   };
 
@@ -478,13 +469,6 @@ function TypesTab({ inventoryItems }: { inventoryItems: Ingredient[] }) {
                       </div>
                     </div>
                     <button
-                      title={tv.affectsCupSize ? "Countable for cup size" : "NOT countable for cup size"}
-                      className={`transition-colors p-1 ${tv.affectsCupSize ? "text-primary hover:text-primary/70" : "text-muted-foreground hover:text-primary"}`}
-                      onClick={() => handleToggleAffectsCupSize(tv)}
-                    >
-                      <FlaskConical className={`h-4 w-4 ${!tv.affectsCupSize && "opacity-40"}`} />
-                    </button>
-                    <button
                       title={tv.isDefault ? "Remove as default" : "Set as default"}
                       className="text-muted-foreground hover:text-primary transition-colors p-1"
                       onClick={() => handleToggleDefault(tv)}
@@ -528,10 +512,6 @@ function TypesTab({ inventoryItems }: { inventoryItems: Ingredient[] }) {
                   <div className="flex items-center gap-2">
                     <Switch id="tv-default" checked={addingIsDefault} onCheckedChange={setAddingIsDefault} />
                     <Label htmlFor="tv-default" className="text-xs">Set as default</Label>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Switch id="tv-countable" checked={addingAffectsCupSize} onCheckedChange={setAddingAffectsCupSize} />
-                    <Label htmlFor="tv-countable" className="text-xs">Countable for cup size</Label>
                   </div>
                 </div>
                 <Button size="sm" className="w-full gap-2" onClick={handleAddTypeVolume} disabled={!addingVolumeId}>

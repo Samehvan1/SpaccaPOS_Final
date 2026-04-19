@@ -47,7 +47,7 @@ export const orderItemCustomizationsTable = pgTable("order_item_customizations",
   addedCost: numeric("added_cost", { precision: 8, scale: 4 }).notNull(),
   slotLabel: text("slot_label").notNull(),
   optionLabel: text("option_label").notNull(),
-  baristaSortOrder: integer("barista_sort_order").notNull().default(0),
+  baristaSortOrder: integer("barista_sort_order").notNull().default(1),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

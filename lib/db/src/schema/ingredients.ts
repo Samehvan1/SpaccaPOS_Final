@@ -92,7 +92,6 @@ export const ingredientTypeVolumesTable = pgTable("ingredient_type_volumes", {
   unit: text("unit"),
   extraCost: numeric("extra_cost", { precision: 8, scale: 4 }).notNull().default("0"),
   isDefault: boolean("is_default").notNull().default(false),
-  affectsCupSize: boolean("affects_cup_size").notNull().default(true),
   sortOrder: integer("sort_order").notNull().default(0),
 });
 

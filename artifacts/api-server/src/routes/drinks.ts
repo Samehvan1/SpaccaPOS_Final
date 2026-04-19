@@ -60,9 +60,12 @@ async function buildDrinkDetail(drinkId: number) {
 
   // Helper: build merged volumes for a type + slot-level overrides
   async function buildTypeVolumes(typeId: number, slotId: number) {
-    const typeVolumes = await db.select().from(ingredientTypeVolumesTable)
-      .where(eq(ingredientTypeVolumesTable.ingredientTypeId, typeId))
-      .orderBy(ingredientTypeVolumesTable.sortOrder);
+    const [[typeDef], typeVolumes] = await Promise.all([
+      db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, typeId)),
+      db.select().from(ingredientTypeVolumesTable)
+        .where(eq(ingredientTypeVolumesTable.ingredientTypeId, typeId))
+        .orderBy(ingredientTypeVolumesTable.sortOrder)
+    ]);
 
     const allSlotVols = await db.select().from(drinkSlotVolumesTable)
       .where(eq(drinkSlotVolumesTable.slotId, slotId));
@@ -88,6 +91,7 @@ async function buildDrinkDetail(drinkId: number) {
         isDefault: override?.isDefault ?? tv.isDefault,
         isEnabled: override?.isEnabled ?? true,
         sortOrder: override?.sortOrder ?? tv.sortOrder,
+        affectsCupSize: typeDef?.affectsCupSize ?? true,
         hasSlotOverride: !!override,
       };
     }).filter((v) => v.isEnabled);
@@ -326,8 +330,8 @@ router.post("/drinks", async (req, res): Promise<void> => {
         isRequired: s.isRequired ?? true,
         defaultOptionId: s.defaultOptionId ?? null,
         sortOrder: s.sortOrder ?? 0,
-        baristaSortOrder: s.baristaSortOrder ?? s.sortOrder ?? 0,
-        customerSortOrder: s.customerSortOrder ?? s.sortOrder ?? 0,
+        baristaSortOrder: s.baristaSortOrder ?? s.sortOrder ?? 1,
+        customerSortOrder: s.customerSortOrder ?? s.sortOrder ?? 1,
       }))
     );
   }
@@ -449,8 +453,8 @@ router.put("/drinks/:id/slots", async (req, res): Promise<void> => {
         isDynamic: s.isDynamic ?? false,
         defaultOptionId: s.defaultOptionId ?? null,
         sortOrder: s.sortOrder ?? i,
-        baristaSortOrder: s.baristaSortOrder ?? s.sortOrder ?? i,
-        customerSortOrder: s.customerSortOrder ?? s.sortOrder ?? i,
+        baristaSortOrder: s.baristaSortOrder ?? s.sortOrder ?? 1,
+        customerSortOrder: s.customerSortOrder ?? s.sortOrder ?? 1,
       }))
     ).returning();
 
@@ -486,7 +490,6 @@ router.put("/drinks/:id/slots", async (req, res): Promise<void> => {
                 extraCost: sv.extraCost ?? null,
                 isDefault: sv.isDefault ?? false,
                 isEnabled: sv.isEnabled ?? true,
-                affectsCupSize: sv.affectsCupSize ?? true,
                 sortOrder: sv.sortOrder ?? 0,
               });
             }
@@ -506,7 +509,6 @@ router.put("/drinks/:id/slots", async (req, res): Promise<void> => {
             extraCost: sv.extraCost ?? null,
             isDefault: sv.isDefault ?? false,
             isEnabled: sv.isEnabled ?? true,
-            affectsCupSize: sv.affectsCupSize ?? true,
             sortOrder: sv.sortOrder ?? 0,
           });
         }

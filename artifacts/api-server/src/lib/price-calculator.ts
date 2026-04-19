@@ -76,8 +76,7 @@ export async function calculateDrinkData(drinkId: number, selections: any[]) {
       const consumedQty = parseFloat(slotVol?.processedQty ?? typeVol.processedQty ?? "0");
       const producedQty = parseFloat(slotVol?.producedQty ?? typeVol.producedQty ?? "0");
       
-      const affectsCupSize = slotVol?.affectsCupSize ?? typeVol.affectsCupSize ?? true;
-      if (affectsCupSize) {
+      if (typeDef?.affectsCupSize) {
         usedVolumeMl += producedQty;
       }
 
@@ -92,7 +91,7 @@ export async function calculateDrinkData(drinkId: number, selections: any[]) {
         addedCost: extraCost,
         slotLabel: slot.slotLabel,
         optionLabel,
-        baristaSortOrder: slot.baristaSortOrder ?? 0,
+        baristaSortOrder: slot.baristaSortOrder ?? 1,
       });
       continue;
     }
@@ -121,7 +120,7 @@ export async function calculateDrinkData(drinkId: number, selections: any[]) {
           addedCost: 0,
           slotLabel: slot.slotLabel,
           optionLabel,
-          baristaSortOrder: slot.baristaSortOrder ?? 0,
+          baristaSortOrder: slot.baristaSortOrder ?? 1,
         });
       }
       continue;
@@ -147,7 +146,7 @@ export async function calculateDrinkData(drinkId: number, selections: any[]) {
           addedCost: extraCost,
           slotLabel: slot.slotLabel,
           optionLabel: `${option.label} · ${subOption.label}`,
-          baristaSortOrder: slot.baristaSortOrder ?? 0,
+          baristaSortOrder: slot.baristaSortOrder ?? 1,
         });
       }
       continue;
@@ -165,7 +164,7 @@ export async function calculateDrinkData(drinkId: number, selections: any[]) {
       addedCost: extraCost,
       slotLabel: slot.slotLabel,
       optionLabel: option.label,
-      baristaSortOrder: slot.baristaSortOrder ?? 0,
+      baristaSortOrder: slot.baristaSortOrder ?? 1,
     });
   }
 
@@ -237,7 +236,7 @@ export async function calculateDrinkData(drinkId: number, selections: any[]) {
           addedCost: cost,
           slotLabel: dynamicSlot.slotLabel,
           optionLabel: ingredientType?.name ? `${ingredientType.name} (${Math.round(filledMl)}${unit})` : `Dynamic (${Math.round(filledMl)}${unit})`,
-          baristaSortOrder: dynamicSlot.baristaSortOrder ?? 0,
+          baristaSortOrder: dynamicSlot.baristaSortOrder ?? 1,
         });
       }
     }
@@ -279,7 +278,7 @@ export async function calculateDrinkData(drinkId: number, selections: any[]) {
           addedCost: cost,
           slotLabel: dynamicSlot.slotLabel,
           optionLabel: `Dynamic (${Math.round(filledMl)}ml)`,
-          baristaSortOrder: dynamicSlot.baristaSortOrder ?? 0,
+          baristaSortOrder: dynamicSlot.baristaSortOrder ?? 1,
         });
       }
     }
