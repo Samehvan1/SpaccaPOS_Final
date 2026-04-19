@@ -530,7 +530,14 @@ router.delete("/drinks/:id", async (req, res): Promise<void> => {
     res.sendStatus(204);
   } catch (error: any) {
     // Handling foreign key constraint (Postgres error 23503)
-    if (error.message?.includes("foreign key constraint") || error.code === "23503") {
+    // Drizzle often wraps the DB error in a 'cause' property
+    const isForeignKeyError = 
+      error.code === "23503" || 
+      error.cause?.code === "23503" ||
+      error.message?.includes("foreign key constraint") ||
+      error.cause?.message?.includes("foreign key constraint");
+
+    if (isForeignKeyError) {
       res.status(400).json({ 
         error: "Cannot delete drink with order history. Please deactivate it instead to hide it from the menu." 
       });

@@ -44,7 +44,8 @@ router.delete("/catalog/categories/:id", async (req, res): Promise<void> => {
     await db.delete(ingredientCategoriesTable).where(eq(ingredientCategoriesTable.id, id));
     res.sendStatus(204);
   } catch (error: any) {
-    if (error.code === "23503") {
+    const isForeignKeyError = error.code === "23503" || error.cause?.code === "23503";
+    if (isForeignKeyError) {
       res.status(400).json({ error: "Cannot delete category while it contains ingredient types. Please remove the types first." });
     } else {
       res.status(500).json({ error: "Failed to delete category" });
@@ -150,7 +151,8 @@ router.delete("/catalog/types/:id", async (req, res): Promise<void> => {
     await db.delete(ingredientTypesTable).where(eq(ingredientTypesTable.id, id));
     res.sendStatus(204);
   } catch (error: any) {
-    if (error.code === "23503") {
+    const isForeignKeyError = error.code === "23503" || error.cause?.code === "23503";
+    if (isForeignKeyError) {
       res.status(400).json({ error: "Cannot delete ingredient type while it is used in drink recipes or has associated volume definitions." });
     } else {
       res.status(500).json({ error: "Failed to delete ingredient type" });
@@ -246,7 +248,8 @@ router.delete("/catalog/volumes/:id", async (req, res): Promise<void> => {
     await db.delete(ingredientVolumesTable).where(eq(ingredientVolumesTable.id, id));
     res.sendStatus(204);
   } catch (error: any) {
-    if (error.code === "23503") {
+    const isForeignKeyError = error.code === "23503" || error.cause?.code === "23503";
+    if (isForeignKeyError) {
       res.status(400).json({ error: "Cannot delete volume while it is linked to ingredient types. Please remove it from those types first." });
     } else {
       res.status(500).json({ error: "Failed to delete volume" });
