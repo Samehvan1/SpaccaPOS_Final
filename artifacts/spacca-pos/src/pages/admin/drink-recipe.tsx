@@ -528,7 +528,10 @@ export default function DrinkRecipe() {
                         <Input
                           type="number"
                           value={slot.customerSortOrder}
-                          onChange={e => updateSlot(slot.key, { customerSortOrder: parseInt(e.target.value) || 1 })}
+                          onChange={e => {
+                            const val = parseInt(e.target.value);
+                            updateSlot(slot.key, { customerSortOrder: isNaN(val) ? 1 : val });
+                          }}
                         />
                       </div>
                       <div className="w-24 grid gap-1.5">
@@ -536,7 +539,10 @@ export default function DrinkRecipe() {
                         <Input
                           type="number"
                           value={slot.baristaSortOrder}
-                          onChange={e => updateSlot(slot.key, { baristaSortOrder: parseInt(e.target.value) || 1 })}
+                          onChange={e => {
+                            const val = parseInt(e.target.value);
+                            updateSlot(slot.key, { baristaSortOrder: isNaN(val) ? 1 : val });
+                          }}
                         />
                       </div>
                     </div>
