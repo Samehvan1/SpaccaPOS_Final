@@ -7,6 +7,7 @@ import {
   useCreateOrder,
   Drink,
 } from "@workspace/api-client-react";
+import { useSettings } from "@/hooks/use-settings";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -79,6 +80,7 @@ function buildSubcategories(drinks: Drink[]): Record<string, Drink[]> {
 export default function PosTerminal() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { autoPrintCustomer, autoPrintAgent } = useSettings();
 
   const { data: drinks, isLoading: isLoadingDrinks } = useListDrinks({ active: true });
   const { data: allCategories = [] } = useDrinkCategories();
@@ -356,7 +358,23 @@ export default function PosTerminal() {
     mutation: {
       onSuccess: (data) => {
         setCompletedOrder(data);
-        setIsReceiptOpen(true);
+        
+        // Handle Auto-Print
+        if (autoPrintCustomer) {
+          printCustomerReceipt(data);
+        }
+        if (autoPrintAgent) {
+          printAgentReceipts(data);
+        }
+
+        // Only show receipt options dialog if at least one print was NOT automatic
+        if (autoPrintCustomer && autoPrintAgent) {
+          setIsReceiptOpen(false);
+          toast({ title: "Order Complete", description: "Receipts printed automatically." });
+        } else {
+          setIsReceiptOpen(true);
+        }
+
         setCart([]);
         setIsCartOpen(false);
         setIsCheckoutOpen(false);

@@ -11,11 +11,14 @@ export default function Login() {
   const { user, refetchUser } = useAuth();
   const { toast } = useToast();
 
+  const params = new URLSearchParams(window.location.search);
+  const from = params.get("from") || "/pos";
+
   useEffect(() => {
     if (user) {
-      setLocation("/pos");
+      setLocation(from);
     }
-  }, [user, setLocation]);
+  }, [user, setLocation, from]);
 
   const loginMutation = useBaristaLogin({
     mutation: {

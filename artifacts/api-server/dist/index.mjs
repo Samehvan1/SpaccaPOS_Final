@@ -20807,27 +20807,27 @@ var require_router = __commonJS({
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var methods = METHODS.map((method) => method.toLowerCase());
-    module.exports = Router12;
+    module.exports = Router13;
     module.exports.Route = Route;
-    function Router12(options) {
-      if (!(this instanceof Router12)) {
-        return new Router12(options);
+    function Router13(options) {
+      if (!(this instanceof Router13)) {
+        return new Router13(options);
       }
       const opts = options || {};
-      function router12(req, res, next) {
-        router12.handle(req, res, next);
+      function router13(req, res, next) {
+        router13.handle(req, res, next);
       }
-      Object.setPrototypeOf(router12, this);
-      router12.caseSensitive = opts.caseSensitive;
-      router12.mergeParams = opts.mergeParams;
-      router12.params = {};
-      router12.strict = opts.strict;
-      router12.stack = [];
-      return router12;
+      Object.setPrototypeOf(router13, this);
+      router13.caseSensitive = opts.caseSensitive;
+      router13.mergeParams = opts.mergeParams;
+      router13.params = {};
+      router13.strict = opts.strict;
+      router13.stack = [];
+      return router13;
     }
-    Router12.prototype = function() {
+    Router13.prototype = function() {
     };
-    Router12.prototype.param = function param(name, fn) {
+    Router13.prototype.param = function param(name, fn) {
       if (!name) {
         throw new TypeError("argument name is required");
       }
@@ -20847,7 +20847,7 @@ var require_router = __commonJS({
       params.push(fn);
       return this;
     };
-    Router12.prototype.handle = function handle(req, res, callback) {
+    Router13.prototype.handle = function handle(req, res, callback) {
       if (!callback) {
         throw new TypeError("argument callback is required");
       }
@@ -20974,7 +20974,7 @@ var require_router = __commonJS({
         }
       }
     };
-    Router12.prototype.use = function use(handler) {
+    Router13.prototype.use = function use(handler) {
       let offset = 0;
       let path2 = "/";
       if (typeof handler !== "function") {
@@ -21007,7 +21007,7 @@ var require_router = __commonJS({
       }
       return this;
     };
-    Router12.prototype.route = function route(path2) {
+    Router13.prototype.route = function route(path2) {
       const route2 = new Route(path2);
       const layer = new Layer(path2, {
         sensitive: this.caseSensitive,
@@ -21022,7 +21022,7 @@ var require_router = __commonJS({
       return route2;
     };
     methods.concat("all").forEach(function(method) {
-      Router12.prototype[method] = function(path2) {
+      Router13.prototype[method] = function(path2) {
         const route = this.route(path2);
         route[method].apply(route, slice.call(arguments, 1));
         return this;
@@ -21205,13 +21205,13 @@ var require_application = __commonJS({
     var compileTrust = require_utils3().compileTrust;
     var resolve2 = __require("node:path").resolve;
     var once = require_once();
-    var Router12 = require_router();
+    var Router13 = require_router();
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var app2 = exports = module.exports = {};
     var trustProxyDefaultSymbol = "@@symbol:trust_proxy_default";
     app2.init = function init() {
-      var router12 = null;
+      var router13 = null;
       this.cache = /* @__PURE__ */ Object.create(null);
       this.engines = /* @__PURE__ */ Object.create(null);
       this.settings = /* @__PURE__ */ Object.create(null);
@@ -21220,13 +21220,13 @@ var require_application = __commonJS({
         configurable: true,
         enumerable: true,
         get: function getrouter() {
-          if (router12 === null) {
-            router12 = new Router12({
+          if (router13 === null) {
+            router13 = new Router13({
               caseSensitive: this.enabled("case sensitive routing"),
               strict: this.enabled("strict routing")
             });
           }
-          return router12;
+          return router13;
         }
       });
     };
@@ -21297,15 +21297,15 @@ var require_application = __commonJS({
       if (fns.length === 0) {
         throw new TypeError("app.use() requires a middleware function");
       }
-      var router12 = this.router;
+      var router13 = this.router;
       fns.forEach(function(fn2) {
         if (!fn2 || !fn2.handle || !fn2.set) {
-          return router12.use(path2, fn2);
+          return router13.use(path2, fn2);
         }
         debug(".use app under %s", path2);
         fn2.mountpath = path2;
         fn2.parent = this;
-        router12.use(path2, function mounted_app(req, res, next) {
+        router13.use(path2, function mounted_app(req, res, next) {
           var orig = req.app;
           fn2.handle(req, res, function(err) {
             Object.setPrototypeOf(req, orig.request);
@@ -23832,7 +23832,7 @@ var require_express = __commonJS({
     var EventEmitter = __require("node:events").EventEmitter;
     var mixin = require_merge_descriptors();
     var proto = require_application();
-    var Router12 = require_router();
+    var Router13 = require_router();
     var req = require_request();
     var res = require_response();
     exports = module.exports = createApplication;
@@ -23854,8 +23854,8 @@ var require_express = __commonJS({
     exports.application = proto;
     exports.request = req;
     exports.response = res;
-    exports.Route = Router12.Route;
-    exports.Router = Router12;
+    exports.Route = Router13.Route;
+    exports.Router = Router13;
     exports.json = bodyParser.json;
     exports.raw = bodyParser.raw;
     exports.static = require_serve_static();
@@ -39247,6 +39247,9 @@ var init_columns = __esm({
 });
 
 // ../../node_modules/.pnpm/drizzle-orm@0.45.1_@types+pg@8.18.0_pg@8.20.0/node_modules/drizzle-orm/pg-core/indexes.js
+function uniqueIndex(name) {
+  return new IndexBuilderOn(true, name);
+}
 var IndexBuilderOn, IndexBuilder, Index;
 var init_indexes = __esm({
   "../../node_modules/.pnpm/drizzle-orm@0.45.1_@types+pg@8.18.0_pg@8.20.0/node_modules/drizzle-orm/pg-core/indexes.js"() {
@@ -55789,6 +55792,33 @@ var init_stock = __esm({
   }
 });
 
+// ../../lib/db/src/schema/settings.ts
+var settingsTable, insertSettingSchema;
+var init_settings = __esm({
+  "../../lib/db/src/schema/settings.ts"() {
+    "use strict";
+    init_pg_core();
+    init_drizzle_orm();
+    init_drizzle_zod();
+    init_users();
+    settingsTable = pgTable("settings", {
+      id: serial("id").primaryKey(),
+      scope: text("scope", { enum: ["global", "user"] }).notNull().default("global"),
+      userId: integer("user_id").references(() => usersTable.id, { onDelete: "cascade" }),
+      key: text("key").notNull(),
+      value: text("value").notNull(),
+      // JSON stringified value
+      updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => /* @__PURE__ */ new Date())
+    }, (table) => ({
+      // Unique index for global settings (ensures one 'autoPrint' global setting)
+      globalKeyIdx: uniqueIndex("global_key_idx").on(table.key).where(sql`scope = 'global'`),
+      // Unique index for per-user settings (ensures one 'autoPrint' per user)
+      userKeyIdx: uniqueIndex("user_key_idx").on(table.userId, table.key).where(sql`scope = 'user'`)
+    }));
+    insertSettingSchema = createInsertSchema(settingsTable).omit({ id: true, updatedAt: true });
+  }
+});
+
 // ../../lib/db/src/schema/index.ts
 var schema_exports = {};
 __export(schema_exports, {
@@ -55816,6 +55846,7 @@ __export(schema_exports, {
   insertIngredientVolumeSchema: () => insertIngredientVolumeSchema,
   insertOrderSchema: () => insertOrderSchema,
   insertPredefinedSlotSchema: () => insertPredefinedSlotSchema,
+  insertSettingSchema: () => insertSettingSchema,
   insertStockMovementSchema: () => insertStockMovementSchema,
   insertUserSchema: () => insertUserSchema,
   orderItemCustomizationsTable: () => orderItemCustomizationsTable,
@@ -55824,6 +55855,7 @@ __export(schema_exports, {
   predefinedSlotTypeOptionsTable: () => predefinedSlotTypeOptionsTable,
   predefinedSlotVolumesTable: () => predefinedSlotVolumesTable,
   predefinedSlotsTable: () => predefinedSlotsTable,
+  settingsTable: () => settingsTable,
   stockMovementsTable: () => stockMovementsTable,
   usersTable: () => usersTable
 });
@@ -55835,6 +55867,7 @@ var init_schema2 = __esm({
     init_drinks();
     init_orders();
     init_stock();
+    init_settings();
   }
 });
 
@@ -55866,6 +55899,7 @@ __export(src_exports, {
   insertIngredientVolumeSchema: () => insertIngredientVolumeSchema,
   insertOrderSchema: () => insertOrderSchema,
   insertPredefinedSlotSchema: () => insertPredefinedSlotSchema,
+  insertSettingSchema: () => insertSettingSchema,
   insertStockMovementSchema: () => insertStockMovementSchema,
   insertUserSchema: () => insertUserSchema,
   orderItemCustomizationsTable: () => orderItemCustomizationsTable,
@@ -55875,6 +55909,7 @@ __export(src_exports, {
   predefinedSlotTypeOptionsTable: () => predefinedSlotTypeOptionsTable,
   predefinedSlotVolumesTable: () => predefinedSlotVolumesTable,
   predefinedSlotsTable: () => predefinedSlotsTable,
+  settingsTable: () => settingsTable,
   stockMovementsTable: () => stockMovementsTable,
   usersTable: () => usersTable
 });
@@ -72493,13 +72528,13 @@ var __dirname2 = dirname(__filename);
 (0, import_dotenv.config)({ path: resolve(__dirname2, "../../../.env") });
 
 // src/app.ts
-var import_express12 = __toESM(require_express2(), 1);
+var import_express13 = __toESM(require_express2(), 1);
 var import_cors = __toESM(require_lib3(), 1);
 var import_pino_http = __toESM(require_logger(), 1);
 var import_express_session = __toESM(require_express_session(), 1);
 
 // src/routes/index.ts
-var import_express11 = __toESM(require_express2(), 1);
+var import_express12 = __toESM(require_express2(), 1);
 
 // src/routes/health.ts
 var import_express = __toESM(require_express2(), 1);
@@ -79078,12 +79113,75 @@ router9.delete("/drink-categories/:id", async (req, res) => {
 });
 var drink_categories_default = router9;
 
-// src/routes/predefined-slots.ts
+// src/routes/settings.ts
 var import_express10 = __toESM(require_express2(), 1);
 init_drizzle_orm();
 init_src();
 var router10 = (0, import_express10.Router)();
-router10.get("/catalog/predefined-slots", async (_req, res) => {
+router10.get("/settings", async (req, res) => {
+  const scope = req.query.scope;
+  const currentUserId = req.session.userId;
+  let query = db.select().from(settingsTable);
+  if (scope === "global") {
+    query = query.where(eq(settingsTable.scope, "global"));
+  } else if (scope === "user") {
+    if (!currentUserId) {
+      res.status(401).json({ error: "Not authenticated for user settings" });
+      return;
+    }
+    query = query.where(and(eq(settingsTable.scope, "user"), eq(settingsTable.userId, currentUserId)));
+  }
+  const rows = await query;
+  res.json(rows);
+});
+router10.patch("/settings", async (req, res) => {
+  const { scope, settings } = req.body;
+  const currentUserId = req.session.userId;
+  if (!scope || !settings || !Array.isArray(settings)) {
+    res.status(400).json({ error: "Invalid request body" });
+    return;
+  }
+  if (scope === "user" && !currentUserId) {
+    res.status(401).json({ error: "Not authenticated" });
+    return;
+  }
+  const results = [];
+  for (const s of settings) {
+    const { key, value } = s;
+    if (!key) continue;
+    let existing;
+    if (scope === "global") {
+      [existing] = await db.select().from(settingsTable).where(and(eq(settingsTable.scope, "global"), eq(settingsTable.key, key))).limit(1);
+    } else {
+      [existing] = await db.select().from(settingsTable).where(and(
+        eq(settingsTable.scope, "user"),
+        eq(settingsTable.userId, currentUserId),
+        eq(settingsTable.key, key)
+      )).limit(1);
+    }
+    if (existing) {
+      const [updated] = await db.update(settingsTable).set({ value, updatedAt: /* @__PURE__ */ new Date() }).where(eq(settingsTable.id, existing.id)).returning();
+      results.push(updated);
+    } else {
+      const [inserted] = await db.insert(settingsTable).values({
+        scope,
+        userId: scope === "user" ? currentUserId : null,
+        key,
+        value
+      }).returning();
+      results.push(inserted);
+    }
+  }
+  res.json(results);
+});
+var settings_default = router10;
+
+// src/routes/predefined-slots.ts
+var import_express11 = __toESM(require_express2(), 1);
+init_drizzle_orm();
+init_src();
+var router11 = (0, import_express11.Router)();
+router11.get("/catalog/predefined-slots", async (_req, res) => {
   const slots = await db.select().from(predefinedSlotsTable).orderBy(asc(predefinedSlotsTable.name));
   const detail = await Promise.all(slots.map(async (slot) => {
     const typeOptions = await db.select().from(predefinedSlotTypeOptionsTable).where(eq(predefinedSlotTypeOptionsTable.predefinedSlotId, slot.id)).orderBy(predefinedSlotTypeOptionsTable.sortOrder);
@@ -79092,7 +79190,7 @@ router10.get("/catalog/predefined-slots", async (_req, res) => {
   }));
   res.json(detail);
 });
-router10.get("/catalog/predefined-slots/:id", async (req, res) => {
+router11.get("/catalog/predefined-slots/:id", async (req, res) => {
   const id = parseInt(req.params.id);
   const [slot] = await db.select().from(predefinedSlotsTable).where(eq(predefinedSlotsTable.id, id));
   if (!slot) {
@@ -79103,7 +79201,7 @@ router10.get("/catalog/predefined-slots/:id", async (req, res) => {
   const volumes = await db.select().from(predefinedSlotVolumesTable).where(eq(predefinedSlotVolumesTable.predefinedSlotId, id)).orderBy(predefinedSlotVolumesTable.sortOrder);
   res.json({ ...slot, typeOptions, volumes });
 });
-router10.post("/catalog/predefined-slots", async (req, res) => {
+router11.post("/catalog/predefined-slots", async (req, res) => {
   const { name, slotLabel, isRequired, isDynamic, affectsCupSize, autoLoadCategoryId } = req.body;
   if (!name || !slotLabel) {
     res.status(400).json({ error: "name and slotLabel required" });
@@ -79147,7 +79245,7 @@ router10.post("/catalog/predefined-slots", async (req, res) => {
   }
   res.status(201).json(slot);
 });
-router10.patch("/catalog/predefined-slots/:id", async (req, res) => {
+router11.patch("/catalog/predefined-slots/:id", async (req, res) => {
   const id = parseInt(req.params.id);
   const { name, slotLabel, isRequired, isDynamic, affectsCupSize, typeOptions, volumes } = req.body;
   const patch = {};
@@ -79188,7 +79286,7 @@ router10.patch("/catalog/predefined-slots/:id", async (req, res) => {
   }
   res.json({ success: true });
 });
-router10.delete("/catalog/predefined-slots/:id", async (req, res) => {
+router11.delete("/catalog/predefined-slots/:id", async (req, res) => {
   const id = parseInt(req.params.id);
   try {
     await db.delete(predefinedSlotsTable).where(eq(predefinedSlotsTable.id, id));
@@ -79201,21 +79299,22 @@ router10.delete("/catalog/predefined-slots/:id", async (req, res) => {
     }
   }
 });
-var predefined_slots_default = router10;
+var predefined_slots_default = router11;
 
 // src/routes/index.ts
-var router11 = (0, import_express11.Router)();
-router11.use(health_default);
-router11.use(auth_default);
-router11.use(drinks_default);
-router11.use(ingredients_default);
-router11.use(orders_default);
-router11.use(stock_default);
-router11.use(dashboard_default);
-router11.use(catalog_default);
-router11.use(drink_categories_default);
-router11.use(predefined_slots_default);
-router11.get("/events", (req, res) => {
+var router12 = (0, import_express12.Router)();
+router12.use(health_default);
+router12.use(auth_default);
+router12.use(drinks_default);
+router12.use(ingredients_default);
+router12.use(orders_default);
+router12.use(stock_default);
+router12.use(dashboard_default);
+router12.use(catalog_default);
+router12.use(drink_categories_default);
+router12.use(settings_default);
+router12.use(predefined_slots_default);
+router12.get("/events", (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache, no-transform");
   res.setHeader("X-Accel-Buffering", "no");
@@ -79224,7 +79323,7 @@ router11.get("/events", (req, res) => {
   res.write("event: connected\ndata: {}\n\n");
   addSseClient(res);
 });
-var routes_default = router11;
+var routes_default = router12;
 
 // src/lib/logger.ts
 var import_pino = __toESM(require_pino(), 1);
@@ -79245,7 +79344,7 @@ var logger = (0, import_pino.default)({
 });
 
 // src/app.ts
-var app = (0, import_express12.default)();
+var app = (0, import_express13.default)();
 app.set("json replacer", (_key, value) => {
   if (value instanceof Date) return value.toISOString();
   return value;
@@ -79271,8 +79370,8 @@ app.use(
 );
 app.set("trust proxy", 1);
 app.use((0, import_cors.default)({ credentials: true, origin: true }));
-app.use(import_express12.default.json());
-app.use(import_express12.default.urlencoded({ extended: true }));
+app.use(import_express13.default.json());
+app.use(import_express13.default.urlencoded({ extended: true }));
 app.use(
   (0, import_express_session.default)({
     secret: process.env.SESSION_SECRET ?? "spacca-dev-secret",
@@ -79286,7 +79385,7 @@ app.use(
     }
   })
 );
-app.use("/uploads", import_express12.default.static("uploads"));
+app.use("/uploads", import_express13.default.static("uploads"));
 app.use("/api", routes_default);
 var app_default = app;
 

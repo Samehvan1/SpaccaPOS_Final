@@ -2,8 +2,9 @@ import { ReactNode } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useTheme } from "@/hooks/use-theme";
+import { useSettings } from "@/hooks/use-settings";
 import { useOrderEvents } from "@/hooks/use-order-events";
-import { Coffee, ChefHat, LayoutDashboard, LogOut, Sun, Moon } from "lucide-react";
+import { Coffee, ChefHat, LayoutDashboard, LogOut, Sun, Moon, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface MainLayoutProps {
@@ -13,13 +14,14 @@ interface MainLayoutProps {
 export function MainLayout({ children }: MainLayoutProps) {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const { autoPrintCustomer, setAutoPrintCustomer, autoPrintAgent, setAutoPrintAgent } = useSettings();
   useOrderEvents(!!user);
   const [location] = useLocation();
 
   if (!user) return <>{children}</>;
 
   // ─── Front-desk kiosk layout ───────────────────────────────────────────────
-  if (user.role === "frontdesk") {
+  if (user?.role === "frontdesk") {
     return (
       <div className="flex flex-col h-screen w-full bg-background overflow-hidden">
         {/* Slim top bar */}
@@ -69,7 +71,7 @@ export function MainLayout({ children }: MainLayoutProps) {
     { href: "/kitchen", label: "Kitchen", icon: ChefHat },
   ];
 
-  if (user.role === "admin") {
+  if (user?.role === "admin") {
     navItems.push({ href: "/admin", label: "Admin", icon: LayoutDashboard });
   }
 
@@ -107,7 +109,7 @@ export function MainLayout({ children }: MainLayoutProps) {
         <div className="p-4 w-full border-t space-y-2">
           <div className="hidden md:block mb-2 px-2">
             <div className="text-sm font-medium">{user.name}</div>
-            <div className="text-xs text-muted-foreground capitalize">{user.role}</div>
+            <div className="text-xs text-muted-foreground capitalize">{user?.role}</div>
           </div>
 
           <Button
@@ -122,6 +124,27 @@ export function MainLayout({ children }: MainLayoutProps) {
               <><Moon className="h-5 w-5" /><span className="hidden md:inline">Dark Mode</span></>
             )}
           </Button>
+          
+          {user?.role === "admin" && (
+            <>
+              <Button
+                variant="ghost"
+                className={`w-full justify-center md:justify-start gap-2 ${autoPrintCustomer ? "text-primary bg-primary/5" : "text-muted-foreground"} hover:text-foreground transition-all`}
+                onClick={() => setAutoPrintCustomer(!autoPrintCustomer)}
+              >
+                <Printer className="h-5 w-5" />
+                <span className="hidden md:inline">Print Customer: {autoPrintCustomer ? "ON" : "OFF"}</span>
+              </Button>
+              <Button
+                variant="ghost"
+                className={`w-full justify-center md:justify-start gap-2 ${autoPrintAgent ? "text-primary bg-primary/5" : "text-muted-foreground"} hover:text-foreground transition-all`}
+                onClick={() => setAutoPrintAgent(!autoPrintAgent)}
+              >
+                <Printer className="h-5 w-5 text-orange-500/80" />
+                <span className="hidden md:inline">Print Agent: {autoPrintAgent ? "ON" : "OFF"}</span>
+              </Button>
+            </>
+          )}
 
           <Button
             variant="ghost"

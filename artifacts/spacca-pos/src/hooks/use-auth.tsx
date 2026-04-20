@@ -12,31 +12,18 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
   const [, setLocation] = useLocation();
 
-  const { data, isLoading, refetch, isError } = useGetMe({
+  const { data: user, isLoading, refetch } = useGetMe({
     query: {
       retry: false,
     },
   } as any);
 
-  useEffect(() => {
-    if (data) {
-      setUser(data);
-    }
-  }, [data]);
-
-  useEffect(() => {
-    if (isError) {
-      setUser(null);
-    }
-  }, [isError]);
-
   const logoutMutation = useBaristaLogout({
     mutation: {
       onSuccess: () => {
-        setUser(null);
+        refetch();
         setLocation("/login");
       },
     },
@@ -49,7 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return (
     <AuthContext.Provider
       value={{
-        user,
+        user: user ?? null,
         isLoading,
         logout,
         refetchUser: refetch,

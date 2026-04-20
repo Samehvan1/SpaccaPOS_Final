@@ -21,6 +21,8 @@ tags:
     description: Stock management
   - name: dashboard
     description: Dashboard summaries
+  - name: settings
+    description: Application settings management
 
 paths:
   /healthz:
@@ -629,6 +631,46 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/TopDrink"
+
+  /settings:
+    get:
+      operationId: getSettings
+      tags: [settings]
+      summary: Get application settings
+      parameters:
+        - name: scope
+          in: query
+          schema:
+            type: string
+            enum: [global, user]
+      responses:
+        "200":
+          description: List of settings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Setting"
+    patch:
+      operationId: updateSettings
+      tags: [settings]
+      summary: Update application settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSettingsBody"
+      responses:
+        "200":
+          description: Settings updated
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Setting"
 
 components:
   schemas:
@@ -1392,3 +1434,42 @@ components:
         - category
         - totalSold
         - totalRevenue
+
+    Setting:
+      type: object
+      properties:
+        key:
+          type: string
+        value:
+          type: string
+        scope:
+          type: string
+          enum: [global, user]
+        userId:
+          type: ["integer", "null"]
+      required:
+        - key
+        - value
+        - scope
+
+    UpdateSettingsBody:
+      type: object
+      properties:
+        scope:
+          type: string
+          enum: [global, user]
+        settings:
+          type: array
+          items:
+            type: object
+            properties:
+              key:
+                type: string
+              value:
+                type: string
+            required:
+              - key
+              - value
+      required:
+        - scope
+        - settings

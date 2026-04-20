@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { ThemeProvider } from "@/hooks/use-theme";
+import { SettingsProvider } from "@/hooks/use-settings";
 import { MainLayout } from "@/components/layout/main-layout";
 
 import Login from "@/pages/login";
@@ -50,7 +51,11 @@ function AppRoutes() {
   return (
     <Switch>
       <Route path="/login">
-        {user ? <Redirect to="/pos" /> : <Login />}
+        {() => {
+          const params = new URLSearchParams(window.location.search);
+          const from = params.get("from") || "/pos";
+          return user ? <Redirect to={from as any} /> : <Login />;
+        }}
       </Route>
 
       <Route path="/">
@@ -132,10 +137,12 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
           <AuthProvider>
-            <TooltipProvider>
-              <AppRoutes />
-              <Toaster />
-            </TooltipProvider>
+            <SettingsProvider>
+              <TooltipProvider>
+                <AppRoutes />
+                <Toaster />
+              </TooltipProvider>
+            </SettingsProvider>
           </AuthProvider>
         </WouterRouter>
       </QueryClientProvider>

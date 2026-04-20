@@ -487,3 +487,22 @@ export type GetSalesByCategoryParams = {
 export type GetTopDrinksParams = {
   limit?: number;
 };
+
+export type GetSettingsParams = {
+  scope?: "global" | "user";
+};
+
+export interface Setting {
+  key: string;
+  value: string;
+  scope: "global" | "user";
+  userId: number | null;
+}
+
+export interface UpdateSettingsBody {
+  scope: "global" | "user";
+  settings: {
+    key: string;
+    value: string;
+  }[];
+}
