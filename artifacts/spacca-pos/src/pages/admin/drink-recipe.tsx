@@ -808,28 +808,29 @@ export default function DrinkRecipe() {
                                 <div className="p-2">
                                   {to.slotVolumes.length > 0 ? (
                                     <div className="border rounded-md divide-y overflow-x-auto">
-                                      <div className="grid grid-cols-[auto_1fr_4rem_4rem_3.5rem_5rem_auto] items-center gap-2 px-3 py-1.5 text-xs font-medium text-muted-foreground border-b min-w-[540px]">
+                                      <div className="grid grid-cols-[auto_1fr_3.5rem_3.5rem_3rem_4.5rem_auto] items-center gap-1.5 px-2 py-1 text-[10px] font-bold uppercase tracking-tight text-muted-foreground border-b min-w-[480px]">
                                         <span>On</span>
                                         <span>Volume</span>
                                         <span className="text-right">Proc.</span>
                                         <span className="text-right">Prod.</span>
                                         <span className="text-center">Unit</span>
-                                        <span className="text-right">+Cost (E£)</span>
-                                        <span className="text-right pr-1">Def.</span>
+                                        <span className="text-right">Cost</span>
+                                        <span className="text-right pr-0.5">Def.</span>
                                       </div>
                                       {to.slotVolumes.map(sv => (
-                                        <div key={sv.typeVolumeId} className={`grid grid-cols-[auto_1fr_4rem_4rem_3.5rem_5rem_auto] items-center gap-2 px-3 py-2 min-w-[540px] ${!sv.isEnabled ? "opacity-50" : ""}`}>
+                                        <div key={sv.typeVolumeId} className={`grid grid-cols-[auto_1fr_3.5rem_3.5rem_3rem_4.5rem_auto] items-center gap-1.5 px-2 py-1 min-w-[480px] ${!sv.isEnabled ? "opacity-40" : ""}`}>
                                           <Checkbox
+                                            className="h-3.5 w-3.5"
                                             checked={sv.isEnabled}
                                             onCheckedChange={v => updateTypeOptionVolume(slot.key, to.key, sv.typeVolumeId, { isEnabled: Boolean(v), isDefault: !v ? false : sv.isDefault })}
                                           />
-                                          <div className="text-sm font-medium truncate">{sv.volumeName}</div>
-                                          <Input type="number" step="0.1" className="h-7 text-sm text-right px-1.5" value={sv.processedQty} disabled={!sv.isEnabled} onChange={e => updateTypeOptionVolume(slot.key, to.key, sv.typeVolumeId, { processedQty: e.target.value })} />
-                                          <Input type="number" step="0.1" className="h-7 text-sm text-right px-1.5" value={sv.producedQty} disabled={!sv.isEnabled} onChange={e => updateTypeOptionVolume(slot.key, to.key, sv.typeVolumeId, { producedQty: e.target.value })} />
-                                          <Input type="text" className="h-7 text-sm text-center px-1" value={sv.unit} disabled={!sv.isEnabled} onChange={e => updateTypeOptionVolume(slot.key, to.key, sv.typeVolumeId, { unit: e.target.value })} />
-                                          <Input type="number" step="0.01" className="h-7 text-sm text-right px-1.5" value={sv.extraCost} disabled={!sv.isEnabled} onChange={e => updateTypeOptionVolume(slot.key, to.key, sv.typeVolumeId, { extraCost: e.target.value })} />
-                                          <div className="flex justify-end pr-1">
-                                            <input type="radio" name={`default-vol-${slot.key}-${to.key}`} checked={sv.isDefault} disabled={!sv.isEnabled} onChange={() => updateTypeOptionVolume(slot.key, to.key, sv.typeVolumeId, { isDefault: true })} className="accent-primary h-3.5 w-3.5" />
+                                          <div className="text-[11px] font-semibold truncate leading-none">{sv.volumeName}</div>
+                                          <Input type="number" step="0.1" className="h-6 text-[10px] text-right px-1" value={sv.processedQty} disabled={!sv.isEnabled} onChange={e => updateTypeOptionVolume(slot.key, to.key, sv.typeVolumeId, { processedQty: e.target.value })} />
+                                          <Input type="number" step="0.1" className="h-6 text-[10px] text-right px-1" value={sv.producedQty} disabled={!sv.isEnabled} onChange={e => updateTypeOptionVolume(slot.key, to.key, sv.typeVolumeId, { producedQty: e.target.value })} />
+                                          <Input type="text" className="h-6 text-[10px] text-center px-0.5" value={sv.unit} disabled={!sv.isEnabled} onChange={e => updateTypeOptionVolume(slot.key, to.key, sv.typeVolumeId, { unit: e.target.value })} />
+                                          <Input type="number" step="0.01" className="h-6 text-[10px] text-right px-1" value={sv.extraCost} disabled={!sv.isEnabled} onChange={e => updateTypeOptionVolume(slot.key, to.key, sv.typeVolumeId, { extraCost: e.target.value })} />
+                                          <div className="flex justify-end pr-0.5">
+                                            <input type="radio" name={`default-vol-${slot.key}-${to.key}`} checked={sv.isDefault} disabled={!sv.isEnabled} onChange={() => updateTypeOptionVolume(slot.key, to.key, sv.typeVolumeId, { isDefault: true })} className="accent-primary h-3 w-3" />
                                           </div>
                                         </div>
                                       ))}

@@ -16,6 +16,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { Coffee, Minus, Plus, ShoppingCart, Trash2, X, ChevronRight, Droplets, Printer, FileText, Receipt } from "lucide-react";
 import { fmt } from "@/lib/currency";
+import { CupSimulator, type CupLayer } from "@/components/cup-simulator";
 import { printCustomerReceipt, printAgentReceipts } from "@/components/receipt-printer";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "/api";
@@ -596,11 +597,54 @@ export default function PosTerminal() {
       {/* Customization Dialog */}
       <Dialog open={isCustomizing} onOpenChange={(open) => { if (!open) handleCloseCustomization(); }}>
         <DialogContent className="sm:max-w-[420px] max-h-[85vh] flex flex-col p-0 gap-0">
-          <DialogHeader className="px-5 pt-5 pb-3 border-b shrink-0">
-            <DialogTitle className="text-xl">{activeDrink?.name}</DialogTitle>
-            <div className={`text-2xl font-bold text-primary mt-1 transition-opacity ${isCalculating ? "opacity-60" : "opacity-100"}`}>
-              {fmt(displayPrice)}
+          <DialogHeader className="px-5 pt-5 pb-5 border-b shrink-0 flex-row items-center gap-4">
+            <div className="flex-1 min-w-0 pb-1">
+              <DialogTitle className="text-xl truncate mb-1">{activeDrink?.name}</DialogTitle>
+              <div className={`text-2xl font-bold text-primary transition-opacity ${isCalculating ? "opacity-60" : "opacity-100"}`}>
+                {fmt(displayPrice)}
+              </div>
             </div>
+            {drinkDetail && (
+              <div className="w-24 h-32 shrink-0 pr-6 mr-2">
+                <CupSimulator 
+                  cupSizeMl={drinkDetail.cupSizeMl || 0}
+                  layers={(() => {
+                    const layers: CupLayer[] = [];
+                    const extras: any[] = (priceBreakdown as any)?.extras ?? [];
+                    
+                    const CATEGORY_DEFAULTS: Record<string, string> = {
+                      coffee: "#4b2c20",
+                      milk: "#fdf5e6",
+                      syrup: "#d4a373",
+                      sauce: "#7f4f24",
+                      sweetener: "#ffffff",
+                      topping: "#fb8500",
+                      other: "#9ca3af"
+                    };
+
+                    extras.forEach((ext: any, idx: number) => {
+                      if (ext.producedQty > 0) {
+                        const category = ext.slotLabel?.toLowerCase() || "";
+                        const defaultColor = CATEGORY_DEFAULTS[category] || 
+                                           (category.includes("milk") ? CATEGORY_DEFAULTS.milk : 
+                                            category.includes("coffee") ? CATEGORY_DEFAULTS.coffee : 
+                                            CATEGORY_DEFAULTS.other);
+
+                        layers.push({
+                          id: `ext-${idx}`,
+                          label: ext.optionLabel,
+                          volume: ext.producedQty,
+                          color: ext.color || defaultColor,
+                          category: ext.slotLabel,
+                        });
+                      }
+                    });
+                    return layers;
+                  })()}
+                  className="mb-2"
+                />
+              </div>
+            )}
           </DialogHeader>
 
           <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4">
@@ -612,7 +656,7 @@ export default function PosTerminal() {
             ) : (
               <div className="space-y-5">
                 {(drinkDetail?.slots as any[])
-                  ?.filter(s => (s.customerSortOrder ?? s.sortOrder ?? 0) >= 1)
+                  ?.filter(s => (s.customerSortOrder ?? s.sortOrder ?? 0) >= 0)
                   ?.sort((a, b) => (a.customerSortOrder ?? a.sortOrder ?? 0) - (b.customerSortOrder ?? b.sortOrder ?? 0))
                   ?.map(slot => {
                   // ── Typed (catalog) slot: two-level — type option → volume ──
@@ -631,7 +675,7 @@ export default function PosTerminal() {
 
                         {/* Level 1: Type option buttons (only shown if more than one type) */}
                         {multiType && (
-                          <div className="grid grid-cols-2 gap-1.5">
+                          <div className="grid grid-cols-3 gap-1">
                             {typeOptions.map((typeOpt: any) => (
                               <button
                                 key={typeOpt.ingredientTypeId}
@@ -645,12 +689,12 @@ export default function PosTerminal() {
                                     return next;
                                   });
                                 }}
-                                className={`px-3 py-2 rounded-lg border text-left transition-all text-sm ${selectedTypeId === typeOpt.ingredientTypeId
+                                className={`px-2 py-1.5 rounded-md border text-left transition-all text-[11px] ${selectedTypeId === typeOpt.ingredientTypeId
                                     ? "bg-primary text-primary-foreground border-primary shadow-sm"
                                     : "bg-background border-border hover:border-primary/50"
                                   }`}
                               >
-                                <div className="font-medium truncate">{typeOpt.typeName}</div>
+                                <div className="font-semibold truncate">{typeOpt.typeName}</div>
                               </button>
                             ))}
                           </div>
@@ -668,19 +712,19 @@ export default function PosTerminal() {
                           {multiType && (
                             <div className="text-xs text-muted-foreground mb-1.5 font-medium">Volume</div>
                           )}
-                          <div className="grid grid-cols-2 gap-1.5">
+                          <div className="grid grid-cols-3 gap-1">
                             {activeVolumes.map((vol: any) => (
                               <button
                                 key={vol.id}
                                 onClick={() => setSubSelections(prev => ({ ...prev, [slot.id]: vol.id }))}
-                                className={`px-3 py-2 rounded-lg border text-left transition-all text-sm ${subSelections[slot.id] === vol.id
+                                className={`px-2 py-1.5 rounded-md border text-left transition-all text-[11px] ${subSelections[slot.id] === vol.id
                                     ? "bg-primary text-primary-foreground border-primary shadow-sm"
                                     : "bg-background border-border hover:border-primary/50"
                                   }`}
                               >
-                                <div className="font-medium truncate">{vol.volumeName}</div>
+                                <div className="font-semibold truncate">{vol.volumeName}</div>
                                 {vol.extraCost > 0 && (
-                                  <div className={`text-xs mt-0.5 ${subSelections[slot.id] === vol.id ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
+                                  <div className={`text-[10px] mt-0.5 ${subSelections[slot.id] === vol.id ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
                                     +{fmt(vol.extraCost)}
                                   </div>
                                 )}
@@ -705,7 +749,7 @@ export default function PosTerminal() {
                       </Label>
 
                       {/* Type picker (or regular option picker) */}
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className="grid grid-cols-3 gap-1">
                         {options.map(option => (
                           <button
                             key={option.id}
@@ -723,14 +767,14 @@ export default function PosTerminal() {
                                 });
                               }
                             }}
-                            className={`px-3 py-2 rounded-lg border text-left transition-all text-sm ${selections[slot.id] === option.id
+                            className={`px-2 py-1.5 rounded-md border text-left transition-all text-[11px] ${selections[slot.id] === option.id
                                 ? "bg-primary text-primary-foreground border-primary shadow-sm"
                                 : "bg-background border-border hover:border-primary/50"
                               }`}
                           >
-                            <div className="font-medium truncate">{option.label}</div>
+                            <div className="font-semibold truncate">{option.label}</div>
                             {!isLinked && option.extraCost > 0 && (
-                              <div className={`text-xs mt-0.5 ${selections[slot.id] === option.id ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
+                              <div className={`text-[10px] mt-0.5 ${selections[slot.id] === option.id ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
                                 +{fmt(option.extraCost)}
                               </div>
                             )}

@@ -23,6 +23,8 @@ export type CustomizationData = {
   typeVolumeId: number | null;
   ingredientTypeId: number | null;
   consumedQty: number; // The qty to deduct from stock
+  producedQty: number; // New: qty added to cup (in ml)
+  color: string | null; // New: visual color for simulator
   addedCost: number; // The extra money to charge
   slotLabel: string;
   optionLabel: string;
@@ -92,8 +94,8 @@ export async function calculateDrinkData(drinkId: number, selections: any[]) {
       const extraCost = parseFloat(slotVol?.extraCost ?? templateDef?.extraCost ?? typeVol.extraCost);
       totalExtras += extraCost;
 
-      const consumedQty = parseFloat(slotVol?.processedQty ?? templateDef?.processedQty ?? typeVol.processedQty ?? "0");
-      const producedQty = parseFloat(slotVol?.producedQty ?? templateDef?.producedQty ?? typeVol.producedQty ?? "0");
+      const consumedQty = parseFloat(slotVol?.processedQty ?? templateDef?.processedQty ?? typeVol.processedQty ?? volDef?.processedQty ?? "0");
+      const producedQty = parseFloat(slotVol?.producedQty ?? templateDef?.producedQty ?? typeVol.producedQty ?? volDef?.producedQty ?? "0");
       
       const shouldCount = slot.affectsCupSize ?? typeDef?.affectsCupSize ?? true;
       if (shouldCount) {
@@ -108,6 +110,8 @@ export async function calculateDrinkData(drinkId: number, selections: any[]) {
         typeVolumeId: sel.typeVolumeId,
         ingredientTypeId: typeVol.ingredientTypeId,
         consumedQty,
+        producedQty,
+        color: typeDef?.color ?? null,
         addedCost: extraCost,
         slotLabel: slot.slotLabel,
         optionLabel,
@@ -138,6 +142,8 @@ export async function calculateDrinkData(drinkId: number, selections: any[]) {
           typeVolumeId: null,
           ingredientTypeId: sel.ingredientTypeId,
           consumedQty,
+          producedQty,
+          color: ingType.color ?? null,
           addedCost: 0,
           slotLabel: slot.slotLabel,
           optionLabel,
@@ -167,6 +173,8 @@ export async function calculateDrinkData(drinkId: number, selections: any[]) {
           typeVolumeId: null,
           ingredientTypeId: null,
           consumedQty: parseFloat(subOption.processedQty),
+          producedQty: parseFloat(subOption.producedQty),
+          color: null,
           addedCost: extraCost,
           slotLabel: slot.slotLabel,
           optionLabel: `${option.label} · ${subOption.label}`,
@@ -188,6 +196,8 @@ export async function calculateDrinkData(drinkId: number, selections: any[]) {
       typeVolumeId: null,
       ingredientTypeId: null,
       consumedQty: parseFloat(option.processedQty),
+      producedQty: parseFloat(option.producedQty),
+      color: null,
       addedCost: extraCost,
       slotLabel: slot.slotLabel,
       optionLabel: option.label,
@@ -247,11 +257,13 @@ export async function calculateDrinkData(drinkId: number, selections: any[]) {
         let unit = "ml";
         if (typeVolumeId) {
           const [typeVolume] = await db.select().from(ingredientTypeVolumesTable).where(eq(ingredientTypeVolumesTable.id, typeVolumeId));
+          const [volDef] = typeVolume?.volumeId ? await db.select().from(ingredientVolumesTable).where(eq(ingredientVolumesTable.id, typeVolume.volumeId)) : [null];
+          
           if (typeVolume) {
-            const processedQty = parseFloat(slotVol?.processedQty ?? templateDef?.processedQty ?? typeVolume.processedQty ?? "0");
-            const producedQty = parseFloat(slotVol?.producedQty ?? templateDef?.producedQty ?? typeVolume.producedQty ?? "0");
+            const processedQty = parseFloat(slotVol?.processedQty ?? templateDef?.processedQty ?? typeVolume.processedQty ?? volDef?.processedQty ?? "0");
+            const producedQty = parseFloat(slotVol?.producedQty ?? templateDef?.producedQty ?? typeVolume.producedQty ?? volDef?.producedQty ?? "0");
             conversionRate = producedQty > 0 ? processedQty / producedQty : 1;
-            unit = slotVol?.unit ?? templateDef?.unit ?? typeVolume.unit ?? "ml";
+            unit = slotVol?.unit ?? templateDef?.unit ?? typeVolume.unit ?? volDef?.unit ?? "ml";
           }
         }
 
@@ -278,6 +290,8 @@ export async function calculateDrinkData(drinkId: number, selections: any[]) {
           typeVolumeId: typeVolumeId ?? null,
           ingredientTypeId: effectiveTypeId,
           consumedQty,
+          producedQty: filledMl,
+          color: ingredientType?.color ?? null,
           addedCost: cost,
           slotLabel: dynamicSlot.slotLabel,
           optionLabel: ingredientType?.name ? `${ingredientType.name} (${Math.round(filledMl)}${unit})` : `Dynamic (${Math.round(filledMl)}${unit})`,
@@ -320,6 +334,8 @@ export async function calculateDrinkData(drinkId: number, selections: any[]) {
           typeVolumeId: null,
           ingredientTypeId: null,
           consumedQty,
+          producedQty: filledMl,
+          color: null,
           addedCost: cost,
           slotLabel: dynamicSlot.slotLabel,
           optionLabel: `Dynamic (${Math.round(filledMl)}ml)`,

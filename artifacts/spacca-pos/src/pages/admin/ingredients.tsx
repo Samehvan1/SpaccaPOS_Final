@@ -33,6 +33,7 @@ type IngType = {
   id: number; categoryId: number; name: string; inventoryIngredientId: number | null;
   processedQty: string; producedQty: string; unit: string;
   isActive: boolean; affectsCupSize: boolean; sortOrder: number; 
+  color: string | null;
   category?: Category | null; inventoryIngredient?: { id: number; name: string; unit: string } | null;
   drinkCount?: number;
 };
@@ -177,6 +178,7 @@ function TypesTab({ inventoryItems }: { inventoryItems: Ingredient[] }) {
   const [affectsCupSize, setAffectsCupSize] = useState(true);
   const [processedQty, setProcessedQty] = useState("0");
   const [producedQty, setProducedQty] = useState("0");
+  const [color, setColor] = useState("#000000");
   const [saving, setSaving] = useState(false);
 
   // Volume config dialog
@@ -213,7 +215,7 @@ function TypesTab({ inventoryItems }: { inventoryItems: Ingredient[] }) {
   const openAdd = () => { 
     setEditId(null); setName(""); setCategoryId(""); setInventoryIngId("none"); 
     setProcessedQty("0"); setProducedQty("0"); setUnit("ml");
-    setIsActive(true); setAffectsCupSize(true); setShowForm(true); 
+    setIsActive(true); setAffectsCupSize(true); setColor("#000000"); setShowForm(true); 
   };
   const openEdit = (t: IngType) => {
     setEditId(t.id); setName(t.name); setCategoryId(String(t.categoryId));
@@ -221,7 +223,9 @@ function TypesTab({ inventoryItems }: { inventoryItems: Ingredient[] }) {
     setProcessedQty(t.processedQty ?? "0");
     setProducedQty(t.producedQty ?? "0");
     setUnit(t.unit ?? "ml");
-    setIsActive(t.isActive); setAffectsCupSize(t.affectsCupSize ?? true); setShowForm(true);
+    setIsActive(t.isActive); setAffectsCupSize(t.affectsCupSize ?? true);
+    setColor(t.color ?? "#000000");
+    setShowForm(true);
   };
 
   const handleSave = async () => {
@@ -232,7 +236,7 @@ function TypesTab({ inventoryItems }: { inventoryItems: Ingredient[] }) {
         name: name.trim(), categoryId: parseInt(categoryId),
         inventoryIngredientId: inventoryIngId !== "none" ? parseInt(inventoryIngId) : null,
         processedQty, producedQty, unit: unit || "ml",
-        isActive, affectsCupSize,
+        isActive, affectsCupSize, color
       };
       if (editId) {
         await api(`/api/catalog/types/${editId}`, { method: "PATCH", body: JSON.stringify(payload) });
@@ -378,6 +382,7 @@ function TypesTab({ inventoryItems }: { inventoryItems: Ingredient[] }) {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-12">Color</TableHead>
               <TableHead>Name</TableHead>
               <TableHead>Category</TableHead>
               <TableHead>Inventory Item</TableHead>
@@ -388,11 +393,14 @@ function TypesTab({ inventoryItems }: { inventoryItems: Ingredient[] }) {
           </TableHeader>
           <TableBody>
             {loading ? (
-              <TableRow><TableCell colSpan={6} className="text-center py-8">Loading…</TableCell></TableRow>
+              <TableRow><TableCell colSpan={7} className="text-center py-8">Loading…</TableCell></TableRow>
             ) : filteredTypes.length === 0 ? (
-              <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">No types found.</TableCell></TableRow>
+              <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">No types found.</TableCell></TableRow>
             ) : filteredTypes.map(t => (
               <TableRow key={t.id}>
+                <TableCell>
+                  <div className="h-6 w-6 rounded-md border shadow-sm" style={{ backgroundColor: t.color || "#e2e8f0" }} />
+                </TableCell>
                 <TableCell className="font-medium">{t.name}</TableCell>
                 <TableCell>
                   {t.category ? (
@@ -426,9 +434,28 @@ function TypesTab({ inventoryItems }: { inventoryItems: Ingredient[] }) {
         <DialogContent className="sm:max-w-sm">
           <DialogHeader><DialogTitle>{editId ? "Edit Type" : "Add Ingredient Type"}</DialogTitle></DialogHeader>
           <div className="grid gap-4 py-2">
-            <div className="grid gap-1.5">
-              <Label>Name</Label>
-              <Input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Brazilian Espresso, Oat Milk" autoFocus />
+            <div className="grid grid-cols-[1fr_auto] gap-4">
+              <div className="grid gap-1.5 flex-1">
+                <Label>Name</Label>
+                <Input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Brazilian Espresso, Oat Milk" autoFocus />
+              </div>
+              <div className="grid gap-1.5 w-24">
+                <Label>Sim. Color</Label>
+                <div className="flex gap-2 items-center">
+                  <Input 
+                    type="color" 
+                    className="h-10 w-10 p-1 border cursor-pointer shrink-0" 
+                    value={color} 
+                    onChange={e => setColor(e.target.value)} 
+                  />
+                  <Input 
+                    className="h-10 text-[10px] px-1 font-mono uppercase" 
+                    value={color} 
+                    onChange={e => setColor(e.target.value)} 
+                    placeholder="#HEX"
+                  />
+                </div>
+              </div>
             </div>
             <div className="grid gap-1.5">
               <Label>Category</Label>
@@ -1298,7 +1325,7 @@ function TemplateOptionsDialog({ open, onOpenChange, template, onUpdate }: { ope
           <DialogTitle>Configure Options — {template?.name}</DialogTitle>
         </DialogHeader>
         
-        <div className="space-y-4 pt-2">
+        <div className="space-y-2.5 pt-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Label className="font-semibold">Ingredient Types</Label>
@@ -1323,11 +1350,11 @@ function TemplateOptionsDialog({ open, onOpenChange, template, onUpdate }: { ope
             ) : (template.typeOptions || []).map((to: any) => {
               const ingType = allTypes.find(at => at.id === to.ingredientTypeId);
               return (
-                <div key={to.id} className="p-3 bg-card space-y-3">
+                <div key={to.id} className="p-2 bg-card space-y-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium text-sm">{ingType?.name || `Type #${to.ingredientTypeId}`}</span>
-                      {to.isDefault && <Badge variant="secondary" className="text-[10px] h-4">Default</Badge>}
+                      <span className="font-semibold text-sm">{ingType?.name || `Type #${to.ingredientTypeId}`}</span>
+                      {to.isDefault && <Badge variant="secondary" className="text-[9px] h-3.5 px-1 font-bold">Default</Badge>}
                     </div>
                     <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleRemoveType(to.ingredientTypeId)}>
                       <Trash2 className="h-4 w-4" />
@@ -1335,18 +1362,18 @@ function TemplateOptionsDialog({ open, onOpenChange, template, onUpdate }: { ope
                   </div>
 
                   {/* Volume Overrides inside template */}
-                  <div className="pl-4 border-l-2 border-primary/20 space-y-2 pb-2">
+                  <div className="pl-4 border-l-2 border-primary/20 space-y-1.5 pb-1">
                     <div 
-                      className="text-[10px] font-bold uppercase text-muted-foreground flex items-center justify-between cursor-pointer hover:text-primary transition-colors"
+                      className="text-[10px] font-bold uppercase text-muted-foreground flex items-center justify-between cursor-pointer hover:text-primary transition-colors py-0.5"
                       onClick={() => toggleExpand(to.id)}
                     >
                       <div className="flex items-center gap-1">
                         {expandedTypeIds.includes(to.id) ? <Droplets className="h-3 w-3 text-primary" /> : <Droplet className="h-3 w-3 opacity-50" />}
-                        <span>Volume Settings</span>
+                        <span>Volumes</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="text-[9px] normal-case font-normal italic">Click to {expandedTypeIds.includes(to.id) ? "collapse" : "expand"}</span>
-                        <ChevronRight className={`h-3 w-3 transition-transform ${expandedTypeIds.includes(to.id) ? "rotate-90" : ""}`} />
+                        <ChevronRight className={`h-2.5 w-2.5 transition-transform ${expandedTypeIds.includes(to.id) ? "rotate-90" : ""}`} />
                       </div>
                     </div>
                     

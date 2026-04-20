@@ -677,7 +677,9 @@ router.post("/drinks/:id/price", async (req, res): Promise<void> => {
       ingredientTypeId: c.ingredientTypeId,
       slotLabel: c.slotLabel,
       optionLabel: c.optionLabel,
-      extraCost: c.addedCost
+      extraCost: c.addedCost,
+      producedQty: c.producedQty,
+      color: c.color
     }));
 
     res.json({ 

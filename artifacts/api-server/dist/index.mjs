@@ -55555,6 +55555,7 @@ var init_ingredients = __esm({
       isActive: boolean("is_active").notNull().default(true),
       affectsCupSize: boolean("affects_cup_size").notNull().default(true),
       sortOrder: integer("sort_order").notNull().default(0),
+      color: text("color"),
       createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
     });
     ingredientVolumesTable = pgTable("ingredient_volumes", {
@@ -55588,7 +55589,7 @@ var init_ingredients = __esm({
 });
 
 // ../../lib/db/src/schema/drinks.ts
-var drinkCategoriesTable, drinksTable, drinkIngredientSlotsTable, drinkSlotTypeOptionsTable, drinkSlotVolumesTable, predefinedSlotsTable2, predefinedSlotTypeOptionsTable2, predefinedSlotVolumesTable2, insertDrinkSchema, insertDrinkCategorySchema, insertDrinkSlotSchema, insertDrinkSlotVolumeSchema, insertDrinkSlotTypeOptionSchema, insertPredefinedSlotSchema;
+var drinkCategoriesTable, drinksTable, drinkIngredientSlotsTable, drinkSlotTypeOptionsTable, drinkSlotVolumesTable, predefinedSlotsTable, predefinedSlotTypeOptionsTable, predefinedSlotVolumesTable, insertDrinkSchema, insertDrinkCategorySchema, insertDrinkSlotSchema, insertDrinkSlotVolumeSchema, insertDrinkSlotTypeOptionSchema, insertPredefinedSlotSchema;
 var init_drinks = __esm({
   "../../lib/db/src/schema/drinks.ts"() {
     "use strict";
@@ -55661,7 +55662,7 @@ var init_drinks = __esm({
       isEnabled: boolean("is_enabled").notNull().default(true),
       sortOrder: integer("sort_order").notNull().default(0)
     });
-    predefinedSlotsTable2 = pgTable("predefined_slots", {
+    predefinedSlotsTable = pgTable("predefined_slots", {
       id: serial("id").primaryKey(),
       name: text("name").notNull(),
       // Administrative name (e.g. "Standard Milk Choice")
@@ -55673,16 +55674,16 @@ var init_drinks = __esm({
       createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
       updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => /* @__PURE__ */ new Date())
     });
-    predefinedSlotTypeOptionsTable2 = pgTable("predefined_slot_type_options", {
+    predefinedSlotTypeOptionsTable = pgTable("predefined_slot_type_options", {
       id: serial("id").primaryKey(),
-      predefinedSlotId: integer("predefined_slot_id").notNull().references(() => predefinedSlotsTable2.id, { onDelete: "cascade" }),
+      predefinedSlotId: integer("predefined_slot_id").notNull().references(() => predefinedSlotsTable.id, { onDelete: "cascade" }),
       ingredientTypeId: integer("ingredient_type_id").notNull().references(() => ingredientTypesTable.id, { onDelete: "cascade" }),
       isDefault: boolean("is_default").notNull().default(false),
       sortOrder: integer("sort_order").notNull().default(0)
     });
-    predefinedSlotVolumesTable2 = pgTable("predefined_slot_volumes", {
+    predefinedSlotVolumesTable = pgTable("predefined_slot_volumes", {
       id: serial("id").primaryKey(),
-      predefinedSlotId: integer("predefined_slot_id").notNull().references(() => predefinedSlotsTable2.id, { onDelete: "cascade" }),
+      predefinedSlotId: integer("predefined_slot_id").notNull().references(() => predefinedSlotsTable.id, { onDelete: "cascade" }),
       typeVolumeId: integer("type_volume_id").notNull().references(() => ingredientTypeVolumesTable.id, { onDelete: "cascade" }),
       processedQty: numeric("processed_qty", { precision: 10, scale: 4 }),
       producedQty: numeric("produced_qty", { precision: 10, scale: 4 }),
@@ -55697,7 +55698,7 @@ var init_drinks = __esm({
     insertDrinkSlotSchema = createInsertSchema(drinkIngredientSlotsTable).omit({ id: true, createdAt: true, updatedAt: true });
     insertDrinkSlotVolumeSchema = createInsertSchema(drinkSlotVolumesTable).omit({ id: true });
     insertDrinkSlotTypeOptionSchema = createInsertSchema(drinkSlotTypeOptionsTable).omit({ id: true });
-    insertPredefinedSlotSchema = createInsertSchema(predefinedSlotsTable2).omit({ id: true, createdAt: true, updatedAt: true });
+    insertPredefinedSlotSchema = createInsertSchema(predefinedSlotsTable).omit({ id: true, createdAt: true, updatedAt: true });
   }
 });
 
@@ -55820,9 +55821,9 @@ __export(schema_exports, {
   orderItemCustomizationsTable: () => orderItemCustomizationsTable,
   orderItemsTable: () => orderItemsTable,
   ordersTable: () => ordersTable,
-  predefinedSlotTypeOptionsTable: () => predefinedSlotTypeOptionsTable2,
-  predefinedSlotVolumesTable: () => predefinedSlotVolumesTable2,
-  predefinedSlotsTable: () => predefinedSlotsTable2,
+  predefinedSlotTypeOptionsTable: () => predefinedSlotTypeOptionsTable,
+  predefinedSlotVolumesTable: () => predefinedSlotVolumesTable,
+  predefinedSlotsTable: () => predefinedSlotsTable,
   stockMovementsTable: () => stockMovementsTable,
   usersTable: () => usersTable
 });
@@ -55871,9 +55872,9 @@ __export(src_exports, {
   orderItemsTable: () => orderItemsTable,
   ordersTable: () => ordersTable,
   pool: () => pool,
-  predefinedSlotTypeOptionsTable: () => predefinedSlotTypeOptionsTable2,
-  predefinedSlotVolumesTable: () => predefinedSlotVolumesTable2,
-  predefinedSlotsTable: () => predefinedSlotsTable2,
+  predefinedSlotTypeOptionsTable: () => predefinedSlotTypeOptionsTable,
+  predefinedSlotVolumesTable: () => predefinedSlotVolumesTable,
+  predefinedSlotsTable: () => predefinedSlotsTable,
   stockMovementsTable: () => stockMovementsTable,
   usersTable: () => usersTable
 });
@@ -77185,7 +77186,7 @@ async function calculateDrinkData(drinkId, selections) {
   const rawSlots = await db.select().from(drinkIngredientSlotsTable).where(eq(drinkIngredientSlotsTable.drinkId, drinkId));
   const slots = await Promise.all(rawSlots.map(async (slot) => {
     if (!slot.predefinedSlotId) return slot;
-    const [template] = await db.select().from(predefinedSlotsTable2).where(eq(predefinedSlotsTable2.id, slot.predefinedSlotId));
+    const [template] = await db.select().from(predefinedSlotsTable).where(eq(predefinedSlotsTable.id, slot.predefinedSlotId));
     if (!template) return slot;
     return {
       ...slot,
@@ -77222,11 +77223,11 @@ async function calculateDrinkData(drinkId, selections) {
       const typeName = typeDef?.name ?? "";
       const [volDef] = typeVol.volumeId ? await db.select().from(ingredientVolumesTable).where(eq(ingredientVolumesTable.id, typeVol.volumeId)) : [null];
       const volumeName = volDef?.name ?? "";
-      const [templateDef] = slot.predefinedSlotId ? await db.select().from(predefinedSlotVolumesTable2).where(and(eq(predefinedSlotVolumesTable2.predefinedSlotId, slot.predefinedSlotId), eq(predefinedSlotVolumesTable2.typeVolumeId, sel.typeVolumeId))) : [null];
+      const [templateDef] = slot.predefinedSlotId ? await db.select().from(predefinedSlotVolumesTable).where(and(eq(predefinedSlotVolumesTable.predefinedSlotId, slot.predefinedSlotId), eq(predefinedSlotVolumesTable.typeVolumeId, sel.typeVolumeId))) : [null];
       const extraCost2 = parseFloat(slotVol?.extraCost ?? templateDef?.extraCost ?? typeVol.extraCost);
       totalExtras += extraCost2;
-      const consumedQty = parseFloat(slotVol?.processedQty ?? templateDef?.processedQty ?? typeVol.processedQty ?? "0");
-      const producedQty = parseFloat(slotVol?.producedQty ?? templateDef?.producedQty ?? typeVol.producedQty ?? "0");
+      const consumedQty = parseFloat(slotVol?.processedQty ?? templateDef?.processedQty ?? typeVol.processedQty ?? volDef?.processedQty ?? "0");
+      const producedQty = parseFloat(slotVol?.producedQty ?? templateDef?.producedQty ?? typeVol.producedQty ?? volDef?.producedQty ?? "0");
       const shouldCount2 = slot.affectsCupSize ?? typeDef?.affectsCupSize ?? true;
       if (shouldCount2) {
         usedVolumeMl += producedQty;
@@ -77238,6 +77239,8 @@ async function calculateDrinkData(drinkId, selections) {
         typeVolumeId: sel.typeVolumeId,
         ingredientTypeId: typeVol.ingredientTypeId,
         consumedQty,
+        producedQty,
+        color: typeDef?.color ?? null,
         addedCost: extraCost2,
         slotLabel: slot.slotLabel,
         optionLabel,
@@ -77261,6 +77264,8 @@ async function calculateDrinkData(drinkId, selections) {
           typeVolumeId: null,
           ingredientTypeId: sel.ingredientTypeId,
           consumedQty,
+          producedQty,
+          color: ingType.color ?? null,
           addedCost: 0,
           slotLabel: slot.slotLabel,
           optionLabel,
@@ -77287,6 +77292,8 @@ async function calculateDrinkData(drinkId, selections) {
           typeVolumeId: null,
           ingredientTypeId: null,
           consumedQty: parseFloat(subOption.processedQty),
+          producedQty: parseFloat(subOption.producedQty),
+          color: null,
           addedCost: extraCost2,
           slotLabel: slot.slotLabel,
           optionLabel: `${option.label} \xB7 ${subOption.label}`,
@@ -77307,6 +77314,8 @@ async function calculateDrinkData(drinkId, selections) {
       typeVolumeId: null,
       ingredientTypeId: null,
       consumedQty: parseFloat(option.processedQty),
+      producedQty: parseFloat(option.producedQty),
+      color: null,
       addedCost: extraCost,
       slotLabel: slot.slotLabel,
       optionLabel: option.label,
@@ -77319,7 +77328,7 @@ async function calculateDrinkData(drinkId, selections) {
     const drinkTypeOptions = await db.select().from(drinkSlotTypeOptionsTable).where(eq(drinkSlotTypeOptionsTable.slotId, dynamicSlot.id));
     let templateTypeOptions = [];
     if (dynamicSlot.predefinedSlotId) {
-      templateTypeOptions = await db.select().from(predefinedSlotTypeOptionsTable2).where(eq(predefinedSlotTypeOptionsTable2.predefinedSlotId, dynamicSlot.predefinedSlotId));
+      templateTypeOptions = await db.select().from(predefinedSlotTypeOptionsTable).where(eq(predefinedSlotTypeOptionsTable.predefinedSlotId, dynamicSlot.predefinedSlotId));
     }
     const typeOptions = drinkTypeOptions.length > 0 ? drinkTypeOptions : templateTypeOptions;
     if (dynamicSlot.ingredientTypeId || typeOptions.length > 0) {
@@ -77341,16 +77350,17 @@ async function calculateDrinkData(drinkId, selections) {
           eq(drinkSlotVolumesTable.slotId, dynamicSlot.id),
           eq(drinkSlotVolumesTable.typeVolumeId, typeVolumeId)
         ));
-        const [templateDef] = dynamicSlot.predefinedSlotId ? await db.select().from(predefinedSlotVolumesTable2).where(and(eq(predefinedSlotVolumesTable2.predefinedSlotId, dynamicSlot.predefinedSlotId), eq(predefinedSlotVolumesTable2.typeVolumeId, typeVolumeId))) : [null];
+        const [templateDef] = dynamicSlot.predefinedSlotId ? await db.select().from(predefinedSlotVolumesTable).where(and(eq(predefinedSlotVolumesTable.predefinedSlotId, dynamicSlot.predefinedSlotId), eq(predefinedSlotVolumesTable.typeVolumeId, typeVolumeId))) : [null];
         let conversionRate = 1;
         let unit = "ml";
         if (typeVolumeId) {
           const [typeVolume] = await db.select().from(ingredientTypeVolumesTable).where(eq(ingredientTypeVolumesTable.id, typeVolumeId));
+          const [volDef] = typeVolume?.volumeId ? await db.select().from(ingredientVolumesTable).where(eq(ingredientVolumesTable.id, typeVolume.volumeId)) : [null];
           if (typeVolume) {
-            const processedQty = parseFloat(slotVol?.processedQty ?? templateDef?.processedQty ?? typeVolume.processedQty ?? "0");
-            const producedQty = parseFloat(slotVol?.producedQty ?? templateDef?.producedQty ?? typeVolume.producedQty ?? "0");
+            const processedQty = parseFloat(slotVol?.processedQty ?? templateDef?.processedQty ?? typeVolume.processedQty ?? volDef?.processedQty ?? "0");
+            const producedQty = parseFloat(slotVol?.producedQty ?? templateDef?.producedQty ?? typeVolume.producedQty ?? volDef?.producedQty ?? "0");
             conversionRate = producedQty > 0 ? processedQty / producedQty : 1;
-            unit = slotVol?.unit ?? templateDef?.unit ?? typeVolume.unit ?? "ml";
+            unit = slotVol?.unit ?? templateDef?.unit ?? typeVolume.unit ?? volDef?.unit ?? "ml";
           }
         }
         const consumedQty = filledMl * conversionRate;
@@ -77372,6 +77382,8 @@ async function calculateDrinkData(drinkId, selections) {
           typeVolumeId: typeVolumeId ?? null,
           ingredientTypeId: effectiveTypeId,
           consumedQty,
+          producedQty: filledMl,
+          color: ingredientType?.color ?? null,
           addedCost: cost,
           slotLabel: dynamicSlot.slotLabel,
           optionLabel: ingredientType?.name ? `${ingredientType.name} (${Math.round(filledMl)}${unit})` : `Dynamic (${Math.round(filledMl)}${unit})`,
@@ -77407,6 +77419,8 @@ async function calculateDrinkData(drinkId, selections) {
           typeVolumeId: null,
           ingredientTypeId: null,
           consumedQty,
+          producedQty: filledMl,
+          color: null,
           addedCost: cost,
           slotLabel: dynamicSlot.slotLabel,
           optionLabel: `Dynamic (${Math.round(filledMl)}ml)`,
@@ -77607,8 +77621,7 @@ async function computeDefaultPrice(drinkId, basePrice) {
     const drinkTypeOptions = await db.select().from(drinkSlotTypeOptionsTable).where(eq(drinkSlotTypeOptionsTable.slotId, slot.id));
     let templateTypeOptions = [];
     if (slot.predefinedSlotId) {
-      const { predefinedSlotTypeOptionsTable: predefinedSlotTypeOptionsTable3 } = await Promise.resolve().then(() => (init_src(), src_exports));
-      templateTypeOptions = await db.select().from(predefinedSlotTypeOptionsTable3).where(eq(predefinedSlotTypeOptionsTable3.predefinedSlotId, slot.predefinedSlotId));
+      templateTypeOptions = await db.select().from(predefinedSlotTypeOptionsTable).where(eq(predefinedSlotTypeOptionsTable.predefinedSlotId, slot.predefinedSlotId));
     }
     const typeOptions = drinkTypeOptions.length > 0 ? drinkTypeOptions : templateTypeOptions;
     let defaultTypeSelection = typeOptions.find((to) => to.isDefault) ?? typeOptions[0];
@@ -77618,8 +77631,7 @@ async function computeDefaultPrice(drinkId, basePrice) {
       const slotVolumes = await db.select().from(drinkSlotVolumesTable).where(eq(drinkSlotVolumesTable.slotId, slot.id));
       let templateVolumes = [];
       if (slot.predefinedSlotId) {
-        const { predefinedSlotVolumesTable: predefinedSlotVolumesTable3 } = await Promise.resolve().then(() => (init_src(), src_exports));
-        templateVolumes = await db.select().from(predefinedSlotVolumesTable3).where(eq(predefinedSlotVolumesTable3.predefinedSlotId, slot.predefinedSlotId));
+        templateVolumes = await db.select().from(predefinedSlotVolumesTable).where(eq(predefinedSlotVolumesTable.predefinedSlotId, slot.predefinedSlotId));
       }
       const slotVolumeMap = new Map(slotVolumes.map((sv) => [sv.typeVolumeId, sv]));
       const templateVolumeMap = new Map(templateVolumes.map((tv) => [tv.typeVolumeId, tv]));
@@ -77928,7 +77940,9 @@ router3.post("/drinks/:id/price", async (req, res) => {
       ingredientTypeId: c.ingredientTypeId,
       slotLabel: c.slotLabel,
       optionLabel: c.optionLabel,
-      extraCost: c.addedCost
+      extraCost: c.addedCost,
+      producedQty: c.producedQty,
+      color: c.color
     }));
     res.json({
       basePrice: data.basePrice,
@@ -78847,7 +78861,7 @@ router8.get("/catalog/types/:id", async (req, res) => {
   });
 });
 router8.post("/catalog/types", async (req, res) => {
-  const { categoryId, name, inventoryIngredientId, processedQty, producedQty, unit, isActive, affectsCupSize, sortOrder } = req.body;
+  const { categoryId, name, inventoryIngredientId, processedQty, producedQty, unit, isActive, affectsCupSize, sortOrder, color } = req.body;
   if (!categoryId || !name) {
     res.status(400).json({ error: "categoryId and name required" });
     return;
@@ -78861,29 +78875,40 @@ router8.post("/catalog/types", async (req, res) => {
     unit: unit ?? "ml",
     isActive: isActive ?? true,
     affectsCupSize: affectsCupSize ?? true,
-    sortOrder: sortOrder ?? 0
+    sortOrder: sortOrder ?? 0,
+    color: color ?? null
   }).returning();
   res.status(201).json(row);
 });
 router8.patch("/catalog/types/:id", async (req, res) => {
   const id = parseInt(req.params.id);
-  const { categoryId, name, inventoryIngredientId, processedQty, producedQty, unit, isActive, affectsCupSize, sortOrder } = req.body;
+  const { categoryId, name, inventoryIngredientId, processedQty, producedQty, unit, isActive, affectsCupSize, sortOrder, color } = req.body;
   const patch = {};
   if (categoryId !== void 0) patch.categoryId = categoryId;
   if (name !== void 0) patch.name = name;
   if (inventoryIngredientId !== void 0) patch.inventoryIngredientId = inventoryIngredientId;
-  if (processedQty !== void 0) patch.processedQty = processedQty;
-  if (producedQty !== void 0) patch.producedQty = producedQty;
+  if (processedQty !== void 0) patch.processedQty = String(processedQty);
+  if (producedQty !== void 0) patch.producedQty = String(producedQty);
   if (unit !== void 0) patch.unit = unit;
   if (isActive !== void 0) patch.isActive = isActive;
   if (affectsCupSize !== void 0) patch.affectsCupSize = affectsCupSize;
   if (sortOrder !== void 0) patch.sortOrder = sortOrder;
-  const [row] = await db.update(ingredientTypesTable).set(patch).where(eq(ingredientTypesTable.id, id)).returning();
-  if (!row) {
-    res.status(404).json({ error: "Not found" });
+  if (color !== void 0) patch.color = color;
+  if (Object.keys(patch).length === 0) {
+    res.status(400).json({ error: "No valid fields provided for update" });
     return;
   }
-  res.json(row);
+  try {
+    const [row] = await db.update(ingredientTypesTable).set(patch).where(eq(ingredientTypesTable.id, id)).returning();
+    if (!row) {
+      res.status(404).json({ error: "Not found" });
+      return;
+    }
+    res.json(row);
+  } catch (err) {
+    console.error("Update Type Error:", err);
+    res.status(500).json({ error: err.message || "Failed to update ingredient type" });
+  }
 });
 router8.delete("/catalog/types/:id", async (req, res) => {
   const id = parseInt(req.params.id);
@@ -79059,23 +79084,23 @@ init_drizzle_orm();
 init_src();
 var router10 = (0, import_express10.Router)();
 router10.get("/catalog/predefined-slots", async (_req, res) => {
-  const slots = await db.select().from(predefinedSlotsTable2).orderBy(asc(predefinedSlotsTable2.name));
+  const slots = await db.select().from(predefinedSlotsTable).orderBy(asc(predefinedSlotsTable.name));
   const detail = await Promise.all(slots.map(async (slot) => {
-    const typeOptions = await db.select().from(predefinedSlotTypeOptionsTable2).where(eq(predefinedSlotTypeOptionsTable2.predefinedSlotId, slot.id)).orderBy(predefinedSlotTypeOptionsTable2.sortOrder);
-    const volumes = await db.select().from(predefinedSlotVolumesTable2).where(eq(predefinedSlotVolumesTable2.predefinedSlotId, slot.id)).orderBy(predefinedSlotVolumesTable2.sortOrder);
+    const typeOptions = await db.select().from(predefinedSlotTypeOptionsTable).where(eq(predefinedSlotTypeOptionsTable.predefinedSlotId, slot.id)).orderBy(predefinedSlotTypeOptionsTable.sortOrder);
+    const volumes = await db.select().from(predefinedSlotVolumesTable).where(eq(predefinedSlotVolumesTable.predefinedSlotId, slot.id)).orderBy(predefinedSlotVolumesTable.sortOrder);
     return { ...slot, typeOptions, volumes };
   }));
   res.json(detail);
 });
 router10.get("/catalog/predefined-slots/:id", async (req, res) => {
   const id = parseInt(req.params.id);
-  const [slot] = await db.select().from(predefinedSlotsTable2).where(eq(predefinedSlotsTable2.id, id));
+  const [slot] = await db.select().from(predefinedSlotsTable).where(eq(predefinedSlotsTable.id, id));
   if (!slot) {
     res.status(404).json({ error: "Not found" });
     return;
   }
-  const typeOptions = await db.select().from(predefinedSlotTypeOptionsTable2).where(eq(predefinedSlotTypeOptionsTable2.predefinedSlotId, id)).orderBy(predefinedSlotTypeOptionsTable2.sortOrder);
-  const volumes = await db.select().from(predefinedSlotVolumesTable2).where(eq(predefinedSlotVolumesTable2.predefinedSlotId, id)).orderBy(predefinedSlotVolumesTable2.sortOrder);
+  const typeOptions = await db.select().from(predefinedSlotTypeOptionsTable).where(eq(predefinedSlotTypeOptionsTable.predefinedSlotId, id)).orderBy(predefinedSlotTypeOptionsTable.sortOrder);
+  const volumes = await db.select().from(predefinedSlotVolumesTable).where(eq(predefinedSlotVolumesTable.predefinedSlotId, id)).orderBy(predefinedSlotVolumesTable.sortOrder);
   res.json({ ...slot, typeOptions, volumes });
 });
 router10.post("/catalog/predefined-slots", async (req, res) => {
@@ -79084,7 +79109,7 @@ router10.post("/catalog/predefined-slots", async (req, res) => {
     res.status(400).json({ error: "name and slotLabel required" });
     return;
   }
-  const [slot] = await db.insert(predefinedSlotsTable2).values({
+  const [slot] = await db.insert(predefinedSlotsTable).values({
     name,
     slotLabel,
     isRequired: isRequired ?? true,
@@ -79101,7 +79126,7 @@ router10.post("/catalog/predefined-slots", async (req, res) => {
         isDefault: i === 0,
         sortOrder: i
       }));
-      await db.insert(predefinedSlotTypeOptionsTable2).values(typeOptionValues);
+      await db.insert(predefinedSlotTypeOptionsTable).values(typeOptionValues);
       const typeIds = types3.map((t) => t.id);
       const typeVolumes = await db.select().from(ingredientTypeVolumesTable).where(inArray(ingredientTypeVolumesTable.ingredientTypeId, typeIds));
       if (typeVolumes.length > 0) {
@@ -79116,7 +79141,7 @@ router10.post("/catalog/predefined-slots", async (req, res) => {
           isEnabled: true,
           sortOrder: i
         }));
-        await db.insert(predefinedSlotVolumesTable2).values(volumeValues);
+        await db.insert(predefinedSlotVolumesTable).values(volumeValues);
       }
     }
   }
@@ -79132,12 +79157,12 @@ router10.patch("/catalog/predefined-slots/:id", async (req, res) => {
   if (isDynamic !== void 0) patch.isDynamic = isDynamic;
   if (affectsCupSize !== void 0) patch.affectsCupSize = affectsCupSize;
   if (Object.keys(patch).length > 0) {
-    await db.update(predefinedSlotsTable2).set(patch).where(eq(predefinedSlotsTable2.id, id));
+    await db.update(predefinedSlotsTable).set(patch).where(eq(predefinedSlotsTable.id, id));
   }
   if (Array.isArray(typeOptions)) {
-    await db.delete(predefinedSlotTypeOptionsTable2).where(eq(predefinedSlotTypeOptionsTable2.predefinedSlotId, id));
+    await db.delete(predefinedSlotTypeOptionsTable).where(eq(predefinedSlotTypeOptionsTable.predefinedSlotId, id));
     if (typeOptions.length > 0) {
-      await db.insert(predefinedSlotTypeOptionsTable2).values(typeOptions.map((to, i) => ({
+      await db.insert(predefinedSlotTypeOptionsTable).values(typeOptions.map((to, i) => ({
         predefinedSlotId: id,
         ingredientTypeId: to.ingredientTypeId,
         isDefault: to.isDefault ?? i === 0,
@@ -79146,9 +79171,9 @@ router10.patch("/catalog/predefined-slots/:id", async (req, res) => {
     }
   }
   if (Array.isArray(volumes)) {
-    await db.delete(predefinedSlotVolumesTable2).where(eq(predefinedSlotVolumesTable2.predefinedSlotId, id));
+    await db.delete(predefinedSlotVolumesTable).where(eq(predefinedSlotVolumesTable.predefinedSlotId, id));
     if (volumes.length > 0) {
-      await db.insert(predefinedSlotVolumesTable2).values(volumes.map((v, i) => ({
+      await db.insert(predefinedSlotVolumesTable).values(volumes.map((v, i) => ({
         predefinedSlotId: id,
         typeVolumeId: v.typeVolumeId,
         processedQty: v.processedQty ?? null,
@@ -79166,7 +79191,7 @@ router10.patch("/catalog/predefined-slots/:id", async (req, res) => {
 router10.delete("/catalog/predefined-slots/:id", async (req, res) => {
   const id = parseInt(req.params.id);
   try {
-    await db.delete(predefinedSlotsTable2).where(eq(predefinedSlotsTable2.id, id));
+    await db.delete(predefinedSlotsTable).where(eq(predefinedSlotsTable.id, id));
     res.sendStatus(204);
   } catch (error40) {
     if (error40.code === "23503" || error40.cause?.code === "23503") {

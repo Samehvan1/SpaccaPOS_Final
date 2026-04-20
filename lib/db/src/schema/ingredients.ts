@@ -60,6 +60,7 @@ export const ingredientTypesTable = pgTable("ingredient_types", {
   isActive: boolean("is_active").notNull().default(true),
   affectsCupSize: boolean("affects_cup_size").notNull().default(true),
   sortOrder: integer("sort_order").notNull().default(0),
+  color: text("color"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

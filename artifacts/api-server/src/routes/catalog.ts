@@ -113,7 +113,7 @@ router.get("/catalog/types/:id", async (req, res): Promise<void> => {
 });
 
 router.post("/catalog/types", async (req, res): Promise<void> => {
-  const { categoryId, name, inventoryIngredientId, processedQty, producedQty, unit, isActive, affectsCupSize, sortOrder } = req.body;
+  const { categoryId, name, inventoryIngredientId, processedQty, producedQty, unit, isActive, affectsCupSize, sortOrder, color } = req.body;
   if (!categoryId || !name) { res.status(400).json({ error: "categoryId and name required" }); return; }
   const [row] = await db.insert(ingredientTypesTable).values({ 
     categoryId, 
@@ -124,27 +124,41 @@ router.post("/catalog/types", async (req, res): Promise<void> => {
     unit: unit ?? "ml",
     isActive: isActive ?? true, 
     affectsCupSize: affectsCupSize ?? true,
-    sortOrder: sortOrder ?? 0 
+    sortOrder: sortOrder ?? 0,
+    color: color ?? null
   }).returning();
   res.status(201).json(row);
 });
 
 router.patch("/catalog/types/:id", async (req, res): Promise<void> => {
   const id = parseInt(req.params.id);
-  const { categoryId, name, inventoryIngredientId, processedQty, producedQty, unit, isActive, affectsCupSize, sortOrder } = req.body;
+  const { categoryId, name, inventoryIngredientId, processedQty, producedQty, unit, isActive, affectsCupSize, sortOrder, color } = req.body;
+  
   const patch: Record<string, unknown> = {};
   if (categoryId !== undefined) patch.categoryId = categoryId;
   if (name !== undefined) patch.name = name;
   if (inventoryIngredientId !== undefined) patch.inventoryIngredientId = inventoryIngredientId;
-  if (processedQty !== undefined) patch.processedQty = processedQty;
-  if (producedQty !== undefined) patch.producedQty = producedQty;
+  if (processedQty !== undefined) patch.processedQty = String(processedQty);
+  if (producedQty !== undefined) patch.producedQty = String(producedQty);
   if (unit !== undefined) patch.unit = unit;
   if (isActive !== undefined) patch.isActive = isActive;
   if (affectsCupSize !== undefined) patch.affectsCupSize = affectsCupSize;
   if (sortOrder !== undefined) patch.sortOrder = sortOrder;
-  const [row] = await db.update(ingredientTypesTable).set(patch).where(eq(ingredientTypesTable.id, id)).returning();
-  if (!row) { res.status(404).json({ error: "Not found" }); return; }
-  res.json(row);
+  if (color !== undefined) patch.color = color;
+
+  if (Object.keys(patch).length === 0) {
+    res.status(400).json({ error: "No valid fields provided for update" });
+    return;
+  }
+
+  try {
+    const [row] = await db.update(ingredientTypesTable).set(patch).where(eq(ingredientTypesTable.id, id)).returning();
+    if (!row) { res.status(404).json({ error: "Not found" }); return; }
+    res.json(row);
+  } catch (err: any) {
+    console.error("Update Type Error:", err);
+    res.status(500).json({ error: err.message || "Failed to update ingredient type" });
+  }
 });
 
 router.delete("/catalog/types/:id", async (req, res): Promise<void> => {
