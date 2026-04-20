@@ -23,7 +23,7 @@ export default function FinanceDashboard() {
   const { data: topDrinks, isLoading: isLoadingTop } = useGetTopDrinks({ limit: 5 });
 
   return (
-    <div className="p-8 max-w-7xl mx-auto w-full flex flex-col gap-6 overflow-y-auto h-full">
+    <div className="p-8 w-full flex flex-col gap-6 overflow-y-auto h-full">
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" asChild>
           <Link href="/admin"><ArrowLeft className="h-5 w-5" /></Link>

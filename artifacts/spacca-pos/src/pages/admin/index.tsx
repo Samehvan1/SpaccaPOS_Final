@@ -64,7 +64,7 @@ export default function AdminHub() {
   ];
 
   return (
-    <div className="p-8 max-w-6xl mx-auto w-full overflow-y-auto h-full">
+    <div className="p-8 w-full overflow-y-auto h-full">
       <div className="mb-8">
         <h1 className="text-3xl font-bold flex items-center gap-3">
           <LayoutDashboard className="h-8 w-8 text-primary" />

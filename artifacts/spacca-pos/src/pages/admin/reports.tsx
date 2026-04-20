@@ -122,7 +122,7 @@ export default function ReportsPage() {
   };
 
   return (
-    <div className="p-8 max-w-7xl mx-auto w-full flex flex-col gap-6 overflow-y-auto h-full">
+    <div className="p-8 w-full flex flex-col gap-6 overflow-y-auto h-full">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div className="flex items-center gap-4">

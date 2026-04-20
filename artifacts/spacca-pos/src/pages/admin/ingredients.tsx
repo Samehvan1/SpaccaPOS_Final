@@ -330,7 +330,7 @@ function TypesTab({ inventoryItems }: { inventoryItems: Ingredient[] }) {
     } catch { toast({ variant: "destructive", title: "Failed to update default" }); }
   };
 
-  const availableVolumesToAdd = allVolumes.filter(v => !typeVolumes.some(tv => tv.volumeId === v.id));
+  const availableVolumesToAdd = allVolumes.filter(v => v.name && !typeVolumes.some(tv => tv.volumeId === v.id));
 
   const filteredTypes = types.filter(t => {
     if (filterCategory !== "all" && String(t.categoryId) !== filterCategory) return false;
@@ -531,7 +531,7 @@ function TypesTab({ inventoryItems }: { inventoryItems: Ingredient[] }) {
               <div className="border border-dashed rounded-md p-4 text-center text-sm text-muted-foreground">No volumes yet.</div>
             ) : (
               <div className="border rounded-md divide-y">
-                {typeVolumes.map(tv => {
+                {typeVolumes.filter(tv => tv && tv.id).map(tv => {
                   const isEditing = editingTypeVolId === tv.id;
                   return (
                     <div key={tv.id} className="flex flex-col px-3 py-2.5 bg-card">
@@ -625,7 +625,7 @@ function TypesTab({ inventoryItems }: { inventoryItems: Ingredient[] }) {
                       }
                     }}>
                       <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Pick volume…" /></SelectTrigger>
-                      <SelectContent>
+                      <SelectContent position="popper" className="max-h-[300px]">
                         {availableVolumesToAdd.map(v => (
                           <SelectItem key={v.id} value={String(v.id)}>{v.name}</SelectItem>
                         ))}
@@ -760,7 +760,7 @@ function VolumesTab() {
               <TableRow><TableCell colSpan={5} className="text-center py-8">Loading…</TableCell></TableRow>
             ) : filteredVolumes.length === 0 ? (
               <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No volumes found.</TableCell></TableRow>
-            ) : filteredVolumes.map(v => (
+            ) : filteredVolumes.filter(v => v.name).map(v => (
               <TableRow key={v.id}>
                 <TableCell className="font-medium">{v.name}</TableCell>
                 <TableCell className="text-muted-foreground text-sm">{v.processedQty}</TableCell>
@@ -1709,7 +1709,7 @@ export default function IngredientsAdmin() {
   const { data: inventoryItems = [] } = useListIngredients();
 
   return (
-    <div className="p-8 max-w-6xl mx-auto w-full flex flex-col gap-6 overflow-y-auto h-full">
+    <div className="p-8 w-full flex flex-col gap-6 overflow-y-auto h-full">
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" asChild>
           <Link href="/admin"><ArrowLeft className="h-5 w-5" /></Link>

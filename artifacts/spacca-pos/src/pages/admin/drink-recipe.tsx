@@ -498,7 +498,7 @@ export default function DrinkRecipe() {
 
   return (
     <div className="overflow-y-auto h-full">
-      <div className="p-6 max-w-4xl mx-auto w-full flex flex-col gap-6">
+      <div className="p-6 w-full flex flex-col gap-6">
         {/* Header */}
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">

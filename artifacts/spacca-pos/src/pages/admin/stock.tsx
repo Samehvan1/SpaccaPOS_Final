@@ -106,7 +106,7 @@ export default function StockAdmin() {
   };
 
   return (
-    <div className="p-8 max-w-6xl mx-auto w-full flex flex-col gap-6 overflow-y-auto h-full">
+    <div className="p-8 w-full flex flex-col gap-6 overflow-y-auto h-full">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" asChild>
