@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowLeft, Plus, Search, Edit, Trash2, Link2, Star, StarOff, ChevronRight, Package, Tag, Layers, FlaskConical, Check, X, Droplet, Droplets } from "lucide-react";
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
@@ -836,8 +837,7 @@ function InventoryTab() {
   const loadOptions = async (id: number) => {
     setIsLoadingOptions(true);
     try {
-      const res = await fetch(`/api/ingredients/${id}`);
-      const data = await res.json();
+      const data = await api(`/api/ingredients/${id}`);
       setOptions(data.options ?? []);
     } catch { toast({ variant: "destructive", title: "Failed to load options" }); }
     finally { setIsLoadingOptions(false); }
@@ -875,15 +875,19 @@ function InventoryTab() {
 
   const handleDeleteOption = async (optId: number) => {
     if (!editId) return;
-    try { await fetch(`/api/ingredients/${editId}/options/${optId}`, { method: "DELETE" }); setOptions(prev => prev.filter(o => o.id !== optId)); toast({ title: "Option removed" }); }
-    catch { toast({ variant: "destructive", title: "Failed to delete option" }); }
+    try { 
+      await api(`/api/ingredients/${editId}/options/${optId}`, { method: "DELETE" }); 
+      setOptions(prev => prev.filter(o => o.id !== optId)); 
+      toast({ title: "Option removed" }); 
+    } catch (err: any) { 
+      toast({ variant: "destructive", title: "Failed to delete option", description: err.message }); 
+    }
   };
 
   const handleToggleDefault = async (opt: IngredientOption) => {
     if (!editId) return;
     try {
-      const res = await fetch(`/api/ingredients/${editId}/options/${opt.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ isDefault: !opt.isDefault }) });
-      const updated = await res.json();
+      const updated = await api(`/api/ingredients/${editId}/options/${opt.id}`, { method: "PATCH", body: JSON.stringify({ isDefault: !opt.isDefault }) });
       setOptions(prev => prev.map(o => o.id === opt.id ? { ...o, isDefault: updated.isDefault } : o));
     } catch { toast({ variant: "destructive", title: "Failed to update option" }); }
   };
@@ -891,8 +895,7 @@ function InventoryTab() {
   const handleSetLinked = async (opt: IngredientOption, linkedIngredientId: number | null) => {
     if (!editId) return;
     try {
-      const res = await fetch(`/api/ingredients/${editId}/options/${opt.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ linkedIngredientId }) });
-      const updated = await res.json();
+      const updated = await api(`/api/ingredients/${editId}/options/${opt.id}`, { method: "PATCH", body: JSON.stringify({ linkedIngredientId }) });
       setOptions(prev => prev.map(o => o.id === opt.id ? { ...o, linkedIngredientId: updated.linkedIngredientId } : o));
     } catch { toast({ variant: "destructive", title: "Failed to update link" }); }
   };
@@ -1122,6 +1125,559 @@ function InventoryTab() {
 
 // ── Root Page ─────────────────────────────────────────────────────────────
 
+// ── Template Options Dialog ─────────────────────────────────────────────
+
+function TemplateOptionsDialog({ open, onOpenChange, template, onUpdate }: { open: boolean, onOpenChange: (o: boolean) => void, template: any, onUpdate: () => void }) {
+  const { toast } = useToast();
+  const [allTypes, setAllTypes] = useState<IngType[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [addingTypeId, setAddingTypeId] = useState<string>("none");
+  const [saving, setSaving] = useState(false);
+
+  // Volume editing state
+  const [typeVolumes, setTypeVolumes] = useState<any[]>([]);
+  const [allVolumes, setAllVolumes] = useState<Volume[]>([]);
+  const [editingTypeVolId, setEditingTypeVolId] = useState<number | null>(null);
+  const [editPhysQty, setEditPhysQty] = useState("");
+  const [editProdQty, setEditProdQty] = useState("");
+  const [editExtraCost, setEditExtraCost] = useState("");
+  const [expandedTypeIds, setExpandedTypeIds] = useState<number[]>([]);
+
+  const toggleExpand = (id: number) => {
+    setExpandedTypeIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
+  const load = useCallback(async () => {
+    if (!template) return;
+    setLoading(true);
+    try {
+      const [typeData, volData, typeVolData] = await Promise.all([
+        api("/api/catalog/types"),
+        api("/api/catalog/volumes"),
+        api("/api/catalog/type-volumes")
+      ]);
+      setAllTypes(typeData);
+      setAllVolumes(volData);
+      setTypeVolumes(typeVolData);
+    } catch {
+      toast({ variant: "destructive", title: "Failed to load data" });
+    } finally {
+      setLoading(false);
+    }
+  }, [template, toast]);
+
+  useEffect(() => { if (open) load(); }, [open, load]);
+
+  const handleAddType = async () => {
+    if (addingTypeId === "none" || !template) return;
+    setSaving(true);
+    try {
+      const currentOptions = template.typeOptions || [];
+      const newOption = {
+        ingredientTypeId: parseInt(addingTypeId),
+        isDefault: currentOptions.length === 0,
+        sortOrder: currentOptions.length
+      };
+      
+      await api(`/api/catalog/predefined-slots/${template.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ typeOptions: [...currentOptions, newOption] })
+      });
+      
+      toast({ title: "Type added to template" });
+      setAddingTypeId("none");
+      onUpdate();
+    } catch {
+      toast({ variant: "destructive", title: "Failed to add type" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleRemoveType = async (typeId: number) => {
+    if (!template) return;
+    const currentOptions = template.typeOptions || [];
+    const newOptions = currentOptions.filter((o: any) => o.ingredientTypeId !== typeId);
+    
+    try {
+      await api(`/api/catalog/predefined-slots/${template.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ typeOptions: newOptions })
+      });
+      toast({ title: "Type removed from template" });
+      onUpdate();
+    } catch {
+      toast({ variant: "destructive", title: "Failed to remove type" });
+    }
+  };
+
+  const handleUpdateVolume = async (typeVolumeId: number) => {
+    if (!template) return;
+    setSaving(true);
+    try {
+      const currentVolumes = template.volumes || [];
+      const others = currentVolumes.filter((v: any) => v.typeVolumeId !== typeVolumeId);
+      const existing = currentVolumes.find((v: any) => v.typeVolumeId === typeVolumeId);
+
+      const updated = {
+        typeVolumeId,
+        processedQty: editPhysQty || null,
+        producedQty: editProdQty || null,
+        extraCost: editExtraCost || "0",
+        isEnabled: existing ? existing.isEnabled : true
+      };
+      
+      await api(`/api/catalog/predefined-slots/${template.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ volumes: [...others, updated] })
+      });
+      
+      setEditingTypeVolId(null);
+      toast({ title: "Volume updated in template" });
+      onUpdate();
+    } catch {
+      toast({ variant: "destructive", title: "Failed to update volume" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSyncCategories = async () => {
+    if (!template) return;
+    setSaving(true);
+    try {
+      const currentOptions = template.typeOptions || [];
+      const currentTypeIds = new Set(currentOptions.map((o: any) => o.ingredientTypeId));
+      
+      const usedCategories = new Set<number>();
+      for (const to of currentOptions) {
+        const typeInfo = allTypes.find(at => at.id === to.ingredientTypeId);
+        if (typeInfo?.categoryId) usedCategories.add(typeInfo.categoryId);
+      }
+      
+      if (usedCategories.size === 0) {
+        toast({ title: "No categories detected to sync" });
+        return;
+      }
+      
+      const missingTypes = allTypes.filter(at => 
+        usedCategories.has(at.categoryId) && !currentTypeIds.has(at.id)
+      );
+      
+      if (missingTypes.length === 0) {
+        toast({ title: "Already up to date" });
+        return;
+      }
+      
+      const newOptionEntries = missingTypes.map((mt, i) => ({
+        ingredientTypeId: mt.id,
+        isDefault: false,
+        sortOrder: currentOptions.length + i
+      }));
+      
+      await api(`/api/catalog/predefined-slots/${template.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ typeOptions: [...currentOptions, ...newOptionEntries] })
+      });
+      
+      toast({ title: `Added ${missingTypes.length} new types from categories` });
+      onUpdate();
+    } catch {
+      toast({ variant: "destructive", title: "Failed to sync categories" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const availableTypes = allTypes.filter(t => !(template?.typeOptions || []).some((to: any) => to.ingredientTypeId === t.id));
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Configure Options — {template?.name}</DialogTitle>
+        </DialogHeader>
+        
+        <div className="space-y-4 pt-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Label className="font-semibold">Ingredient Types</Label>
+              <Button variant="outline" size="sm" className="h-6 text-[10px] px-2 gap-1" onClick={handleSyncCategories} disabled={saving}>
+                <Layers className="h-3 w-3" /> Sync Categories
+              </Button>
+            </div>
+            <div className="flex items-center gap-2">
+              <Select value={addingTypeId} onValueChange={setAddingTypeId}>
+                <SelectTrigger className="h-8 w-[150px] text-xs"><SelectValue placeholder="Add…" /></SelectTrigger>
+                <SelectContent>
+                  {availableTypes.map(t => <SelectItem key={t.id} value={String(t.id)}>{t.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Button size="sm" className="h-8 px-2" onClick={handleAddType} disabled={saving || addingTypeId === "none"}><Plus className="h-3.5 w-3.5" /></Button>
+            </div>
+          </div>
+
+          <div className="border rounded-md divide-y overflow-hidden">
+            {(template?.typeOptions || []).length === 0 ? (
+              <div className="p-8 text-center text-sm text-muted-foreground">No types configured. Add one or use Bulk Import.</div>
+            ) : (template.typeOptions || []).map((to: any) => {
+              const ingType = allTypes.find(at => at.id === to.ingredientTypeId);
+              return (
+                <div key={to.id} className="p-3 bg-card space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-sm">{ingType?.name || `Type #${to.ingredientTypeId}`}</span>
+                      {to.isDefault && <Badge variant="secondary" className="text-[10px] h-4">Default</Badge>}
+                    </div>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleRemoveType(to.ingredientTypeId)}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+
+                  {/* Volume Overrides inside template */}
+                  <div className="pl-4 border-l-2 border-primary/20 space-y-2 pb-2">
+                    <div 
+                      className="text-[10px] font-bold uppercase text-muted-foreground flex items-center justify-between cursor-pointer hover:text-primary transition-colors"
+                      onClick={() => toggleExpand(to.id)}
+                    >
+                      <div className="flex items-center gap-1">
+                        {expandedTypeIds.includes(to.id) ? <Droplets className="h-3 w-3 text-primary" /> : <Droplet className="h-3 w-3 opacity-50" />}
+                        <span>Volume Settings</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[9px] normal-case font-normal italic">Click to {expandedTypeIds.includes(to.id) ? "collapse" : "expand"}</span>
+                        <ChevronRight className={`h-3 w-3 transition-transform ${expandedTypeIds.includes(to.id) ? "rotate-90" : ""}`} />
+                      </div>
+                    </div>
+                    
+                    {expandedTypeIds.includes(to.id) && (
+                      <div className="space-y-1.5 animate-in slide-in-from-top-1 duration-200">
+                      {typeVolumes.filter(tv => tv.ingredientTypeId === to.ingredientTypeId).map(tv => {
+                        const override = (template.volumes || []).find((v: any) => v.typeVolumeId === tv.id);
+                        const isEnabled = override ? override.isEnabled : false;
+                        const isEditing = editingTypeVolId === tv.id;
+                        const volName = allVolumes.find(av => av.id === tv.volumeId)?.name || `#${tv.volumeId}`;
+
+                        return (
+                          <div key={tv.id} className="text-xs border rounded-md p-1.5 bg-muted/10">
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2 min-w-0 flex-1">
+                                <Checkbox 
+                                  checked={isEnabled} 
+                                  onCheckedChange={async (val) => {
+                                    const currentVolumes = template.volumes || [];
+                                    const others = currentVolumes.filter((v: any) => v.typeVolumeId !== tv.id);
+                                    const u = override || { 
+                                      typeVolumeId: tv.id, 
+                                      processedQty: tv.processedQty, 
+                                      producedQty: tv.producedQty, 
+                                      unit: tv.unit, 
+                                      extraCost: tv.extraCost,
+                                      isDefault: tv.isDefault 
+                                    };
+                                    await api(`/api/catalog/predefined-slots/${template.id}`, {
+                                      method: "PATCH",
+                                      body: JSON.stringify({ volumes: [...others, { ...u, isEnabled: !!val }] })
+                                    });
+                                    onUpdate();
+                                  }}
+                                />
+                                <span className={`font-medium truncate ${!isEnabled ? "text-muted-foreground line-through" : ""}`}>
+                                  {volName}
+                                </span>
+                                {tv.isDefault && !override?.isDefault && <Badge variant="outline" className="h-3 text-[8px] px-1 opacity-50">Base Default</Badge>}
+                                {override?.isDefault && <Badge variant="secondary" className="h-3 text-[8px] px-1 font-bold">Default</Badge>}
+                              </div>
+                              
+                              <div className="flex items-center gap-1 shrink-0">
+                                {isEditing ? (
+                                  <>
+                                    <Button size="icon" variant="ghost" className="h-6 w-6 text-green-600" onClick={() => handleUpdateVolume(tv.id)}><Check className="h-3 w-3" /></Button>
+                                    <Button size="icon" variant="ghost" className="h-6 w-6 text-muted-foreground" onClick={() => setEditingTypeVolId(null)}><X className="h-3 w-3" /></Button>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Button 
+                                      variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground" 
+                                      disabled={!isEnabled}
+                                      onClick={() => {
+                                        setEditingTypeVolId(tv.id);
+                                        setEditPhysQty(override?.processedQty ?? tv.processedQty ?? "0");
+                                        setEditProdQty(override?.producedQty ?? tv.producedQty ?? "0");
+                                        setEditExtraCost(override?.extraCost ?? tv.extraCost ?? "0");
+                                      }}
+                                    >
+                                      <Edit className="h-3 w-3" />
+                                    </Button>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+
+                            {isEditing && (
+                              <div className="grid grid-cols-3 gap-2 mt-2 pt-2 border-t border-dashed">
+                                <div className="grid gap-0.5">
+                                  <Label className="text-[9px] uppercase font-bold text-muted-foreground">Proc</Label>
+                                  <Input type="number" step="0.1" className="h-6 text-[10px] px-1.5" value={editPhysQty} onChange={e => setEditPhysQty(e.target.value)} />
+                                </div>
+                                <div className="grid gap-0.5">
+                                  <Label className="text-[9px] uppercase font-bold text-muted-foreground">Prod</Label>
+                                  <Input type="number" step="0.1" className="h-6 text-[10px] px-1.5" value={editProdQty} onChange={e => setEditProdQty(e.target.value)} />
+                                </div>
+                                <div className="grid gap-0.5">
+                                  <Label className="text-[9px] uppercase font-bold text-muted-foreground">Cost</Label>
+                                  <Input type="number" step="0.01" className="h-6 text-[10px] px-1.5" value={editExtraCost} onChange={e => setEditExtraCost(e.target.value)} />
+                                </div>
+                              </div>
+                            )}
+
+                            {!isEditing && isEnabled && (override?.processedQty || override?.extraCost) && (
+                              <div className="text-[9px] text-muted-foreground flex items-center gap-1.5 mt-0.5 ml-6">
+                                <span>{override?.processedQty ?? tv.processedQty}ml</span>
+                                <span>·</span>
+                                <span className="text-primary/80">+E£{override?.extraCost ?? tv.extraCost}</span>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                      {typeVolumes.filter(tv => tv.ingredientTypeId === to.ingredientTypeId).length === 0 && (
+                        <div className="text-xs text-muted-foreground italic">No volumes found for this type.</div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+            })}
+          </div>
+        </div>
+
+        <DialogFooter className="pt-4">
+          <Button onClick={() => onOpenChange(false)}>Done</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ── Slot Templates Tab ──────────────────────────────────────────────────
+
+function SlotTemplatesTab() {
+  const { toast } = useToast();
+  const [templates, setTemplates] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [editId, setEditId] = useState<number | null>(null);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [selectedTemplate, setSelectedTemplate] = useState<any | null>(null);
+  const [showOptions, setShowOptions] = useState(false);
+
+  // Form Fields
+  const [name, setName] = useState("");
+  const [slotLabel, setSlotLabel] = useState("");
+  const [isRequired, setIsRequired] = useState(true);
+  const [isDynamic, setIsDynamic] = useState(false);
+  const [affectsCupSize, setAffectsCupSize] = useState<string>("inherit");
+  const [bulkCategoryId, setBulkCategoryId] = useState<string>("none");
+  const [saving, setSaving] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [templData, catData] = await Promise.all([
+        api("/api/catalog/predefined-slots"),
+        api("/api/catalog/categories")
+      ]);
+      setTemplates(templData);
+      setCategories(catData);
+    } catch {
+      toast({ variant: "destructive", title: "Failed to load templates" });
+    } finally {
+      setLoading(false);
+    }
+  }, [toast]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const openAdd = () => {
+    setEditId(null);
+    setName("");
+    setSlotLabel("");
+    setIsRequired(true);
+    setIsDynamic(false);
+    setAffectsCupSize("inherit");
+    setBulkCategoryId("none");
+    setShowForm(true);
+  };
+
+  const openEdit = (t: any) => {
+    setEditId(t.id);
+    setName(t.name);
+    setSlotLabel(t.slotLabel);
+    setIsRequired(t.isRequired);
+    setIsDynamic(t.isDynamic);
+    setAffectsCupSize(t.affectsCupSize === null ? "inherit" : String(t.affectsCupSize));
+    setBulkCategoryId("none");
+    setShowForm(true);
+  };
+
+  const handleSave = async () => {
+    if (!name || !slotLabel) return;
+    setSaving(true);
+    try {
+      const body = {
+        name, slotLabel, isRequired, isDynamic,
+        affectsCupSize: affectsCupSize === "inherit" ? null : affectsCupSize === "true",
+        autoLoadCategoryId: bulkCategoryId !== "none" ? parseInt(bulkCategoryId) : undefined
+      };
+
+      if (editId) {
+        await api(`/api/catalog/predefined-slots/${editId}`, { method: "PATCH", body: JSON.stringify(body) });
+        toast({ title: "Template updated" });
+      } else {
+        await api("/api/catalog/predefined-slots", { method: "POST", body: JSON.stringify(body) });
+        toast({ title: "Template created" });
+      }
+      setShowForm(false);
+      load();
+    } catch (err) {
+      toast({ variant: "destructive", title: "Failed to save template" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    if (!confirm("Delete this template?")) return;
+    try {
+      await api(`/api/catalog/predefined-slots/${id}`, { method: "DELETE" });
+      load();
+      toast({ title: "Template deleted" });
+    } catch (err: any) {
+      const msg = err.message || "Failed to delete";
+      toast({ variant: "destructive", title: msg });
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-muted-foreground">Define slot configurations once and reuse them across multiple drink recipes.</p>
+        <Button size="sm" className="gap-2" onClick={openAdd}><Plus className="h-3.5 w-3.5" /> Add Template</Button>
+      </div>
+
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Name</TableHead>
+              <TableHead>Default UI Label</TableHead>
+              <TableHead className="text-center">Required</TableHead>
+              <TableHead className="text-center">Dynamic</TableHead>
+              <TableHead className="text-right w-32">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {loading ? (
+              <TableRow><TableCell colSpan={5} className="text-center py-8">Loading…</TableCell></TableRow>
+            ) : templates.length === 0 ? (
+              <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No templates defined yet.</TableCell></TableRow>
+            ) : templates.map(t => (
+              <TableRow key={t.id}>
+                <TableCell className="font-medium">{t.name}</TableCell>
+                <TableCell>{t.slotLabel}</TableCell>
+                <TableCell className="text-center">{t.isRequired ? <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-green-200">Yes</Badge> : <Badge variant="outline">No</Badge>}</TableCell>
+                <TableCell className="text-center">{t.isDynamic ? <Badge variant="secondary">Dynamic</Badge> : <span className="text-muted-foreground text-xs">Standard</span>}</TableCell>
+                <TableCell className="text-right flex items-center justify-end">
+                  <Button variant="ghost" size="sm" className="h-7 px-2 gap-1 text-xs" onClick={() => { setSelectedTemplate(t); setShowOptions(true); }} title="Configure Ingredient Options">
+                    <FlaskConical className="h-3.5 w-3.5" /> Options
+                  </Button>
+                  <Button variant="ghost" size="icon" onClick={() => openEdit(t)} title="Edit Configuration"><Edit className="h-4 w-4" /></Button>
+                  <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDelete(t.id)} title="Delete"><Trash2 className="h-4 w-4" /></Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+
+      {/* Options Management Dialog */}
+      <TemplateOptionsDialog 
+        open={showOptions} 
+        onOpenChange={setShowOptions} 
+        template={selectedTemplate} 
+        onUpdate={() => { load(); if(selectedTemplate) { api(`/api/catalog/predefined-slots/${selectedTemplate.id}`).then(setSelectedTemplate); } }}
+      />
+
+      {/* Add/Edit Template Dialog */}
+      <Dialog open={showForm} onOpenChange={o => { if (!o) setShowForm(false); }}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader><DialogTitle>{editId ? "Edit Template" : "Add Slot Template"}</DialogTitle></DialogHeader>
+          <div className="grid gap-4 py-2">
+            <div className="grid gap-1.5">
+              <Label>Template Name</Label>
+              <Input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Standard Milk Selection" />
+            </div>
+            <div className="grid gap-1.5">
+              <Label>Default Slot Label (in UI)</Label>
+              <Input value={slotLabel} onChange={e => setSlotLabel(e.target.value)} placeholder="e.g. Choice of Milk" />
+            </div>
+            
+            <div className="flex flex-col gap-3 pt-2">
+              <div className="flex items-center gap-2">
+                <Switch id="t-required" checked={isRequired} onCheckedChange={setIsRequired} />
+                <Label htmlFor="t-required" className="cursor-pointer">Mandatory selection</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch id="t-dynamic" checked={isDynamic} onCheckedChange={setIsDynamic} />
+                <Label htmlFor="t-dynamic" className="cursor-pointer">Dynamic fill volume</Label>
+              </div>
+            </div>
+
+            <div className="grid gap-1.5">
+              <Label>Displaces liquid (Cup Size)</Label>
+              <Select value={affectsCupSize} onValueChange={setAffectsCupSize}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="inherit">Inherit from Ingredient Type</SelectItem>
+                  <SelectItem value="true">Yes, displaces liquid</SelectItem>
+                  <SelectItem value="false">No, adds to volume</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {!editId && (
+              <>
+                <Separator className="mt-2" />
+                <div className="grid gap-1.5">
+                  <Label className="text-primary font-semibold flex items-center gap-1.5">
+                    <FlaskConical className="h-3.5 w-3.5" /> Bulk Import (Optional)
+                  </Label>
+                  <Select value={bulkCategoryId} onValueChange={setBulkCategoryId}>
+                    <SelectTrigger><SelectValue placeholder="Pick category to import…" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Create empty template</SelectItem>
+                      {categories.map(c => <SelectItem key={c.id} value={String(c.id)}>Import all "{c.name}"</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-[10px] text-muted-foreground">Auto-populates the template with all types and volumes from this category.</p>
+                </div>
+              </>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setShowForm(false)}>Cancel</Button>
+            <Button onClick={handleSave} disabled={saving || !name || !slotLabel}>
+              {saving ? "Saving…" : "Save Template"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
 export default function IngredientsAdmin() {
   const { data: inventoryItems = [] } = useListIngredients();
 
@@ -1138,7 +1694,7 @@ export default function IngredientsAdmin() {
       </div>
 
       <Tabs defaultValue="inventory">
-        <TabsList className="grid grid-cols-4 w-full max-w-lg">
+        <TabsList className="grid grid-cols-5 w-full max-w-2xl">
           <TabsTrigger value="inventory" className="gap-1.5">
             <Package className="h-3.5 w-3.5" /> Inventory
           </TabsTrigger>
@@ -1150,6 +1706,9 @@ export default function IngredientsAdmin() {
           </TabsTrigger>
           <TabsTrigger value="volumes" className="gap-1.5">
             <Layers className="h-3.5 w-3.5" /> Volumes
+          </TabsTrigger>
+          <TabsTrigger value="templates" className="gap-1.5">
+            <Layers className="h-3.5 w-3.5 text-primary" /> Slots
           </TabsTrigger>
         </TabsList>
 
@@ -1164,6 +1723,9 @@ export default function IngredientsAdmin() {
         </TabsContent>
         <TabsContent value="volumes" className="mt-6">
           <VolumesTab />
+        </TabsContent>
+        <TabsContent value="templates" className="mt-6">
+          <SlotTemplatesTab />
         </TabsContent>
       </Tabs>
     </div>

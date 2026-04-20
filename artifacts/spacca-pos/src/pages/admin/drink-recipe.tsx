@@ -52,6 +52,7 @@ type SlotDraft = {
   baristaSortOrder: number;
   customerSortOrder: number;
   affectsCupSize: boolean | null;
+  predefinedSlotId: number | null;
 };
 
 type Category = { id: number; name: string; sortOrder: number };
@@ -88,6 +89,22 @@ function makeVolumeDrafts(vols: TypeVolume[]): SlotVolumeDraft[] {
   }));
 }
 
+function resolveSlotVolumes(typeVolumes: TypeVolume[], templateVolumes: any[]): SlotVolumeDraft[] {
+  return typeVolumes.map(tv => {
+    const override = templateVolumes.find((v: any) => v.typeVolumeId === tv.id);
+    return {
+      typeVolumeId: tv.id,
+      volumeName: tv.volume?.name ?? `vol#${tv.volumeId}`,
+      processedQty: String(override?.processedQty ?? tv.processedQty ?? 0),
+      producedQty: String(override?.producedQty ?? tv.producedQty ?? 0),
+      unit: override?.unit ?? tv.unit ?? "ml",
+      extraCost: String(override?.extraCost ?? tv.extraCost ?? "0"),
+      isDefault: override?.isDefault ?? tv.isDefault,
+      isEnabled: override ? override.isEnabled : true,
+    };
+  });
+}
+
 export default function DrinkRecipe() {
   const params = useParams<{ id: string }>();
   const drinkId = parseInt(params.id ?? "0");
@@ -98,6 +115,7 @@ export default function DrinkRecipe() {
 
   const [slots, setSlots] = useState<SlotDraft[]>([]);
   const [cupSizeMl, setCupSizeMl] = useState<string>("");
+  const [predefinedSlots, setPredefinedSlots] = useState<any[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
 
@@ -107,6 +125,7 @@ export default function DrinkRecipe() {
   const [optionsCache, setOptionsCache] = useState<Record<number, any[]>>({});
 
   useEffect(() => {
+    api("/api/catalog/predefined-slots").then(setPredefinedSlots).catch(() => {});
     Promise.all([api("/api/catalog/categories"), api("/api/catalog/types")])
       .then(([cats, types]) => { setCategories(cats); setAllTypes(types); })
       .catch(() => {});
@@ -163,6 +182,7 @@ export default function DrinkRecipe() {
           baristaSortOrder: s.baristaSortOrder ?? s.sortOrder ?? 1,
           customerSortOrder: s.customerSortOrder ?? s.sortOrder ?? 1,
           affectsCupSize: s.affectsCupSize ?? null,
+          predefinedSlotId: s.predefinedSlotId ?? null,
         };
       }
       return {
@@ -174,6 +194,7 @@ export default function DrinkRecipe() {
         baristaSortOrder: s.baristaSortOrder ?? s.sortOrder ?? 1,
         customerSortOrder: s.customerSortOrder ?? s.sortOrder ?? 1,
         affectsCupSize: s.affectsCupSize ?? null,
+        predefinedSlotId: s.predefinedSlotId ?? null,
       };
     });
 
@@ -189,12 +210,117 @@ export default function DrinkRecipe() {
 
   const mark = () => setIsDirty(true);
 
-  const addSlot = (style: SlotStyle = "legacy") => {
-    setSlots(prev => [...prev, {
-      key: newKey(), style, slotLabel: "", isRequired: true, expanded: true,
-      typeOptions: [], ingredientId: null, isDynamic: false, defaultOptionId: null,
-      baristaSortOrder: 1, customerSortOrder: 1, affectsCupSize: null,
-    }]);
+  const addSlot = (style: SlotStyle) => {
+    const newSlot: SlotDraft = {
+      key: newKey(),
+      style,
+      slotLabel: "",
+      isRequired: true,
+      expanded: true,
+      typeOptions: [],
+      ingredientId: null,
+      isDynamic: false,
+      defaultOptionId: null,
+      baristaSortOrder: slots.length + 1,
+      customerSortOrder: slots.length + 1,
+      affectsCupSize: null,
+      predefinedSlotId: null,
+    };
+    setSlots([...slots, newSlot]);
+    mark();
+  };
+
+  const addFromTemplate = async (templateId: number) => {
+    const template = predefinedSlots.find(t => t.id === templateId);
+    if (!template) return;
+
+    // We fetch full template details if not already present
+    let fullTemplate = template;
+    if (!template.typeOptions || !template.volumes) {
+      try {
+        fullTemplate = await api(`/api/catalog/predefined-slots/${templateId}`);
+      } catch { return; }
+    }
+
+    const typeOptionsDrafts = await Promise.all((fullTemplate.typeOptions || []).map(async (to: any) => {
+      const ingredientType = allTypes.find(at => at.id === to.ingredientTypeId);
+      const cat = categories.find(c => c.id === ingredientType?.categoryId);
+      const vols = await loadTypeVolumes(to.ingredientTypeId);
+      
+      const slotVolumes = resolveSlotVolumes(vols, fullTemplate.volumes || []);
+
+      return {
+        key: newKey(),
+        ingredientTypeId: to.ingredientTypeId,
+        typeName: ingredientType?.name ?? "",
+        categoryName: cat?.name ?? "",
+        isDefault: to.isDefault,
+        sortOrder: to.sortOrder,
+        expanded: false,
+        slotVolumes,
+      };
+    }));
+
+    const newSlot: SlotDraft = {
+      key: newKey(),
+      style: "typed",
+      slotLabel: fullTemplate.slotLabel,
+      isRequired: fullTemplate.isRequired,
+      expanded: true,
+      predefinedSlotId: fullTemplate.id,
+      isDynamic: fullTemplate.isDynamic,
+      affectsCupSize: fullTemplate.affectsCupSize,
+      typeOptions: typeOptionsDrafts,
+      ingredientId: null,
+      defaultOptionId: null,
+      baristaSortOrder: slots.length + 1,
+      customerSortOrder: slots.length + 1,
+    };
+    setSlots([...slots, newSlot]);
+    mark();
+  };
+
+  const syncFromTemplate = async (slotKey: string) => {
+    const slot = slots.find(s => s.key === slotKey);
+    if (!slot || !slot.predefinedSlotId) return;
+
+    const template = predefinedSlots.find(t => t.id === slot.predefinedSlotId);
+    if (!template) return;
+
+    // Fetch full template details if needed
+    let fullTemplate = template;
+    if (!template.typeOptions || !template.volumes) {
+      try {
+        fullTemplate = await api(`/api/catalog/predefined-slots/${slot.predefinedSlotId}`);
+      } catch { return; }
+    }
+
+    const missingTypes = (fullTemplate.typeOptions || []).filter(
+      (to: any) => !slot.typeOptions.some(existing => existing.ingredientTypeId === to.ingredientTypeId)
+    );
+
+    if (missingTypes.length === 0) {
+      toast({ title: "Already synced with template" });
+      return;
+    }
+
+    const newSlotOptions = [...slot.typeOptions];
+    for (const to of missingTypes) {
+      const ingredientType = allTypes.find(at => at.id === to.ingredientTypeId);
+      const vols = await loadTypeVolumes(to.ingredientTypeId);
+      newSlotOptions.push({
+        key: newKey(),
+        ingredientTypeId: to.ingredientTypeId,
+        typeName: ingredientType?.name ?? "",
+        categoryName: categories.find(c => c.id === ingredientType?.categoryId)?.name ?? "",
+        isDefault: to.isDefault && !newSlotOptions.some(ex => ex.isDefault),
+        sortOrder: to.sortOrder,
+        expanded: true,
+        slotVolumes: resolveSlotVolumes(vols, fullTemplate.volumes || []),
+      });
+    }
+
+    updateSlot(slotKey, { typeOptions: newSlotOptions });
     mark();
   };
 
@@ -303,6 +429,7 @@ export default function DrinkRecipe() {
           isRequired: s.isRequired,
           isDynamic: s.isDynamic,
           affectsCupSize: s.affectsCupSize,
+          predefinedSlotId: s.predefinedSlotId,
           sortOrder: i,
           baristaSortOrder: s.baristaSortOrder,
           customerSortOrder: s.customerSortOrder,
@@ -417,7 +544,23 @@ export default function DrinkRecipe() {
         <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <h2 className="font-semibold text-lg">Ingredient Slots ({slots.length})</h2>
-            <div className="flex gap-2">
+            <div className="flex gap-2 items-center">
+              <div className="flex gap-1.5 items-center mr-2 pr-2 border-r">
+                <Select onValueChange={(v) => v !== "none" && addFromTemplate(parseInt(v))}>
+                  <SelectTrigger className="w-[180px] h-9 text-xs">
+                    <SelectValue placeholder="Add from Template…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectLabel>Available Templates</SelectLabel>
+                      {predefinedSlots.length === 0 && <SelectItem value="none" disabled>No templates defined</SelectItem>}
+                      {predefinedSlots.map(t => (
+                        <SelectItem key={t.id} value={String(t.id)}>{t.name}</SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </div>
               <Button variant="outline" size="sm" className="gap-2" onClick={() => addSlot("typed")}>
                 <Layers className="h-4 w-4" /> Add Catalog Slot
               </Button>
@@ -435,13 +578,32 @@ export default function DrinkRecipe() {
                   <p className="font-medium">No ingredient slots yet</p>
                   <p className="text-sm">Add catalog slots (new system) or legacy slots for existing ingredients.</p>
                 </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={() => addSlot("typed")} className="gap-2">
-                    <Layers className="h-4 w-4" /> Add Catalog Slot
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => addSlot("legacy")} className="gap-2">
-                    <Plus className="h-4 w-4" /> Add Legacy Slot
-                  </Button>
+                <div className="flex flex-col gap-4 items-center">
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={() => addSlot("typed")} className="gap-2">
+                      <Layers className="h-4 w-4" /> Add Catalog Slot
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => addSlot("legacy")} className="gap-2">
+                      <Plus className="h-4 w-4" /> Add Legacy Slot
+                    </Button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-medium">Or</span>
+                    <Select onValueChange={(v) => v !== "none" && addFromTemplate(parseInt(v))}>
+                      <SelectTrigger className="w-[200px] h-9 text-xs">
+                        <SelectValue placeholder="Add from Template…" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          <SelectLabel>Available Templates</SelectLabel>
+                          {predefinedSlots.length === 0 && <SelectItem value="none" disabled>No templates defined</SelectItem>}
+                          {predefinedSlots.map(t => (
+                            <SelectItem key={t.id} value={String(t.id)}>{t.name}</SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -494,6 +656,11 @@ export default function DrinkRecipe() {
                       <span className={`text-sm font-medium truncate ${slot.slotLabel ? "" : "text-muted-foreground italic"}`}>
                         {slot.slotLabel || "Unnamed slot"}
                       </span>
+                      {slot.predefinedSlotId && (
+                        <Badge variant="outline" className="ml-2 bg-primary/5 text-primary border-primary/20 gap-1 px-1.5 h-4 text-[10px] uppercase font-bold">
+                          <Tag className="h-2.5 w-2.5" /> Template: {predefinedSlots.find(ps => ps.id === slot.predefinedSlotId)?.name || "Synced"}
+                        </Badge>
+                      )}
                       {/* Compact summary when collapsed */}
                       {!slot.expanded && (
                         <span className="text-xs text-muted-foreground truncate shrink-0">
@@ -519,7 +686,17 @@ export default function DrinkRecipe() {
 
                     <div className="flex flex-wrap gap-4 pl-14 items-end">
                       <div className="min-w-[280px] flex-[2] grid gap-1.5">
-                        <Label className="text-xs">Slot Label</Label>
+                        <Label className="text-xs flex items-center gap-2">
+                          Slot Label
+                          {slot.predefinedSlotId && (
+                            <Button 
+                              variant="ghost" size="sm" className="h-5 px-1.5 text-[10px] text-primary bg-primary/5 hover:bg-primary/10 border border-primary/20 gap-1 font-bold uppercase"
+                              onClick={() => syncFromTemplate(slot.key)}
+                            >
+                              <FlaskConical className="h-2.5 w-2.5" /> Sync with Template
+                            </Button>
+                          )}
+                        </Label>
                         <Input
                           placeholder="e.g. Espresso, Milk, Syrup"
                           value={slot.slotLabel}

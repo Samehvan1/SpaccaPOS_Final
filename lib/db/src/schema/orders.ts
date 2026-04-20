@@ -41,7 +41,7 @@ export const orderItemCustomizationsTable = pgTable("order_item_customizations",
   id: serial("id").primaryKey(),
   orderItemId: integer("order_item_id").notNull().references(() => orderItemsTable.id, { onDelete: "cascade" }),
   ingredientId: integer("ingredient_id").references(() => ingredientsTable.id), // Nullable for catalog-only items
-  optionId: integer("option_id").references(() => ingredientOptionsTable.id), // Nullable for Typed slots
+  optionId: integer("option_id").references(() => ingredientOptionsTable.id, { onDelete: "set null" }), // Nullable for Typed slots
   typeVolumeId: integer("type_volume_id"), // Added for Typed slots tracking
   consumedQty: numeric("consumed_qty", { precision: 10, scale: 4 }).notNull(),
   addedCost: numeric("added_cost", { precision: 8, scale: 4 }).notNull(),

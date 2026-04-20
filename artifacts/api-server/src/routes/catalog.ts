@@ -164,6 +164,11 @@ router.delete("/catalog/types/:id", async (req, res): Promise<void> => {
 
 // ── Type Volumes (volumes attached to a type) ─────────────────────────────
 
+router.get("/catalog/type-volumes", async (_req, res): Promise<void> => {
+  const rows = await db.select().from(ingredientTypeVolumesTable).orderBy(asc(ingredientTypeVolumesTable.sortOrder));
+  res.json(rows);
+});
+
 router.get("/catalog/types/:id/volumes", async (req, res): Promise<void> => {
   const id = parseInt(req.params.id);
   const typeVolumes = await db.select().from(ingredientTypeVolumesTable)

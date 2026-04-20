@@ -44,6 +44,7 @@ export const drinkIngredientSlotsTable = pgTable("drink_ingredient_slots", {
   baristaSortOrder: integer("barista_sort_order").notNull().default(1),
   customerSortOrder: integer("customer_sort_order").notNull().default(1),
   affectsCupSize: boolean("affects_cup_size"), // null = inherit from type
+  predefinedSlotId: integer("predefined_slot_id"), // Added for templates support
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });
@@ -80,11 +81,44 @@ export const drinkSlotVolumesTable = pgTable("drink_slot_volumes", {
   sortOrder: integer("sort_order").notNull().default(0),
 });
 
+export const predefinedSlotsTable = pgTable("predefined_slots", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(), // Administrative name (e.g. "Standard Milk Choice")
+  slotLabel: text("slot_label").notNull(), // Default UI label (e.g. "Milk")
+  isRequired: boolean("is_required").notNull().default(true),
+  isDynamic: boolean("is_dynamic").notNull().default(false),
+  affectsCupSize: boolean("affects_cup_size"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
+});
+
+export const predefinedSlotTypeOptionsTable = pgTable("predefined_slot_type_options", {
+  id: serial("id").primaryKey(),
+  predefinedSlotId: integer("predefined_slot_id").notNull().references(() => predefinedSlotsTable.id, { onDelete: "cascade" }),
+  ingredientTypeId: integer("ingredient_type_id").notNull().references(() => ingredientTypesTable.id, { onDelete: "cascade" }),
+  isDefault: boolean("is_default").notNull().default(false),
+  sortOrder: integer("sort_order").notNull().default(0),
+});
+
+export const predefinedSlotVolumesTable = pgTable("predefined_slot_volumes", {
+  id: serial("id").primaryKey(),
+  predefinedSlotId: integer("predefined_slot_id").notNull().references(() => predefinedSlotsTable.id, { onDelete: "cascade" }),
+  typeVolumeId: integer("type_volume_id").notNull().references(() => ingredientTypeVolumesTable.id, { onDelete: "cascade" }),
+  processedQty: numeric("processed_qty", { precision: 10, scale: 4 }),
+  producedQty: numeric("produced_qty", { precision: 10, scale: 4 }),
+  unit: text("unit"),
+  extraCost: numeric("extra_cost", { precision: 8, scale: 4 }),
+  isDefault: boolean("is_default").notNull().default(false),
+  isEnabled: boolean("is_enabled").notNull().default(true),
+  sortOrder: integer("sort_order").notNull().default(0),
+});
+
 export const insertDrinkSchema = createInsertSchema(drinksTable).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertDrinkCategorySchema = createInsertSchema(drinkCategoriesTable).omit({ id: true, createdAt: true });
 export const insertDrinkSlotSchema = createInsertSchema(drinkIngredientSlotsTable).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertDrinkSlotVolumeSchema = createInsertSchema(drinkSlotVolumesTable).omit({ id: true });
 export const insertDrinkSlotTypeOptionSchema = createInsertSchema(drinkSlotTypeOptionsTable).omit({ id: true });
+export const insertPredefinedSlotSchema = createInsertSchema(predefinedSlotsTable).omit({ id: true, createdAt: true, updatedAt: true });
 
 export type InsertDrink = typeof drinksTable.$inferInsert;
 export type InsertDrinkCategory = typeof drinkCategoriesTable.$inferInsert;
@@ -94,3 +128,7 @@ export type DrinkCategory = typeof drinkCategoriesTable.$inferSelect;
 export type DrinkIngredientSlot = typeof drinkIngredientSlotsTable.$inferSelect;
 export type DrinkSlotVolume = typeof drinkSlotVolumesTable.$inferSelect;
 export type DrinkSlotTypeOption = typeof drinkSlotTypeOptionsTable.$inferSelect;
+
+export type PredefinedSlot = typeof predefinedSlotsTable.$inferSelect;
+export type PredefinedSlotTypeOption = typeof predefinedSlotTypeOptionsTable.$inferSelect;
+export type PredefinedSlotVolume = typeof predefinedSlotVolumesTable.$inferSelect;

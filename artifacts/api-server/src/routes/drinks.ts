@@ -15,6 +15,9 @@ import {
   ingredientTypeVolumesTable,
   ingredientVolumesTable,
   ingredientCategoriesTable,
+  predefinedSlotsTable,
+  predefinedSlotTypeOptionsTable,
+  predefinedSlotVolumesTable,
 } from "@workspace/db";
 import { serializeDates } from "../lib/serialize";
 
@@ -99,19 +102,49 @@ async function buildDrinkDetail(drinkId: number) {
 
   const slotsWithDetails = await Promise.all(
     slots.map(async (slot) => {
+      // ── Template Resolution ──────────────────────────────────────────────
+      let effectiveSlot = { ...slot };
+      let templateTypeOptions: any[] = [];
+      let templateVolumes: any[] = [];
+
+      if (slot.predefinedSlotId) {
+        const [template] = await db.select().from(predefinedSlotsTable).where(eq(predefinedSlotsTable.id, slot.predefinedSlotId));
+        if (template) {
+          // Inherit template properties (can be overridden by slot fields if they were non-null, but here we assume template wins for standard fields)
+          effectiveSlot.slotLabel = template.slotLabel;
+          effectiveSlot.isRequired = template.isRequired;
+          effectiveSlot.isDynamic = template.isDynamic;
+          effectiveSlot.affectsCupSize = slot.affectsCupSize ?? template.affectsCupSize;
+          
+          templateTypeOptions = await db.select().from(predefinedSlotTypeOptionsTable)
+            .where(eq(predefinedSlotTypeOptionsTable.predefinedSlotId, template.id));
+          templateVolumes = await db.select().from(predefinedSlotVolumesTable)
+            .where(eq(predefinedSlotVolumesTable.predefinedSlotId, template.id));
+        }
+      }
+
       // ── New-style slot: check for multi-type options first ────────────────
       const typeOptions = await db.select().from(drinkSlotTypeOptionsTable)
         .where(eq(drinkSlotTypeOptionsTable.slotId, slot.id))
         .orderBy(drinkSlotTypeOptionsTable.sortOrder);
 
-      // Multi-type OR single-type (fall back to ingredientTypeId on slot)
-      const effectiveTypeOptions = typeOptions.length > 0
-        ? typeOptions
-        : slot.ingredientTypeId
-          ? [{ id: 0, slotId: slot.id, ingredientTypeId: slot.ingredientTypeId, isDefault: true, sortOrder: 0 }]
-          : [];
+      // Multi-type OR template-based OR single-type
+      let effectiveTypeOptions = typeOptions;
+      
+      // If we have a template but no drink-specific options yet, 
+      // or if we want to show all template options as available for selection:
+      // Actually, for the API response, we return what is ACTIVE.
+      // If it's a template, we only show those in typeOptions (whitelisted).
+      
+      if (effectiveTypeOptions.length === 0 && !slot.predefinedSlotId && slot.ingredientTypeId) {
+        effectiveTypeOptions = [{ id: 0, slotId: slot.id, ingredientTypeId: slot.ingredientTypeId, isDefault: true, sortOrder: 0 }];
+      }
 
-      if (effectiveTypeOptions.length > 0) {
+      if (effectiveTypeOptions.length > 0 || (slot.predefinedSlotId && templateTypeOptions.length > 0)) {
+        // Resolve Type Options
+        // If it's a template, we might want to return ALL template options but marked as enabled/disabled?
+        // No, POS usually only wants enabled ones. Admin will fetch template separately.
+        
         const typeOptionsWithVolumes = await Promise.all(
           effectiveTypeOptions.map(async (to) => {
             const [ingType] = await db.select().from(ingredientTypesTable)
@@ -120,7 +153,42 @@ async function buildDrinkDetail(drinkId: number) {
               ? await db.select().from(ingredientCategoriesTable)
                   .where(eq(ingredientCategoriesTable.id, ingType.categoryId))
               : [null];
-            const volumes = await buildTypeVolumes(to.ingredientTypeId, slot.id);
+              
+            // Volumes: merge slot-level overrides with template-level defaults or global type defaults
+            const globalTypeVolumes = await db.select().from(ingredientTypeVolumesTable)
+              .where(eq(ingredientTypeVolumesTable.ingredientTypeId, to.ingredientTypeId))
+              .orderBy(ingredientTypeVolumesTable.sortOrder);
+              
+            const [typeDef] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, to.ingredientTypeId));
+            const allSlotVols = await db.select().from(drinkSlotVolumesTable).where(eq(drinkSlotVolumesTable.slotId, slot.id));
+            const slotVolumeMap = new Map(allSlotVols.map((sv) => [sv.typeVolumeId, sv]));
+            const templateVolumeMap = new Map(templateVolumes.map((tv) => [tv.typeVolumeId, tv]));
+
+            const volIds = globalTypeVolumes.map((tv) => tv.volumeId);
+            const volRows = volIds.length > 0 ? await db.select().from(ingredientVolumesTable).where(inArray(ingredientVolumesTable.id, volIds)) : [];
+            const volMap = new Map(volRows.map((v) => [v.id, v]));
+
+            const volumes = globalTypeVolumes.map((tv) => {
+              const override = slotVolumeMap.get(tv.id);
+              const templateDef = templateVolumeMap.get(tv.id);
+              const vol = volMap.get(tv.volumeId);
+              
+              return {
+                id: tv.id,
+                volumeId: tv.volumeId,
+                volumeName: vol?.name ?? "",
+                processedQty: parseFloat(override?.processedQty ?? templateDef?.processedQty ?? tv.processedQty ?? vol?.processedQty ?? "0"),
+                producedQty: parseFloat(override?.producedQty ?? templateDef?.producedQty ?? tv.producedQty ?? vol?.producedQty ?? "0"),
+                unit: override?.unit ?? templateDef?.unit ?? tv.unit ?? vol?.unit ?? "ml",
+                extraCost: parseFloat(override?.extraCost ?? templateDef?.extraCost ?? tv.extraCost),
+                isDefault: override?.isDefault ?? templateDef?.isDefault ?? tv.isDefault,
+                isEnabled: override?.isEnabled ?? templateDef?.isEnabled ?? true,
+                sortOrder: override?.sortOrder ?? templateDef?.sortOrder ?? tv.sortOrder,
+                affectsCupSize: typeDef?.affectsCupSize ?? true,
+                hasSlotOverride: !!override,
+              };
+            }).filter((v) => v.isEnabled);
+
             return {
               typeOptionId: to.id,
               ingredientTypeId: to.ingredientTypeId,
@@ -134,7 +202,7 @@ async function buildDrinkDetail(drinkId: number) {
         );
 
         return {
-          ...slot,
+          ...effectiveSlot,
           slotStyle: "typed" as const,
           typeOptions: typeOptionsWithVolumes,
           // Legacy compat fields
@@ -145,7 +213,7 @@ async function buildDrinkDetail(drinkId: number) {
       }
 
       // ── Old-style slot: ingredientId set ─────────────────────────────────
-      if (!slot.ingredientId) return { ...slot, slotStyle: "legacy" as const, ingredient: null, volumes: [] };
+      if (!slot.ingredientId) return { ...effectiveSlot, slotStyle: "legacy" as const, ingredient: null, volumes: [] };
 
       const [ingredient] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, slot.ingredientId));
       const options = await db
@@ -189,7 +257,7 @@ async function buildDrinkDetail(drinkId: number) {
       );
 
       return {
-        ...slot,
+        ...effectiveSlot,
         slotStyle: "legacy" as const,
         ingredient: ingredient ? {
           ...ingredient,
@@ -215,44 +283,70 @@ async function computeDefaultPrice(drinkId: number, basePrice: number): Promise<
   const slots = await db
     .select()
     .from(drinkIngredientSlotsTable)
-    .where(eq(drinkIngredientSlotsTable.drinkId, drinkId));
+    .where(eq(drinkIngredientSlotsTable.drinkId, drinkId))
+    .orderBy(drinkIngredientSlotsTable.sortOrder);
 
   let extras = 0;
   for (const slot of slots) {
-    if (slot.ingredientTypeId) {
-      // New-style: find the default type volume (with slot override if any)
-      const typeVolumes = await db.select().from(ingredientTypeVolumesTable)
-        .where(eq(ingredientTypeVolumesTable.ingredientTypeId, slot.ingredientTypeId))
-        .orderBy(ingredientTypeVolumesTable.sortOrder);
-      const slotVolumes = await db.select().from(drinkSlotVolumesTable)
-        .where(eq(drinkSlotVolumesTable.slotId, slot.id));
-      const slotVolumeMap = new Map(slotVolumes.map((sv) => [sv.typeVolumeId, sv]));
+    if (slot.isDynamic) continue;
 
-      // Find default volume
-      const defaultTv = typeVolumes.find((tv) => {
+    // 1. Resolve Type Selection
+    const drinkTypeOptions = await db.select().from(drinkSlotTypeOptionsTable)
+      .where(eq(drinkSlotTypeOptionsTable.slotId, slot.id));
+    
+    let templateTypeOptions: any[] = [];
+    if (slot.predefinedSlotId) {
+      templateTypeOptions = await db.select().from(predefinedSlotTypeOptionsTable)
+        .where(eq(predefinedSlotTypeOptionsTable.predefinedSlotId, slot.predefinedSlotId));
+    }
+
+    const typeOptions = drinkTypeOptions.length > 0 ? drinkTypeOptions : templateTypeOptions;
+    let defaultTypeSelection = typeOptions.find(to => to.isDefault) ?? typeOptions[0];
+    let effectiveTypeId = defaultTypeSelection?.ingredientTypeId ?? slot.ingredientTypeId;
+
+    // 2. Resolve Volume/Cost
+    if (effectiveTypeId) {
+      const globalTypeVolumes = await db.select().from(ingredientTypeVolumesTable)
+        .where(eq(ingredientTypeVolumesTable.ingredientTypeId, effectiveTypeId))
+        .orderBy(ingredientTypeVolumesTable.sortOrder);
+      
+      const slotVolumes = await db.select().from(drinkSlotVolumesTable).where(eq(drinkSlotVolumesTable.slotId, slot.id));
+      
+      let templateVolumes: any[] = [];
+      if (slot.predefinedSlotId) {
+        templateVolumes = await db.select().from(predefinedSlotVolumesTable)
+          .where(eq(predefinedSlotVolumesTable.predefinedSlotId, slot.predefinedSlotId));
+      }
+
+      const slotVolumeMap = new Map(slotVolumes.map((sv) => [sv.typeVolumeId, sv]));
+      const templateVolumeMap = new Map(templateVolumes.map((tv) => [tv.typeVolumeId, tv]));
+
+      const defaultTv = globalTypeVolumes.find((tv) => {
         const sv = slotVolumeMap.get(tv.id);
-        return sv ? sv.isDefault : tv.isDefault;
-      }) ?? typeVolumes[0];
+        const tvDef = templateVolumeMap.get(tv.id);
+        return sv ? sv.isDefault : (tvDef ? tvDef.isDefault : tv.isDefault);
+      }) ?? globalTypeVolumes[0];
 
       if (defaultTv) {
         const sv = slotVolumeMap.get(defaultTv.id);
-        extras += parseFloat(sv?.extraCost ?? defaultTv.extraCost);
+        const tvDef = templateVolumeMap.get(defaultTv.id);
+        extras += parseFloat(sv?.extraCost ?? tvDef?.extraCost ?? defaultTv.extraCost);
       }
-      continue;
-    }
-
-    if (!slot.defaultOptionId) continue;
-    const [option] = await db.select().from(ingredientOptionsTable).where(eq(ingredientOptionsTable.id, slot.defaultOptionId));
-    if (!option) continue;
-
-    if (option.linkedIngredientId) {
-      const linkedOpts = await db.select().from(ingredientOptionsTable)
-        .where(eq(ingredientOptionsTable.ingredientId, option.linkedIngredientId))
-        .orderBy(ingredientOptionsTable.sortOrder);
-      const subDefault = linkedOpts.find((o) => o.isDefault) ?? linkedOpts[0];
-      if (subDefault) extras += parseFloat(subDefault.extraCost);
-    } else {
-      extras += parseFloat(option.extraCost);
+    } 
+    // Legacy support (old-style slots)
+    else if (slot.defaultOptionId) {
+      const [option] = await db.select().from(ingredientOptionsTable).where(eq(ingredientOptionsTable.id, slot.defaultOptionId));
+      if (option) {
+        if (option.linkedIngredientId) {
+          const linkedOpts = await db.select().from(ingredientOptionsTable)
+            .where(eq(ingredientOptionsTable.ingredientId, option.linkedIngredientId))
+            .orderBy(ingredientOptionsTable.sortOrder);
+          const subDefault = linkedOpts.find((o) => o.isDefault) ?? linkedOpts[0];
+          if (subDefault) extras += parseFloat(subDefault.extraCost);
+        } else {
+          extras += parseFloat(option.extraCost);
+        }
+      }
     }
   }
 
@@ -457,6 +551,7 @@ router.put("/drinks/:id/slots", async (req, res): Promise<void> => {
         baristaSortOrder: s.baristaSortOrder ?? s.sortOrder ?? 1,
         customerSortOrder: s.customerSortOrder ?? s.sortOrder ?? 1,
         affectsCupSize: s.affectsCupSize ?? null,
+        predefinedSlotId: s.predefinedSlotId ?? null,
       }))
     ).returning();
 

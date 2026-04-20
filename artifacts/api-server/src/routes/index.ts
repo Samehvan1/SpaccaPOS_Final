@@ -8,6 +8,7 @@ import stockRouter from "./stock";
 import dashboardRouter from "./dashboard";
 import catalogRouter from "./catalog";
 import drinkCategoriesRouter from "./drink-categories";
+import predefinedSlotsRouter from "./predefined-slots";
 import { addSseClient } from "../lib/sse";
 
 const router: IRouter = Router();
@@ -21,6 +22,7 @@ router.use(stockRouter);
 router.use(dashboardRouter);
 router.use(catalogRouter);
 router.use(drinkCategoriesRouter);
+router.use(predefinedSlotsRouter);
 
 // Server-Sent Events endpoint for real-time order push
 router.get("/events", (req, res) => {

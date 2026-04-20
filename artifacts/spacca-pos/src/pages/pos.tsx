@@ -941,7 +941,7 @@ function DrinkCard({ drink, onClick }: { drink: Drink; onClick: () => void }) {
       </div>
       {/* Two-line label */}
       <div className="flex flex-col items-center px-2 py-1.5 border-t bg-slate-100/5 shrink-0">
-        <span className="font-semibold text-[10px] sm:text-xs text-white leading-tight line-clamp-2 w-full text-center">{drink.name}</span>
+        <span className="font-semibold text-[10px] sm:text-xs leading-tight line-clamp-2 w-full text-center">{drink.name}</span>
         <span className="text-[10px] sm:text-xs text-primary font-bold leading-tight">{fmt((drink as any).defaultPrice ?? drink.basePrice)}</span>
       </div>
     </button>
