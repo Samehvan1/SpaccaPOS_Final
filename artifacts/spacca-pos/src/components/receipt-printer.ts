@@ -9,6 +9,7 @@ function fmt(n: number) {
 interface Customization {
   slotLabel: string;
   optionLabel: string;
+  baristaSortOrder?: number | null;
 }
 
 interface OrderItem {
@@ -121,8 +122,12 @@ export function printAgentReceipts(order: CompletedOrder) {
     const copies: string[] = [];
     for (let q = 0; q < item.quantity; q++) {
       ticketNum++;
-      const customs = item.customizations.length
-        ? item.customizations.map(c =>
+      const filteredCustoms = (item.customizations ?? [])
+        .filter(c => (c.baristaSortOrder ?? 1) > 0)
+        .sort((a, b) => (a.baristaSortOrder ?? 1) - (b.baristaSortOrder ?? 1));
+
+      const customs = filteredCustoms.length
+        ? filteredCustoms.map(c =>
             `<div class="row"><span class="label" style="color:#555">${c.slotLabel}</span><span class="value bold">${c.optionLabel}</span></div>`
           ).join("")
         : `<div class="indent" style="color:#aaa">No customizations</div>`;

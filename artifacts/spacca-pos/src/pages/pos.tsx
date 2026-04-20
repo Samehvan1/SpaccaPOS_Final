@@ -674,8 +674,8 @@ export default function PosTerminal() {
             ) : (
               <div className="space-y-5">
                 {(drinkDetail?.slots as any[])
-                  ?.filter(s => (s.customerSortOrder ?? s.sortOrder ?? 0) >= 0)
-                  ?.sort((a, b) => (a.customerSortOrder ?? a.sortOrder ?? 0) - (b.customerSortOrder ?? b.sortOrder ?? 0))
+                  ?.filter(s => (s.customerSortOrder ?? s.sortOrder ?? 1) > 0)
+                  ?.sort((a, b) => (a.customerSortOrder ?? a.sortOrder ?? 1) - (b.customerSortOrder ?? b.sortOrder ?? 1))
                   ?.map(slot => {
                   // ── Typed (catalog) slot: two-level — type option → volume ──
                   if (slot.slotStyle === "typed") {
