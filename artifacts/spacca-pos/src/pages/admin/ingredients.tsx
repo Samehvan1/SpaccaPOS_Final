@@ -330,7 +330,9 @@ function TypesTab({ inventoryItems }: { inventoryItems: Ingredient[] }) {
     } catch { toast({ variant: "destructive", title: "Failed to update default" }); }
   };
 
-  const availableVolumesToAdd = allVolumes.filter(v => v.name && !typeVolumes.some(tv => tv.volumeId === v.id));
+  const availableVolumesToAdd = allVolumes
+    .filter(v => v.name && !typeVolumes.some(tv => tv.volumeId === v.id))
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   const filteredTypes = types.filter(t => {
     if (filterCategory !== "all" && String(t.categoryId) !== filterCategory) return false;

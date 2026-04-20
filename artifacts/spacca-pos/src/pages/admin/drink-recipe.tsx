@@ -856,8 +856,10 @@ export default function DrinkRecipe() {
                             <SelectValue placeholder={slot.typeOptions.length === 0 ? "Pick a type to add…" : "Add another type option…"} />
                           </SelectTrigger>
                           <SelectContent position="popper" side="bottom" sideOffset={4} className="max-h-[60vh] overflow-y-auto">
-                            {categories.map(cat => {
-                              const catTypes = (typesByCategory.get(cat.id) ?? []).filter(t => !slot.typeOptions.some(to => to.ingredientTypeId === t.id));
+                            {categories.slice().sort((a, b) => a.name.localeCompare(b.name)).map(cat => {
+                              const catTypes = (typesByCategory.get(cat.id) ?? [])
+                                .filter(t => !slot.typeOptions.some(to => to.ingredientTypeId === t.id))
+                                .sort((a, b) => a.name.localeCompare(b.name));
                               if (catTypes.length === 0) return null;
                               return (
                                 <SelectGroup key={cat.id}>
@@ -890,7 +892,7 @@ export default function DrinkRecipe() {
                         >
                           <SelectTrigger><SelectValue placeholder="Pick ingredient…" /></SelectTrigger>
                           <SelectContent position="popper" side="bottom" sideOffset={4} className="max-h-[60vh] overflow-y-auto">
-                            {(ingredients ?? []).map(i => (
+                            {(ingredients ?? []).slice().sort((a, b) => a.name.localeCompare(b.name)).map(i => (
                               <SelectItem key={i.id} value={i.id.toString()}>
                                 <span className="capitalize">[{i.ingredientType}]</span> {i.name}
                               </SelectItem>
