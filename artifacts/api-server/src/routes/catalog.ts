@@ -278,4 +278,90 @@ router.delete("/catalog/volumes/:id", async (req, res): Promise<void> => {
   }
 });
 
+// ── Overrides Management ──────────────────────────────────────────────────
+
+/**
+ * Lists drinks that have overrides for a specific ingredient type.
+ * Overrides are records in drink_slot_volumes linked to type volumes of this type.
+ */
+router.get("/catalog/types/:id/overrides", async (req, res): Promise<void> => {
+  const typeId = parseInt(req.params.id);
+  const { drinksTable } = await import("@workspace/db");
+  
+  const overrides = await db.select({
+    drinkId: drinksTable.id,
+    drinkName: drinksTable.name,
+    slotId: drinkIngredientSlotsTable.id,
+    slotLabel: drinkIngredientSlotsTable.slotLabel,
+  })
+  .from(drinkSlotVolumesTable)
+  .innerJoin(ingredientTypeVolumesTable, eq(drinkSlotVolumesTable.typeVolumeId, ingredientTypeVolumesTable.id))
+  .innerJoin(drinkIngredientSlotsTable, eq(drinkSlotVolumesTable.slotId, drinkIngredientSlotsTable.id))
+  .innerJoin(drinksTable, eq(drinkIngredientSlotsTable.drinkId, drinksTable.id))
+  .where(eq(ingredientTypeVolumesTable.ingredientTypeId, typeId))
+  .groupBy(drinksTable.id, drinksTable.name, drinkIngredientSlotsTable.id, drinkIngredientSlotsTable.slotLabel);
+
+  // Group by drink to make it cleaner for the UI
+  const grouped = overrides.reduce((acc: any[], curr) => {
+    let drink = acc.find(d => d.id === curr.drinkId);
+    if (!drink) {
+      drink = { id: curr.drinkId, name: curr.drinkName, slots: [] };
+      acc.push(drink);
+    }
+    drink.slots.push({ id: curr.slotId, label: curr.slotLabel });
+    return acc;
+  }, []);
+
+  res.json(grouped);
+});
+
+/**
+ * Resets (deletes) overrides for a specific ingredient type on a specific drink.
+ */
+router.post("/catalog/types/:id/sync", async (req, res): Promise<void> => {
+  const typeId = parseInt(req.params.id);
+  const { drinkId } = req.body;
+  
+  if (!drinkId) {
+    res.status(400).json({ error: "drinkId required" });
+    return;
+  }
+
+  // Find type volume IDs for this type
+  const typeVols = await db.select({ id: ingredientTypeVolumesTable.id })
+    .from(ingredientTypeVolumesTable)
+    .where(eq(ingredientTypeVolumesTable.ingredientTypeId, typeId));
+  
+  if (typeVols.length === 0) {
+    res.sendStatus(204);
+    return;
+  }
+
+  const tvIds = typeVols.map(tv => tv.id);
+
+  // Find slot IDs for this drink that reference this type (directly or via options)
+  const slots = await db.select({ id: drinkIngredientSlotsTable.id })
+    .from(drinkIngredientSlotsTable)
+    .where(eq(drinkIngredientSlotsTable.drinkId, drinkId));
+  
+  if (slots.length === 0) {
+    res.sendStatus(204);
+    return;
+  }
+
+  const slotIds = slots.map(s => s.id);
+
+  // Delete overrides in drink_slot_volumes
+  // Actually, we should only delete overrides WHERE typeVolumeId belongs to this type
+  const { inArray, and } = await import("drizzle-orm");
+  
+  await db.delete(drinkSlotVolumesTable)
+    .where(and(
+      inArray(drinkSlotVolumesTable.slotId, slotIds),
+      inArray(drinkSlotVolumesTable.typeVolumeId, tvIds)
+    ));
+
+  res.sendStatus(204);
+});
+
 export default router;

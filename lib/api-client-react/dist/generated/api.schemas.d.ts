@@ -13,6 +13,8 @@ export declare const UserRole: {
     readonly admin: "admin";
     readonly barista: "barista";
     readonly frontdesk: "frontdesk";
+    readonly cashier: "cashier";
+    readonly pickup: "pickup";
 };
 export interface User {
     id: number;
@@ -24,6 +26,48 @@ export interface LoginBody {
 }
 export interface LoginResponse {
     user: User;
+}
+export type UserDetailRole = (typeof UserDetailRole)[keyof typeof UserDetailRole];
+export declare const UserDetailRole: {
+    readonly admin: "admin";
+    readonly barista: "barista";
+    readonly frontdesk: "frontdesk";
+    readonly cashier: "cashier";
+    readonly pickup: "pickup";
+};
+export interface UserDetail {
+    id: number;
+    name: string;
+    role: UserDetailRole;
+    pin?: string;
+    createdAt?: string;
+    updatedAt?: string;
+}
+export type CreateUserBodyRole = (typeof CreateUserBodyRole)[keyof typeof CreateUserBodyRole];
+export declare const CreateUserBodyRole: {
+    readonly admin: "admin";
+    readonly barista: "barista";
+    readonly frontdesk: "frontdesk";
+    readonly cashier: "cashier";
+    readonly pickup: "pickup";
+};
+export interface CreateUserBody {
+    name: string;
+    role: CreateUserBodyRole;
+    pin: string;
+}
+export type UpdateUserBodyRole = (typeof UpdateUserBodyRole)[keyof typeof UpdateUserBodyRole];
+export declare const UpdateUserBodyRole: {
+    readonly admin: "admin";
+    readonly barista: "barista";
+    readonly frontdesk: "frontdesk";
+    readonly cashier: "cashier";
+    readonly pickup: "pickup";
+};
+export interface UpdateUserBody {
+    name?: string;
+    role?: UpdateUserBodyRole;
+    pin?: string;
 }
 export type IngredientIngredientType = (typeof IngredientIngredientType)[keyof typeof IngredientIngredientType];
 export declare const IngredientIngredientType: {
@@ -241,6 +285,11 @@ export interface OrderItemCustomization {
     /** @nullable */
     baristaSortOrder?: number | null;
 }
+export type OrderItemStatus = (typeof OrderItemStatus)[keyof typeof OrderItemStatus];
+export declare const OrderItemStatus: {
+    readonly pending: "pending";
+    readonly ready: "ready";
+};
 export interface OrderItem {
     id: number;
     orderId: number;
@@ -251,11 +300,13 @@ export interface OrderItem {
     lineTotal: number;
     /** @nullable */
     specialNotes: string | null;
+    status: OrderItemStatus;
     customizations: OrderItemCustomization[];
 }
 export type OrderStatus = (typeof OrderStatus)[keyof typeof OrderStatus];
 export declare const OrderStatus: {
     readonly pending: "pending";
+    readonly paid: "paid";
     readonly in_progress: "in_progress";
     readonly ready: "ready";
     readonly completed: "completed";
@@ -322,6 +373,7 @@ export interface CreateOrderBody {
 export type UpdateOrderStatusBodyStatus = (typeof UpdateOrderStatusBodyStatus)[keyof typeof UpdateOrderStatusBodyStatus];
 export declare const UpdateOrderStatusBodyStatus: {
     readonly pending: "pending";
+    readonly paid: "paid";
     readonly in_progress: "in_progress";
     readonly ready: "ready";
     readonly completed: "completed";
@@ -390,6 +442,31 @@ export interface TopDrink {
     totalSold: number;
     totalRevenue: number;
 }
+export type SettingScope = (typeof SettingScope)[keyof typeof SettingScope];
+export declare const SettingScope: {
+    readonly global: "global";
+    readonly user: "user";
+};
+export interface Setting {
+    key: string;
+    value: string;
+    scope: SettingScope;
+    /** @nullable */
+    userId?: number | null;
+}
+export type UpdateSettingsBodyScope = (typeof UpdateSettingsBodyScope)[keyof typeof UpdateSettingsBodyScope];
+export declare const UpdateSettingsBodyScope: {
+    readonly global: "global";
+    readonly user: "user";
+};
+export type UpdateSettingsBodySettingsItem = {
+    key: string;
+    value: string;
+};
+export interface UpdateSettingsBody {
+    scope: UpdateSettingsBodyScope;
+    settings: UpdateSettingsBodySettingsItem[];
+}
 export type ListDrinksParams = {
     category?: string;
     active?: boolean;
@@ -410,6 +487,16 @@ export type ListStockMovementsParams = {
     limit?: number;
     offset?: number;
 };
+export type GetActiveOrdersParams = {
+    status?: GetActiveOrdersStatus;
+};
+export type GetActiveOrdersStatus = (typeof GetActiveOrdersStatus)[keyof typeof GetActiveOrdersStatus];
+export declare const GetActiveOrdersStatus: {
+    readonly pending: "pending";
+    readonly paid: "paid";
+    readonly in_progress: "in_progress";
+    readonly ready: "ready";
+};
 export type GetSalesByCategoryParams = {
     days?: number;
     startDate?: string;
@@ -419,19 +506,11 @@ export type GetTopDrinksParams = {
     limit?: number;
 };
 export type GetSettingsParams = {
-    scope?: "global" | "user";
+    scope?: GetSettingsScope;
 };
-export interface Setting {
-    key: string;
-    value: string;
-    scope: "global" | "user";
-    userId: number | null;
-}
-export interface UpdateSettingsBody {
-    scope: "global" | "user";
-    settings: {
-        key: string;
-        value: string;
-    }[];
-}
+export type GetSettingsScope = (typeof GetSettingsScope)[keyof typeof GetSettingsScope];
+export declare const GetSettingsScope: {
+    readonly global: "global";
+    readonly user: "user";
+};
 //# sourceMappingURL=api.schemas.d.ts.map

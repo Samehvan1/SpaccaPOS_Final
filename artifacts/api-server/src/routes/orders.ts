@@ -84,6 +84,7 @@ async function buildOrderDetail(orderId: number) {
     changeDue: order.changeDue ? parseFloat(order.changeDue) : null,
     items: items.map((item) => ({
       ...item,
+      status: item.status as "pending" | "ready",
       unitPrice: parseFloat(item.unitPrice),
       lineTotal: parseFloat(item.lineTotal),
       customizations: (custByItem.get(item.id) ?? []).map((c) => ({
@@ -411,6 +412,60 @@ router.patch("/orders/:id/status", async (req, res): Promise<void> => {
       changeDue: order.changeDue ? parseFloat(order.changeDue) : null,
     }))
   );
+});
+
+router.patch("/order-items/:id/ready", async (req, res): Promise<void> => {
+  const itemId = parseInt(req.params.id);
+  if (isNaN(itemId)) {
+    res.status(400).json({ error: "Invalid item ID" });
+    return;
+  }
+
+  const [item] = await db
+    .update(orderItemsTable)
+    .set({ status: "ready" })
+    .where(eq(orderItemsTable.id, itemId))
+    .returning();
+
+  if (!item) {
+    res.status(404).json({ error: "Item not found" });
+    return;
+  }
+
+  // Check if all items in the order are ready
+  const allItems = await db
+    .select()
+    .from(orderItemsTable)
+    .where(eq(orderItemsTable.orderId, item.orderId));
+
+  const allReady = allItems.every((i) => i.status === "ready");
+  
+  const [order] = await db
+    .select()
+    .from(ordersTable)
+    .where(eq(ordersTable.id, item.orderId));
+
+  if (order) {
+    let nextStatus = order.status;
+    if (allReady) {
+      nextStatus = "ready";
+    } else if (order.status === "paid" || order.status === "pending") {
+      // If at least one item is ready, it's definitely in progress now
+      nextStatus = "in_progress";
+    }
+
+    if (nextStatus !== order.status) {
+      await db
+        .update(ordersTable)
+        .set({ status: nextStatus })
+        .where(eq(ordersTable.id, order.id));
+      
+      broadcastEvent("order_updated", { orderId: order.id, status: nextStatus });
+    }
+  }
+
+  const detail = await buildOrderDetail(item.orderId);
+  res.json(GetOrderResponse.parse(serializeDates(detail)));
 });
 
 export default router;

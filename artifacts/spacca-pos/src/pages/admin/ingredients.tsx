@@ -13,7 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft, Plus, Search, Edit, Trash2, Link2, Star, StarOff, ChevronRight, Package, Tag, Layers, FlaskConical, Check, X, Droplet, Droplets } from "lucide-react";
+import { ArrowLeft, Plus, Search, Edit, Trash2, Link2, Star, StarOff, ChevronRight, Package, Tag, Layers, FlaskConical, Check, X, Droplet, Droplets, RefreshCw, CheckCircle2 } from "lucide-react";
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 
@@ -49,6 +49,11 @@ type TypeVolume = {
   isDefault: boolean;
   sortOrder: number;
   volume?: Volume | null;
+};
+type DrinkOverride = {
+  id: number;
+  name: string;
+  slots: { id: number; label: string }[];
 };
 
 const api = async (path: string, opts?: RequestInit) => {
@@ -192,10 +197,15 @@ function TypesTab({ inventoryItems }: { inventoryItems: Ingredient[] }) {
   const [addingProducedQty, setAddingProducedQty] = useState("0");
   const [addingIsDefault, setAddingIsDefault] = useState(false);
 
+  const [editingExtraCost, setEditingExtraCost] = useState("0");
   const [editingTypeVolId, setEditingTypeVolId] = useState<number | null>(null);
   const [editingProcessedQty, setEditingProcessedQty] = useState("0");
   const [editingProducedQty, setEditingProducedQty] = useState("0");
-  const [editingExtraCost, setEditingExtraCost] = useState("0");
+
+  // Overrides state
+  const [drinkOverrides, setDrinkOverrides] = useState<DrinkOverride[]>([]);
+  const [loadingOverrides, setLoadingOverrides] = useState(false);
+  const [syncing, setSyncing] = useState<number | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -273,11 +283,17 @@ function TypesTab({ inventoryItems }: { inventoryItems: Ingredient[] }) {
   const openVolumes = async (t: IngType) => {
     setVolTypeId(t.id); setVolTypeName(t.name);
     setLoadingTypeVols(true); setAddingVolumeId(""); setAddingExtraCost("0"); setAddingIsDefault(false);
-    try { setTypeVolumes(await api(`/api/catalog/types/${t.id}/volumes`)); }
-    catch { toast({ variant: "destructive", title: "Failed to load volumes" }); }
+    setDrinkOverrides([]);
+    try { 
+      const [vols, overrides] = await Promise.all([
+        api(`/api/catalog/types/${t.id}/volumes`),
+        api(`/api/catalog/types/${t.id}/overrides`),
+      ]);
+      setTypeVolumes(vols); 
+      setDrinkOverrides(overrides);
+    }
+    catch { toast({ variant: "destructive", title: "Failed to load details" }); }
     finally { setLoadingTypeVols(false); }
-    setAddingVolumeId(""); setAddingExtraCost("0"); setAddingIsDefault(false);
-    loadTypeVolumes(t.id);
   };
 
   const handleAddTypeVolume = async () => {
@@ -316,11 +332,23 @@ function TypesTab({ inventoryItems }: { inventoryItems: Ingredient[] }) {
   };
 
   const handleDeleteTypeVolume = async (tvId: number) => {
+    if (!confirm("Remove this volume from this type?")) return;
     try {
       await api(`/api/catalog/type-volumes/${tvId}`, { method: "DELETE" });
       loadTypeVolumes(volTypeId!);
       toast({ title: "Volume removed" });
     } catch { toast({ variant: "destructive", title: "Failed to remove volume" }); }
+  };
+
+  const handleSyncDrink = async (drinkId: number) => {
+    if (!volTypeId) return;
+    setSyncing(drinkId);
+    try {
+      await api(`/api/catalog/types/${volTypeId}/sync`, { method: "POST", body: JSON.stringify({ drinkId }) });
+      setDrinkOverrides(prev => prev.filter(d => d.id !== drinkId));
+      toast({ title: "Drink synced", description: "Overrides reset to global defaults." });
+    } catch { toast({ variant: "destructive", title: "Sync failed" }); }
+    finally { setSyncing(null); }
   };
 
   const handleToggleDefault = async (tv: TypeVolume) => {
@@ -661,6 +689,52 @@ function TypesTab({ inventoryItems }: { inventoryItems: Ingredient[] }) {
             {availableVolumesToAdd.length === 0 && typeVolumes.length > 0 && (
               <p className="text-xs text-muted-foreground text-center">All volumes added. Create more in the Volumes tab.</p>
             )}
+
+            {/* Overrides Section */}
+            <Separator className="my-4" />
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="text-sm font-semibold">Drink Overrides</h4>
+                  <p className="text-[10px] text-muted-foreground">Drinks with custom price/volume for this type.</p>
+                </div>
+                <Badge variant="outline">{drinkOverrides.length}</Badge>
+              </div>
+
+              {loadingTypeVols ? (
+                <div className="text-sm text-center py-4 text-muted-foreground">Loading…</div>
+              ) : drinkOverrides.length === 0 ? (
+                <div className="text-xs text-center py-6 text-muted-foreground bg-muted/10 rounded-md border border-dashed flex flex-col items-center gap-2">
+                  <CheckCircle2 className="h-8 w-8 text-green-500/20" />
+                  All drinks are synced to global defaults.
+                </div>
+              ) : (
+                <div className="border rounded-md divide-y overflow-hidden">
+                  {drinkOverrides.map(drink => (
+                    <div key={drink.id} className="flex items-center justify-between p-3 bg-card hover:bg-muted/5 transition-colors">
+                      <div className="min-w-0">
+                        <div className="text-sm font-medium">{drink.name}</div>
+                        <div className="text-[10px] text-muted-foreground flex flex-wrap gap-1 mt-1">
+                          {drink.slots.map(s => (
+                            <span key={s.id} className="bg-muted px-1.5 py-0.5 rounded">Slot: {s.label}</span>
+                          ))}
+                        </div>
+                      </div>
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="h-8 gap-2 text-xs" 
+                        onClick={() => handleSyncDrink(drink.id)}
+                        disabled={syncing === drink.id}
+                      >
+                        <RefreshCw className={`h-3 w-3 ${syncing === drink.id ? 'animate-spin' : ''}`} />
+                        {syncing === drink.id ? "Syncing..." : "Sync to Default"}
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </DialogContent>
       </Dialog>

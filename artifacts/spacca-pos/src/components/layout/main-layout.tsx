@@ -6,6 +6,7 @@ import { useSettings } from "@/hooks/use-settings";
 import { useOrderEvents } from "@/hooks/use-order-events";
 import { Coffee, ChefHat, LayoutDashboard, LogOut, Sun, Moon, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -16,7 +17,7 @@ export function MainLayout({ children }: MainLayoutProps) {
   const { theme, toggleTheme } = useTheme();
   const { autoPrintCustomer, setAutoPrintCustomer, autoPrintAgent, setAutoPrintAgent } = useSettings();
   useOrderEvents(!!user);
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
 
   if (!user) return <>{children}</>;
 
@@ -49,7 +50,7 @@ export function MainLayout({ children }: MainLayoutProps) {
               variant="ghost"
               size="sm"
               className="gap-2 text-muted-foreground hover:text-foreground"
-              onClick={logout}
+              onClick={() => { logout(); setLocation("/login"); }}
             >
               <LogOut className="h-4 w-4" />
               <span className="hidden sm:inline">Logout</span>
@@ -65,7 +66,54 @@ export function MainLayout({ children }: MainLayoutProps) {
     );
   }
 
-  // ─── Normal sidebar layout (admin / barista) ───────────────────────────────
+  // ─── Specialized roles (no sidebar) ───────────────────────────────────────
+  const specializedRoles = ["barista", "cashier", "pickup"];
+  if (specializedRoles.includes(user?.role || "")) {
+    return (
+      <div className="flex flex-col h-screen w-full bg-background overflow-hidden relative">
+        {/* Slim actions bar for specialized roles */}
+        <header className="flex items-center justify-between px-6 py-2 border-b bg-card shrink-0 shadow-sm z-40">
+           <div className="flex items-center gap-3">
+              <span className="font-black text-xl tracking-tighter text-primary select-none">SPACCA</span>
+              <Badge variant="outline" className="capitalize px-2.5 py-0 rounded-full bg-primary/5 text-primary border-primary/20 font-bold text-[10px] tracking-tight">
+                {user.role}
+              </Badge>
+           </div>
+           
+           <div className="flex items-center gap-2">
+             <div className="hidden sm:flex flex-col items-end mr-2">
+               <span className="text-xs font-bold leading-none">{user.name}</span>
+               <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Terminal ID: {user.id}</span>
+             </div>
+             
+             <Button 
+               variant="ghost" 
+               size="sm" 
+               onClick={toggleTheme} 
+               className="rounded-lg h-8 w-8 p-0 text-muted-foreground hover:text-foreground hover:bg-muted"
+             >
+                {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+             </Button>
+             
+             <Button 
+               variant="ghost" 
+               size="sm" 
+               onClick={() => { logout(); setLocation("/login"); }}
+               className="rounded-lg h-8 w-8 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+             >
+                <LogOut className="h-4 w-4" />
+             </Button>
+           </div>
+        </header>
+
+        <main className="flex-1 flex flex-col h-full overflow-hidden relative">
+          {children}
+        </main>
+      </div>
+    );
+  }
+
+  // ─── Front-desk kiosk layout ───────────────────────────────────────────────
   const navItems = [
     { href: "/pos", label: "POS", icon: Coffee },
     { href: "/kitchen", label: "Kitchen", icon: ChefHat },
@@ -149,7 +197,7 @@ export function MainLayout({ children }: MainLayoutProps) {
           <Button
             variant="ghost"
             className="w-full justify-center md:justify-start gap-2 text-muted-foreground hover:text-foreground"
-            onClick={logout}
+            onClick={() => { logout(); setLocation("/login"); }}
           >
             <LogOut className="h-5 w-5" />
             <span className="hidden md:inline">Logout</span>

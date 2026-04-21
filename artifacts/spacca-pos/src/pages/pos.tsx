@@ -394,23 +394,7 @@ export default function PosTerminal() {
     mutation: {
       onSuccess: (data) => {
         setCompletedOrder(data);
-        
-        // Handle Auto-Print
-        if (autoPrintCustomer) {
-          printCustomerReceipt(data);
-        }
-        if (autoPrintAgent) {
-          printAgentReceipts(data);
-        }
-
-        // Only show receipt options dialog if at least one print was NOT automatic
-        if (autoPrintCustomer && autoPrintAgent) {
-          setIsReceiptOpen(false);
-          toast({ title: "Order Complete", description: "Receipts printed automatically." });
-        } else {
-          setIsReceiptOpen(true);
-        }
-
+        setIsReceiptOpen(true);
         setCart([]);
         setIsCartOpen(false);
         setIsCheckoutOpen(false);

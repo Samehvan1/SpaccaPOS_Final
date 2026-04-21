@@ -40,22 +40,40 @@ export default defineConfig({
         name: 'Spacca POS',
         short_name: 'Spacca',
         description: 'Premium Point of Sale and Kitchen Management System',
-        theme_color: '#000000',
-        background_color: '#ffffff',
+        theme_color: '#080808',
+        background_color: '#080808',
         display: 'standalone',
         orientation: 'landscape',
         icons: [
           {
-            src: 'favicon.svg',
+            src: '/favicon.svg',
             sizes: '192x192',
             type: 'image/svg+xml',
+            purpose: 'any maskable',
           },
           {
-            src: 'favicon.svg',
+            src: '/favicon.svg',
             sizes: '512x512',
             type: 'image/svg+xml',
+            purpose: 'any maskable',
           },
         ],
+        shortcuts: [
+          {
+            name: 'Cashier Terminal',
+            short_name: 'Cashier',
+            description: 'Open the Cashier Approval Dashboard',
+            url: '/cashier',
+            icons: [{ src: '/favicon.svg', sizes: '192x192' }]
+          },
+          {
+            name: 'Pickup Dashboard',
+            short_name: 'Pickup',
+            description: 'Open the Order Pickup Dashboard',
+            url: '/pickup',
+            icons: [{ src: '/favicon.svg', sizes: '192x192' }]
+          }
+        ]
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],

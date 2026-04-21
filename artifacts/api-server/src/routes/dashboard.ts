@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { gte, sql, eq, and, lte } from "drizzle-orm";
+import { gte, sql, eq, and, lte, inArray } from "drizzle-orm";
 import { serializeDates } from "../lib/serialize";
 import {
   db,
@@ -71,13 +71,16 @@ router.get("/dashboard/summary", async (_req, res): Promise<void> => {
   );
 });
 
-router.get("/dashboard/active-orders", async (_req, res): Promise<void> => {
+router.get("/dashboard/active-orders", async (req, res): Promise<void> => {
+  const { status } = req.query;
+  const statusList = status 
+    ? [status] 
+    : ["pending", "paid", "in_progress", "ready"];
+
   const activeOrders = await db
     .select()
     .from(ordersTable)
-    .where(
-      sql`${ordersTable.status} IN ('pending', 'in_progress')`
-    )
+    .where(inArray(ordersTable.status, statusList as any))
     .orderBy(ordersTable.createdAt);
 
   const allUsers = await db.select().from(usersTable);
@@ -104,6 +107,7 @@ router.get("/dashboard/active-orders", async (_req, res): Promise<void> => {
 
           return {
             ...item,
+            status: item.status as "pending" | "ready",
             kitchenStation: drink?.kitchenStation ?? "main",
             unitPrice: parseFloat(item.unitPrice),
             lineTotal: parseFloat(item.lineTotal),

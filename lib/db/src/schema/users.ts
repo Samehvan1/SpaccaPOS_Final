@@ -5,7 +5,7 @@ import { z } from "zod/v4";
 export const usersTable = pgTable("users", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
-  role: text("role", { enum: ["admin", "barista", "frontdesk"] }).notNull().default("barista"),
+  role: text("role", { enum: ["admin", "barista", "frontdesk", "cashier", "pickup"] }).notNull().default("barista"),
   pin: varchar("pin", { length: 6 }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),

@@ -10,7 +10,7 @@ export const ordersTable = pgTable("orders", {
   orderNumber: text("order_number").notNull().unique(),
   baristaId: integer("barista_id").notNull().references(() => usersTable.id),
   status: text("status", {
-    enum: ["pending", "in_progress", "ready", "completed", "cancelled"],
+    enum: ["pending", "paid", "in_progress", "ready", "completed", "cancelled"],
   }).notNull().default("pending"),
   customerName: text("customer_name"),
   subtotal: numeric("subtotal", { precision: 8, scale: 2 }).notNull(),
@@ -34,6 +34,7 @@ export const orderItemsTable = pgTable("order_items", {
   lineTotal: numeric("line_total", { precision: 8, scale: 2 }).notNull(),
   specialNotes: text("special_notes"),
   kitchenStation: text("kitchen_station").notNull().default("main"),
+  status: text("status", { enum: ["pending", "ready"] }).notNull().default("pending"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

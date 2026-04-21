@@ -15,6 +15,8 @@ export const UserRole = {
   admin: "admin",
   barista: "barista",
   frontdesk: "frontdesk",
+  cashier: "cashier",
+  pickup: "pickup",
 } as const;
 
 export interface User {
@@ -29,6 +31,60 @@ export interface LoginBody {
 
 export interface LoginResponse {
   user: User;
+}
+
+export type UserDetailRole =
+  (typeof UserDetailRole)[keyof typeof UserDetailRole];
+
+export const UserDetailRole = {
+  admin: "admin",
+  barista: "barista",
+  frontdesk: "frontdesk",
+  cashier: "cashier",
+  pickup: "pickup",
+} as const;
+
+export interface UserDetail {
+  id: number;
+  name: string;
+  role: UserDetailRole;
+  pin?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export type CreateUserBodyRole =
+  (typeof CreateUserBodyRole)[keyof typeof CreateUserBodyRole];
+
+export const CreateUserBodyRole = {
+  admin: "admin",
+  barista: "barista",
+  frontdesk: "frontdesk",
+  cashier: "cashier",
+  pickup: "pickup",
+} as const;
+
+export interface CreateUserBody {
+  name: string;
+  role: CreateUserBodyRole;
+  pin: string;
+}
+
+export type UpdateUserBodyRole =
+  (typeof UpdateUserBodyRole)[keyof typeof UpdateUserBodyRole];
+
+export const UpdateUserBodyRole = {
+  admin: "admin",
+  barista: "barista",
+  frontdesk: "frontdesk",
+  cashier: "cashier",
+  pickup: "pickup",
+} as const;
+
+export interface UpdateUserBody {
+  name?: string;
+  role?: UpdateUserBodyRole;
+  pin?: string;
 }
 
 export type IngredientIngredientType =
@@ -275,6 +331,14 @@ export interface OrderItemCustomization {
   baristaSortOrder?: number | null;
 }
 
+export type OrderItemStatus =
+  (typeof OrderItemStatus)[keyof typeof OrderItemStatus];
+
+export const OrderItemStatus = {
+  pending: "pending",
+  ready: "ready",
+} as const;
+
 export interface OrderItem {
   id: number;
   orderId: number;
@@ -285,6 +349,7 @@ export interface OrderItem {
   lineTotal: number;
   /** @nullable */
   specialNotes: string | null;
+  status: OrderItemStatus;
   customizations: OrderItemCustomization[];
 }
 
@@ -292,6 +357,7 @@ export type OrderStatus = (typeof OrderStatus)[keyof typeof OrderStatus];
 
 export const OrderStatus = {
   pending: "pending",
+  paid: "paid",
   in_progress: "in_progress",
   ready: "ready",
   completed: "completed",
@@ -372,6 +438,7 @@ export type UpdateOrderStatusBodyStatus =
 
 export const UpdateOrderStatusBodyStatus = {
   pending: "pending",
+  paid: "paid",
   in_progress: "in_progress",
   ready: "ready",
   completed: "completed",
@@ -454,6 +521,39 @@ export interface TopDrink {
   totalRevenue: number;
 }
 
+export type SettingScope = (typeof SettingScope)[keyof typeof SettingScope];
+
+export const SettingScope = {
+  global: "global",
+  user: "user",
+} as const;
+
+export interface Setting {
+  key: string;
+  value: string;
+  scope: SettingScope;
+  /** @nullable */
+  userId?: number | null;
+}
+
+export type UpdateSettingsBodyScope =
+  (typeof UpdateSettingsBodyScope)[keyof typeof UpdateSettingsBodyScope];
+
+export const UpdateSettingsBodyScope = {
+  global: "global",
+  user: "user",
+} as const;
+
+export type UpdateSettingsBodySettingsItem = {
+  key: string;
+  value: string;
+};
+
+export interface UpdateSettingsBody {
+  scope: UpdateSettingsBodyScope;
+  settings: UpdateSettingsBodySettingsItem[];
+}
+
 export type ListDrinksParams = {
   category?: string;
   active?: boolean;
@@ -478,6 +578,20 @@ export type ListStockMovementsParams = {
   offset?: number;
 };
 
+export type GetActiveOrdersParams = {
+  status?: GetActiveOrdersStatus;
+};
+
+export type GetActiveOrdersStatus =
+  (typeof GetActiveOrdersStatus)[keyof typeof GetActiveOrdersStatus];
+
+export const GetActiveOrdersStatus = {
+  pending: "pending",
+  paid: "paid",
+  in_progress: "in_progress",
+  ready: "ready",
+} as const;
+
 export type GetSalesByCategoryParams = {
   days?: number;
   startDate?: string;
@@ -489,20 +603,13 @@ export type GetTopDrinksParams = {
 };
 
 export type GetSettingsParams = {
-  scope?: "global" | "user";
+  scope?: GetSettingsScope;
 };
 
-export interface Setting {
-  key: string;
-  value: string;
-  scope: "global" | "user";
-  userId: number | null;
-}
+export type GetSettingsScope =
+  (typeof GetSettingsScope)[keyof typeof GetSettingsScope];
 
-export interface UpdateSettingsBody {
-  scope: "global" | "user";
-  settings: {
-    key: string;
-    value: string;
-  }[];
-}
+export const GetSettingsScope = {
+  global: "global",
+  user: "user",
+} as const;

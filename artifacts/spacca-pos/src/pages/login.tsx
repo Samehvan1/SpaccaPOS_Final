@@ -16,9 +16,29 @@ export default function Login() {
 
   useEffect(() => {
     if (user) {
-      setLocation(from);
+      if (params.has("from")) {
+        setLocation(params.get("from")!);
+      } else {
+        // Role-based default redirection
+        switch (user.role) {
+          case "barista":
+            setLocation("/kitchen");
+            break;
+          case "cashier":
+            setLocation("/cashier");
+            break;
+          case "pickup":
+            setLocation("/pickup");
+            break;
+          case "admin":
+            setLocation("/admin");
+            break;
+          default:
+            setLocation("/pos");
+        }
+      }
     }
-  }, [user, setLocation, from]);
+  }, [user, setLocation]);
 
   const loginMutation = useBaristaLogin({
     mutation: {

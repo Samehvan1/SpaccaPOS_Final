@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { OrderItemCustomization } from "./orderItemCustomization";
+import type { OrderItemStatus } from "./orderItemStatus";
 
 export interface OrderItem {
   id: number;
@@ -17,5 +18,6 @@ export interface OrderItem {
   lineTotal: number;
   /** @nullable */
   specialNotes: string | null;
+  status: OrderItemStatus;
   customizations: OrderItemCustomization[];
 }

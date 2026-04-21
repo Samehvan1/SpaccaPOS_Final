@@ -1,5 +1,5 @@
 import type { QueryKey, UseMutationOptions, UseMutationResult, UseQueryOptions, UseQueryResult } from "@tanstack/react-query";
-import type { CategorySales, CreateDrinkBody, CreateIngredientBody, CreateIngredientOptionBody, CreateOrderBody, DashboardSummary, Drink, DrinkDetail, GetSalesByCategoryParams, GetSettingsParams, GetTopDrinksParams, HealthStatus, Ingredient, IngredientDetail, IngredientOption, ListDrinksParams, ListIngredientsParams, ListOrdersParams, ListStockMovementsParams, LoginBody, LoginResponse, Order, OrderDetail, PriceBreakdown, PriceCalculationBody, RestockBody, Setting, StockAdjustmentBody, StockMovement, TopDrink, UpdateDrinkBody, UpdateIngredientBody, UpdateIngredientOptionBody, UpdateOrderStatusBody, UpdateSettingsBody, User } from "./api.schemas";
+import type { CategorySales, CreateDrinkBody, CreateIngredientBody, CreateIngredientOptionBody, CreateOrderBody, CreateUserBody, DashboardSummary, Drink, DrinkDetail, GetActiveOrdersParams, GetSalesByCategoryParams, GetSettingsParams, GetTopDrinksParams, HealthStatus, Ingredient, IngredientDetail, IngredientOption, ListDrinksParams, ListIngredientsParams, ListOrdersParams, ListStockMovementsParams, LoginBody, LoginResponse, Order, OrderDetail, PriceBreakdown, PriceCalculationBody, RestockBody, Setting, StockAdjustmentBody, StockMovement, TopDrink, UpdateDrinkBody, UpdateIngredientBody, UpdateIngredientOptionBody, UpdateOrderStatusBody, UpdateSettingsBody, UpdateUserBody, User, UserDetail } from "./api.schemas";
 import { customFetch } from "../custom-fetch";
 import type { ErrorType, BodyType } from "../custom-fetch";
 type AwaitedInput<T> = PromiseLike<T> | T;
@@ -593,6 +593,32 @@ export declare const useUpdateOrderStatus: <TError = ErrorType<unknown>, TContex
     data: BodyType<UpdateOrderStatusBody>;
 }, TContext>;
 /**
+ * @summary Mark a specific order item as ready
+ */
+export declare const getMarkOrderItemReadyUrl: (id: number) => string;
+export declare const markOrderItemReady: (id: number, options?: RequestInit) => Promise<Order>;
+export declare const getMarkOrderItemReadyMutationOptions: <TError = ErrorType<unknown>, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof markOrderItemReady>>, TError, {
+        id: number;
+    }, TContext>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseMutationOptions<Awaited<ReturnType<typeof markOrderItemReady>>, TError, {
+    id: number;
+}, TContext>;
+export type MarkOrderItemReadyMutationResult = NonNullable<Awaited<ReturnType<typeof markOrderItemReady>>>;
+export type MarkOrderItemReadyMutationError = ErrorType<unknown>;
+/**
+ * @summary Mark a specific order item as ready
+ */
+export declare const useMarkOrderItemReady: <TError = ErrorType<unknown>, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof markOrderItemReady>>, TError, {
+        id: number;
+    }, TContext>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseMutationResult<Awaited<ReturnType<typeof markOrderItemReady>>, TError, {
+    id: number;
+}, TContext>;
+/**
  * @summary List stock movements ledger
  */
 export declare const getListStockMovementsUrl: (params?: ListStockMovementsParams) => string;
@@ -666,12 +692,12 @@ export declare function useGetDashboardSummary<TData = Awaited<ReturnType<typeof
     queryKey: QueryKey;
 };
 /**
- * @summary Get active orders (pending + in_progress) for kitchen display
+ * @summary Get active orders for various screens
  */
-export declare const getGetActiveOrdersUrl: () => string;
-export declare const getActiveOrders: (options?: RequestInit) => Promise<OrderDetail[]>;
-export declare const getGetActiveOrdersQueryKey: () => readonly ["/api/dashboard/active-orders"];
-export declare const getGetActiveOrdersQueryOptions: <TData = Awaited<ReturnType<typeof getActiveOrders>>, TError = ErrorType<unknown>>(options?: {
+export declare const getGetActiveOrdersUrl: (params?: GetActiveOrdersParams) => string;
+export declare const getActiveOrders: (params?: GetActiveOrdersParams, options?: RequestInit) => Promise<OrderDetail[]>;
+export declare const getGetActiveOrdersQueryKey: (params?: GetActiveOrdersParams) => readonly ["/api/dashboard/active-orders", ...GetActiveOrdersParams[]];
+export declare const getGetActiveOrdersQueryOptions: <TData = Awaited<ReturnType<typeof getActiveOrders>>, TError = ErrorType<unknown>>(params?: GetActiveOrdersParams, options?: {
     query?: UseQueryOptions<Awaited<ReturnType<typeof getActiveOrders>>, TError, TData>;
     request?: SecondParameter<typeof customFetch>;
 }) => UseQueryOptions<Awaited<ReturnType<typeof getActiveOrders>>, TError, TData> & {
@@ -680,9 +706,9 @@ export declare const getGetActiveOrdersQueryOptions: <TData = Awaited<ReturnType
 export type GetActiveOrdersQueryResult = NonNullable<Awaited<ReturnType<typeof getActiveOrders>>>;
 export type GetActiveOrdersQueryError = ErrorType<unknown>;
 /**
- * @summary Get active orders (pending + in_progress) for kitchen display
+ * @summary Get active orders for various screens
  */
-export declare function useGetActiveOrders<TData = Awaited<ReturnType<typeof getActiveOrders>>, TError = ErrorType<unknown>>(options?: {
+export declare function useGetActiveOrders<TData = Awaited<ReturnType<typeof getActiveOrders>>, TError = ErrorType<unknown>>(params?: GetActiveOrdersParams, options?: {
     query?: UseQueryOptions<Awaited<ReturnType<typeof getActiveOrders>>, TError, TData>;
     request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & {
@@ -711,6 +737,113 @@ export declare function useGetLowStockIngredients<TData = Awaited<ReturnType<typ
 }): UseQueryResult<TData, TError> & {
     queryKey: QueryKey;
 };
+/**
+ * @summary List all users
+ */
+export declare const getListUsersUrl: () => string;
+export declare const listUsers: (options?: RequestInit) => Promise<UserDetail[]>;
+export declare const getListUsersQueryKey: () => readonly ["/api/users"];
+export declare const getListUsersQueryOptions: <TData = Awaited<ReturnType<typeof listUsers>>, TError = ErrorType<unknown>>(options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof listUsers>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseQueryOptions<Awaited<ReturnType<typeof listUsers>>, TError, TData> & {
+    queryKey: QueryKey;
+};
+export type ListUsersQueryResult = NonNullable<Awaited<ReturnType<typeof listUsers>>>;
+export type ListUsersQueryError = ErrorType<unknown>;
+/**
+ * @summary List all users
+ */
+export declare function useListUsers<TData = Awaited<ReturnType<typeof listUsers>>, TError = ErrorType<unknown>>(options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof listUsers>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+};
+/**
+ * @summary Create a new user
+ */
+export declare const getCreateUserUrl: () => string;
+export declare const createUser: (createUserBody: CreateUserBody, options?: RequestInit) => Promise<UserDetail>;
+export declare const getCreateUserMutationOptions: <TError = ErrorType<unknown>, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof createUser>>, TError, {
+        data: BodyType<CreateUserBody>;
+    }, TContext>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseMutationOptions<Awaited<ReturnType<typeof createUser>>, TError, {
+    data: BodyType<CreateUserBody>;
+}, TContext>;
+export type CreateUserMutationResult = NonNullable<Awaited<ReturnType<typeof createUser>>>;
+export type CreateUserMutationBody = BodyType<CreateUserBody>;
+export type CreateUserMutationError = ErrorType<unknown>;
+/**
+ * @summary Create a new user
+ */
+export declare const useCreateUser: <TError = ErrorType<unknown>, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof createUser>>, TError, {
+        data: BodyType<CreateUserBody>;
+    }, TContext>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseMutationResult<Awaited<ReturnType<typeof createUser>>, TError, {
+    data: BodyType<CreateUserBody>;
+}, TContext>;
+/**
+ * @summary Update a user
+ */
+export declare const getUpdateUserUrl: (id: number) => string;
+export declare const updateUser: (id: number, updateUserBody: UpdateUserBody, options?: RequestInit) => Promise<UserDetail>;
+export declare const getUpdateUserMutationOptions: <TError = ErrorType<unknown>, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof updateUser>>, TError, {
+        id: number;
+        data: BodyType<UpdateUserBody>;
+    }, TContext>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseMutationOptions<Awaited<ReturnType<typeof updateUser>>, TError, {
+    id: number;
+    data: BodyType<UpdateUserBody>;
+}, TContext>;
+export type UpdateUserMutationResult = NonNullable<Awaited<ReturnType<typeof updateUser>>>;
+export type UpdateUserMutationBody = BodyType<UpdateUserBody>;
+export type UpdateUserMutationError = ErrorType<unknown>;
+/**
+ * @summary Update a user
+ */
+export declare const useUpdateUser: <TError = ErrorType<unknown>, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof updateUser>>, TError, {
+        id: number;
+        data: BodyType<UpdateUserBody>;
+    }, TContext>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseMutationResult<Awaited<ReturnType<typeof updateUser>>, TError, {
+    id: number;
+    data: BodyType<UpdateUserBody>;
+}, TContext>;
+/**
+ * @summary Delete a user
+ */
+export declare const getDeleteUserUrl: (id: number) => string;
+export declare const deleteUser: (id: number, options?: RequestInit) => Promise<void>;
+export declare const getDeleteUserMutationOptions: <TError = ErrorType<unknown>, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof deleteUser>>, TError, {
+        id: number;
+    }, TContext>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseMutationOptions<Awaited<ReturnType<typeof deleteUser>>, TError, {
+    id: number;
+}, TContext>;
+export type DeleteUserMutationResult = NonNullable<Awaited<ReturnType<typeof deleteUser>>>;
+export type DeleteUserMutationError = ErrorType<unknown>;
+/**
+ * @summary Delete a user
+ */
+export declare const useDeleteUser: <TError = ErrorType<unknown>, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof deleteUser>>, TError, {
+        id: number;
+    }, TContext>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseMutationResult<Awaited<ReturnType<typeof deleteUser>>, TError, {
+    id: number;
+}, TContext>;
 /**
  * @summary Get sales grouped by drink category
  */

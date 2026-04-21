@@ -25,7 +25,7 @@ export const BaristaLoginResponse = zod.object({
   user: zod.object({
     id: zod.number(),
     name: zod.string(),
-    role: zod.enum(["admin", "barista", "frontdesk"]),
+    role: zod.enum(["admin", "barista", "frontdesk", "cashier", "pickup"]),
   }),
 });
 
@@ -35,7 +35,7 @@ export const BaristaLoginResponse = zod.object({
 export const GetMeResponse = zod.object({
   id: zod.number(),
   name: zod.string(),
-  role: zod.enum(["admin", "barista", "frontdesk"]),
+  role: zod.enum(["admin", "barista", "frontdesk", "cashier", "pickup"]),
 });
 
 /**
@@ -58,8 +58,6 @@ export const ListDrinksResponseItem = zod.object({
   prepTimeSeconds: zod.number(),
   cupSizeMl: zod.number().nullish(),
   kitchenStation: zod.string().optional(),
-  categoryId: zod.number().nullable().optional(),
-  sortOrder: zod.number().optional(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
@@ -92,8 +90,6 @@ export const CreateDrinkBody = zod.object({
       }),
     )
     .optional(),
-  categoryId: zod.number().nullable().optional(),
-  sortOrder: zod.number().optional(),
 });
 
 /**
@@ -116,8 +112,6 @@ export const GetDrinkResponse = zod
     prepTimeSeconds: zod.number(),
     cupSizeMl: zod.number().nullish(),
     kitchenStation: zod.string().optional(),
-    categoryId: zod.number().nullable().optional(),
-    sortOrder: zod.number().optional(),
     createdAt: zod.string(),
     updatedAt: zod.string(),
   })
@@ -157,8 +151,6 @@ export const UpdateDrinkBody = zod.object({
   isActive: zod.boolean().optional(),
   prepTimeSeconds: zod.number().optional(),
   kitchenStation: zod.string().optional(),
-  categoryId: zod.number().nullable().optional(),
-  sortOrder: zod.number().optional(),
 });
 
 export const UpdateDrinkResponse = zod.object({
@@ -173,8 +165,6 @@ export const UpdateDrinkResponse = zod.object({
   prepTimeSeconds: zod.number(),
   cupSizeMl: zod.number().nullish(),
   kitchenStation: zod.string().optional(),
-  categoryId: zod.number().nullable().optional(),
-  sortOrder: zod.number().optional(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
@@ -491,6 +481,7 @@ export const ListOrdersResponseItem = zod.object({
   baristaName: zod.string(),
   status: zod.enum([
     "pending",
+    "paid",
     "in_progress",
     "ready",
     "completed",
@@ -552,6 +543,7 @@ export const GetOrderResponse = zod
     baristaName: zod.string(),
     status: zod.enum([
       "pending",
+      "paid",
       "in_progress",
       "ready",
       "completed",
@@ -580,7 +572,7 @@ export const GetOrderResponse = zod
           unitPrice: zod.number(),
           lineTotal: zod.number(),
           specialNotes: zod.string().nullable(),
-          kitchenStation: zod.string().optional(),
+          status: zod.enum(["pending", "ready"]),
           customizations: zod.array(
             zod.object({
               id: zod.number(),
@@ -610,6 +602,7 @@ export const UpdateOrderStatusParams = zod.object({
 export const UpdateOrderStatusBody = zod.object({
   status: zod.enum([
     "pending",
+    "paid",
     "in_progress",
     "ready",
     "completed",
@@ -624,6 +617,39 @@ export const UpdateOrderStatusResponse = zod.object({
   baristaName: zod.string(),
   status: zod.enum([
     "pending",
+    "paid",
+    "in_progress",
+    "ready",
+    "completed",
+    "cancelled",
+  ]),
+  customerName: zod.string().nullable(),
+  subtotal: zod.number(),
+  discount: zod.number(),
+  total: zod.number(),
+  paymentMethod: zod.enum(["cash", "card", "wallet"]),
+  amountTendered: zod.number().nullable(),
+  changeDue: zod.number().nullable(),
+  notes: zod.string().nullable(),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+});
+
+/**
+ * @summary Mark a specific order item as ready
+ */
+export const MarkOrderItemReadyParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const MarkOrderItemReadyResponse = zod.object({
+  id: zod.number(),
+  orderNumber: zod.string(),
+  baristaId: zod.number(),
+  baristaName: zod.string(),
+  status: zod.enum([
+    "pending",
+    "paid",
     "in_progress",
     "ready",
     "completed",
@@ -690,8 +716,12 @@ export const GetDashboardSummaryResponse = zod.object({
 });
 
 /**
- * @summary Get active orders (pending + in_progress) for kitchen display
+ * @summary Get active orders for various screens
  */
+export const GetActiveOrdersQueryParams = zod.object({
+  status: zod.enum(["pending", "paid", "in_progress", "ready"]).optional(),
+});
+
 export const GetActiveOrdersResponseItem = zod
   .object({
     id: zod.number(),
@@ -700,6 +730,7 @@ export const GetActiveOrdersResponseItem = zod
     baristaName: zod.string(),
     status: zod.enum([
       "pending",
+      "paid",
       "in_progress",
       "ready",
       "completed",
@@ -728,7 +759,7 @@ export const GetActiveOrdersResponseItem = zod
           unitPrice: zod.number(),
           lineTotal: zod.number(),
           specialNotes: zod.string().nullable(),
-          kitchenStation: zod.string().optional(),
+          status: zod.enum(["pending", "ready"]),
           customizations: zod.array(
             zod.object({
               id: zod.number(),
@@ -779,6 +810,59 @@ export const GetLowStockIngredientsResponse = zod.array(
 );
 
 /**
+ * @summary List all users
+ */
+export const ListUsersResponseItem = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  role: zod.enum(["admin", "barista", "frontdesk", "cashier", "pickup"]),
+  pin: zod.string().optional(),
+  createdAt: zod.string().optional(),
+  updatedAt: zod.string().optional(),
+});
+export const ListUsersResponse = zod.array(ListUsersResponseItem);
+
+/**
+ * @summary Create a new user
+ */
+export const CreateUserBody = zod.object({
+  name: zod.string(),
+  role: zod.enum(["admin", "barista", "frontdesk", "cashier", "pickup"]),
+  pin: zod.string(),
+});
+
+/**
+ * @summary Update a user
+ */
+export const UpdateUserParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const UpdateUserBody = zod.object({
+  name: zod.string().optional(),
+  role: zod
+    .enum(["admin", "barista", "frontdesk", "cashier", "pickup"])
+    .optional(),
+  pin: zod.string().optional(),
+});
+
+export const UpdateUserResponse = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  role: zod.enum(["admin", "barista", "frontdesk", "cashier", "pickup"]),
+  pin: zod.string().optional(),
+  createdAt: zod.string().optional(),
+  updatedAt: zod.string().optional(),
+});
+
+/**
+ * @summary Delete a user
+ */
+export const DeleteUserParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+/**
  * @summary Get sales grouped by drink category
  */
 export const GetSalesByCategoryQueryParams = zod.object({
@@ -812,3 +896,39 @@ export const GetTopDrinksResponseItem = zod.object({
   totalRevenue: zod.number(),
 });
 export const GetTopDrinksResponse = zod.array(GetTopDrinksResponseItem);
+
+/**
+ * @summary Get application settings
+ */
+export const GetSettingsQueryParams = zod.object({
+  scope: zod.enum(["global", "user"]).optional(),
+});
+
+export const GetSettingsResponseItem = zod.object({
+  key: zod.string(),
+  value: zod.string(),
+  scope: zod.enum(["global", "user"]),
+  userId: zod.number().nullish(),
+});
+export const GetSettingsResponse = zod.array(GetSettingsResponseItem);
+
+/**
+ * @summary Update application settings
+ */
+export const UpdateSettingsBody = zod.object({
+  scope: zod.enum(["global", "user"]),
+  settings: zod.array(
+    zod.object({
+      key: zod.string(),
+      value: zod.string(),
+    }),
+  ),
+});
+
+export const UpdateSettingsResponseItem = zod.object({
+  key: zod.string(),
+  value: zod.string(),
+  scope: zod.enum(["global", "user"]),
+  userId: zod.number().nullish(),
+});
+export const UpdateSettingsResponse = zod.array(UpdateSettingsResponseItem);

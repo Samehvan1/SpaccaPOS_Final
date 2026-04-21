@@ -492,6 +492,25 @@ paths:
               schema:
                 $ref: "#/components/schemas/Order"
 
+  /order-items/{id}/ready:
+    patch:
+      operationId: markOrderItemReady
+      tags: [orders]
+      summary: Mark a specific order item as ready
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Item marked ready
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+
   /stock/movements:
     get:
       operationId: listStockMovements
@@ -556,7 +575,13 @@ paths:
     get:
       operationId: getActiveOrders
       tags: [dashboard]
-      summary: Get active orders (pending + in_progress) for kitchen display
+      summary: Get active orders for various screens
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [pending, paid, in_progress, ready]
       responses:
         "200":
           description: Active orders
@@ -581,6 +606,76 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Ingredient"
+
+  /users:
+    get:
+      operationId: listUsers
+      tags: [admin]
+      summary: List all users
+      responses:
+        "200":
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UserDetail"
+    post:
+      operationId: createUser
+      tags: [admin]
+      summary: Create a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUserBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserDetail"
+
+  /users/{id}:
+    patch:
+      operationId: updateUser
+      tags: [admin]
+      summary: Update a user
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserDetail"
+    delete:
+      operationId: deleteUser
+      tags: [admin]
+      summary: Delete a user
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
 
   /dashboard/sales-by-category:
     get:
@@ -691,7 +786,7 @@ components:
           type: string
         role:
           type: string
-          enum: [admin, barista, frontdesk]
+          enum: [admin, barista, frontdesk, cashier, pickup]
       required:
         - id
         - name
@@ -712,6 +807,53 @@ components:
           $ref: "#/components/schemas/User"
       required:
         - user
+
+    UserDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        role:
+          type: string
+          enum: [admin, barista, frontdesk, cashier, pickup]
+        pin:
+          type: string
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - name
+        - role
+
+    CreateUserBody:
+      type: object
+      properties:
+        name:
+          type: string
+        role:
+          type: string
+          enum: [admin, barista, frontdesk, cashier, pickup]
+        pin:
+          type: string
+      required:
+        - name
+        - role
+        - pin
+
+    UpdateUserBody:
+      type: object
+      properties:
+        name:
+          type: string
+        role:
+          type: string
+          enum: [admin, barista, frontdesk, cashier, pickup]
+        pin:
+          type: string
 
     Ingredient:
       type: object
@@ -1170,6 +1312,9 @@ components:
           type: number
         specialNotes:
           type: ["string", "null"]
+        status:
+          type: string
+          enum: [pending, ready]
         customizations:
           type: array
           items:
@@ -1183,6 +1328,7 @@ components:
         - unitPrice
         - lineTotal
         - specialNotes
+        - status
         - customizations
 
     Order:
@@ -1198,7 +1344,7 @@ components:
           type: string
         status:
           type: string
-          enum: [pending, in_progress, ready, completed, cancelled]
+          enum: [pending, paid, in_progress, ready, completed, cancelled]
         customerName:
           type: ["string", "null"]
         subtotal:
@@ -1305,7 +1451,7 @@ components:
       properties:
         status:
           type: string
-          enum: [pending, in_progress, ready, completed, cancelled]
+          enum: [pending, paid, in_progress, ready, completed, cancelled]
       required:
         - status
 

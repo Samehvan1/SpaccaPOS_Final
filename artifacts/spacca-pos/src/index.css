@@ -24,12 +24,45 @@
   --color-popover: hsl(var(--popover));
   --color-popover-foreground: hsl(var(--popover-foreground));
 
+  --color-neon-green: hsl(var(--primary));
+  /* --color-neon-cyan: #148f7a; */
+  --color-neon-cyan:#809080;
+  --color-neon-red: #FF3131;
+  --color-neon-yellow: #FFEA00;
+
   --font-sans: var(--app-font-sans);
   --font-mono: var(--app-font-mono);
 
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 12px);
+  --radius-3xl: calc(var(--radius) + 20px);
+}
+
+@utility glass-card {
+  @apply bg-background/60 backdrop-blur-xl border border-white/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.3)];
+}
+
+@utility glow-green {
+  @apply shadow-[0_0_15px_hsl(var(--primary)/0.3)] border-neon-green/50;
+}
+
+@utility glow-cyan {
+  @apply shadow-[0_0_15px_rgba(0,153,255,0.3)] border-neon-cyan/50;
+}
+
+@utility glow-red {
+  @apply shadow-[0_0_15px_rgba(255,49,49,0.3)] border-neon-red/50;
+}
+
+@utility neon-text-green {
+  @apply text-neon-green [text-shadow:0_0_8px_hsl(var(--primary)/0.5)];
+}
+
+@utility neon-text-cyan {
+  @apply text-neon-cyan [text-shadow:0_0_8px_hsl(var(--primary)/0.5)];
 }
 
 :root {

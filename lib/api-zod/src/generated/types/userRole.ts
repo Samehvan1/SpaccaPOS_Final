@@ -12,4 +12,6 @@ export const UserRole = {
   admin: "admin",
   barista: "barista",
   frontdesk: "frontdesk",
+  cashier: "cashier",
+  pickup: "pickup",
 } as const;

@@ -11,6 +11,7 @@ export type UpdateOrderStatusBodyStatus =
 
 export const UpdateOrderStatusBodyStatus = {
   pending: "pending",
+  paid: "paid",
   in_progress: "in_progress",
   ready: "ready",
   completed: "completed",
