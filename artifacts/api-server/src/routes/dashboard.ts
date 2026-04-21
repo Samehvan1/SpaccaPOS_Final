@@ -100,6 +100,9 @@ router.get("/dashboard/active-orders", async (req, res): Promise<void> => {
             .from(orderItemCustomizationsTable)
             .where(eq(orderItemCustomizationsTable.orderItemId, item.id));
 
+          // Debug kitchenStation directly from DB
+          console.log(`Item ID: ${item.id}, DB kitchenStation:`, (item as any).kitchenStation);
+
           return {
             ...item,
             status: item.status as "pending" | "ready",

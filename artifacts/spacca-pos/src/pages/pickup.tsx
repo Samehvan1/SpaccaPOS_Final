@@ -7,20 +7,23 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, Clock, Loader2, PackageCheck, Zap, History, User } from "lucide-react";
 import { useGetActiveOrders, useUpdateOrderStatus } from "@workspace/api-client-react";
+import { useOrderEvents } from "@/hooks/use-order-events";
 
 export default function PickupPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  useOrderEvents();
+
   const { data: readyOrders = [], isLoading: isLoadingReady } = useGetActiveOrders(
     { status: "ready" as any },
-    { query: { refetchInterval: 5000 } as any }
+    { query: { } as any }
   );
 
   // Fetch recently completed orders for the sidebar
   const { data: completedOrders = [] } = useGetActiveOrders(
     { status: "completed" as any },
-    { query: { refetchInterval: 10000 } as any }
+    { query: { } as any }
   );
 
   const { mutate: updateStatus, isPending } = useUpdateOrderStatus();

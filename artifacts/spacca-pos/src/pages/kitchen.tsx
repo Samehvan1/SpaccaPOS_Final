@@ -81,30 +81,79 @@ export default function KitchenDisplay() {
     }
   };
 
-  // Filter orders by station
-  const filteredOrders = (activeOrders as any[])?.filter(order => {
-    // Basic status exclusions
-    if (order.status === "ready" || order.status === "completed" || order.status === "cancelled") return false;
+  const knownStationValues = new Set(allStations.map(s => s.value).filter(v => v !== "all"));
 
-    // In Global View: show everything that is paid or in_progress (and pending if you want, but user said after payment)
-    if (activeStation === "all") {
-       return order.status !== "pending"; 
+  // Unified station matching helper
+  const stationMatches = (itemStation: string, targetValue: string) => {
+    if (targetValue === "all") return true;
+    if (!itemStation) return false;
+    const iSlug = slugifyStation(itemStation);
+    const tSlug = targetValue;
+    
+    if (!iSlug || !tSlug) return false;
+
+    // Get the label for the target station to allow matching against the display name
+    const targetLabel = allStations.find(s => s.value === targetValue)?.label?.toLowerCase() || "";
+    const itemLabel = itemStation.toLowerCase();
+    
+    // 1. Exact slug match
+    if (iSlug === tSlug) return true;
+
+    // 2. Exact label match
+    if (targetLabel === itemLabel) return true;
+
+    // 3. Substring slug/label match (more strict: min 3 chars and not generic keywords like 'bar')
+    const genericKeywords = ["bar", "station", "main"];
+    const isGeneric = (s: string) => genericKeywords.includes(s.toLowerCase());
+
+    if (iSlug.length >= 3 && !isGeneric(iSlug)) {
+      if (tSlug.includes(iSlug) || iSlug.includes(tSlug)) return true;
     }
     
-    // In Specific Station: show if order is paid/in_progress AND at least one item belongs to this station and is still pending
-      const hasItemsForThisStation = order.items.some((item: any) => {
-        const itemStation = slugifyStation(item.kitchenStation);
-        return itemStation === activeStation;
-      });
+    if (itemLabel.length >= 3 && !isGeneric(itemLabel)) {
+      if (targetLabel.includes(itemLabel) || itemLabel.includes(targetLabel)) return true;
+    }
 
-      return (order.status === "paid" || order.status === "in_progress") && hasItemsForThisStation;
+    // 4. Common synonyms & overrides (explicitly for Hot Bar)
+    const isHotStation = tSlug === "hot" || tSlug === "hot-bar";
+    const isPrimaryItem = iSlug === "main" || iSlug === "main-bar" || iSlug === "hot";
+    if (isHotStation && isPrimaryItem) return true;
+    
+    return false;
+  };
+
+  // Filter orders by station
+  const filteredOrders = (activeOrders as any[])?.filter(order => {
+    if (order.status === "ready" || order.status === "completed" || order.status === "cancelled") return false;
+
+    if (activeStation === "all") return order.status !== "pending";
+    
+    const isFirstStation = allStations[1]?.value === activeStation;
+
+    const hasItemsForThisStation = order.items.some((item: any) => {
+      if (stationMatches(item.kitchenStation, activeStation)) return true;
+      
+      // Fallback for "forgotten" items to the first bar
+      if (isFirstStation && !Array.from(knownStationValues).some(v => stationMatches(item.kitchenStation, v))) return true;
+
+      return false;
+    });
+
+    return (order.status === "paid" || order.status === "in_progress") && hasItemsForThisStation;
   }) ?? [];
 
   const stationCounts: Record<string, number> = {};
-  allStations.filter(s => s.value !== "all").forEach(s => {
+  allStations.filter(s => s.value !== "all").forEach((s, idx) => {
+    const isFirst = s.value === allStations[1]?.value;
+
     stationCounts[s.value] = activeOrders?.filter(o =>
       (o.status === "paid" || o.status === "in_progress") && 
-      o.items.some((item: any) => slugifyStation(item.kitchenStation) === s.value && item.status === "pending")
+      o.items.some((item: any) => {
+        const isMatched = stationMatches(item.kitchenStation, s.value);
+        const isUnknown = !Array.from(knownStationValues).some(v => stationMatches(item.kitchenStation, v));
+
+        return (isMatched || (isFirst && isUnknown)) && item.status === "pending";
+      })
     ).length ?? 0;
   });
 
@@ -192,7 +241,14 @@ export default function KitchenDisplay() {
                 <CardHeader className="p-4 pb-2 border-b border-white/5 space-y-3">
                   <div className="flex justify-between items-start">
                     <div>
-                      <CardTitle className="text-xl font-bold tracking-tighter group-hover:neon-text-cyan transition-all">#{order.orderNumber}</CardTitle>
+                      <div className="flex items-center gap-2">
+                        <CardTitle className="text-xl font-bold tracking-tighter group-hover:neon-text-cyan transition-all">#{order.orderNumber}</CardTitle>
+                        {Array.from(new Set(order.items.map((i:any) => i.kitchenStation))).length > 1 && (
+                          <Badge variant="outline" className="text-[8px] font-black px-1.5 py-0 rounded bg-neon-yellow/10 text-neon-yellow border-neon-yellow/20 uppercase tracking-widest">
+                            Mixed
+                          </Badge>
+                        )}
+                      </div>
                       <div className="text-[10px] font-bold text-muted-foreground mt-0.5 uppercase tracking-widest truncate max-w-[120px]">
                         {order.customerName || "Walk-in"}
                       </div>
@@ -212,8 +268,11 @@ export default function KitchenDisplay() {
                 <CardContent className="p-0">
                   <div className="divide-y divide-white/5">
                     {order.items.map((item: any) => {
-                      const itemStation = slugifyStation(item.kitchenStation);
-                      const isThisStation = activeStation === "all" || itemStation === activeStation;
+                      const isMatched = stationMatches(item.kitchenStation, activeStation);
+                      const isUnknown = !Array.from(knownStationValues).some(v => stationMatches(item.kitchenStation, v));
+                      const isFirstStation = allStations[1]?.value === activeStation;
+                      const isThisStation = activeStation === "all" || isMatched || (isFirstStation && isUnknown);
+
                       return (
                         <div
                           key={item.id}
@@ -267,11 +326,12 @@ export default function KitchenDisplay() {
                                   </Button>
                                 </>
                               ) : (
-                                !isThisStation && activeStation !== "all" && (
-                                  <div className="text-[10px] font-black text-neon-cyan/40 uppercase tracking-widest mt-2 flex items-center gap-2">
-                                    <Zap className="h-3 w-3" /> Assigned to: {stationLabel(itemStation)}
-                                  </div>
-                                )
+                                  !isThisStation && activeStation !== "all" && (
+                                    <div className="text-[10px] font-black text-neon-cyan/40 uppercase tracking-widest mt-2 flex items-center gap-2 italic">
+                                      <div className="w-1.5 h-1.5 rounded-full bg-neon-cyan/40 animate-pulse" />
+                                      In production at {stationLabel(slugifyStation(item.kitchenStation))}
+                                    </div>
+                                  )
                               )}
                             </div>
                           </div>

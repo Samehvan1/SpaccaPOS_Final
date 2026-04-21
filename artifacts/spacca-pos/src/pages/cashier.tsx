@@ -12,15 +12,18 @@ import { useSettings } from "@/hooks/use-settings";
 import { useGetActiveOrders, useUpdateOrderStatus } from "@workspace/api-client-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import PosTerminal from "./pos";
+import { useOrderEvents } from "@/hooks/use-order-events";
 
 export default function CashierPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { autoPrintCustomer, autoPrintAgent } = useSettings();
 
+  useOrderEvents();
+
   const { data: orders = [], isLoading } = useGetActiveOrders(
     { status: "pending" as any },
-    { query: { refetchInterval: 5000 } as any }
+    { query: { } as any }
   );
 
   const { mutate: updateStatus, isPending } = useUpdateOrderStatus();

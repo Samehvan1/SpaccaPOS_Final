@@ -25,8 +25,8 @@ var __commonJS = (cb, mod) => function __require2() {
   return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
 };
 var __export = (target, all) => {
-  for (var name2 in all)
-    __defProp(target, name2, { get: all[name2], enumerable: true });
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
 };
 var __copyProps = (to, from, except2, desc2) => {
   if (from && typeof from === "object" || typeof from === "function") {
@@ -473,9 +473,9 @@ var require_ms = __commonJS({
       }
       return ms + " ms";
     }
-    function plural(ms, msAbs, n, name2) {
+    function plural(ms, msAbs, n, name) {
       var isPlural = msAbs >= n * 1.5;
-      return Math.round(ms / n) + " " + name2 + (isPlural ? "s" : "");
+      return Math.round(ms / n) + " " + name + (isPlural ? "s" : "");
     }
   }
 });
@@ -628,14 +628,14 @@ var require_common = __commonJS({
         createDebug.enable("");
         return namespaces;
       }
-      function enabled(name2) {
+      function enabled(name) {
         for (const skip of createDebug.skips) {
-          if (matchesTemplate(name2, skip)) {
+          if (matchesTemplate(name, skip)) {
             return false;
           }
         }
         for (const ns of createDebug.names) {
-          if (matchesTemplate(name2, ns)) {
+          if (matchesTemplate(name, ns)) {
             return true;
           }
         }
@@ -951,15 +951,15 @@ var require_node = __commonJS({
       return "colors" in exports.inspectOpts ? Boolean(exports.inspectOpts.colors) : tty.isatty(process.stderr.fd);
     }
     function formatArgs(args) {
-      const { namespace: name2, useColors: useColors2 } = this;
+      const { namespace: name, useColors: useColors2 } = this;
       if (useColors2) {
         const c = this.color;
         const colorCode = "\x1B[3" + (c < 8 ? c : "8;5;" + c);
-        const prefix = `  ${colorCode};1m${name2} \x1B[0m`;
+        const prefix = `  ${colorCode};1m${name} \x1B[0m`;
         args[0] = prefix + args[0].split("\n").join("\n" + prefix);
         args.push(colorCode + "m+" + module.exports.humanize(this.diff) + "\x1B[0m");
       } else {
-        args[0] = getDate() + name2 + " " + args[0];
+        args[0] = getDate() + name + " " + args[0];
       }
     }
     function getDate() {
@@ -1082,8 +1082,8 @@ var require_depd = __commonJS({
       return deprecate;
     }
     function eehaslisteners(emitter, type) {
-      var count2 = typeof emitter.listenerCount !== "function" ? emitter.listeners(type).length : emitter.listenerCount(type);
-      return count2 > 0;
+      var count = typeof emitter.listenerCount !== "function" ? emitter.listeners(type).length : emitter.listenerCount(type);
+      return count > 0;
     }
     function isignored(namespace) {
       if (process.noDeprecation) {
@@ -1605,8 +1605,8 @@ var require_http_errors = __commonJS({
       inherits(HttpError, Error);
       return HttpError;
     }
-    function createClientErrorConstructor(HttpError, name2, code) {
-      var className = toClassName(name2);
+    function createClientErrorConstructor(HttpError, name, code) {
+      var className = toClassName(name);
       function ClientError(message) {
         var msg = message != null ? message : statuses.message[code];
         var err = new Error(msg);
@@ -1644,8 +1644,8 @@ var require_http_errors = __commonJS({
         return val instanceof Error && typeof val.expose === "boolean" && typeof val.statusCode === "number" && val.status === val.statusCode;
       };
     }
-    function createServerErrorConstructor(HttpError, name2, code) {
-      var className = toClassName(name2);
+    function createServerErrorConstructor(HttpError, name, code) {
+      var className = toClassName(name);
       function ServerError(message) {
         var msg = message != null ? message : statuses.message[code];
         var err = new Error(msg);
@@ -1672,33 +1672,33 @@ var require_http_errors = __commonJS({
       ServerError.prototype.expose = false;
       return ServerError;
     }
-    function nameFunc(func, name2) {
+    function nameFunc(func, name) {
       var desc2 = Object.getOwnPropertyDescriptor(func, "name");
       if (desc2 && desc2.configurable) {
-        desc2.value = name2;
+        desc2.value = name;
         Object.defineProperty(func, "name", desc2);
       }
     }
     function populateConstructorExports(exports2, codes, HttpError) {
       codes.forEach(function forEachCode(code) {
         var CodeError;
-        var name2 = toIdentifier(statuses.message[code]);
+        var name = toIdentifier(statuses.message[code]);
         switch (codeClass(code)) {
           case 400:
-            CodeError = createClientErrorConstructor(HttpError, name2, code);
+            CodeError = createClientErrorConstructor(HttpError, name, code);
             break;
           case 500:
-            CodeError = createServerErrorConstructor(HttpError, name2, code);
+            CodeError = createServerErrorConstructor(HttpError, name, code);
             break;
         }
         if (CodeError) {
           exports2[code] = CodeError;
-          exports2[name2] = CodeError;
+          exports2[name] = CodeError;
         }
       });
     }
-    function toClassName(name2) {
-      return name2.slice(-5) === "Error" ? name2 : name2 + "Error";
+    function toClassName(name) {
+      return name.slice(-5) === "Error" ? name : name + "Error";
     }
   }
 });
@@ -5984,14 +5984,14 @@ var require_content_type = __commonJS({
       }
       var string4 = type;
       if (parameters && typeof parameters === "object") {
-        var param2;
+        var param;
         var params = Object.keys(parameters).sort();
         for (var i = 0; i < params.length; i++) {
-          param2 = params[i];
-          if (!TOKEN_REGEXP.test(param2)) {
+          param = params[i];
+          if (!TOKEN_REGEXP.test(param)) {
             throw new TypeError("invalid parameter name");
           }
-          string4 += "; " + param2 + "=" + qstring(parameters[param2]);
+          string4 += "; " + param + "=" + qstring(parameters[param]);
         }
       }
       return string4;
@@ -15999,8 +15999,8 @@ var require_json = __commonJS({
         throw new SyntaxError("strict violation");
       } catch (e) {
         return normalizeJsonSyntaxError(e, {
-          message: e.message.replace(JSON_SYNTAX_REGEXP, function(placeholder2) {
-            return str.substring(index, index + placeholder2.length);
+          message: e.message.replace(JSON_SYNTAX_REGEXP, function(placeholder) {
+            return str.substring(index, index + placeholder.length);
           }),
           stack: e.stack
         });
@@ -16218,9 +16218,9 @@ var require_object_inspect = __commonJS({
         return inspect_(value, opts, depth + 1, seen);
       }
       if (typeof obj === "function" && !isRegExp(obj)) {
-        var name2 = nameOf(obj);
+        var name = nameOf(obj);
         var keys = arrObjKeys(obj, inspect);
-        return "[Function" + (name2 ? ": " + name2 : " (anonymous)") + "]" + (keys.length > 0 ? " { " + $join.call(keys, ", ") + " }" : "");
+        return "[Function" + (name ? ": " + name : " (anonymous)") + "]" + (keys.length > 0 ? " { " + $join.call(keys, ", ") + " }" : "");
       }
       if (isSymbol(obj)) {
         var symString = hasShammedSymbols ? $replace.call(String(obj), /^(Symbol\(.*\))_[^)]*$/, "$1") : symToString.call(obj);
@@ -16974,7 +16974,7 @@ var require_implementation = __commonJS({
     "use strict";
     var ERROR_MESSAGE = "Function.prototype.bind called on incompatible ";
     var toStr = Object.prototype.toString;
-    var max2 = Math.max;
+    var max = Math.max;
     var funcType = "[object Function]";
     var concatty = function concatty2(a, b) {
       var arr = [];
@@ -17026,7 +17026,7 @@ var require_implementation = __commonJS({
           concatty(args, arguments)
         );
       };
-      var boundLength = max2(0, target.length - args.length);
+      var boundLength = max(0, target.length - args.length);
       var boundArgs = [];
       for (var i = 0; i < boundLength; i++) {
         boundArgs[i] = "$" + i;
@@ -17183,8 +17183,8 @@ var require_get_intrinsic = __commonJS({
     var $URIError = require_uri();
     var abs = require_abs();
     var floor = require_floor();
-    var max2 = require_max();
-    var min2 = require_min();
+    var max = require_max();
+    var min = require_min();
     var pow = require_pow();
     var round = require_round();
     var sign = require_sign();
@@ -17297,8 +17297,8 @@ var require_get_intrinsic = __commonJS({
       "%Object.getPrototypeOf%": $ObjectGPO,
       "%Math.abs%": abs,
       "%Math.floor%": floor,
-      "%Math.max%": max2,
-      "%Math.min%": min2,
+      "%Math.max%": max,
+      "%Math.min%": min,
       "%Math.pow%": pow,
       "%Math.round%": round,
       "%Math.sign%": sign,
@@ -17313,26 +17313,26 @@ var require_get_intrinsic = __commonJS({
       }
     }
     var errorProto;
-    var doEval = function doEval2(name2) {
+    var doEval = function doEval2(name) {
       var value;
-      if (name2 === "%AsyncFunction%") {
+      if (name === "%AsyncFunction%") {
         value = getEvalledConstructor("async function () {}");
-      } else if (name2 === "%GeneratorFunction%") {
+      } else if (name === "%GeneratorFunction%") {
         value = getEvalledConstructor("function* () {}");
-      } else if (name2 === "%AsyncGeneratorFunction%") {
+      } else if (name === "%AsyncGeneratorFunction%") {
         value = getEvalledConstructor("async function* () {}");
-      } else if (name2 === "%AsyncGenerator%") {
+      } else if (name === "%AsyncGenerator%") {
         var fn = doEval2("%AsyncGeneratorFunction%");
         if (fn) {
           value = fn.prototype;
         }
-      } else if (name2 === "%AsyncIteratorPrototype%") {
+      } else if (name === "%AsyncIteratorPrototype%") {
         var gen = doEval2("%AsyncGenerator%");
         if (gen && getProto) {
           value = getProto(gen.prototype);
         }
       }
-      INTRINSICS[name2] = value;
+      INTRINSICS[name] = value;
       return value;
     };
     var LEGACY_ALIASES = {
@@ -17412,8 +17412,8 @@ var require_get_intrinsic = __commonJS({
       });
       return result;
     };
-    var getBaseIntrinsic = function getBaseIntrinsic2(name2, allowMissing) {
-      var intrinsicName = name2;
+    var getBaseIntrinsic = function getBaseIntrinsic2(name, allowMissing) {
+      var intrinsicName = name;
       var alias;
       if (hasOwn(LEGACY_ALIASES, intrinsicName)) {
         alias = LEGACY_ALIASES[intrinsicName];
@@ -17425,7 +17425,7 @@ var require_get_intrinsic = __commonJS({
           value = doEval(intrinsicName);
         }
         if (typeof value === "undefined" && !allowMissing) {
-          throw new $TypeError("intrinsic " + name2 + " exists, but is not available. Please file an issue!");
+          throw new $TypeError("intrinsic " + name + " exists, but is not available. Please file an issue!");
         }
         return {
           alias,
@@ -17433,19 +17433,19 @@ var require_get_intrinsic = __commonJS({
           value
         };
       }
-      throw new $SyntaxError("intrinsic " + name2 + " does not exist!");
+      throw new $SyntaxError("intrinsic " + name + " does not exist!");
     };
-    module.exports = function GetIntrinsic(name2, allowMissing) {
-      if (typeof name2 !== "string" || name2.length === 0) {
+    module.exports = function GetIntrinsic(name, allowMissing) {
+      if (typeof name !== "string" || name.length === 0) {
         throw new $TypeError("intrinsic name must be a non-empty string");
       }
       if (arguments.length > 1 && typeof allowMissing !== "boolean") {
         throw new $TypeError('"allowMissing" argument must be a boolean');
       }
-      if ($exec(/^%?[^%]*%?$/, name2) === null) {
+      if ($exec(/^%?[^%]*%?$/, name) === null) {
         throw new $SyntaxError("`%` may not be present anywhere but at the beginning and end of the intrinsic name");
       }
-      var parts = stringToPath(name2);
+      var parts = stringToPath(name);
       var intrinsicBaseName = parts.length > 0 ? parts[0] : "";
       var intrinsic = getBaseIntrinsic("%" + intrinsicBaseName + "%", allowMissing);
       var intrinsicRealName = intrinsic.name;
@@ -17473,7 +17473,7 @@ var require_get_intrinsic = __commonJS({
         } else if (value != null) {
           if (!(part in value)) {
             if (!allowMissing) {
-              throw new $TypeError("base intrinsic for " + name2 + " exists, but the property is not available.");
+              throw new $TypeError("base intrinsic for " + name + " exists, but the property is not available.");
             }
             return void undefined2;
           }
@@ -17506,12 +17506,12 @@ var require_call_bound = __commonJS({
     var GetIntrinsic = require_get_intrinsic();
     var callBindBasic = require_call_bind_apply_helpers();
     var $indexOf = callBindBasic([GetIntrinsic("%String.prototype.indexOf%")]);
-    module.exports = function callBoundIntrinsic(name2, allowMissing) {
+    module.exports = function callBoundIntrinsic(name, allowMissing) {
       var intrinsic = (
         /** @type {(this: unknown, ...args: unknown[]) => unknown} */
-        GetIntrinsic(name2, !!allowMissing)
+        GetIntrinsic(name, !!allowMissing)
       );
-      if (typeof intrinsic === "function" && $indexOf(name2, ".prototype.") > -1) {
+      if (typeof intrinsic === "function" && $indexOf(name, ".prototype.") > -1) {
         return callBindBasic(
           /** @type {const} */
           [intrinsic]
@@ -18653,14 +18653,14 @@ var require_urlencoded = __commonJS({
       };
     }
     function parameterCount(body, limit) {
-      let count2 = 0;
+      let count = 0;
       let index = -1;
       do {
-        count2++;
-        if (count2 > limit) return void 0;
+        count++;
+        if (count > limit) return void 0;
         index = body.indexOf("&", index + 1);
       } while (index !== -1);
-      return count2;
+      return count;
     }
   }
 });
@@ -18707,12 +18707,12 @@ var require_merge_descriptors = __commonJS({
       if (!source) {
         throw new TypeError("The `source` argument is required.");
       }
-      for (const name2 of Object.getOwnPropertyNames(source)) {
-        if (!overwrite && Object.hasOwn(destination, name2)) {
+      for (const name of Object.getOwnPropertyNames(source)) {
+        if (!overwrite && Object.hasOwn(destination, name)) {
           continue;
         }
-        const descriptor = Object.getOwnPropertyDescriptor(source, name2);
-        Object.defineProperty(destination, name2, descriptor);
+        const descriptor = Object.getOwnPropertyDescriptor(source, name);
+        Object.defineProperty(destination, name, descriptor);
       }
       return destination;
     }
@@ -19005,16 +19005,16 @@ var require_view = __commonJS({
     var join = path2.join;
     var resolve2 = path2.resolve;
     module.exports = View2;
-    function View2(name2, options) {
+    function View2(name, options) {
       var opts = options || {};
       this.defaultEngine = opts.defaultEngine;
-      this.ext = extname(name2);
-      this.name = name2;
+      this.ext = extname(name);
+      this.name = name;
       this.root = opts.root;
       if (!this.ext && !this.defaultEngine) {
         throw new Error("No default engine was specified and no extension was provided.");
       }
-      var fileName = name2;
+      var fileName = name;
       if (!this.ext) {
         this.ext = this.defaultEngine[0] !== "." ? "." + this.defaultEngine : this.defaultEngine;
         fileName += this.ext;
@@ -19031,13 +19031,13 @@ var require_view = __commonJS({
       this.engine = opts.engines[this.ext];
       this.path = this.lookup(fileName);
     }
-    View2.prototype.lookup = function lookup(name2) {
+    View2.prototype.lookup = function lookup(name) {
       var path3;
       var roots = [].concat(this.root);
-      debug('lookup "%s"', name2);
+      debug('lookup "%s"', name);
       for (var i = 0; i < roots.length && !path3; i++) {
         var root = roots[i];
-        var loc = resolve2(root, name2);
+        var loc = resolve2(root, name);
         var dir = dirname2(loc);
         var file2 = basename(loc);
         path3 = this.resolve(dir, file2);
@@ -19872,10 +19872,10 @@ var require_proxy_addr = __commonJS({
       if (pos === -1 && ip.kind() === "ipv6" && ip.isIPv4MappedAddress()) {
         ip = ip.toIPv4Address();
       }
-      var max2 = ip.kind() === "ipv6" ? 128 : 32;
+      var max = ip.kind() === "ipv6" ? 128 : 32;
       var range = pos !== -1 ? note.substring(pos + 1, note.length) : null;
       if (range === null) {
-        range = max2;
+        range = max;
       } else if (DIGIT_REGEXP.test(range)) {
         range = parseInt(range, 10);
       } else if (ip.kind() === "ipv4" && isip(range)) {
@@ -19883,7 +19883,7 @@ var require_proxy_addr = __commonJS({
       } else {
         range = null;
       }
-      if (range <= 0 || range > max2) {
+      if (range <= 0 || range > max) {
         throw new TypeError("invalid range on address: " + note);
       }
       return [ip, range];
@@ -20149,8 +20149,8 @@ var require_once = __commonJS({
         f.called = true;
         return f.value = fn.apply(this, arguments);
       };
-      var name2 = fn.name || "Function wrapped with `once`";
-      f.onceError = name2 + " shouldn't be called more than once";
+      var name = fn.name || "Function wrapped with `once`";
+      f.onceError = name + " shouldn't be called more than once";
       f.called = false;
       return f;
     }
@@ -20226,7 +20226,7 @@ var require_dist = __commonJS({
       const tokens = [];
       let index = 0;
       let pos = 0;
-      function name2() {
+      function name() {
         let value = "";
         if (ID_START.test(chars[index])) {
           do {
@@ -20261,9 +20261,9 @@ var require_dist = __commonJS({
         } else if (value === "\\") {
           tokens.push({ type: "escape", index: index++, value: chars[index++] });
         } else if (value === ":") {
-          tokens.push({ type: "param", index: index++, value: name2() });
+          tokens.push({ type: "param", index: index++, value: name() });
         } else if (value === "*") {
-          tokens.push({ type: "wildcard", index: index++, value: name2() });
+          tokens.push({ type: "wildcard", index: index++, value: name() });
         } else {
           tokens.push({ type: "char", index: index++, value });
         }
@@ -20482,7 +20482,7 @@ var require_dist = __commonJS({
     function stringifyTokens(tokens) {
       let value = "";
       let i = 0;
-      function name2(value2) {
+      function name(value2) {
         const isSafe = isNameSafe(value2) && isNextNameSafe(tokens[i]);
         return isSafe ? value2 : JSON.stringify(value2);
       }
@@ -20497,11 +20497,11 @@ var require_dist = __commonJS({
           continue;
         }
         if (token.type === "param") {
-          value += `:${name2(token.name)}`;
+          value += `:${name(token.name)}`;
           continue;
         }
         if (token.type === "wildcard") {
-          value += `*${name2(token.name)}`;
+          value += `*${name(token.name)}`;
           continue;
         }
         throw new TypeError(`Unknown token type: ${token.type}`);
@@ -20511,8 +20511,8 @@ var require_dist = __commonJS({
     function stringify(data) {
       return stringifyTokens(data.tokens);
     }
-    function isNameSafe(name2) {
-      const [first, ...rest] = name2;
+    function isNameSafe(name) {
+      const [first, ...rest] = name;
       return ID_START.test(first) && rest.every((char2) => ID_CONTINUE.test(char2));
     }
     function isNextNameSafe(token) {
@@ -20549,11 +20549,11 @@ var require_layer = __commonJS({
       function matcher(_path) {
         if (_path instanceof RegExp) {
           const keys = [];
-          let name2 = 0;
+          let name = 0;
           let m;
           while (m = MATCHING_GROUP_REGEXP.exec(_path.source)) {
             keys.push({
-              name: m[1] || name2++,
+              name: m[1] || name++,
               offset: m.index
             });
           }
@@ -20694,11 +20694,11 @@ var require_route = __commonJS({
       if (this.methods._all) {
         return true;
       }
-      let name2 = typeof method === "string" ? method.toLowerCase() : method;
-      if (name2 === "head" && !this.methods.head) {
-        name2 = "get";
+      let name = typeof method === "string" ? method.toLowerCase() : method;
+      if (name === "head" && !this.methods.head) {
+        name = "get";
       }
-      return Boolean(this.methods[name2]);
+      return Boolean(this.methods[name]);
     };
     Route.prototype._methods = function _methods() {
       const methods2 = Object.keys(this.methods);
@@ -20827,11 +20827,11 @@ var require_router = __commonJS({
     }
     Router15.prototype = function() {
     };
-    Router15.prototype.param = function param2(name2, fn) {
-      if (!name2) {
+    Router15.prototype.param = function param(name, fn) {
+      if (!name) {
         throw new TypeError("argument name is required");
       }
-      if (typeof name2 !== "string") {
+      if (typeof name !== "string") {
         throw new TypeError("argument name must be a string");
       }
       if (!fn) {
@@ -20840,9 +20840,9 @@ var require_router = __commonJS({
       if (typeof fn !== "function") {
         throw new TypeError("argument fn must be a function");
       }
-      let params = this.params[name2];
+      let params = this.params[name];
       if (!params) {
-        params = this.params[name2] = [];
+        params = this.params[name] = [];
       }
       params.push(fn);
       return this;
@@ -21094,7 +21094,7 @@ var require_router = __commonJS({
       let paramVal;
       let paramCallbacks;
       let paramCalled;
-      function param2(err) {
+      function param(err) {
         if (err) {
           return done(err);
         }
@@ -21107,11 +21107,11 @@ var require_router = __commonJS({
         paramCallbacks = params[key];
         paramCalled = called[key];
         if (paramVal === void 0 || !paramCallbacks) {
-          return param2();
+          return param();
         }
         if (paramCalled && (paramCalled.match === paramVal || paramCalled.error && paramCalled.error !== "route")) {
           req.params[key] = paramCalled.value;
-          return param2(paramCalled.error);
+          return param(paramCalled.error);
         }
         called[key] = paramCalled = {
           error: null,
@@ -21125,10 +21125,10 @@ var require_router = __commonJS({
         paramCalled.value = req.params[key];
         if (err) {
           paramCalled.error = err;
-          param2(err);
+          param(err);
           return;
         }
-        if (!fn) return param2();
+        if (!fn) return param();
         try {
           const ret = fn(req, res, paramCallback, paramVal, key);
           if (isPromise(ret)) {
@@ -21143,7 +21143,7 @@ var require_router = __commonJS({
           paramCallback(e);
         }
       }
-      param2();
+      param();
     }
     function restore(fn, obj) {
       const props = new Array(arguments.length - 2);
@@ -21328,14 +21328,14 @@ var require_application = __commonJS({
       this.engines[extension] = fn;
       return this;
     };
-    app2.param = function param2(name2, fn) {
-      if (Array.isArray(name2)) {
-        for (var i = 0; i < name2.length; i++) {
-          this.param(name2[i], fn);
+    app2.param = function param(name, fn) {
+      if (Array.isArray(name)) {
+        for (var i = 0; i < name.length; i++) {
+          this.param(name[i], fn);
         }
         return this;
       }
-      this.router.param(name2, fn);
+      this.router.param(name, fn);
       return this;
     };
     app2.set = function set2(setting, val) {
@@ -21394,7 +21394,7 @@ var require_application = __commonJS({
       }
       return this;
     };
-    app2.render = function render(name2, options, callback) {
+    app2.render = function render(name, options, callback) {
       var cache = this.cache;
       var done = callback;
       var engines = this.engines;
@@ -21409,23 +21409,23 @@ var require_application = __commonJS({
         renderOptions.cache = this.enabled("view cache");
       }
       if (renderOptions.cache) {
-        view = cache[name2];
+        view = cache[name];
       }
       if (!view) {
         var View3 = this.get("view");
-        view = new View3(name2, {
+        view = new View3(name, {
           defaultEngine: this.get("view engine"),
           root: this.get("views"),
           engines
         });
         if (!view.path) {
           var dirs = Array.isArray(view.root) && view.root.length > 1 ? 'directories "' + view.root.slice(0, -1).join('", "') + '" or "' + view.root[view.root.length - 1] + '"' : 'directory "' + view.root + '"';
-          var err = new Error('Failed to lookup view "' + name2 + '" in views ' + dirs);
+          var err = new Error('Failed to lookup view "' + name + '" in views ' + dirs);
           err.view = view;
           return done(err);
         }
         if (renderOptions.cache) {
-          cache[name2] = view;
+          cache[name] = view;
         }
       }
       tryRender(view, renderOptions, done);
@@ -21859,13 +21859,13 @@ var require_mediaType = __commonJS({
       return spec.q > 0;
     }
     function quoteCount(string4) {
-      var count2 = 0;
+      var count = 0;
       var index = 0;
       while ((index = string4.indexOf('"', index)) !== -1) {
-        count2++;
+        count++;
         index++;
       }
-      return count2;
+      return count;
     }
     function splitKeyValuePair(str) {
       var index = str.indexOf("=");
@@ -22213,14 +22213,14 @@ var require_request = __commonJS({
     var proxyaddr = require_proxy_addr();
     var req = Object.create(http.IncomingMessage.prototype);
     module.exports = req;
-    req.get = req.header = function header(name2) {
-      if (!name2) {
+    req.get = req.header = function header(name) {
+      if (!name) {
         throw new TypeError("name argument is required to req.get");
       }
-      if (typeof name2 !== "string") {
+      if (typeof name !== "string") {
         throw new TypeError("name must be a string to req.get");
       }
-      var lc = name2.toLowerCase();
+      var lc = name.toLowerCase();
       switch (lc) {
         case "referer":
         case "referrer":
@@ -22337,8 +22337,8 @@ var require_request = __commonJS({
       var val = this.get("X-Requested-With") || "";
       return val.toLowerCase() === "xmlhttprequest";
     });
-    function defineGetter(obj, name2, getter) {
-      Object.defineProperty(obj, name2, {
+    function defineGetter(obj, name, getter) {
+      Object.defineProperty(obj, name, {
         configurable: true,
         enumerable: true,
         get: getter
@@ -22388,15 +22388,15 @@ var require_content_disposition = __commonJS({
       if (typeof fallback === "string" && NON_LATIN1_REGEXP.test(fallback)) {
         throw new TypeError("fallback must be ISO-8859-1 string");
       }
-      var name2 = basename(filename);
-      var isQuotedString = TEXT_REGEXP.test(name2);
-      var fallbackName = typeof fallback !== "string" ? fallback && getlatin1(name2) : basename(fallback);
-      var hasFallback = typeof fallbackName === "string" && fallbackName !== name2;
-      if (hasFallback || !isQuotedString || HEX_ESCAPE_REGEXP.test(name2)) {
-        params["filename*"] = name2;
+      var name = basename(filename);
+      var isQuotedString = TEXT_REGEXP.test(name);
+      var fallbackName = typeof fallback !== "string" ? fallback && getlatin1(name) : basename(fallback);
+      var hasFallback = typeof fallbackName === "string" && fallbackName !== name;
+      if (hasFallback || !isQuotedString || HEX_ESCAPE_REGEXP.test(name)) {
+        params["filename*"] = name;
       }
       if (isQuotedString || hasFallback) {
-        params.filename = hasFallback ? fallbackName : name2;
+        params.filename = hasFallback ? fallbackName : name;
       }
       return params;
     }
@@ -22408,12 +22408,12 @@ var require_content_disposition = __commonJS({
       }
       var string4 = String(type).toLowerCase();
       if (parameters && typeof parameters === "object") {
-        var param2;
+        var param;
         var params = Object.keys(parameters).sort();
         for (var i = 0; i < params.length; i++) {
-          param2 = params[i];
-          var val = param2.slice(-1) === "*" ? ustring(parameters[param2]) : qstring(parameters[param2]);
-          string4 += "; " + param2 + "=" + val;
+          param = params[i];
+          var val = param.slice(-1) === "*" ? ustring(parameters[param]) : qstring(parameters[param]);
+          string4 += "; " + param + "=" + val;
         }
       }
       return string4;
@@ -22578,33 +22578,33 @@ var require_cookie = __commonJS({
       } while (index < len);
       return obj;
     }
-    function startIndex(str, index, max2) {
+    function startIndex(str, index, max) {
       do {
         var code = str.charCodeAt(index);
         if (code !== 32 && code !== 9) return index;
-      } while (++index < max2);
-      return max2;
+      } while (++index < max);
+      return max;
     }
-    function endIndex(str, index, min2) {
-      while (index > min2) {
+    function endIndex(str, index, min) {
+      while (index > min) {
         var code = str.charCodeAt(--index);
         if (code !== 32 && code !== 9) return index + 1;
       }
-      return min2;
+      return min;
     }
-    function serialize(name2, val, opt) {
+    function serialize(name, val, opt) {
       var enc = opt && opt.encode || encodeURIComponent;
       if (typeof enc !== "function") {
         throw new TypeError("option encode is invalid");
       }
-      if (!cookieNameRegExp.test(name2)) {
+      if (!cookieNameRegExp.test(name)) {
         throw new TypeError("argument name is invalid");
       }
       var value = enc(val);
       if (!cookieValueRegExp.test(value)) {
         throw new TypeError("argument val is invalid");
       }
-      var str = name2 + "=" + value;
+      var str = name + "=" + value;
       if (!opt) return str;
       if (null != opt.maxAge) {
         var maxAge = Math.floor(opt.maxAge);
@@ -23124,14 +23124,14 @@ var require_send = __commonJS({
       }
     }
     function hasListeners(emitter, type) {
-      var count2 = typeof emitter.listenerCount !== "function" ? emitter.listeners(type).length : emitter.listenerCount(type);
-      return count2 > 0;
+      var count = typeof emitter.listenerCount !== "function" ? emitter.listeners(type).length : emitter.listenerCount(type);
+      return count > 0;
     }
-    function normalizeList(val, name2) {
+    function normalizeList(val, name) {
       var list = [].concat(val || []);
       for (var i = 0; i < list.length; i++) {
         if (typeof list[i] !== "string") {
-          throw new TypeError(name2 + " must be array of strings or false");
+          throw new TypeError(name + " must be array of strings or false");
         }
       }
       return list;
@@ -23450,22 +23450,22 @@ var require_response = __commonJS({
     };
     res.download = function download(path3, filename, options, callback) {
       var done = callback;
-      var name2 = filename;
+      var name = filename;
       var opts = options || null;
       if (typeof filename === "function") {
         done = filename;
-        name2 = null;
+        name = null;
         opts = null;
       } else if (typeof options === "function") {
         done = options;
         opts = null;
       }
       if (typeof filename === "object" && (typeof options === "function" || options === void 0)) {
-        name2 = null;
+        name = null;
         opts = filename;
       }
       var headers = {
-        "Content-Disposition": contentDisposition(name2 || path3)
+        "Content-Disposition": contentDisposition(name || path3)
       };
       if (opts && opts.headers) {
         var keys = Object.keys(opts.headers);
@@ -23542,12 +23542,12 @@ var require_response = __commonJS({
     res.get = function(field) {
       return this.getHeader(field);
     };
-    res.clearCookie = function clearCookie(name2, options) {
+    res.clearCookie = function clearCookie(name, options) {
       const opts = { path: "/", ...options, expires: /* @__PURE__ */ new Date(1) };
       delete opts.maxAge;
-      return this.cookie(name2, "", opts);
+      return this.cookie(name, "", opts);
     };
-    res.cookie = function(name2, value, options) {
+    res.cookie = function(name, value, options) {
       var opts = { ...options };
       var secret = this.req.secret;
       var signed = opts.signed;
@@ -23568,7 +23568,7 @@ var require_response = __commonJS({
       if (opts.path == null) {
         opts.path = "/";
       }
-      this.append("Set-Cookie", cookie.serialize(name2, String(val), opts));
+      this.append("Set-Cookie", cookie.serialize(name, String(val), opts));
       return this;
     };
     res.location = function location(url2) {
@@ -25539,8 +25539,8 @@ var require_sonic_boom = __commonJS({
           }
         }
       };
-      this.on("newListener", function(name2) {
-        if (name2 === "drain") {
+      this.on("newListener", function(name) {
+        if (name === "drain") {
           this._asyncDrainScheduled = false;
         }
       });
@@ -26071,7 +26071,7 @@ var require_wait = __commonJS({
     "use strict";
     var MAX_TIMEOUT = 1e3;
     function wait(state, index, expected, timeout, done) {
-      const max2 = Date.now() + timeout;
+      const max = Date.now() + timeout;
       let current = Atomics.load(state, index);
       if (current === expected) {
         done(null, "ok");
@@ -26079,7 +26079,7 @@ var require_wait = __commonJS({
       }
       let prior = current;
       const check2 = (backoff) => {
-        if (Date.now() > max2) {
+        if (Date.now() > max) {
           done(null, "timed-out");
         } else {
           setTimeout(() => {
@@ -26097,14 +26097,14 @@ var require_wait = __commonJS({
       check2(1);
     }
     function waitDiff(state, index, expected, timeout, done) {
-      const max2 = Date.now() + timeout;
+      const max = Date.now() + timeout;
       let current = Atomics.load(state, index);
       if (current !== expected) {
         done(null, "ok");
         return;
       }
       const check2 = (backoff) => {
-        if (Date.now() > max2) {
+        if (Date.now() > max) {
           done(null, "timed-out");
         } else {
           setTimeout(() => {
@@ -28355,7 +28355,7 @@ var require_pino = __commonJS({
         errorKey,
         nestedKey,
         base,
-        name: name2,
+        name,
         level,
         customLevels,
         levelComparison,
@@ -28394,10 +28394,10 @@ var require_pino = __commonJS({
       });
       let chindings = "";
       if (base !== null) {
-        if (name2 === void 0) {
+        if (name === void 0) {
           chindings = coreChindings(base);
         } else {
-          chindings = coreChindings(Object.assign({}, base, { name: name2 }));
+          chindings = coreChindings(Object.assign({}, base, { name }));
         }
       }
       const time5 = timestamp2 instanceof Function ? timestamp2 : timestamp2 ? epochTime : nullTime;
@@ -28861,14 +28861,14 @@ var require_ms2 = __commonJS({
     function fmtLong(ms) {
       return plural(ms, d, "day") || plural(ms, h, "hour") || plural(ms, m, "minute") || plural(ms, s, "second") || ms + " ms";
     }
-    function plural(ms, n, name2) {
+    function plural(ms, n, name) {
       if (ms < n) {
         return;
       }
       if (ms < n * 1.5) {
-        return Math.floor(ms / n) + " " + name2;
+        return Math.floor(ms / n) + " " + name;
       }
-      return Math.ceil(ms / n) + " " + name2 + "s";
+      return Math.ceil(ms / n) + " " + name + "s";
     }
   }
 });
@@ -28957,15 +28957,15 @@ var require_debug = __commonJS({
     function disable() {
       exports.enable("");
     }
-    function enabled(name2) {
+    function enabled(name) {
       var i, len;
       for (i = 0, len = exports.skips.length; i < len; i++) {
-        if (exports.skips[i].test(name2)) {
+        if (exports.skips[i].test(name)) {
           return false;
         }
       }
       for (i = 0, len = exports.names.length; i < len; i++) {
-        if (exports.names[i].test(name2)) {
+        if (exports.names[i].test(name)) {
           return true;
         }
       }
@@ -29111,15 +29111,15 @@ var require_node2 = __commonJS({
       return util2.inspect(v, this.inspectOpts);
     };
     function formatArgs(args) {
-      var name2 = this.namespace;
+      var name = this.namespace;
       var useColors2 = this.useColors;
       if (useColors2) {
         var c = this.color;
-        var prefix = "  \x1B[3" + c + ";1m" + name2 + " \x1B[0m";
+        var prefix = "  \x1B[3" + c + ";1m" + name + " \x1B[0m";
         args[0] = prefix + args[0].split("\n").join("\n" + prefix);
         args.push("\x1B[3" + c + "m+" + exports.humanize(this.diff) + "\x1B[0m");
       } else {
-        args[0] = (/* @__PURE__ */ new Date()).toUTCString() + " " + name2 + " " + args[0];
+        args[0] = (/* @__PURE__ */ new Date()).toUTCString() + " " + name + " " + args[0];
       }
     }
     function log() {
@@ -29495,8 +29495,8 @@ var require_cookie2 = __commonJS({
        * @return {String}
        * @api public
        */
-      serialize: function(name2, val) {
-        return cookie.serialize(name2, val, this.data);
+      serialize: function(name, val) {
+        return cookie.serialize(name, val, this.data);
       },
       /**
        * Return JSON representation of this cookie.
@@ -29559,8 +29559,8 @@ var require_session = __commonJS({
       this.req.sessionStore.regenerate(this.req, fn);
       return this;
     });
-    function defineMethod(obj, name2, fn) {
-      Object.defineProperty(obj, name2, {
+    function defineMethod(obj, name, fn) {
+      Object.defineProperty(obj, name, {
         configurable: true,
         enumerable: false,
         value: fn,
@@ -29718,7 +29718,7 @@ var require_express_session = __commonJS({
       var opts = options || {};
       var cookieOptions = opts.cookie || {};
       var generateId = opts.genid || generateSessionId;
-      var name2 = opts.name || opts.key || "connect.sid";
+      var name = opts.name || opts.key || "connect.sid";
       var store = opts.store || new MemoryStore();
       var trustProxy = opts.proxy;
       var resaveSession = opts.resave;
@@ -29799,7 +29799,7 @@ var require_express_session = __commonJS({
         var savedHash;
         var touched = false;
         req.sessionStore = store;
-        var cookieId = req.sessionID = getcookie(req, name2, secrets);
+        var cookieId = req.sessionID = getcookie(req, name, secrets);
         onHeaders(res, function() {
           if (!req.session) {
             debug("no session");
@@ -29817,7 +29817,7 @@ var require_express_session = __commonJS({
             touched = true;
           }
           try {
-            setcookie(res, name2, req.sessionID, secrets[0], req.session.cookie.data);
+            setcookie(res, name, req.sessionID, secrets[0], req.session.cookie.data);
           } catch (err) {
             defer(next, err);
           }
@@ -30015,13 +30015,13 @@ var require_express_session = __commonJS({
     function generateSessionId() {
       return uid(24);
     }
-    function getcookie(req, name2, secrets) {
+    function getcookie(req, name, secrets) {
       var header = req.headers.cookie;
       var raw;
       var val;
       if (header) {
         var cookies = cookie.parse(header);
-        raw = cookies[name2];
+        raw = cookies[name];
         if (raw) {
           if (raw.substr(0, 2) === "s:") {
             val = unsigncookie(raw.slice(2), secrets);
@@ -30035,13 +30035,13 @@ var require_express_session = __commonJS({
         }
       }
       if (!val && req.signedCookies) {
-        val = req.signedCookies[name2];
+        val = req.signedCookies[name];
         if (val) {
           deprecate("cookie should be available in req.headers.cookie");
         }
       }
       if (!val && req.cookies) {
-        raw = req.cookies[name2];
+        raw = req.cookies[name];
         if (raw) {
           if (raw.substr(0, 2) === "s:") {
             val = unsigncookie(raw.slice(2), secrets);
@@ -30083,9 +30083,9 @@ var require_express_session = __commonJS({
       var proto = index !== -1 ? header.substr(0, index).toLowerCase().trim() : header.toLowerCase().trim();
       return proto === "https";
     }
-    function setcookie(res, name2, val, secret, options) {
+    function setcookie(res, name, val, secret, options) {
       var signed = "s:" + signature.sign(val, secret);
-      var data = cookie.serialize(name2, signed, options);
+      var data = cookie.serialize(name, signed, options);
       debug("set-cookie %s", data);
       var prev = res.getHeader("Set-Cookie") || [];
       var header = Array.isArray(prev) ? prev.concat(data) : [prev, data];
@@ -30127,11 +30127,10 @@ function is(value, type) {
   }
   return false;
 }
-var entityKind, hasOwnEntityKind;
+var entityKind;
 var init_entity = __esm({
   "../../node_modules/.pnpm/drizzle-orm@0.45.1_@types+pg@8.18.0_pg@8.20.0/node_modules/drizzle-orm/entity.js"() {
     entityKind = /* @__PURE__ */ Symbol.for("drizzle:entityKind");
-    hasOwnEntityKind = /* @__PURE__ */ Symbol.for("drizzle:hasOwnEntityKind");
   }
 });
 
@@ -30200,10 +30199,10 @@ var init_column_builder = __esm({
     ColumnBuilder = class {
       static [entityKind] = "ColumnBuilder";
       config;
-      constructor(name2, dataType, columnType) {
+      constructor(name, dataType, columnType) {
         this.config = {
-          name: name2,
-          keyAsName: name2 === "",
+          name,
+          keyAsName: name === "",
           notNull: false,
           default: void 0,
           hasDefault: false,
@@ -30293,9 +30292,9 @@ var init_column_builder = __esm({
         return this;
       }
       /** @internal Sets the name of the column to the key within the table definition if a name was not given. */
-      setName(name2) {
+      setName(name) {
         if (this.config.name !== "") return;
-        this.config.name = name2;
+        this.config.name = name;
       }
     };
   }
@@ -30325,8 +30324,8 @@ var init_foreign_keys = __esm({
       _onDelete = "no action";
       constructor(config3, actions) {
         this.reference = () => {
-          const { name: name2, columns, foreignColumns } = config3();
-          return { name: name2, columns, foreignTable: foreignColumns[0].table, foreignColumns };
+          const { name, columns, foreignColumns } = config3();
+          return { name, columns, foreignTable: foreignColumns[0].table, foreignColumns };
         };
         if (actions) {
           this._onUpdate = actions.onUpdate;
@@ -30358,7 +30357,7 @@ var init_foreign_keys = __esm({
       onUpdate;
       onDelete;
       getName() {
-        const { name: name2, columns, foreignColumns } = this.reference();
+        const { name, columns, foreignColumns } = this.reference();
         const columnNames = columns.map((column) => column.name);
         const foreignColumnNames = foreignColumns.map((column) => column.name);
         const chunks = [
@@ -30367,7 +30366,7 @@ var init_foreign_keys = __esm({
           foreignColumns[0].table[TableName],
           ...foreignColumnNames
         ];
-        return name2 ?? `${chunks.join("_")}_fk`;
+        return name ?? `${chunks.join("_")}_fk`;
       }
     };
   }
@@ -30392,8 +30391,8 @@ var init_unique_constraint = __esm({
     init_entity();
     init_table_utils();
     UniqueConstraintBuilder = class {
-      constructor(columns, name2) {
-        this.name = name2;
+      constructor(columns, name) {
+        this.name = name;
         this.columns = columns;
       }
       static [entityKind] = "PgUniqueConstraintBuilder";
@@ -30414,18 +30413,18 @@ var init_unique_constraint = __esm({
       static [entityKind] = "PgUniqueOnConstraintBuilder";
       /** @internal */
       name;
-      constructor(name2) {
-        this.name = name2;
+      constructor(name) {
+        this.name = name;
       }
       on(...columns) {
         return new UniqueConstraintBuilder(columns, this.name);
       }
     };
     UniqueConstraint = class {
-      constructor(table, columns, nullsNotDistinct, name2) {
+      constructor(table, columns, nullsNotDistinct, name) {
         this.table = table;
         this.columns = columns;
-        this.name = name2 ?? uniqueKeyName(this.table, this.columns.map((column) => column.name));
+        this.name = name ?? uniqueKeyName(this.table, this.columns.map((column) => column.name));
         this.nullsNotDistinct = nullsNotDistinct;
       }
       static [entityKind] = "PgUniqueConstraint";
@@ -30540,9 +30539,9 @@ var init_common = __esm({
         this.foreignKeyConfigs.push({ ref, actions });
         return this;
       }
-      unique(name2, config3) {
+      unique(name, config3) {
         this.config.isUnique = true;
-        this.config.uniqueName = name2;
+        this.config.uniqueName = name;
         this.config.uniqueType = config3?.nulls;
         return this;
       }
@@ -30658,8 +30657,8 @@ var init_common = __esm({
     };
     IndexedColumn = class {
       static [entityKind] = "IndexedColumn";
-      constructor(name2, keyAsName, type, indexConfig) {
-        this.name = name2;
+      constructor(name, keyAsName, type, indexConfig) {
+        this.name = name;
         this.keyAsName = keyAsName;
         this.type = type;
         this.indexConfig = indexConfig;
@@ -30671,8 +30670,8 @@ var init_common = __esm({
     };
     PgArrayBuilder = class extends PgColumnBuilder {
       static [entityKind] = "PgArrayBuilder";
-      constructor(name2, baseBuilder, size) {
-        super(name2, "array", "PgArray");
+      constructor(name, baseBuilder, size) {
+        super(name, "array", "PgArray");
         this.config.baseBuilder = baseBuilder;
         this.config.size = size;
       }
@@ -30721,7 +30720,7 @@ function isPgEnum(obj) {
 }
 function pgEnumWithSchema(enumName, values, schema) {
   const enumInstance = Object.assign(
-    (name2) => new PgEnumColumnBuilder(name2 ?? "", enumInstance),
+    (name) => new PgEnumColumnBuilder(name ?? "", enumInstance),
     {
       enumName,
       enumValues: values,
@@ -30733,7 +30732,7 @@ function pgEnumWithSchema(enumName, values, schema) {
 }
 function pgEnumObjectWithSchema(enumName, values, schema) {
   const enumInstance = Object.assign(
-    (name2) => new PgEnumObjectColumnBuilder(name2 ?? "", enumInstance),
+    (name) => new PgEnumObjectColumnBuilder(name ?? "", enumInstance),
     {
       enumName,
       enumValues: Object.values(values),
@@ -30750,8 +30749,8 @@ var init_enum = __esm({
     init_common();
     PgEnumObjectColumnBuilder = class extends PgColumnBuilder {
       static [entityKind] = "PgEnumObjectColumnBuilder";
-      constructor(name2, enumInstance) {
-        super(name2, "string", "PgEnumObjectColumn");
+      constructor(name, enumInstance) {
+        super(name, "string", "PgEnumObjectColumn");
         this.config.enum = enumInstance;
       }
       /** @internal */
@@ -30777,8 +30776,8 @@ var init_enum = __esm({
     isPgEnumSym = /* @__PURE__ */ Symbol.for("drizzle:isPgEnum");
     PgEnumColumnBuilder = class extends PgColumnBuilder {
       static [entityKind] = "PgEnumColumnBuilder";
-      constructor(name2, enumInstance) {
-        super(name2, "string", "PgEnumColumn");
+      constructor(name, enumInstance) {
+        super(name, "string", "PgEnumColumn");
         this.config.enum = enumInstance;
       }
       /** @internal */
@@ -30846,7 +30845,7 @@ var init_tracing = __esm({
     init_tracing_utils();
     init_version();
     tracer = {
-      startActiveSpan(name2, fn) {
+      startActiveSpan(name, fn) {
         if (!otel) {
           return fn();
         }
@@ -30855,7 +30854,7 @@ var init_tracing = __esm({
         }
         return iife(
           (otel2, rawTracer2) => rawTracer2.startActiveSpan(
-            name2,
+            name,
             (span) => {
               try {
                 return fn(span);
@@ -30950,8 +30949,8 @@ var init_table = __esm({
       [IsDrizzleTable] = true;
       /** @internal */
       [ExtraConfigBuilder] = void 0;
-      constructor(name2, schema, baseName) {
-        this[TableName] = this[OriginalName] = name2;
+      constructor(name, schema, baseName) {
+        this[TableName] = this[OriginalName] = name;
         this[Schema] = schema;
         this[BaseName] = baseName;
       }
@@ -30977,14 +30976,8 @@ function mergeQueries(queries) {
   }
   return result;
 }
-function name(value) {
-  return new Name(value);
-}
 function isDriverValueEncoder(value) {
   return typeof value === "object" && value !== null && "mapToDriverValue" in value && typeof value.mapToDriverValue === "function";
-}
-function param(value, encoder) {
-  return new Param(value, encoder);
 }
 function sql(strings, ...params) {
   const queryChunks = [];
@@ -30995,9 +30988,6 @@ function sql(strings, ...params) {
     queryChunks.push(param2, new StringChunk(strings[paramIndex + 1]));
   }
   return new SQL(queryChunks);
-}
-function placeholder(name2) {
-  return new Placeholder(name2);
 }
 function fillPlaceholders(params, values) {
   return params.map((p) => {
@@ -31018,9 +31008,6 @@ function fillPlaceholders(params, values) {
 }
 function isView(view) {
   return typeof view === "object" && view !== null && IsDrizzleView in view;
-}
-function getViewName(view) {
-  return view[ViewBaseConfig].name;
 }
 var FakePrimitiveParam, StringChunk, SQL, Name, noopDecoder, noopEncoder, noopMapper, Param, Placeholder, IsDrizzleView, View;
 var init_sql = __esm({
@@ -31384,9 +31371,6 @@ var init_sql = __esm({
 function aliasedTable(table, tableAlias) {
   return new Proxy(table, new TableAliasProxyHandler(tableAlias, false));
 }
-function aliasedRelation(relation, tableAlias) {
-  return new Proxy(relation, new RelationTableAliasProxyHandler(tableAlias));
-}
 function aliasedTableColumn(column, tableAlias) {
   return new Proxy(
     column,
@@ -31644,11 +31628,11 @@ function mapResultRow(columns, row, joinsNotNullableMap) {
   return result;
 }
 function orderSelectedFields(fields, pathPrefix) {
-  return Object.entries(fields).reduce((result, [name2, field]) => {
-    if (typeof name2 !== "string") {
+  return Object.entries(fields).reduce((result, [name, field]) => {
+    if (typeof name !== "string") {
       return result;
     }
-    const newPath = pathPrefix ? [...pathPrefix, name2] : [name2];
+    const newPath = pathPrefix ? [...pathPrefix, name] : [name];
     if (is(field, Column) || is(field, SQL) || is(field, SQL.Aliased) || is(field, Subquery)) {
       result.push({ path: newPath, field });
     } else if (is(field, Table)) {
@@ -31687,12 +31671,12 @@ function mapUpdateSet(table, values) {
 }
 function applyMixins(baseClass, extendedClasses) {
   for (const extendedClass of extendedClasses) {
-    for (const name2 of Object.getOwnPropertyNames(extendedClass.prototype)) {
-      if (name2 === "constructor") continue;
+    for (const name of Object.getOwnPropertyNames(extendedClass.prototype)) {
+      if (name === "constructor") continue;
       Object.defineProperty(
         baseClass.prototype,
-        name2,
-        Object.getOwnPropertyDescriptor(extendedClass.prototype, name2) || /* @__PURE__ */ Object.create(null)
+        name,
+        Object.getOwnPropertyDescriptor(extendedClass.prototype, name) || /* @__PURE__ */ Object.create(null)
       );
     }
   }
@@ -31770,10 +31754,10 @@ var init_int_common = __esm({
       static [entityKind] = "PgIntColumnBaseBuilder";
       generatedAlwaysAsIdentity(sequence) {
         if (sequence) {
-          const { name: name2, ...options } = sequence;
+          const { name, ...options } = sequence;
           this.config.generatedIdentity = {
             type: "always",
-            sequenceName: name2,
+            sequenceName: name,
             sequenceOptions: options
           };
         } else {
@@ -31787,10 +31771,10 @@ var init_int_common = __esm({
       }
       generatedByDefaultAsIdentity(sequence) {
         if (sequence) {
-          const { name: name2, ...options } = sequence;
+          const { name, ...options } = sequence;
           this.config.generatedIdentity = {
             type: "byDefault",
-            sequenceName: name2,
+            sequenceName: name,
             sequenceOptions: options
           };
         } else {
@@ -31808,11 +31792,11 @@ var init_int_common = __esm({
 
 // ../../node_modules/.pnpm/drizzle-orm@0.45.1_@types+pg@8.18.0_pg@8.20.0/node_modules/drizzle-orm/pg-core/columns/bigint.js
 function bigint(a, b) {
-  const { name: name2, config: config3 } = getColumnNameAndConfig(a, b);
+  const { name, config: config3 } = getColumnNameAndConfig(a, b);
   if (config3.mode === "number") {
-    return new PgBigInt53Builder(name2);
+    return new PgBigInt53Builder(name);
   }
-  return new PgBigInt64Builder(name2);
+  return new PgBigInt64Builder(name);
 }
 var PgBigInt53Builder, PgBigInt53, PgBigInt64Builder, PgBigInt64;
 var init_bigint = __esm({
@@ -31823,8 +31807,8 @@ var init_bigint = __esm({
     init_int_common();
     PgBigInt53Builder = class extends PgIntColumnBaseBuilder {
       static [entityKind] = "PgBigInt53Builder";
-      constructor(name2) {
-        super(name2, "number", "PgBigInt53");
+      constructor(name) {
+        super(name, "number", "PgBigInt53");
       }
       /** @internal */
       build(table) {
@@ -31845,8 +31829,8 @@ var init_bigint = __esm({
     };
     PgBigInt64Builder = class extends PgIntColumnBaseBuilder {
       static [entityKind] = "PgBigInt64Builder";
-      constructor(name2) {
-        super(name2, "bigint", "PgBigInt64");
+      constructor(name) {
+        super(name, "bigint", "PgBigInt64");
       }
       /** @internal */
       build(table) {
@@ -31871,11 +31855,11 @@ var init_bigint = __esm({
 
 // ../../node_modules/.pnpm/drizzle-orm@0.45.1_@types+pg@8.18.0_pg@8.20.0/node_modules/drizzle-orm/pg-core/columns/bigserial.js
 function bigserial(a, b) {
-  const { name: name2, config: config3 } = getColumnNameAndConfig(a, b);
+  const { name, config: config3 } = getColumnNameAndConfig(a, b);
   if (config3.mode === "number") {
-    return new PgBigSerial53Builder(name2);
+    return new PgBigSerial53Builder(name);
   }
-  return new PgBigSerial64Builder(name2);
+  return new PgBigSerial64Builder(name);
 }
 var PgBigSerial53Builder, PgBigSerial53, PgBigSerial64Builder, PgBigSerial64;
 var init_bigserial = __esm({
@@ -31885,8 +31869,8 @@ var init_bigserial = __esm({
     init_common();
     PgBigSerial53Builder = class extends PgColumnBuilder {
       static [entityKind] = "PgBigSerial53Builder";
-      constructor(name2) {
-        super(name2, "number", "PgBigSerial53");
+      constructor(name) {
+        super(name, "number", "PgBigSerial53");
         this.config.hasDefault = true;
         this.config.notNull = true;
       }
@@ -31912,8 +31896,8 @@ var init_bigserial = __esm({
     };
     PgBigSerial64Builder = class extends PgColumnBuilder {
       static [entityKind] = "PgBigSerial64Builder";
-      constructor(name2) {
-        super(name2, "bigint", "PgBigSerial64");
+      constructor(name) {
+        super(name, "bigint", "PgBigSerial64");
         this.config.hasDefault = true;
       }
       /** @internal */
@@ -31938,8 +31922,8 @@ var init_bigserial = __esm({
 });
 
 // ../../node_modules/.pnpm/drizzle-orm@0.45.1_@types+pg@8.18.0_pg@8.20.0/node_modules/drizzle-orm/pg-core/columns/boolean.js
-function boolean(name2) {
-  return new PgBooleanBuilder(name2 ?? "");
+function boolean(name) {
+  return new PgBooleanBuilder(name ?? "");
 }
 var PgBooleanBuilder, PgBoolean;
 var init_boolean = __esm({
@@ -31948,8 +31932,8 @@ var init_boolean = __esm({
     init_common();
     PgBooleanBuilder = class extends PgColumnBuilder {
       static [entityKind] = "PgBooleanBuilder";
-      constructor(name2) {
-        super(name2, "boolean", "PgBoolean");
+      constructor(name) {
+        super(name, "boolean", "PgBoolean");
       }
       /** @internal */
       build(table) {
@@ -31967,8 +31951,8 @@ var init_boolean = __esm({
 
 // ../../node_modules/.pnpm/drizzle-orm@0.45.1_@types+pg@8.18.0_pg@8.20.0/node_modules/drizzle-orm/pg-core/columns/char.js
 function char(a, b = {}) {
-  const { name: name2, config: config3 } = getColumnNameAndConfig(a, b);
-  return new PgCharBuilder(name2, config3);
+  const { name, config: config3 } = getColumnNameAndConfig(a, b);
+  return new PgCharBuilder(name, config3);
 }
 var PgCharBuilder, PgChar;
 var init_char = __esm({
@@ -31978,8 +31962,8 @@ var init_char = __esm({
     init_common();
     PgCharBuilder = class extends PgColumnBuilder {
       static [entityKind] = "PgCharBuilder";
-      constructor(name2, config3) {
-        super(name2, "string", "PgChar");
+      constructor(name, config3) {
+        super(name, "string", "PgChar");
         this.config.length = config3.length;
         this.config.enumValues = config3.enum;
       }
@@ -32003,8 +31987,8 @@ var init_char = __esm({
 });
 
 // ../../node_modules/.pnpm/drizzle-orm@0.45.1_@types+pg@8.18.0_pg@8.20.0/node_modules/drizzle-orm/pg-core/columns/cidr.js
-function cidr(name2) {
-  return new PgCidrBuilder(name2 ?? "");
+function cidr(name) {
+  return new PgCidrBuilder(name ?? "");
 }
 var PgCidrBuilder, PgCidr;
 var init_cidr = __esm({
@@ -32013,8 +31997,8 @@ var init_cidr = __esm({
     init_common();
     PgCidrBuilder = class extends PgColumnBuilder {
       static [entityKind] = "PgCidrBuilder";
-      constructor(name2) {
-        super(name2, "string", "PgCidr");
+      constructor(name) {
+        super(name, "string", "PgCidr");
       }
       /** @internal */
       build(table) {
@@ -32033,8 +32017,8 @@ var init_cidr = __esm({
 // ../../node_modules/.pnpm/drizzle-orm@0.45.1_@types+pg@8.18.0_pg@8.20.0/node_modules/drizzle-orm/pg-core/columns/custom.js
 function customType(customTypeParams) {
   return (a, b) => {
-    const { name: name2, config: config3 } = getColumnNameAndConfig(a, b);
-    return new PgCustomColumnBuilder(name2, config3, customTypeParams);
+    const { name, config: config3 } = getColumnNameAndConfig(a, b);
+    return new PgCustomColumnBuilder(name, config3, customTypeParams);
   };
 }
 var PgCustomColumnBuilder, PgCustomColumn;
@@ -32045,8 +32029,8 @@ var init_custom = __esm({
     init_common();
     PgCustomColumnBuilder = class extends PgColumnBuilder {
       static [entityKind] = "PgCustomColumnBuilder";
-      constructor(name2, fieldConfig, customTypeParams) {
-        super(name2, "custom", "PgCustomColumn");
+      constructor(name, fieldConfig, customTypeParams) {
+        super(name, "custom", "PgCustomColumn");
         this.config.fieldConfig = fieldConfig;
         this.config.customTypeParams = customTypeParams;
       }
@@ -32100,11 +32084,11 @@ var init_date_common = __esm({
 
 // ../../node_modules/.pnpm/drizzle-orm@0.45.1_@types+pg@8.18.0_pg@8.20.0/node_modules/drizzle-orm/pg-core/columns/date.js
 function date(a, b) {
-  const { name: name2, config: config3 } = getColumnNameAndConfig(a, b);
+  const { name, config: config3 } = getColumnNameAndConfig(a, b);
   if (config3?.mode === "date") {
-    return new PgDateBuilder(name2);
+    return new PgDateBuilder(name);
   }
-  return new PgDateStringBuilder(name2);
+  return new PgDateStringBuilder(name);
 }
 var PgDateBuilder, PgDate, PgDateStringBuilder, PgDateString;
 var init_date = __esm({
@@ -32115,8 +32099,8 @@ var init_date = __esm({
     init_date_common();
     PgDateBuilder = class extends PgDateColumnBaseBuilder {
       static [entityKind] = "PgDateBuilder";
-      constructor(name2) {
-        super(name2, "date", "PgDate");
+      constructor(name) {
+        super(name, "date", "PgDate");
       }
       /** @internal */
       build(table) {
@@ -32138,8 +32122,8 @@ var init_date = __esm({
     };
     PgDateStringBuilder = class extends PgDateColumnBaseBuilder {
       static [entityKind] = "PgDateStringBuilder";
-      constructor(name2) {
-        super(name2, "string", "PgDateString");
+      constructor(name) {
+        super(name, "string", "PgDateString");
       }
       /** @internal */
       build(table) {
@@ -32163,8 +32147,8 @@ var init_date = __esm({
 });
 
 // ../../node_modules/.pnpm/drizzle-orm@0.45.1_@types+pg@8.18.0_pg@8.20.0/node_modules/drizzle-orm/pg-core/columns/double-precision.js
-function doublePrecision(name2) {
-  return new PgDoublePrecisionBuilder(name2 ?? "");
+function doublePrecision(name) {
+  return new PgDoublePrecisionBuilder(name ?? "");
 }
 var PgDoublePrecisionBuilder, PgDoublePrecision;
 var init_double_precision = __esm({
@@ -32173,8 +32157,8 @@ var init_double_precision = __esm({
     init_common();
     PgDoublePrecisionBuilder = class extends PgColumnBuilder {
       static [entityKind] = "PgDoublePrecisionBuilder";
-      constructor(name2) {
-        super(name2, "number", "PgDoublePrecision");
+      constructor(name) {
+        super(name, "number", "PgDoublePrecision");
       }
       /** @internal */
       build(table) {
@@ -32200,8 +32184,8 @@ var init_double_precision = __esm({
 });
 
 // ../../node_modules/.pnpm/drizzle-orm@0.45.1_@types+pg@8.18.0_pg@8.20.0/node_modules/drizzle-orm/pg-core/columns/inet.js
-function inet(name2) {
-  return new PgInetBuilder(name2 ?? "");
+function inet(name) {
+  return new PgInetBuilder(name ?? "");
 }
 var PgInetBuilder, PgInet;
 var init_inet = __esm({
@@ -32210,8 +32194,8 @@ var init_inet = __esm({
     init_common();
     PgInetBuilder = class extends PgColumnBuilder {
       static [entityKind] = "PgInetBuilder";
-      constructor(name2) {
-        super(name2, "string", "PgInet");
+      constructor(name) {
+        super(name, "string", "PgInet");
       }
       /** @internal */
       build(table) {
@@ -32228,8 +32212,8 @@ var init_inet = __esm({
 });
 
 // ../../node_modules/.pnpm/drizzle-orm@0.45.1_@types+pg@8.18.0_pg@8.20.0/node_modules/drizzle-orm/pg-core/columns/integer.js
-function integer(name2) {
-  return new PgIntegerBuilder(name2 ?? "");
+function integer(name) {
+  return new PgIntegerBuilder(name ?? "");
 }
 var PgIntegerBuilder, PgInteger;
 var init_integer = __esm({
@@ -32239,8 +32223,8 @@ var init_integer = __esm({
     init_int_common();
     PgIntegerBuilder = class extends PgIntColumnBaseBuilder {
       static [entityKind] = "PgIntegerBuilder";
-      constructor(name2) {
-        super(name2, "number", "PgInteger");
+      constructor(name) {
+        super(name, "number", "PgInteger");
       }
       /** @internal */
       build(table) {
@@ -32264,8 +32248,8 @@ var init_integer = __esm({
 
 // ../../node_modules/.pnpm/drizzle-orm@0.45.1_@types+pg@8.18.0_pg@8.20.0/node_modules/drizzle-orm/pg-core/columns/interval.js
 function interval(a, b = {}) {
-  const { name: name2, config: config3 } = getColumnNameAndConfig(a, b);
-  return new PgIntervalBuilder(name2, config3);
+  const { name, config: config3 } = getColumnNameAndConfig(a, b);
+  return new PgIntervalBuilder(name, config3);
 }
 var PgIntervalBuilder, PgInterval;
 var init_interval = __esm({
@@ -32275,8 +32259,8 @@ var init_interval = __esm({
     init_common();
     PgIntervalBuilder = class extends PgColumnBuilder {
       static [entityKind] = "PgIntervalBuilder";
-      constructor(name2, intervalConfig) {
-        super(name2, "string", "PgInterval");
+      constructor(name, intervalConfig) {
+        super(name, "string", "PgInterval");
         this.config.intervalConfig = intervalConfig;
       }
       /** @internal */
@@ -32298,8 +32282,8 @@ var init_interval = __esm({
 });
 
 // ../../node_modules/.pnpm/drizzle-orm@0.45.1_@types+pg@8.18.0_pg@8.20.0/node_modules/drizzle-orm/pg-core/columns/json.js
-function json(name2) {
-  return new PgJsonBuilder(name2 ?? "");
+function json(name) {
+  return new PgJsonBuilder(name ?? "");
 }
 var PgJsonBuilder, PgJson;
 var init_json = __esm({
@@ -32308,8 +32292,8 @@ var init_json = __esm({
     init_common();
     PgJsonBuilder = class extends PgColumnBuilder {
       static [entityKind] = "PgJsonBuilder";
-      constructor(name2) {
-        super(name2, "json", "PgJson");
+      constructor(name) {
+        super(name, "json", "PgJson");
       }
       /** @internal */
       build(table) {
@@ -32342,8 +32326,8 @@ var init_json = __esm({
 });
 
 // ../../node_modules/.pnpm/drizzle-orm@0.45.1_@types+pg@8.18.0_pg@8.20.0/node_modules/drizzle-orm/pg-core/columns/jsonb.js
-function jsonb(name2) {
-  return new PgJsonbBuilder(name2 ?? "");
+function jsonb(name) {
+  return new PgJsonbBuilder(name ?? "");
 }
 var PgJsonbBuilder, PgJsonb;
 var init_jsonb = __esm({
@@ -32352,8 +32336,8 @@ var init_jsonb = __esm({
     init_common();
     PgJsonbBuilder = class extends PgColumnBuilder {
       static [entityKind] = "PgJsonbBuilder";
-      constructor(name2) {
-        super(name2, "json", "PgJsonb");
+      constructor(name) {
+        super(name, "json", "PgJsonb");
       }
       /** @internal */
       build(table) {
@@ -32387,11 +32371,11 @@ var init_jsonb = __esm({
 
 // ../../node_modules/.pnpm/drizzle-orm@0.45.1_@types+pg@8.18.0_pg@8.20.0/node_modules/drizzle-orm/pg-core/columns/line.js
 function line(a, b) {
-  const { name: name2, config: config3 } = getColumnNameAndConfig(a, b);
+  const { name, config: config3 } = getColumnNameAndConfig(a, b);
   if (!config3?.mode || config3.mode === "tuple") {
-    return new PgLineBuilder(name2);
+    return new PgLineBuilder(name);
   }
-  return new PgLineABCBuilder(name2);
+  return new PgLineABCBuilder(name);
 }
 var PgLineBuilder, PgLineTuple, PgLineABCBuilder, PgLineABC;
 var init_line = __esm({
@@ -32401,8 +32385,8 @@ var init_line = __esm({
     init_common();
     PgLineBuilder = class extends PgColumnBuilder {
       static [entityKind] = "PgLineBuilder";
-      constructor(name2) {
-        super(name2, "array", "PgLine");
+      constructor(name) {
+        super(name, "array", "PgLine");
       }
       /** @internal */
       build(table) {
@@ -32427,8 +32411,8 @@ var init_line = __esm({
     };
     PgLineABCBuilder = class extends PgColumnBuilder {
       static [entityKind] = "PgLineABCBuilder";
-      constructor(name2) {
-        super(name2, "json", "PgLineABC");
+      constructor(name) {
+        super(name, "json", "PgLineABC");
       }
       /** @internal */
       build(table) {
@@ -32455,8 +32439,8 @@ var init_line = __esm({
 });
 
 // ../../node_modules/.pnpm/drizzle-orm@0.45.1_@types+pg@8.18.0_pg@8.20.0/node_modules/drizzle-orm/pg-core/columns/macaddr.js
-function macaddr(name2) {
-  return new PgMacaddrBuilder(name2 ?? "");
+function macaddr(name) {
+  return new PgMacaddrBuilder(name ?? "");
 }
 var PgMacaddrBuilder, PgMacaddr;
 var init_macaddr = __esm({
@@ -32465,8 +32449,8 @@ var init_macaddr = __esm({
     init_common();
     PgMacaddrBuilder = class extends PgColumnBuilder {
       static [entityKind] = "PgMacaddrBuilder";
-      constructor(name2) {
-        super(name2, "string", "PgMacaddr");
+      constructor(name) {
+        super(name, "string", "PgMacaddr");
       }
       /** @internal */
       build(table) {
@@ -32483,8 +32467,8 @@ var init_macaddr = __esm({
 });
 
 // ../../node_modules/.pnpm/drizzle-orm@0.45.1_@types+pg@8.18.0_pg@8.20.0/node_modules/drizzle-orm/pg-core/columns/macaddr8.js
-function macaddr8(name2) {
-  return new PgMacaddr8Builder(name2 ?? "");
+function macaddr8(name) {
+  return new PgMacaddr8Builder(name ?? "");
 }
 var PgMacaddr8Builder, PgMacaddr8;
 var init_macaddr8 = __esm({
@@ -32493,8 +32477,8 @@ var init_macaddr8 = __esm({
     init_common();
     PgMacaddr8Builder = class extends PgColumnBuilder {
       static [entityKind] = "PgMacaddr8Builder";
-      constructor(name2) {
-        super(name2, "string", "PgMacaddr8");
+      constructor(name) {
+        super(name, "string", "PgMacaddr8");
       }
       /** @internal */
       build(table) {
@@ -32512,9 +32496,9 @@ var init_macaddr8 = __esm({
 
 // ../../node_modules/.pnpm/drizzle-orm@0.45.1_@types+pg@8.18.0_pg@8.20.0/node_modules/drizzle-orm/pg-core/columns/numeric.js
 function numeric(a, b) {
-  const { name: name2, config: config3 } = getColumnNameAndConfig(a, b);
+  const { name, config: config3 } = getColumnNameAndConfig(a, b);
   const mode = config3?.mode;
-  return mode === "number" ? new PgNumericNumberBuilder(name2, config3?.precision, config3?.scale) : mode === "bigint" ? new PgNumericBigIntBuilder(name2, config3?.precision, config3?.scale) : new PgNumericBuilder(name2, config3?.precision, config3?.scale);
+  return mode === "number" ? new PgNumericNumberBuilder(name, config3?.precision, config3?.scale) : mode === "bigint" ? new PgNumericBigIntBuilder(name, config3?.precision, config3?.scale) : new PgNumericBuilder(name, config3?.precision, config3?.scale);
 }
 var PgNumericBuilder, PgNumeric, PgNumericNumberBuilder, PgNumericNumber, PgNumericBigIntBuilder, PgNumericBigInt;
 var init_numeric = __esm({
@@ -32524,8 +32508,8 @@ var init_numeric = __esm({
     init_common();
     PgNumericBuilder = class extends PgColumnBuilder {
       static [entityKind] = "PgNumericBuilder";
-      constructor(name2, precision, scale) {
-        super(name2, "string", "PgNumeric");
+      constructor(name, precision, scale) {
+        super(name, "string", "PgNumeric");
         this.config.precision = precision;
         this.config.scale = scale;
       }
@@ -32559,8 +32543,8 @@ var init_numeric = __esm({
     };
     PgNumericNumberBuilder = class extends PgColumnBuilder {
       static [entityKind] = "PgNumericNumberBuilder";
-      constructor(name2, precision, scale) {
-        super(name2, "number", "PgNumericNumber");
+      constructor(name, precision, scale) {
+        super(name, "number", "PgNumericNumber");
         this.config.precision = precision;
         this.config.scale = scale;
       }
@@ -32598,8 +32582,8 @@ var init_numeric = __esm({
     };
     PgNumericBigIntBuilder = class extends PgColumnBuilder {
       static [entityKind] = "PgNumericBigIntBuilder";
-      constructor(name2, precision, scale) {
-        super(name2, "bigint", "PgNumericBigInt");
+      constructor(name, precision, scale) {
+        super(name, "bigint", "PgNumericBigInt");
         this.config.precision = precision;
         this.config.scale = scale;
       }
@@ -32637,11 +32621,11 @@ var init_numeric = __esm({
 
 // ../../node_modules/.pnpm/drizzle-orm@0.45.1_@types+pg@8.18.0_pg@8.20.0/node_modules/drizzle-orm/pg-core/columns/point.js
 function point(a, b) {
-  const { name: name2, config: config3 } = getColumnNameAndConfig(a, b);
+  const { name, config: config3 } = getColumnNameAndConfig(a, b);
   if (!config3?.mode || config3.mode === "tuple") {
-    return new PgPointTupleBuilder(name2);
+    return new PgPointTupleBuilder(name);
   }
-  return new PgPointObjectBuilder(name2);
+  return new PgPointObjectBuilder(name);
 }
 var PgPointTupleBuilder, PgPointTuple, PgPointObjectBuilder, PgPointObject;
 var init_point = __esm({
@@ -32651,8 +32635,8 @@ var init_point = __esm({
     init_common();
     PgPointTupleBuilder = class extends PgColumnBuilder {
       static [entityKind] = "PgPointTupleBuilder";
-      constructor(name2) {
-        super(name2, "array", "PgPointTuple");
+      constructor(name) {
+        super(name, "array", "PgPointTuple");
       }
       /** @internal */
       build(table) {
@@ -32680,8 +32664,8 @@ var init_point = __esm({
     };
     PgPointObjectBuilder = class extends PgColumnBuilder {
       static [entityKind] = "PgPointObjectBuilder";
-      constructor(name2) {
-        super(name2, "json", "PgPointObject");
+      constructor(name) {
+        super(name, "json", "PgPointObject");
       }
       /** @internal */
       build(table) {
@@ -32755,11 +32739,11 @@ var init_utils2 = __esm({
 
 // ../../node_modules/.pnpm/drizzle-orm@0.45.1_@types+pg@8.18.0_pg@8.20.0/node_modules/drizzle-orm/pg-core/columns/postgis_extension/geometry.js
 function geometry(a, b) {
-  const { name: name2, config: config3 } = getColumnNameAndConfig(a, b);
+  const { name, config: config3 } = getColumnNameAndConfig(a, b);
   if (!config3?.mode || config3.mode === "tuple") {
-    return new PgGeometryBuilder(name2);
+    return new PgGeometryBuilder(name);
   }
-  return new PgGeometryObjectBuilder(name2);
+  return new PgGeometryObjectBuilder(name);
 }
 var PgGeometryBuilder, PgGeometry, PgGeometryObjectBuilder, PgGeometryObject;
 var init_geometry = __esm({
@@ -32770,8 +32754,8 @@ var init_geometry = __esm({
     init_utils2();
     PgGeometryBuilder = class extends PgColumnBuilder {
       static [entityKind] = "PgGeometryBuilder";
-      constructor(name2) {
-        super(name2, "array", "PgGeometry");
+      constructor(name) {
+        super(name, "array", "PgGeometry");
       }
       /** @internal */
       build(table) {
@@ -32795,8 +32779,8 @@ var init_geometry = __esm({
     };
     PgGeometryObjectBuilder = class extends PgColumnBuilder {
       static [entityKind] = "PgGeometryObjectBuilder";
-      constructor(name2) {
-        super(name2, "json", "PgGeometryObject");
+      constructor(name) {
+        super(name, "json", "PgGeometryObject");
       }
       /** @internal */
       build(table) {
@@ -32823,8 +32807,8 @@ var init_geometry = __esm({
 });
 
 // ../../node_modules/.pnpm/drizzle-orm@0.45.1_@types+pg@8.18.0_pg@8.20.0/node_modules/drizzle-orm/pg-core/columns/real.js
-function real(name2) {
-  return new PgRealBuilder(name2 ?? "");
+function real(name) {
+  return new PgRealBuilder(name ?? "");
 }
 var PgRealBuilder, PgReal;
 var init_real = __esm({
@@ -32833,8 +32817,8 @@ var init_real = __esm({
     init_common();
     PgRealBuilder = class extends PgColumnBuilder {
       static [entityKind] = "PgRealBuilder";
-      constructor(name2, length) {
-        super(name2, "number", "PgReal");
+      constructor(name, length) {
+        super(name, "number", "PgReal");
         this.config.length = length;
       }
       /** @internal */
@@ -32861,8 +32845,8 @@ var init_real = __esm({
 });
 
 // ../../node_modules/.pnpm/drizzle-orm@0.45.1_@types+pg@8.18.0_pg@8.20.0/node_modules/drizzle-orm/pg-core/columns/serial.js
-function serial(name2) {
-  return new PgSerialBuilder(name2 ?? "");
+function serial(name) {
+  return new PgSerialBuilder(name ?? "");
 }
 var PgSerialBuilder, PgSerial;
 var init_serial = __esm({
@@ -32871,8 +32855,8 @@ var init_serial = __esm({
     init_common();
     PgSerialBuilder = class extends PgColumnBuilder {
       static [entityKind] = "PgSerialBuilder";
-      constructor(name2) {
-        super(name2, "number", "PgSerial");
+      constructor(name) {
+        super(name, "number", "PgSerial");
         this.config.hasDefault = true;
         this.config.notNull = true;
       }
@@ -32891,8 +32875,8 @@ var init_serial = __esm({
 });
 
 // ../../node_modules/.pnpm/drizzle-orm@0.45.1_@types+pg@8.18.0_pg@8.20.0/node_modules/drizzle-orm/pg-core/columns/smallint.js
-function smallint(name2) {
-  return new PgSmallIntBuilder(name2 ?? "");
+function smallint(name) {
+  return new PgSmallIntBuilder(name ?? "");
 }
 var PgSmallIntBuilder, PgSmallInt;
 var init_smallint = __esm({
@@ -32902,8 +32886,8 @@ var init_smallint = __esm({
     init_int_common();
     PgSmallIntBuilder = class extends PgIntColumnBaseBuilder {
       static [entityKind] = "PgSmallIntBuilder";
-      constructor(name2) {
-        super(name2, "number", "PgSmallInt");
+      constructor(name) {
+        super(name, "number", "PgSmallInt");
       }
       /** @internal */
       build(table) {
@@ -32926,8 +32910,8 @@ var init_smallint = __esm({
 });
 
 // ../../node_modules/.pnpm/drizzle-orm@0.45.1_@types+pg@8.18.0_pg@8.20.0/node_modules/drizzle-orm/pg-core/columns/smallserial.js
-function smallserial(name2) {
-  return new PgSmallSerialBuilder(name2 ?? "");
+function smallserial(name) {
+  return new PgSmallSerialBuilder(name ?? "");
 }
 var PgSmallSerialBuilder, PgSmallSerial;
 var init_smallserial = __esm({
@@ -32936,8 +32920,8 @@ var init_smallserial = __esm({
     init_common();
     PgSmallSerialBuilder = class extends PgColumnBuilder {
       static [entityKind] = "PgSmallSerialBuilder";
-      constructor(name2) {
-        super(name2, "number", "PgSmallSerial");
+      constructor(name) {
+        super(name, "number", "PgSmallSerial");
         this.config.hasDefault = true;
         this.config.notNull = true;
       }
@@ -32960,8 +32944,8 @@ var init_smallserial = __esm({
 
 // ../../node_modules/.pnpm/drizzle-orm@0.45.1_@types+pg@8.18.0_pg@8.20.0/node_modules/drizzle-orm/pg-core/columns/text.js
 function text(a, b = {}) {
-  const { name: name2, config: config3 } = getColumnNameAndConfig(a, b);
-  return new PgTextBuilder(name2, config3);
+  const { name, config: config3 } = getColumnNameAndConfig(a, b);
+  return new PgTextBuilder(name, config3);
 }
 var PgTextBuilder, PgText;
 var init_text = __esm({
@@ -32971,8 +32955,8 @@ var init_text = __esm({
     init_common();
     PgTextBuilder = class extends PgColumnBuilder {
       static [entityKind] = "PgTextBuilder";
-      constructor(name2, config3) {
-        super(name2, "string", "PgText");
+      constructor(name, config3) {
+        super(name, "string", "PgText");
         this.config.enumValues = config3.enum;
       }
       /** @internal */
@@ -32992,8 +32976,8 @@ var init_text = __esm({
 
 // ../../node_modules/.pnpm/drizzle-orm@0.45.1_@types+pg@8.18.0_pg@8.20.0/node_modules/drizzle-orm/pg-core/columns/time.js
 function time(a, b = {}) {
-  const { name: name2, config: config3 } = getColumnNameAndConfig(a, b);
-  return new PgTimeBuilder(name2, config3.withTimezone ?? false, config3.precision);
+  const { name, config: config3 } = getColumnNameAndConfig(a, b);
+  return new PgTimeBuilder(name, config3.withTimezone ?? false, config3.precision);
 }
 var PgTimeBuilder, PgTime;
 var init_time = __esm({
@@ -33003,8 +32987,8 @@ var init_time = __esm({
     init_common();
     init_date_common();
     PgTimeBuilder = class extends PgDateColumnBaseBuilder {
-      constructor(name2, withTimezone, precision) {
-        super(name2, "string", "PgTime");
+      constructor(name, withTimezone, precision) {
+        super(name, "string", "PgTime");
         this.withTimezone = withTimezone;
         this.precision = precision;
         this.config.withTimezone = withTimezone;
@@ -33035,11 +33019,11 @@ var init_time = __esm({
 
 // ../../node_modules/.pnpm/drizzle-orm@0.45.1_@types+pg@8.18.0_pg@8.20.0/node_modules/drizzle-orm/pg-core/columns/timestamp.js
 function timestamp(a, b = {}) {
-  const { name: name2, config: config3 } = getColumnNameAndConfig(a, b);
+  const { name, config: config3 } = getColumnNameAndConfig(a, b);
   if (config3?.mode === "string") {
-    return new PgTimestampStringBuilder(name2, config3.withTimezone ?? false, config3.precision);
+    return new PgTimestampStringBuilder(name, config3.withTimezone ?? false, config3.precision);
   }
-  return new PgTimestampBuilder(name2, config3?.withTimezone ?? false, config3?.precision);
+  return new PgTimestampBuilder(name, config3?.withTimezone ?? false, config3?.precision);
 }
 var PgTimestampBuilder, PgTimestamp, PgTimestampStringBuilder, PgTimestampString;
 var init_timestamp = __esm({
@@ -33050,8 +33034,8 @@ var init_timestamp = __esm({
     init_date_common();
     PgTimestampBuilder = class extends PgDateColumnBaseBuilder {
       static [entityKind] = "PgTimestampBuilder";
-      constructor(name2, withTimezone, precision) {
-        super(name2, "date", "PgTimestamp");
+      constructor(name, withTimezone, precision) {
+        super(name, "date", "PgTimestamp");
         this.config.withTimezone = withTimezone;
         this.config.precision = precision;
       }
@@ -33083,8 +33067,8 @@ var init_timestamp = __esm({
     };
     PgTimestampStringBuilder = class extends PgDateColumnBaseBuilder {
       static [entityKind] = "PgTimestampStringBuilder";
-      constructor(name2, withTimezone, precision) {
-        super(name2, "string", "PgTimestampString");
+      constructor(name, withTimezone, precision) {
+        super(name, "string", "PgTimestampString");
         this.config.withTimezone = withTimezone;
         this.config.precision = precision;
       }
@@ -33124,8 +33108,8 @@ var init_timestamp = __esm({
 });
 
 // ../../node_modules/.pnpm/drizzle-orm@0.45.1_@types+pg@8.18.0_pg@8.20.0/node_modules/drizzle-orm/pg-core/columns/uuid.js
-function uuid(name2) {
-  return new PgUUIDBuilder(name2 ?? "");
+function uuid(name) {
+  return new PgUUIDBuilder(name ?? "");
 }
 var PgUUIDBuilder, PgUUID;
 var init_uuid = __esm({
@@ -33135,8 +33119,8 @@ var init_uuid = __esm({
     init_common();
     PgUUIDBuilder = class extends PgColumnBuilder {
       static [entityKind] = "PgUUIDBuilder";
-      constructor(name2) {
-        super(name2, "string", "PgUUID");
+      constructor(name) {
+        super(name, "string", "PgUUID");
       }
       /**
        * Adds `default gen_random_uuid()` to the column definition.
@@ -33160,8 +33144,8 @@ var init_uuid = __esm({
 
 // ../../node_modules/.pnpm/drizzle-orm@0.45.1_@types+pg@8.18.0_pg@8.20.0/node_modules/drizzle-orm/pg-core/columns/varchar.js
 function varchar(a, b = {}) {
-  const { name: name2, config: config3 } = getColumnNameAndConfig(a, b);
-  return new PgVarcharBuilder(name2, config3);
+  const { name, config: config3 } = getColumnNameAndConfig(a, b);
+  return new PgVarcharBuilder(name, config3);
 }
 var PgVarcharBuilder, PgVarchar;
 var init_varchar = __esm({
@@ -33171,8 +33155,8 @@ var init_varchar = __esm({
     init_common();
     PgVarcharBuilder = class extends PgColumnBuilder {
       static [entityKind] = "PgVarcharBuilder";
-      constructor(name2, config3) {
-        super(name2, "string", "PgVarchar");
+      constructor(name, config3) {
+        super(name, "string", "PgVarchar");
         this.config.length = config3.length;
         this.config.enumValues = config3.enum;
       }
@@ -33197,8 +33181,8 @@ var init_varchar = __esm({
 
 // ../../node_modules/.pnpm/drizzle-orm@0.45.1_@types+pg@8.18.0_pg@8.20.0/node_modules/drizzle-orm/pg-core/columns/vector_extension/bit.js
 function bit(a, b) {
-  const { name: name2, config: config3 } = getColumnNameAndConfig(a, b);
-  return new PgBinaryVectorBuilder(name2, config3);
+  const { name, config: config3 } = getColumnNameAndConfig(a, b);
+  return new PgBinaryVectorBuilder(name, config3);
 }
 var PgBinaryVectorBuilder, PgBinaryVector;
 var init_bit = __esm({
@@ -33208,8 +33192,8 @@ var init_bit = __esm({
     init_common();
     PgBinaryVectorBuilder = class extends PgColumnBuilder {
       static [entityKind] = "PgBinaryVectorBuilder";
-      constructor(name2, config3) {
-        super(name2, "string", "PgBinaryVector");
+      constructor(name, config3) {
+        super(name, "string", "PgBinaryVector");
         this.config.dimensions = config3.dimensions;
       }
       /** @internal */
@@ -33232,8 +33216,8 @@ var init_bit = __esm({
 
 // ../../node_modules/.pnpm/drizzle-orm@0.45.1_@types+pg@8.18.0_pg@8.20.0/node_modules/drizzle-orm/pg-core/columns/vector_extension/halfvec.js
 function halfvec(a, b) {
-  const { name: name2, config: config3 } = getColumnNameAndConfig(a, b);
-  return new PgHalfVectorBuilder(name2, config3);
+  const { name, config: config3 } = getColumnNameAndConfig(a, b);
+  return new PgHalfVectorBuilder(name, config3);
 }
 var PgHalfVectorBuilder, PgHalfVector;
 var init_halfvec = __esm({
@@ -33243,8 +33227,8 @@ var init_halfvec = __esm({
     init_common();
     PgHalfVectorBuilder = class extends PgColumnBuilder {
       static [entityKind] = "PgHalfVectorBuilder";
-      constructor(name2, config3) {
-        super(name2, "array", "PgHalfVector");
+      constructor(name, config3) {
+        super(name, "array", "PgHalfVector");
         this.config.dimensions = config3.dimensions;
       }
       /** @internal */
@@ -33273,8 +33257,8 @@ var init_halfvec = __esm({
 
 // ../../node_modules/.pnpm/drizzle-orm@0.45.1_@types+pg@8.18.0_pg@8.20.0/node_modules/drizzle-orm/pg-core/columns/vector_extension/sparsevec.js
 function sparsevec(a, b) {
-  const { name: name2, config: config3 } = getColumnNameAndConfig(a, b);
-  return new PgSparseVectorBuilder(name2, config3);
+  const { name, config: config3 } = getColumnNameAndConfig(a, b);
+  return new PgSparseVectorBuilder(name, config3);
 }
 var PgSparseVectorBuilder, PgSparseVector;
 var init_sparsevec = __esm({
@@ -33284,8 +33268,8 @@ var init_sparsevec = __esm({
     init_common();
     PgSparseVectorBuilder = class extends PgColumnBuilder {
       static [entityKind] = "PgSparseVectorBuilder";
-      constructor(name2, config3) {
-        super(name2, "string", "PgSparseVector");
+      constructor(name, config3) {
+        super(name, "string", "PgSparseVector");
         this.config.dimensions = config3.dimensions;
       }
       /** @internal */
@@ -33308,8 +33292,8 @@ var init_sparsevec = __esm({
 
 // ../../node_modules/.pnpm/drizzle-orm@0.45.1_@types+pg@8.18.0_pg@8.20.0/node_modules/drizzle-orm/pg-core/columns/vector_extension/vector.js
 function vector(a, b) {
-  const { name: name2, config: config3 } = getColumnNameAndConfig(a, b);
-  return new PgVectorBuilder(name2, config3);
+  const { name, config: config3 } = getColumnNameAndConfig(a, b);
+  return new PgVectorBuilder(name, config3);
 }
 var PgVectorBuilder, PgVector;
 var init_vector = __esm({
@@ -33319,8 +33303,8 @@ var init_vector = __esm({
     init_common();
     PgVectorBuilder = class extends PgColumnBuilder {
       static [entityKind] = "PgVectorBuilder";
-      constructor(name2, config3) {
-        super(name2, "array", "PgVector");
+      constructor(name, config3) {
+        super(name, "array", "PgVector");
         this.config.dimensions = config3.dimensions;
       }
       /** @internal */
@@ -33422,24 +33406,24 @@ var init_all = __esm({
 });
 
 // ../../node_modules/.pnpm/drizzle-orm@0.45.1_@types+pg@8.18.0_pg@8.20.0/node_modules/drizzle-orm/pg-core/table.js
-function pgTableWithSchema(name2, columns, extraConfig, schema, baseName = name2) {
-  const rawTable = new PgTable(name2, schema, baseName);
+function pgTableWithSchema(name, columns, extraConfig, schema, baseName = name) {
+  const rawTable = new PgTable(name, schema, baseName);
   const parsedColumns = typeof columns === "function" ? columns(getPgColumnBuilders()) : columns;
   const builtColumns = Object.fromEntries(
-    Object.entries(parsedColumns).map(([name22, colBuilderBase]) => {
+    Object.entries(parsedColumns).map(([name2, colBuilderBase]) => {
       const colBuilder = colBuilderBase;
-      colBuilder.setName(name22);
+      colBuilder.setName(name2);
       const column = colBuilder.build(rawTable);
       rawTable[InlineForeignKeys].push(...colBuilder.buildForeignKeys(column, rawTable));
-      return [name22, column];
+      return [name2, column];
     })
   );
   const builtColumnsForExtraConfig = Object.fromEntries(
-    Object.entries(parsedColumns).map(([name22, colBuilderBase]) => {
+    Object.entries(parsedColumns).map(([name2, colBuilderBase]) => {
       const colBuilder = colBuilderBase;
-      colBuilder.setName(name22);
+      colBuilder.setName(name2);
       const column = colBuilder.buildExtraConfigColumn(rawTable);
-      return [name22, column];
+      return [name2, column];
     })
   );
   const table = Object.assign(rawTable, builtColumns);
@@ -33479,8 +33463,8 @@ var init_table2 = __esm({
       /** @internal */
       [Table.Symbol.ExtraConfigColumns] = {};
     };
-    pgTable = (name2, columns, extraConfig) => {
-      return pgTableWithSchema(name2, columns, extraConfig, void 0);
+    pgTable = (name, columns, extraConfig) => {
+      return pgTableWithSchema(name, columns, extraConfig, void 0);
     };
   }
 });
@@ -33497,9 +33481,9 @@ var init_primary_keys = __esm({
       columns;
       /** @internal */
       name;
-      constructor(columns, name2) {
+      constructor(columns, name) {
         this.columns = columns;
-        this.name = name2;
+        this.name = name;
       }
       /** @internal */
       build(table) {
@@ -33507,10 +33491,10 @@ var init_primary_keys = __esm({
       }
     };
     PrimaryKey = class {
-      constructor(table, columns, name2) {
+      constructor(table, columns, name) {
         this.table = table;
         this.columns = columns;
-        this.name = name2;
+        this.name = name;
       }
       static [entityKind] = "PgPrimaryKey";
       columns;
@@ -33594,17 +33578,17 @@ function exists(subquery) {
 function notExists(subquery) {
   return sql`not exists ${subquery}`;
 }
-function between(column, min2, max2) {
-  return sql`${column} between ${bindIfParam(min2, column)} and ${bindIfParam(
-    max2,
+function between(column, min, max) {
+  return sql`${column} between ${bindIfParam(min, column)} and ${bindIfParam(
+    max,
     column
   )}`;
 }
-function notBetween(column, min2, max2) {
+function notBetween(column, min, max) {
   return sql`${column} not between ${bindIfParam(
-    min2,
+    min,
     column
-  )} and ${bindIfParam(max2, column)}`;
+  )} and ${bindIfParam(max, column)}`;
 }
 function like(column, value) {
   return sql`${column} like ${value}`;
@@ -33617,36 +33601,6 @@ function ilike(column, value) {
 }
 function notIlike(column, value) {
   return sql`${column} not ilike ${value}`;
-}
-function arrayContains(column, values) {
-  if (Array.isArray(values)) {
-    if (values.length === 0) {
-      throw new Error("arrayContains requires at least one value");
-    }
-    const array2 = sql`${bindIfParam(values, column)}`;
-    return sql`${column} @> ${array2}`;
-  }
-  return sql`${column} @> ${bindIfParam(values, column)}`;
-}
-function arrayContained(column, values) {
-  if (Array.isArray(values)) {
-    if (values.length === 0) {
-      throw new Error("arrayContained requires at least one value");
-    }
-    const array2 = sql`${bindIfParam(values, column)}`;
-    return sql`${column} <@ ${array2}`;
-  }
-  return sql`${column} <@ ${bindIfParam(values, column)}`;
-}
-function arrayOverlaps(column, values) {
-  if (Array.isArray(values)) {
-    if (values.length === 0) {
-      throw new Error("arrayOverlaps requires at least one value");
-    }
-    const array2 = sql`${bindIfParam(values, column)}`;
-    return sql`${column} && ${array2}`;
-  }
-  return sql`${column} && ${bindIfParam(values, column)}`;
 }
 var eq, ne, gt, gte, lt, lte;
 var init_conditions = __esm({
@@ -33793,17 +33747,6 @@ function extractTablesRelationalConfig(schema, configHelpers) {
     }
   }
   return { tables: tablesConfig, tableNamesMap };
-}
-function relations(table, relations2) {
-  return new Relations(
-    table,
-    (helpers) => Object.fromEntries(
-      Object.entries(relations2(helpers)).map(([key, value]) => [
-        key,
-        value.withFieldName(key)
-      ])
-    )
-  );
 }
 function createOne(sourceTable) {
   return function one(table, config3) {
@@ -33981,81 +33924,14 @@ var init_relations = __esm({
 });
 
 // ../../node_modules/.pnpm/drizzle-orm@0.45.1_@types+pg@8.18.0_pg@8.20.0/node_modules/drizzle-orm/sql/functions/aggregate.js
-function count(expression) {
-  return sql`count(${expression || sql.raw("*")})`.mapWith(Number);
-}
-function countDistinct(expression) {
-  return sql`count(distinct ${expression})`.mapWith(Number);
-}
-function avg(expression) {
-  return sql`avg(${expression})`.mapWith(String);
-}
-function avgDistinct(expression) {
-  return sql`avg(distinct ${expression})`.mapWith(String);
-}
-function sum(expression) {
-  return sql`sum(${expression})`.mapWith(String);
-}
-function sumDistinct(expression) {
-  return sql`sum(distinct ${expression})`.mapWith(String);
-}
-function max(expression) {
-  return sql`max(${expression})`.mapWith(is(expression, Column) ? expression : String);
-}
-function min(expression) {
-  return sql`min(${expression})`.mapWith(is(expression, Column) ? expression : String);
-}
 var init_aggregate = __esm({
   "../../node_modules/.pnpm/drizzle-orm@0.45.1_@types+pg@8.18.0_pg@8.20.0/node_modules/drizzle-orm/sql/functions/aggregate.js"() {
-    init_column();
-    init_entity();
-    init_sql();
   }
 });
 
 // ../../node_modules/.pnpm/drizzle-orm@0.45.1_@types+pg@8.18.0_pg@8.20.0/node_modules/drizzle-orm/sql/functions/vector.js
-function toSql(value) {
-  return JSON.stringify(value);
-}
-function l2Distance(column, value) {
-  if (Array.isArray(value)) {
-    return sql`${column} <-> ${toSql(value)}`;
-  }
-  return sql`${column} <-> ${value}`;
-}
-function l1Distance(column, value) {
-  if (Array.isArray(value)) {
-    return sql`${column} <+> ${toSql(value)}`;
-  }
-  return sql`${column} <+> ${value}`;
-}
-function innerProduct(column, value) {
-  if (Array.isArray(value)) {
-    return sql`${column} <#> ${toSql(value)}`;
-  }
-  return sql`${column} <#> ${value}`;
-}
-function cosineDistance(column, value) {
-  if (Array.isArray(value)) {
-    return sql`${column} <=> ${toSql(value)}`;
-  }
-  return sql`${column} <=> ${value}`;
-}
-function hammingDistance(column, value) {
-  if (Array.isArray(value)) {
-    return sql`${column} <~> ${toSql(value)}`;
-  }
-  return sql`${column} <~> ${value}`;
-}
-function jaccardDistance(column, value) {
-  if (Array.isArray(value)) {
-    return sql`${column} <%> ${toSql(value)}`;
-  }
-  return sql`${column} <%> ${value}`;
-}
 var init_vector2 = __esm({
   "../../node_modules/.pnpm/drizzle-orm@0.45.1_@types+pg@8.18.0_pg@8.20.0/node_modules/drizzle-orm/sql/functions/vector.js"() {
-    init_sql();
   }
 });
 
@@ -34077,127 +33953,6 @@ var init_sql2 = __esm({
 });
 
 // ../../node_modules/.pnpm/drizzle-orm@0.45.1_@types+pg@8.18.0_pg@8.20.0/node_modules/drizzle-orm/index.js
-var drizzle_orm_exports = {};
-__export(drizzle_orm_exports, {
-  BaseName: () => BaseName,
-  Column: () => Column,
-  ColumnAliasProxyHandler: () => ColumnAliasProxyHandler,
-  ColumnBuilder: () => ColumnBuilder,
-  Columns: () => Columns,
-  ConsoleLogWriter: () => ConsoleLogWriter,
-  DefaultLogger: () => DefaultLogger,
-  DrizzleError: () => DrizzleError,
-  DrizzleQueryError: () => DrizzleQueryError,
-  ExtraConfigBuilder: () => ExtraConfigBuilder,
-  ExtraConfigColumns: () => ExtraConfigColumns,
-  FakePrimitiveParam: () => FakePrimitiveParam,
-  IsAlias: () => IsAlias,
-  Many: () => Many,
-  Name: () => Name,
-  NoopLogger: () => NoopLogger,
-  One: () => One,
-  OriginalName: () => OriginalName,
-  Param: () => Param,
-  Placeholder: () => Placeholder,
-  QueryPromise: () => QueryPromise,
-  Relation: () => Relation,
-  RelationTableAliasProxyHandler: () => RelationTableAliasProxyHandler,
-  Relations: () => Relations,
-  SQL: () => SQL,
-  Schema: () => Schema,
-  StringChunk: () => StringChunk,
-  Subquery: () => Subquery,
-  Table: () => Table,
-  TableAliasProxyHandler: () => TableAliasProxyHandler,
-  TransactionRollbackError: () => TransactionRollbackError,
-  View: () => View,
-  ViewBaseConfig: () => ViewBaseConfig,
-  WithSubquery: () => WithSubquery,
-  aliasedRelation: () => aliasedRelation,
-  aliasedTable: () => aliasedTable,
-  aliasedTableColumn: () => aliasedTableColumn,
-  and: () => and,
-  applyMixins: () => applyMixins,
-  arrayContained: () => arrayContained,
-  arrayContains: () => arrayContains,
-  arrayOverlaps: () => arrayOverlaps,
-  asc: () => asc,
-  avg: () => avg,
-  avgDistinct: () => avgDistinct,
-  between: () => between,
-  bindIfParam: () => bindIfParam,
-  cosineDistance: () => cosineDistance,
-  count: () => count,
-  countDistinct: () => countDistinct,
-  createMany: () => createMany,
-  createOne: () => createOne,
-  createTableRelationsHelpers: () => createTableRelationsHelpers,
-  desc: () => desc,
-  entityKind: () => entityKind,
-  eq: () => eq,
-  exists: () => exists,
-  extractTablesRelationalConfig: () => extractTablesRelationalConfig,
-  fillPlaceholders: () => fillPlaceholders,
-  getColumnNameAndConfig: () => getColumnNameAndConfig,
-  getOperators: () => getOperators,
-  getOrderByOperators: () => getOrderByOperators,
-  getTableColumns: () => getTableColumns,
-  getTableLikeName: () => getTableLikeName,
-  getTableName: () => getTableName,
-  getTableUniqueName: () => getTableUniqueName,
-  getViewName: () => getViewName,
-  getViewSelectedFields: () => getViewSelectedFields,
-  gt: () => gt,
-  gte: () => gte,
-  hammingDistance: () => hammingDistance,
-  hasOwnEntityKind: () => hasOwnEntityKind,
-  haveSameKeys: () => haveSameKeys,
-  ilike: () => ilike,
-  inArray: () => inArray,
-  innerProduct: () => innerProduct,
-  is: () => is,
-  isConfig: () => isConfig,
-  isDriverValueEncoder: () => isDriverValueEncoder,
-  isNotNull: () => isNotNull,
-  isNull: () => isNull,
-  isSQLWrapper: () => isSQLWrapper,
-  isTable: () => isTable,
-  isView: () => isView,
-  jaccardDistance: () => jaccardDistance,
-  l1Distance: () => l1Distance,
-  l2Distance: () => l2Distance,
-  like: () => like,
-  lt: () => lt,
-  lte: () => lte,
-  mapColumnsInAliasedSQLToAlias: () => mapColumnsInAliasedSQLToAlias,
-  mapColumnsInSQLToAlias: () => mapColumnsInSQLToAlias,
-  mapRelationalRow: () => mapRelationalRow,
-  mapResultRow: () => mapResultRow,
-  mapUpdateSet: () => mapUpdateSet,
-  max: () => max,
-  min: () => min,
-  name: () => name,
-  ne: () => ne,
-  noopDecoder: () => noopDecoder,
-  noopEncoder: () => noopEncoder,
-  noopMapper: () => noopMapper,
-  normalizeRelation: () => normalizeRelation,
-  not: () => not,
-  notBetween: () => notBetween,
-  notExists: () => notExists,
-  notIlike: () => notIlike,
-  notInArray: () => notInArray,
-  notLike: () => notLike,
-  or: () => or,
-  orderSelectedFields: () => orderSelectedFields,
-  param: () => param,
-  placeholder: () => placeholder,
-  relations: () => relations,
-  sql: () => sql,
-  sum: () => sum,
-  sumDistinct: () => sumDistinct,
-  textDecoder: () => textDecoder
-});
 var init_drizzle_orm = __esm({
   "../../node_modules/.pnpm/drizzle-orm@0.45.1_@types+pg@8.18.0_pg@8.20.0/node_modules/drizzle-orm/index.js"() {
     init_alias();
@@ -34995,11 +34750,11 @@ var require_binaryParsers = __commonJS({
         var array2 = [];
         var i2;
         if (dimension.length > 1) {
-          var count2 = dimension.shift();
-          for (i2 = 0; i2 < count2; i2++) {
+          var count = dimension.shift();
+          for (i2 = 0; i2 < count; i2++) {
             array2[i2] = parse3(dimension, elementType2);
           }
-          dimension.unshift(count2);
+          dimension.unshift(count);
         } else {
           for (i2 = 0; i2 < dimension[0]; i2++) {
             array2[i2] = parseElement(elementType2);
@@ -35688,9 +35443,9 @@ var require_sasl = __commonJS({
           if (!/^.=/.test(attrValue)) {
             throw new Error("SASL: Invalid attribute pair entry");
           }
-          const name2 = attrValue[0];
+          const name = attrValue[0];
           const value = attrValue.substring(2);
-          return [name2, value];
+          return [name, value];
         })
       );
     }
@@ -36444,10 +36199,10 @@ var require_messages = __commonJS({
       length: 4
     };
     var DatabaseError2 = class extends Error {
-      constructor(message, length, name2) {
+      constructor(message, length, name) {
         super(message);
         this.length = length;
-        this.name = name2;
+        this.name = name;
       }
     };
     exports.DatabaseError = DatabaseError2;
@@ -36460,17 +36215,17 @@ var require_messages = __commonJS({
     };
     exports.CopyDataMessage = CopyDataMessage;
     var CopyResponse = class {
-      constructor(length, name2, binary, columnCount) {
+      constructor(length, name, binary, columnCount) {
         this.length = length;
-        this.name = name2;
+        this.name = name;
         this.binary = binary;
         this.columnTypes = new Array(columnCount);
       }
     };
     exports.CopyResponse = CopyResponse;
     var Field = class {
-      constructor(name2, tableID, columnID, dataTypeID, dataTypeSize, dataTypeModifier, format) {
-        this.name = name2;
+      constructor(name, tableID, columnID, dataTypeID, dataTypeSize, dataTypeModifier, format) {
+        this.name = name;
         this.tableID = tableID;
         this.columnID = columnID;
         this.dataTypeID = dataTypeID;
@@ -36702,15 +36457,15 @@ var require_serializer = __commonJS({
     };
     var emptyArray = [];
     var parse3 = (query2) => {
-      const name2 = query2.name || "";
-      if (name2.length > 63) {
+      const name = query2.name || "";
+      if (name.length > 63) {
         console.error("Warning! Postgres only supports 63 characters for query names.");
-        console.error("You supplied %s (%s)", name2, name2.length);
+        console.error("You supplied %s (%s)", name, name.length);
         console.error("This can cause conflicts and silent errors executing queries");
       }
       const types3 = query2.types || emptyArray;
       const len = types3.length;
-      const buffer = writer.addCString(name2).addCString(query2.text).addInt16(len);
+      const buffer = writer.addCString(name).addCString(query2.text).addInt16(len);
       for (let i = 0; i < len; i++) {
         buffer.addInt32(types3[i]);
       }
@@ -37121,14 +36876,14 @@ var require_parser = __commonJS({
       return message;
     };
     var parseField = (reader) => {
-      const name2 = reader.cstring();
+      const name = reader.cstring();
       const tableID = reader.uint32();
       const columnID = reader.int16();
       const dataTypeID = reader.uint32();
       const dataTypeSize = reader.int16();
       const dataTypeModifier = reader.int32();
       const mode = reader.int16() === 0 ? "text" : "binary";
-      return new messages_1.Field(name2, tableID, columnID, dataTypeID, dataTypeSize, dataTypeModifier, mode);
+      return new messages_1.Field(name, tableID, columnID, dataTypeID, dataTypeSize, dataTypeModifier, mode);
     };
     var parseParameterDescriptionMessage = (reader) => {
       const parameterCount = reader.int16();
@@ -37148,9 +36903,9 @@ var require_parser = __commonJS({
       return new messages_1.DataRowMessage(LATEINIT_LENGTH, fields);
     };
     var parseParameterStatusMessage = (reader) => {
-      const name2 = reader.cstring();
+      const name = reader.cstring();
       const value = reader.cstring();
-      return new messages_1.ParameterStatusMessage(LATEINIT_LENGTH, name2, value);
+      return new messages_1.ParameterStatusMessage(LATEINIT_LENGTH, name, value);
     };
     var parseBackendKeyData = (reader) => {
       const processID = reader.int32();
@@ -37204,7 +36959,7 @@ var require_parser = __commonJS({
       }
       return message;
     };
-    var parseErrorMessage = (reader, name2) => {
+    var parseErrorMessage = (reader, name) => {
       const fields = {};
       let fieldType = reader.string(1);
       while (fieldType !== "\0") {
@@ -37212,7 +36967,7 @@ var require_parser = __commonJS({
         fieldType = reader.string(1);
       }
       const messageValue = fields.M;
-      const message = name2 === "notice" ? new messages_1.NoticeMessage(LATEINIT_LENGTH, messageValue) : new messages_1.DatabaseError(messageValue, LATEINIT_LENGTH, name2);
+      const message = name === "notice" ? new messages_1.NoticeMessage(LATEINIT_LENGTH, messageValue) : new messages_1.DatabaseError(messageValue, LATEINIT_LENGTH, name);
       message.severity = fields.S;
       message.code = fields.C;
       message.detail = fields.D;
@@ -39426,8 +39181,8 @@ var init_checks = __esm({
   "../../node_modules/.pnpm/drizzle-orm@0.45.1_@types+pg@8.18.0_pg@8.20.0/node_modules/drizzle-orm/pg-core/checks.js"() {
     init_entity();
     CheckBuilder = class {
-      constructor(name2, value) {
-        this.name = name2;
+      constructor(name, value) {
+        this.name = name;
         this.value = value;
       }
       static [entityKind] = "PgCheckBuilder";
@@ -39492,8 +39247,8 @@ var init_columns = __esm({
 });
 
 // ../../node_modules/.pnpm/drizzle-orm@0.45.1_@types+pg@8.18.0_pg@8.20.0/node_modules/drizzle-orm/pg-core/indexes.js
-function uniqueIndex(name2) {
-  return new IndexBuilderOn(true, name2);
+function uniqueIndex(name) {
+  return new IndexBuilderOn(true, name);
 }
 var IndexBuilderOn, IndexBuilder, Index;
 var init_indexes = __esm({
@@ -39502,9 +39257,9 @@ var init_indexes = __esm({
     init_entity();
     init_columns();
     IndexBuilderOn = class {
-      constructor(unique, name2) {
+      constructor(unique, name) {
         this.unique = unique;
-        this.name = name2;
+        this.name = name;
       }
       static [entityKind] = "PgIndexBuilderOn";
       on(...columns) {
@@ -39572,9 +39327,9 @@ var init_indexes = __esm({
       static [entityKind] = "PgIndexBuilder";
       /** @internal */
       config;
-      constructor(columns, unique, only, name2, method = "btree") {
+      constructor(columns, unique, only, name, method = "btree") {
         this.config = {
-          name: name2,
+          name,
           columns,
           unique,
           only,
@@ -39614,8 +39369,8 @@ var init_policies = __esm({
   "../../node_modules/.pnpm/drizzle-orm@0.45.1_@types+pg@8.18.0_pg@8.20.0/node_modules/drizzle-orm/pg-core/policies.js"() {
     init_entity();
     PgPolicy = class {
-      constructor(name2, config3) {
-        this.name = name2;
+      constructor(name, config3) {
+        this.name = name;
         if (config3) {
           this.as = config3.as;
           this.for = config3.for;
@@ -39774,8 +39529,8 @@ var init_dialect = __esm({
           }
         });
       }
-      escapeName(name2) {
-        return `"${name2}"`;
+      escapeName(name) {
+        return `"${name}"`;
       }
       escapeParam(num) {
         return `$${num + 1}`;
@@ -41637,7 +41392,7 @@ var init_select2 = __esm({
     PgSelectBase = class extends PgSelectQueryBuilderBase {
       static [entityKind] = "PgSelect";
       /** @internal */
-      _prepare(name2) {
+      _prepare(name) {
         const { session: session2, config: config3, dialect, joinsNotNullableMap, authToken, cacheConfig, usedTables } = this;
         if (!session2) {
           throw new Error("Cannot execute a query on a query builder. Please use a database instance instead.");
@@ -41645,7 +41400,7 @@ var init_select2 = __esm({
         const { fields } = config3;
         return tracer.startActiveSpan("drizzle.prepareQuery", () => {
           const fieldsList = orderSelectedFields(fields);
-          const query = session2.prepareQuery(dialect.sqlToQuery(this.getSQL()), fieldsList, name2, true, void 0, {
+          const query = session2.prepareQuery(dialect.sqlToQuery(this.getSQL()), fieldsList, name, true, void 0, {
             type: "select",
             tables: [...usedTables]
           }, cacheConfig);
@@ -41660,8 +41415,8 @@ var init_select2 = __esm({
        *
        * {@link https://www.postgresql.org/docs/current/sql-prepare.html | Postgres prepare documentation}
        */
-      prepare(name2) {
-        return this._prepare(name2);
+      prepare(name) {
+        return this._prepare(name);
       }
       authToken;
       /** @internal */
@@ -41791,17 +41546,17 @@ var init_query_builder2 = __esm({
 });
 
 // ../../node_modules/.pnpm/drizzle-orm@0.45.1_@types+pg@8.18.0_pg@8.20.0/node_modules/drizzle-orm/pg-core/view.js
-function pgViewWithSchema(name2, selection, schema) {
+function pgViewWithSchema(name, selection, schema) {
   if (selection) {
-    return new ManualViewBuilder(name2, selection, schema);
+    return new ManualViewBuilder(name, selection, schema);
   }
-  return new ViewBuilder(name2, schema);
+  return new ViewBuilder(name, schema);
 }
-function pgMaterializedViewWithSchema(name2, selection, schema) {
+function pgMaterializedViewWithSchema(name, selection, schema) {
   if (selection) {
-    return new ManualMaterializedViewBuilder(name2, selection, schema);
+    return new ManualMaterializedViewBuilder(name, selection, schema);
   }
-  return new MaterializedViewBuilder(name2, schema);
+  return new MaterializedViewBuilder(name, schema);
 }
 var DefaultViewBuilderCore, ViewBuilder, ManualViewBuilder, MaterializedViewBuilderCore, MaterializedViewBuilder, ManualMaterializedViewBuilder, PgView, PgMaterializedViewConfig, PgMaterializedView;
 var init_view = __esm({
@@ -41814,8 +41569,8 @@ var init_view = __esm({
     init_view_base();
     init_view_common2();
     DefaultViewBuilderCore = class {
-      constructor(name2, schema) {
-        this.name = name2;
+      constructor(name, schema) {
+        this.name = name;
         this.schema = schema;
       }
       static [entityKind] = "PgDefaultViewBuilderCore";
@@ -41855,9 +41610,9 @@ var init_view = __esm({
     ManualViewBuilder = class extends DefaultViewBuilderCore {
       static [entityKind] = "PgManualViewBuilder";
       columns;
-      constructor(name2, columns, schema) {
-        super(name2, schema);
-        this.columns = getTableColumns(pgTable(name2, columns));
+      constructor(name, columns, schema) {
+        super(name, schema);
+        this.columns = getTableColumns(pgTable(name, columns));
       }
       existing() {
         return new Proxy(
@@ -41899,8 +41654,8 @@ var init_view = __esm({
       }
     };
     MaterializedViewBuilderCore = class {
-      constructor(name2, schema) {
-        this.name = name2;
+      constructor(name, schema) {
+        this.name = name;
         this.schema = schema;
       }
       static [entityKind] = "PgMaterializedViewBuilderCore";
@@ -41957,9 +41712,9 @@ var init_view = __esm({
     ManualMaterializedViewBuilder = class extends MaterializedViewBuilderCore {
       static [entityKind] = "PgManualMaterializedViewBuilder";
       columns;
-      constructor(name2, columns, schema) {
-        super(name2, schema);
-        this.columns = getTableColumns(pgTable(name2, columns));
+      constructor(name, columns, schema) {
+        super(name, schema);
+        this.columns = getTableColumns(pgTable(name, columns));
       }
       existing() {
         return new Proxy(
@@ -42130,16 +41885,16 @@ var init_delete = __esm({
         return rest;
       }
       /** @internal */
-      _prepare(name2) {
+      _prepare(name) {
         return tracer.startActiveSpan("drizzle.prepareQuery", () => {
-          return this.session.prepareQuery(this.dialect.sqlToQuery(this.getSQL()), this.config.returning, name2, true, void 0, {
+          return this.session.prepareQuery(this.dialect.sqlToQuery(this.getSQL()), this.config.returning, name, true, void 0, {
             type: "delete",
             tables: extractUsedTable(this.config.table)
           }, this.cacheConfig);
         });
       }
-      prepare(name2) {
-        return this._prepare(name2);
+      prepare(name) {
+        return this._prepare(name);
       }
       authToken;
       /** @internal */
@@ -42337,16 +42092,16 @@ var init_insert = __esm({
         return rest;
       }
       /** @internal */
-      _prepare(name2) {
+      _prepare(name) {
         return tracer.startActiveSpan("drizzle.prepareQuery", () => {
-          return this.session.prepareQuery(this.dialect.sqlToQuery(this.getSQL()), this.config.returning, name2, true, void 0, {
+          return this.session.prepareQuery(this.dialect.sqlToQuery(this.getSQL()), this.config.returning, name, true, void 0, {
             type: "insert",
             tables: extractUsedTable(this.config.table)
           }, this.cacheConfig);
         });
       }
-      prepare(name2) {
-        return this._prepare(name2);
+      prepare(name) {
+        return this._prepare(name);
       }
       authToken;
       /** @internal */
@@ -42416,13 +42171,13 @@ var init_refresh_materialized_view = __esm({
         return rest;
       }
       /** @internal */
-      _prepare(name2) {
+      _prepare(name) {
         return tracer.startActiveSpan("drizzle.prepareQuery", () => {
-          return this.session.prepareQuery(this.dialect.sqlToQuery(this.getSQL()), void 0, name2, true);
+          return this.session.prepareQuery(this.dialect.sqlToQuery(this.getSQL()), void 0, name, true);
         });
       }
-      prepare(name2) {
-        return this._prepare(name2);
+      prepare(name) {
+        return this._prepare(name);
       }
       authToken;
       /** @internal */
@@ -42634,16 +42389,16 @@ var init_update = __esm({
         return rest;
       }
       /** @internal */
-      _prepare(name2) {
-        const query = this.session.prepareQuery(this.dialect.sqlToQuery(this.getSQL()), this.config.returning, name2, true, void 0, {
+      _prepare(name) {
+        const query = this.session.prepareQuery(this.dialect.sqlToQuery(this.getSQL()), this.config.returning, name, true, void 0, {
           type: "insert",
           tables: extractUsedTable(this.config.table)
         }, this.cacheConfig);
         query.joinsNotNullableMap = this.joinsNotNullableMap;
         return query;
       }
-      prepare(name2) {
-        return this._prepare(name2);
+      prepare(name) {
+        return this._prepare(name);
       }
       authToken;
       /** @internal */
@@ -42804,13 +42559,13 @@ var init_query = __esm({
       }
       static [entityKind] = "PgRelationalQuery";
       /** @internal */
-      _prepare(name2) {
+      _prepare(name) {
         return tracer.startActiveSpan("drizzle.prepareQuery", () => {
           const { query, builtQuery } = this._toSQL();
           return this.session.prepareQuery(
             builtQuery,
             void 0,
-            name2,
+            name,
             true,
             (rawRows, mapColumnValue) => {
               const rows = rawRows.map(
@@ -42824,8 +42579,8 @@ var init_query = __esm({
           );
         });
       }
-      prepare(name2) {
-        return this._prepare(name2);
+      prepare(name) {
+        return this._prepare(name);
       }
       _getQuery() {
         return this.dialect.buildRelationalQueryWithoutPK({
@@ -43246,8 +43001,8 @@ var init_roles = __esm({
   "../../node_modules/.pnpm/drizzle-orm@0.45.1_@types+pg@8.18.0_pg@8.20.0/node_modules/drizzle-orm/pg-core/roles.js"() {
     init_entity();
     PgRole = class {
-      constructor(name2, config3) {
-        this.name = name2;
+      constructor(name, config3) {
+        this.name = name;
         if (config3) {
           this.createDb = config3.createDb;
           this.createRole = config3.createRole;
@@ -43272,8 +43027,8 @@ var init_roles = __esm({
 });
 
 // ../../node_modules/.pnpm/drizzle-orm@0.45.1_@types+pg@8.18.0_pg@8.20.0/node_modules/drizzle-orm/pg-core/sequence.js
-function pgSequenceWithSchema(name2, options, schema) {
-  return new PgSequence(name2, options, schema);
+function pgSequenceWithSchema(name, options, schema) {
+  return new PgSequence(name, options, schema);
 }
 var PgSequence;
 var init_sequence = __esm({
@@ -43305,14 +43060,14 @@ var init_schema = __esm({
         this.schemaName = schemaName;
       }
       static [entityKind] = "PgSchema";
-      table = (name2, columns, extraConfig) => {
-        return pgTableWithSchema(name2, columns, extraConfig, this.schemaName);
+      table = (name, columns, extraConfig) => {
+        return pgTableWithSchema(name, columns, extraConfig, this.schemaName);
       };
-      view = (name2, columns) => {
-        return pgViewWithSchema(name2, columns, this.schemaName);
+      view = (name, columns) => {
+        return pgViewWithSchema(name, columns, this.schemaName);
       };
-      materializedView = (name2, columns) => {
-        return pgMaterializedViewWithSchema(name2, columns, this.schemaName);
+      materializedView = (name, columns) => {
+        return pgMaterializedViewWithSchema(name, columns, this.schemaName);
       };
       enum(enumName, input) {
         return Array.isArray(input) ? pgEnumWithSchema(
@@ -43321,8 +43076,8 @@ var init_schema = __esm({
           this.schemaName
         ) : pgEnumObjectWithSchema(enumName, input, this.schemaName);
       }
-      sequence = (name2, options) => {
-        return pgSequenceWithSchema(name2, options, this.schemaName);
+      sequence = (name, options) => {
+        return pgSequenceWithSchema(name, options, this.schemaName);
       };
       getSQL() {
         return new SQL([sql.identifier(this.schemaName)]);
@@ -43560,7 +43315,7 @@ var init_session2 = __esm({
     init_utils();
     ({ Pool: Pool2, types: types2 } = esm_default);
     NodePgPreparedQuery = class extends PgPreparedQuery {
-      constructor(client, queryString, params, logger2, cache, queryMetadata, cacheConfig, fields, name2, _isResponseInArrayMode, customResultMapper) {
+      constructor(client, queryString, params, logger2, cache, queryMetadata, cacheConfig, fields, name, _isResponseInArrayMode, customResultMapper) {
         super({ sql: queryString, params }, cache, queryMetadata, cacheConfig);
         this.client = client;
         this.queryString = queryString;
@@ -43570,7 +43325,7 @@ var init_session2 = __esm({
         this._isResponseInArrayMode = _isResponseInArrayMode;
         this.customResultMapper = customResultMapper;
         this.rawQueryConfig = {
-          name: name2,
+          name,
           text: queryString,
           types: {
             // @ts-ignore
@@ -43607,7 +43362,7 @@ var init_session2 = __esm({
           }
         };
         this.queryConfig = {
-          name: name2,
+          name,
           text: queryString,
           rowMode: "array",
           types: {
@@ -43713,7 +43468,7 @@ var init_session2 = __esm({
       static [entityKind] = "NodePgSession";
       logger;
       cache;
-      prepareQuery(query, fields, name2, isResponseInArrayMode, customResultMapper, queryMetadata, cacheConfig) {
+      prepareQuery(query, fields, name, isResponseInArrayMode, customResultMapper, queryMetadata, cacheConfig) {
         return new NodePgPreparedQuery(
           this.client,
           query.sql,
@@ -43723,7 +43478,7 @@ var init_session2 = __esm({
           queryMetadata,
           cacheConfig,
           fields,
-          name2,
+          name,
           isResponseInArrayMode,
           customResultMapper
         );
@@ -43870,7 +43625,7 @@ var init_node_postgres = __esm({
 
 // ../../node_modules/.pnpm/zod@3.25.76/node_modules/zod/v4/core/core.js
 // @__NO_SIDE_EFFECTS__
-function $constructor(name2, initializer3, params) {
+function $constructor(name, initializer3, params) {
   function init(inst, def) {
     var _a;
     Object.defineProperty(inst, "_zod", {
@@ -43878,7 +43633,7 @@ function $constructor(name2, initializer3, params) {
       enumerable: false
     });
     (_a = inst._zod).traits ?? (_a.traits = /* @__PURE__ */ new Set());
-    inst._zod.traits.add(name2);
+    inst._zod.traits.add(name);
     initializer3(inst, def);
     for (const k in _.prototype) {
       if (!(k in inst))
@@ -43890,7 +43645,7 @@ function $constructor(name2, initializer3, params) {
   const Parent = params?.Parent ?? Object;
   class Definition extends Parent {
   }
-  Object.defineProperty(Definition, "name", { value: name2 });
+  Object.defineProperty(Definition, "name", { value: name });
   function _(def) {
     var _a;
     const inst = params?.Parent ? new Definition() : this;
@@ -43906,10 +43661,10 @@ function $constructor(name2, initializer3, params) {
     value: (inst) => {
       if (params?.Parent && inst instanceof params.Parent)
         return true;
-      return inst?._zod?.traits?.has(name2);
+      return inst?._zod?.traits?.has(name);
     }
   });
-  Object.defineProperty(_, "name", { value: name2 });
+  Object.defineProperty(_, "name", { value: name });
   return _;
 }
 function config2(newConfig) {
@@ -47276,8 +47031,8 @@ var init_az = __esm({
 });
 
 // ../../node_modules/.pnpm/zod@3.25.76/node_modules/zod/v4/locales/be.js
-function getBelarusianPlural(count2, one, few, many) {
-  const absCount = Math.abs(count2);
+function getBelarusianPlural(count, one, few, many) {
+  const absCount = Math.abs(count);
   const lastDigit = absCount % 10;
   const lastTwoDigits = absCount % 100;
   if (lastTwoDigits >= 11 && lastTwoDigits <= 19) {
@@ -50578,8 +50333,8 @@ var init_pt = __esm({
 });
 
 // ../../node_modules/.pnpm/zod@3.25.76/node_modules/zod/v4/locales/ru.js
-function getRussianPlural(count2, one, few, many) {
-  const absCount = Math.abs(count2);
+function getRussianPlural(count, one, few, many) {
+  const absCount = Math.abs(count);
   const lastDigit = absCount % 10;
   const lastTwoDigits = absCount % 100;
   if (lastTwoDigits >= 11 && lastTwoDigits <= 19) {
@@ -55537,12 +55292,12 @@ function columnToSchema(column, factory) {
 }
 function numberColumnToSchema(column, z, coerce2) {
   let unsigned = column.getSQLType().includes("unsigned");
-  let min2;
-  let max2;
+  let min;
+  let max;
   let integer3 = false;
   if (isColumnType(column, ["MySqlTinyInt", "SingleStoreTinyInt"])) {
-    min2 = unsigned ? 0 : CONSTANTS.INT8_MIN;
-    max2 = unsigned ? CONSTANTS.INT8_UNSIGNED_MAX : CONSTANTS.INT8_MAX;
+    min = unsigned ? 0 : CONSTANTS.INT8_MIN;
+    max = unsigned ? CONSTANTS.INT8_UNSIGNED_MAX : CONSTANTS.INT8_MAX;
     integer3 = true;
   } else if (isColumnType(column, [
     "PgSmallInt",
@@ -55550,8 +55305,8 @@ function numberColumnToSchema(column, z, coerce2) {
     "MySqlSmallInt",
     "SingleStoreSmallInt"
   ])) {
-    min2 = unsigned ? 0 : CONSTANTS.INT16_MIN;
-    max2 = unsigned ? CONSTANTS.INT16_UNSIGNED_MAX : CONSTANTS.INT16_MAX;
+    min = unsigned ? 0 : CONSTANTS.INT16_MIN;
+    max = unsigned ? CONSTANTS.INT16_UNSIGNED_MAX : CONSTANTS.INT16_MAX;
     integer3 = true;
   } else if (isColumnType(column, [
     "PgReal",
@@ -55560,8 +55315,8 @@ function numberColumnToSchema(column, z, coerce2) {
     "SingleStoreMediumInt",
     "SingleStoreFloat"
   ])) {
-    min2 = unsigned ? 0 : CONSTANTS.INT24_MIN;
-    max2 = unsigned ? CONSTANTS.INT24_UNSIGNED_MAX : CONSTANTS.INT24_MAX;
+    min = unsigned ? 0 : CONSTANTS.INT24_MIN;
+    max = unsigned ? CONSTANTS.INT24_UNSIGNED_MAX : CONSTANTS.INT24_MAX;
     integer3 = isColumnType(column, ["MySqlMediumInt", "SingleStoreMediumInt"]);
   } else if (isColumnType(column, [
     "PgInteger",
@@ -55569,8 +55324,8 @@ function numberColumnToSchema(column, z, coerce2) {
     "MySqlInt",
     "SingleStoreInt"
   ])) {
-    min2 = unsigned ? 0 : CONSTANTS.INT32_MIN;
-    max2 = unsigned ? CONSTANTS.INT32_UNSIGNED_MAX : CONSTANTS.INT32_MAX;
+    min = unsigned ? 0 : CONSTANTS.INT32_MIN;
+    max = unsigned ? CONSTANTS.INT32_UNSIGNED_MAX : CONSTANTS.INT32_MAX;
     integer3 = true;
   } else if (isColumnType(column, [
     "PgDoublePrecision",
@@ -55580,8 +55335,8 @@ function numberColumnToSchema(column, z, coerce2) {
     "SingleStoreDouble",
     "SQLiteReal"
   ])) {
-    min2 = unsigned ? 0 : CONSTANTS.INT48_MIN;
-    max2 = unsigned ? CONSTANTS.INT48_UNSIGNED_MAX : CONSTANTS.INT48_MAX;
+    min = unsigned ? 0 : CONSTANTS.INT48_MIN;
+    max = unsigned ? CONSTANTS.INT48_UNSIGNED_MAX : CONSTANTS.INT48_MAX;
   } else if (isColumnType(column, [
     "PgBigInt53",
     "PgBigSerial53",
@@ -55592,48 +55347,48 @@ function numberColumnToSchema(column, z, coerce2) {
     "SQLiteInteger"
   ])) {
     unsigned = unsigned || isColumnType(column, ["MySqlSerial", "SingleStoreSerial"]);
-    min2 = unsigned ? 0 : Number.MIN_SAFE_INTEGER;
-    max2 = Number.MAX_SAFE_INTEGER;
+    min = unsigned ? 0 : Number.MIN_SAFE_INTEGER;
+    max = Number.MAX_SAFE_INTEGER;
     integer3 = true;
   } else if (isColumnType(column, ["MySqlYear", "SingleStoreYear"])) {
-    min2 = 1901;
-    max2 = 2155;
+    min = 1901;
+    max = 2155;
     integer3 = true;
   } else {
-    min2 = Number.MIN_SAFE_INTEGER;
-    max2 = Number.MAX_SAFE_INTEGER;
+    min = Number.MIN_SAFE_INTEGER;
+    max = Number.MAX_SAFE_INTEGER;
   }
   let schema = coerce2 === true || coerce2?.number ? integer3 ? z.coerce.number() : z.coerce.number().int() : integer3 ? z.int() : z.number();
-  schema = schema.gte(min2).lte(max2);
+  schema = schema.gte(min).lte(max);
   return schema;
 }
 function bigintColumnToSchema(column, z, coerce2) {
   const unsigned = column.getSQLType().includes("unsigned");
-  const min2 = unsigned ? 0n : CONSTANTS.INT64_MIN;
-  const max2 = unsigned ? CONSTANTS.INT64_UNSIGNED_MAX : CONSTANTS.INT64_MAX;
+  const min = unsigned ? 0n : CONSTANTS.INT64_MIN;
+  const max = unsigned ? CONSTANTS.INT64_UNSIGNED_MAX : CONSTANTS.INT64_MAX;
   const schema = coerce2 === true || coerce2?.bigint ? z.coerce.bigint() : z.bigint();
-  return schema.gte(min2).lte(max2);
+  return schema.gte(min).lte(max);
 }
 function stringColumnToSchema(column, z, coerce2) {
   if (isColumnType(column, ["PgUUID"])) {
     return z.uuid();
   }
-  let max2;
+  let max;
   let regex;
   let fixed = false;
   if (isColumnType(column, ["PgVarchar", "SQLiteText"])) {
-    max2 = column.length;
+    max = column.length;
   } else if (isColumnType(column, ["MySqlVarChar", "SingleStoreVarChar"])) {
-    max2 = column.length ?? CONSTANTS.INT16_UNSIGNED_MAX;
+    max = column.length ?? CONSTANTS.INT16_UNSIGNED_MAX;
   } else if (isColumnType(column, ["MySqlText", "SingleStoreText"])) {
     if (column.textType === "longtext") {
-      max2 = CONSTANTS.INT32_UNSIGNED_MAX;
+      max = CONSTANTS.INT32_UNSIGNED_MAX;
     } else if (column.textType === "mediumtext") {
-      max2 = CONSTANTS.INT24_UNSIGNED_MAX;
+      max = CONSTANTS.INT24_UNSIGNED_MAX;
     } else if (column.textType === "text") {
-      max2 = CONSTANTS.INT16_UNSIGNED_MAX;
+      max = CONSTANTS.INT16_UNSIGNED_MAX;
     } else {
-      max2 = CONSTANTS.INT8_UNSIGNED_MAX;
+      max = CONSTANTS.INT8_UNSIGNED_MAX;
     }
   }
   if (isColumnType(column, [
@@ -55641,16 +55396,16 @@ function stringColumnToSchema(column, z, coerce2) {
     "MySqlChar",
     "SingleStoreChar"
   ])) {
-    max2 = column.length;
+    max = column.length;
     fixed = true;
   }
   if (isColumnType(column, ["PgBinaryVector"])) {
     regex = /^[01]+$/;
-    max2 = column.dimensions;
+    max = column.dimensions;
   }
   let schema = coerce2 === true || coerce2?.string ? z.coerce.string() : z.string();
   schema = regex ? schema.regex(regex) : schema;
-  return max2 && fixed ? schema.length(max2) : max2 ? schema.max(max2) : schema;
+  return max && fixed ? schema.length(max) : max ? schema.max(max) : schema;
 }
 function getColumns(tableLike) {
   return isTable(tableLike) ? getTableColumns(tableLike) : getViewSelectedFields(tableLike);
@@ -55837,7 +55592,7 @@ var init_ingredients = __esm({
 });
 
 // ../../lib/db/src/schema/drinks.ts
-var drinkCategoriesTable, kitchenStationsTable, drinksTable, drinkIngredientSlotsTable, drinkSlotTypeOptionsTable, drinkSlotVolumesTable2, predefinedSlotsTable, predefinedSlotTypeOptionsTable, predefinedSlotVolumesTable, insertDrinkSchema, insertDrinkCategorySchema, insertKitchenStationSchema, insertDrinkSlotSchema, insertDrinkSlotVolumeSchema, insertDrinkSlotTypeOptionSchema, insertPredefinedSlotSchema;
+var drinkCategoriesTable, kitchenStationsTable, drinksTable, drinkIngredientSlotsTable, drinkSlotTypeOptionsTable, drinkSlotVolumesTable, predefinedSlotsTable, predefinedSlotTypeOptionsTable, predefinedSlotVolumesTable, insertDrinkSchema, insertDrinkCategorySchema, insertKitchenStationSchema, insertDrinkSlotSchema, insertDrinkSlotVolumeSchema, insertDrinkSlotTypeOptionSchema, insertPredefinedSlotSchema;
 var init_drinks = __esm({
   "../../lib/db/src/schema/drinks.ts"() {
     "use strict";
@@ -55904,7 +55659,7 @@ var init_drinks = __esm({
       isDefault: boolean("is_default").notNull().default(false),
       sortOrder: integer("sort_order").notNull().default(0)
     });
-    drinkSlotVolumesTable2 = pgTable("drink_slot_volumes", {
+    drinkSlotVolumesTable = pgTable("drink_slot_volumes", {
       id: serial("id").primaryKey(),
       slotId: integer("slot_id").notNull().references(() => drinkIngredientSlotsTable.id, { onDelete: "cascade" }),
       typeVolumeId: integer("type_volume_id").notNull().references(() => ingredientTypeVolumesTable.id),
@@ -55952,7 +55707,7 @@ var init_drinks = __esm({
     insertDrinkCategorySchema = createInsertSchema(drinkCategoriesTable).omit({ id: true, createdAt: true });
     insertKitchenStationSchema = createInsertSchema(kitchenStationsTable).omit({ id: true, createdAt: true });
     insertDrinkSlotSchema = createInsertSchema(drinkIngredientSlotsTable).omit({ id: true, createdAt: true, updatedAt: true });
-    insertDrinkSlotVolumeSchema = createInsertSchema(drinkSlotVolumesTable2).omit({ id: true });
+    insertDrinkSlotVolumeSchema = createInsertSchema(drinkSlotVolumesTable).omit({ id: true });
     insertDrinkSlotTypeOptionSchema = createInsertSchema(drinkSlotTypeOptionsTable).omit({ id: true });
     insertPredefinedSlotSchema = createInsertSchema(predefinedSlotsTable).omit({ id: true, createdAt: true, updatedAt: true });
   }
@@ -56080,7 +55835,7 @@ __export(schema_exports, {
   drinkCategoriesTable: () => drinkCategoriesTable,
   drinkIngredientSlotsTable: () => drinkIngredientSlotsTable,
   drinkSlotTypeOptionsTable: () => drinkSlotTypeOptionsTable,
-  drinkSlotVolumesTable: () => drinkSlotVolumesTable2,
+  drinkSlotVolumesTable: () => drinkSlotVolumesTable,
   drinksTable: () => drinksTable,
   ingredientCategoriesTable: () => ingredientCategoriesTable,
   ingredientOptionsTable: () => ingredientOptionsTable,
@@ -56135,7 +55890,7 @@ __export(src_exports, {
   drinkCategoriesTable: () => drinkCategoriesTable,
   drinkIngredientSlotsTable: () => drinkIngredientSlotsTable,
   drinkSlotTypeOptionsTable: () => drinkSlotTypeOptionsTable,
-  drinkSlotVolumesTable: () => drinkSlotVolumesTable2,
+  drinkSlotVolumesTable: () => drinkSlotVolumesTable,
   drinksTable: () => drinksTable,
   ingredientCategoriesTable: () => ingredientCategoriesTable,
   ingredientOptionsTable: () => ingredientOptionsTable,
@@ -56226,14 +55981,14 @@ var require_media_typer2 = __commonJS({
         string4 += "+" + suffix;
       }
       if (parameters && typeof parameters === "object") {
-        var param2;
+        var param;
         var params = Object.keys(parameters).sort();
         for (var i = 0; i < params.length; i++) {
-          param2 = params[i];
-          if (!tokenRegExp.test(param2)) {
+          param = params[i];
+          if (!tokenRegExp.test(param)) {
             throw new TypeError("invalid parameter name");
           }
-          string4 += "; " + param2 + "=" + qstring(parameters[param2]);
+          string4 += "; " + param + "=" + qstring(parameters[param]);
         }
       }
       return string4;
@@ -65096,7 +64851,7 @@ var require_utils6 = __commonJS({
         }
         if (i === str.length)
           return;
-        let name2;
+        let name;
         const nameStart = i;
         for (; i < str.length; ++i) {
           const code = str.charCodeAt(i);
@@ -65108,7 +64863,7 @@ var require_utils6 = __commonJS({
         }
         if (i === str.length)
           return;
-        name2 = str.slice(nameStart, i);
+        name = str.slice(nameStart, i);
         ++i;
         if (i === str.length)
           return;
@@ -65160,9 +64915,9 @@ var require_utils6 = __commonJS({
           }
           value = str.slice(valueStart, i);
         }
-        name2 = name2.toLowerCase();
-        if (params[name2] === void 0)
-          params[name2] = value;
+        name = name.toLowerCase();
+        if (params[name] === void 0)
+          params[name] = value;
       }
       return params;
     }
@@ -65200,7 +64955,7 @@ var require_utils6 = __commonJS({
         }
         if (i === str.length)
           return;
-        let name2;
+        let name;
         const nameStart = i;
         for (; i < str.length; ++i) {
           const code = str.charCodeAt(i);
@@ -65215,8 +64970,8 @@ var require_utils6 = __commonJS({
         let value = "";
         let valueStart;
         let charset;
-        name2 = str.slice(nameStart, i);
-        if (name2.charCodeAt(name2.length - 1) === 42) {
+        name = str.slice(nameStart, i);
+        if (name.charCodeAt(name.length - 1) === 42) {
           const charsetStart = ++i;
           for (; i < str.length; ++i) {
             const code = str.charCodeAt(i);
@@ -65323,9 +65078,9 @@ var require_utils6 = __commonJS({
           if (value === void 0)
             return;
         }
-        name2 = name2.toLowerCase();
-        if (params[name2] === void 0)
-          params[name2] = value;
+        name = name.toLowerCase();
+        if (params[name] === void 0)
+          params[name] = value;
       }
       return params;
     }
@@ -68977,7 +68732,7 @@ var require_file_appender = __commonJS({
       }
     }
     FileAppender.prototype.insertPlaceholder = function(file2) {
-      var placeholder2 = {
+      var placeholder = {
         fieldname: file2.fieldname
       };
       switch (this.strategy) {
@@ -68986,43 +68741,43 @@ var require_file_appender = __commonJS({
         case "VALUE":
           break;
         case "ARRAY":
-          this.req.files.push(placeholder2);
+          this.req.files.push(placeholder);
           break;
         case "OBJECT":
           if (this.req.files[file2.fieldname]) {
-            this.req.files[file2.fieldname].push(placeholder2);
+            this.req.files[file2.fieldname].push(placeholder);
           } else {
-            this.req.files[file2.fieldname] = [placeholder2];
+            this.req.files[file2.fieldname] = [placeholder];
           }
           break;
       }
-      return placeholder2;
+      return placeholder;
     };
-    FileAppender.prototype.removePlaceholder = function(placeholder2) {
+    FileAppender.prototype.removePlaceholder = function(placeholder) {
       switch (this.strategy) {
         case "NONE":
           break;
         case "VALUE":
           break;
         case "ARRAY":
-          arrayRemove(this.req.files, placeholder2);
+          arrayRemove(this.req.files, placeholder);
           break;
         case "OBJECT":
-          if (this.req.files[placeholder2.fieldname].length === 1) {
-            delete this.req.files[placeholder2.fieldname];
+          if (this.req.files[placeholder.fieldname].length === 1) {
+            delete this.req.files[placeholder.fieldname];
           } else {
-            arrayRemove(this.req.files[placeholder2.fieldname], placeholder2);
+            arrayRemove(this.req.files[placeholder.fieldname], placeholder);
           }
           break;
       }
     };
-    FileAppender.prototype.replacePlaceholder = function(placeholder2, file2) {
+    FileAppender.prototype.replacePlaceholder = function(placeholder, file2) {
       if (this.strategy === "VALUE") {
         this.req.file = file2;
         return;
       }
-      delete placeholder2.fieldname;
-      Object.assign(placeholder2, file2);
+      delete placeholder.fieldname;
+      Object.assign(placeholder, file2);
     };
     module.exports = FileAppender;
   }
@@ -69199,18 +68954,18 @@ var require_make_middleware = __commonJS({
             encoding,
             mimetype: mimeType
           };
-          var placeholder2 = appender.insertPlaceholder(file2);
+          var placeholder = appender.insertPlaceholder(file2);
           fileFilter(req, file2, function(err, includeFile) {
             if (errorOccured) {
-              appender.removePlaceholder(placeholder2);
+              appender.removePlaceholder(placeholder);
               return fileStream.resume();
             }
             if (err) {
-              appender.removePlaceholder(placeholder2);
+              appender.removePlaceholder(placeholder);
               return abortWithError(err);
             }
             if (!includeFile) {
-              appender.removePlaceholder(placeholder2);
+              appender.removePlaceholder(placeholder);
               return fileStream.resume();
             }
             var aborting = false;
@@ -69227,17 +68982,17 @@ var require_make_middleware = __commonJS({
             });
             storage2._handleFile(req, file2, function(err2, info) {
               if (aborting) {
-                appender.removePlaceholder(placeholder2);
+                appender.removePlaceholder(placeholder);
                 uploadedFiles.push({ ...file2, ...info });
                 return pendingWrites.decrement();
               }
               if (err2) {
-                appender.removePlaceholder(placeholder2);
+                appender.removePlaceholder(placeholder);
                 pendingWrites.decrement();
                 return abortWithError(err2);
               }
               var fileInfo = { ...file2, ...info };
-              appender.replacePlaceholder(placeholder2, fileInfo);
+              appender.replacePlaceholder(placeholder, fileInfo);
               uploadedFiles.push(fileInfo);
               pendingWrites.decrement();
               indicateDone();
@@ -69724,10 +69479,10 @@ var require_errors = __commonJS({
         return str.indexOf(search, start) !== -1;
       }
     }
-    createErrorType("ERR_INVALID_OPT_VALUE", function(name2, value) {
-      return 'The value "' + value + '" is invalid for option "' + name2 + '"';
+    createErrorType("ERR_INVALID_OPT_VALUE", function(name, value) {
+      return 'The value "' + value + '" is invalid for option "' + name + '"';
     }, TypeError);
-    createErrorType("ERR_INVALID_ARG_TYPE", function(name2, expected, actual) {
+    createErrorType("ERR_INVALID_ARG_TYPE", function(name, expected, actual) {
       let determiner;
       if (typeof expected === "string" && startsWith(expected, "not ")) {
         determiner = "must not be";
@@ -69736,22 +69491,22 @@ var require_errors = __commonJS({
         determiner = "must be";
       }
       let msg;
-      if (endsWith(name2, " argument")) {
-        msg = `The ${name2} ${determiner} ${oneOf(expected, "type")}`;
+      if (endsWith(name, " argument")) {
+        msg = `The ${name} ${determiner} ${oneOf(expected, "type")}`;
       } else {
-        const type = includes(name2, ".") ? "property" : "argument";
-        msg = `The "${name2}" ${type} ${determiner} ${oneOf(expected, "type")}`;
+        const type = includes(name, ".") ? "property" : "argument";
+        msg = `The "${name}" ${type} ${determiner} ${oneOf(expected, "type")}`;
       }
       msg += `. Received type ${typeof actual}`;
       return msg;
     }, TypeError);
     createErrorType("ERR_STREAM_PUSH_AFTER_EOF", "stream.push() after EOF");
-    createErrorType("ERR_METHOD_NOT_IMPLEMENTED", function(name2) {
-      return "The " + name2 + " method is not implemented";
+    createErrorType("ERR_METHOD_NOT_IMPLEMENTED", function(name) {
+      return "The " + name + " method is not implemented";
     });
     createErrorType("ERR_STREAM_PREMATURE_CLOSE", "Premature close");
-    createErrorType("ERR_STREAM_DESTROYED", function(name2) {
-      return "Cannot call " + name2 + " after a stream was destroyed";
+    createErrorType("ERR_STREAM_DESTROYED", function(name) {
+      return "Cannot call " + name + " after a stream was destroyed";
     });
     createErrorType("ERR_MULTIPLE_CALLBACK", "Callback called multiple times");
     createErrorType("ERR_STREAM_CANNOT_PIPE", "Cannot pipe, not readable");
@@ -69777,8 +69532,8 @@ var require_state = __commonJS({
       var hwm = highWaterMarkFrom(options, isDuplex, duplexKey);
       if (hwm != null) {
         if (!(isFinite(hwm) && Math.floor(hwm) === hwm) || hwm < 0) {
-          var name2 = isDuplex ? duplexKey : "highWaterMark";
-          throw new ERR_INVALID_OPT_VALUE(name2, hwm);
+          var name = isDuplex ? duplexKey : "highWaterMark";
+          throw new ERR_INVALID_OPT_VALUE(name, hwm);
         }
         return Math.floor(hwm);
       }
@@ -70110,13 +69865,13 @@ var require_stream_writable = __commonJS({
         var buffer = new Array(l);
         var holder = state.corkedRequestsFree;
         holder.entry = entry;
-        var count2 = 0;
+        var count = 0;
         var allBuffers = true;
         while (entry) {
-          buffer[count2] = entry;
+          buffer[count] = entry;
           if (!entry.isBuf) allBuffers = false;
           entry = entry.next;
-          count2 += 1;
+          count += 1;
         }
         buffer.allBuffers = allBuffers;
         doWrite(stream, state, true, state.length, buffer, "", holder.finish);
@@ -72032,7 +71787,7 @@ var require_typedarray = __commonJS({
     var abs = Math.abs;
     var floor = Math.floor;
     var log = Math.log;
-    var min2 = Math.min;
+    var min = Math.min;
     var pow = Math.pow;
     var round = Math.round;
     function configureProperties(obj) {
@@ -72179,7 +71934,7 @@ var require_typedarray = __commonJS({
         s = v < 0;
         v = abs(v);
         if (v >= pow(2, 1 - bias)) {
-          e = min2(floor(log(v) / LN2), 1023);
+          e = min(floor(log(v) / LN2), 1023);
           f = roundToEven(v / pow(2, e) * pow(2, fbits));
           if (f / pow(2, fbits) >= 2) {
             e = e + 1;
@@ -72396,8 +72151,8 @@ var require_typedarray = __commonJS({
           }
         };
         ctor.prototype.subarray = function(start, end) {
-          function clamp(v, min3, max2) {
-            return v < min3 ? min3 : v > max2 ? max2 : v;
+          function clamp(v, min2, max) {
+            return v < min2 ? min2 : v > max ? max : v;
           }
           start = ECMAScript.ToInt32(start);
           end = ECMAScript.ToInt32(end);
@@ -72737,11 +72492,11 @@ var require_multer = __commonJS({
       }
       return makeMiddleware(setup.bind(this));
     };
-    Multer.prototype.single = function(name2) {
-      return this._makeMiddleware([{ name: name2, maxCount: 1 }], "VALUE");
+    Multer.prototype.single = function(name) {
+      return this._makeMiddleware([{ name, maxCount: 1 }], "VALUE");
     };
-    Multer.prototype.array = function(name2, maxCount) {
-      return this._makeMiddleware([{ name: name2, maxCount }], "ARRAY");
+    Multer.prototype.array = function(name, maxCount) {
+      return this._makeMiddleware([{ name, maxCount }], "ARRAY");
     };
     Multer.prototype.fields = function(fields) {
       return this._makeMiddleware(fields, "OBJECT");
@@ -74334,24 +74089,24 @@ var ZodString = class _ZodString2 extends ZodType {
     return !!this._def.checks.find((ch) => ch.kind === "base64url");
   }
   get minLength() {
-    let min2 = null;
+    let min = null;
     for (const ch of this._def.checks) {
       if (ch.kind === "min") {
-        if (min2 === null || ch.value > min2)
-          min2 = ch.value;
+        if (min === null || ch.value > min)
+          min = ch.value;
       }
     }
-    return min2;
+    return min;
   }
   get maxLength() {
-    let max2 = null;
+    let max = null;
     for (const ch of this._def.checks) {
       if (ch.kind === "max") {
-        if (max2 === null || ch.value < max2)
-          max2 = ch.value;
+        if (max === null || ch.value < max)
+          max = ch.value;
       }
     }
-    return max2;
+    return max;
   }
 };
 ZodString.create = (params) => {
@@ -74555,43 +74310,43 @@ var ZodNumber = class _ZodNumber extends ZodType {
     });
   }
   get minValue() {
-    let min2 = null;
+    let min = null;
     for (const ch of this._def.checks) {
       if (ch.kind === "min") {
-        if (min2 === null || ch.value > min2)
-          min2 = ch.value;
+        if (min === null || ch.value > min)
+          min = ch.value;
       }
     }
-    return min2;
+    return min;
   }
   get maxValue() {
-    let max2 = null;
+    let max = null;
     for (const ch of this._def.checks) {
       if (ch.kind === "max") {
-        if (max2 === null || ch.value < max2)
-          max2 = ch.value;
+        if (max === null || ch.value < max)
+          max = ch.value;
       }
     }
-    return max2;
+    return max;
   }
   get isInt() {
     return !!this._def.checks.find((ch) => ch.kind === "int" || ch.kind === "multipleOf" && util.isInteger(ch.value));
   }
   get isFinite() {
-    let max2 = null;
-    let min2 = null;
+    let max = null;
+    let min = null;
     for (const ch of this._def.checks) {
       if (ch.kind === "finite" || ch.kind === "int" || ch.kind === "multipleOf") {
         return true;
       } else if (ch.kind === "min") {
-        if (min2 === null || ch.value > min2)
-          min2 = ch.value;
+        if (min === null || ch.value > min)
+          min = ch.value;
       } else if (ch.kind === "max") {
-        if (max2 === null || ch.value < max2)
-          max2 = ch.value;
+        if (max === null || ch.value < max)
+          max = ch.value;
       }
     }
-    return Number.isFinite(min2) && Number.isFinite(max2);
+    return Number.isFinite(min) && Number.isFinite(max);
   }
 };
 ZodNumber.create = (params) => {
@@ -74746,24 +74501,24 @@ var ZodBigInt = class _ZodBigInt extends ZodType {
     });
   }
   get minValue() {
-    let min2 = null;
+    let min = null;
     for (const ch of this._def.checks) {
       if (ch.kind === "min") {
-        if (min2 === null || ch.value > min2)
-          min2 = ch.value;
+        if (min === null || ch.value > min)
+          min = ch.value;
       }
     }
-    return min2;
+    return min;
   }
   get maxValue() {
-    let max2 = null;
+    let max = null;
     for (const ch of this._def.checks) {
       if (ch.kind === "max") {
-        if (max2 === null || ch.value < max2)
-          max2 = ch.value;
+        if (max === null || ch.value < max)
+          max = ch.value;
       }
     }
-    return max2;
+    return max;
   }
 };
 ZodBigInt.create = (params) => {
@@ -74880,24 +74635,24 @@ var ZodDate = class _ZodDate extends ZodType {
     });
   }
   get minDate() {
-    let min2 = null;
+    let min = null;
     for (const ch of this._def.checks) {
       if (ch.kind === "min") {
-        if (min2 === null || ch.value > min2)
-          min2 = ch.value;
+        if (min === null || ch.value > min)
+          min = ch.value;
       }
     }
-    return min2 != null ? new Date(min2) : null;
+    return min != null ? new Date(min) : null;
   }
   get maxDate() {
-    let max2 = null;
+    let max = null;
     for (const ch of this._def.checks) {
       if (ch.kind === "max") {
-        if (max2 === null || ch.value < max2)
-          max2 = ch.value;
+        if (max === null || ch.value < max)
+          max = ch.value;
       }
     }
-    return max2 != null ? new Date(max2) : null;
+    return max != null ? new Date(max) : null;
   }
 };
 ZodDate.create = (params) => {
@@ -76867,6 +76622,8 @@ var ListDrinksResponseItem = objectType({
   name: stringType(),
   description: stringType().nullable(),
   category: stringType(),
+  categoryId: numberType().nullish(),
+  sortOrder: numberType().optional(),
   basePrice: numberType(),
   defaultPrice: numberType().optional(),
   imageUrl: stringType().nullable(),
@@ -76882,6 +76639,8 @@ var CreateDrinkBody = objectType({
   name: stringType(),
   description: stringType().optional(),
   category: stringType(),
+  categoryId: numberType().optional(),
+  sortOrder: numberType().optional(),
   basePrice: numberType(),
   imageUrl: stringType().optional(),
   isActive: booleanType().optional(),
@@ -76909,6 +76668,8 @@ var GetDrinkResponse = objectType({
   name: stringType(),
   description: stringType().nullable(),
   category: stringType(),
+  categoryId: numberType().nullish(),
+  sortOrder: numberType().optional(),
   basePrice: numberType(),
   defaultPrice: numberType().optional(),
   imageUrl: stringType().nullable(),
@@ -76944,6 +76705,8 @@ var UpdateDrinkBody = objectType({
   name: stringType().optional(),
   description: stringType().optional(),
   category: stringType().optional(),
+  categoryId: numberType().optional(),
+  sortOrder: numberType().optional(),
   basePrice: numberType().optional(),
   imageUrl: stringType().optional(),
   isActive: booleanType().optional(),
@@ -76955,6 +76718,8 @@ var UpdateDrinkResponse = objectType({
   name: stringType(),
   description: stringType().nullable(),
   category: stringType(),
+  categoryId: numberType().nullish(),
+  sortOrder: numberType().optional(),
   basePrice: numberType(),
   defaultPrice: numberType().optional(),
   imageUrl: stringType().nullable(),
@@ -77296,6 +77061,7 @@ var GetOrderResponse = objectType({
         unitPrice: numberType(),
         lineTotal: numberType(),
         specialNotes: stringType().nullable(),
+        kitchenStation: stringType().optional(),
         status: enumType(["pending", "ready"]),
         customizations: arrayType(
           objectType({
@@ -77452,6 +77218,7 @@ var GetActiveOrdersResponseItem = objectType({
         unitPrice: numberType(),
         lineTotal: numberType(),
         specialNotes: stringType().nullable(),
+        kitchenStation: stringType().optional(),
         status: enumType(["pending", "ready"]),
         customizations: arrayType(
           objectType({
@@ -77759,9 +77526,9 @@ async function calculateDrinkData(drinkId, selections) {
     if (sel.typeVolumeId) {
       const [typeVol] = await db.select().from(ingredientTypeVolumesTable).where(eq(ingredientTypeVolumesTable.id, sel.typeVolumeId));
       if (!typeVol) continue;
-      const [slotVol] = await db.select().from(drinkSlotVolumesTable2).where(and(
-        eq(drinkSlotVolumesTable2.slotId, slot.id),
-        eq(drinkSlotVolumesTable2.typeVolumeId, sel.typeVolumeId)
+      const [slotVol] = await db.select().from(drinkSlotVolumesTable).where(and(
+        eq(drinkSlotVolumesTable.slotId, slot.id),
+        eq(drinkSlotVolumesTable.typeVolumeId, sel.typeVolumeId)
       ));
       const [typeDef] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, typeVol.ingredientTypeId));
       const inventoryId = typeDef?.inventoryIngredientId ?? null;
@@ -77891,9 +77658,9 @@ async function calculateDrinkData(drinkId, selections) {
           const defVol = typeVolumes.find((tv) => tv.isDefault) ?? typeVolumes[0];
           typeVolumeId = defVol?.id;
         }
-        const [slotVol] = await db.select().from(drinkSlotVolumesTable2).where(and(
-          eq(drinkSlotVolumesTable2.slotId, dynamicSlot.id),
-          eq(drinkSlotVolumesTable2.typeVolumeId, typeVolumeId)
+        const [slotVol] = await db.select().from(drinkSlotVolumesTable).where(and(
+          eq(drinkSlotVolumesTable.slotId, dynamicSlot.id),
+          eq(drinkSlotVolumesTable.typeVolumeId, typeVolumeId)
         ));
         const [templateDef] = dynamicSlot.predefinedSlotId ? await db.select().from(predefinedSlotVolumesTable).where(and(eq(predefinedSlotVolumesTable.predefinedSlotId, dynamicSlot.predefinedSlotId), eq(predefinedSlotVolumesTable.typeVolumeId, typeVolumeId))) : [null];
         let conversionRate = 1;
@@ -78007,7 +77774,7 @@ async function buildDrinkDetail(drinkId) {
       db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, typeId)),
       db.select().from(ingredientTypeVolumesTable).where(eq(ingredientTypeVolumesTable.ingredientTypeId, typeId)).orderBy(ingredientTypeVolumesTable.sortOrder)
     ]);
-    const allSlotVols = await db.select().from(drinkSlotVolumesTable2).where(eq(drinkSlotVolumesTable2.slotId, slotId));
+    const allSlotVols = await db.select().from(drinkSlotVolumesTable).where(eq(drinkSlotVolumesTable.slotId, slotId));
     const slotVolumeMap = new Map(allSlotVols.map((sv) => [sv.typeVolumeId, sv]));
     const volIds = typeVolumes.map((tv) => tv.volumeId);
     const volRows = volIds.length > 0 ? await db.select().from(ingredientVolumesTable).where(inArray(ingredientVolumesTable.id, volIds)) : [];
@@ -78059,7 +77826,7 @@ async function buildDrinkDetail(drinkId) {
             const [category] = ingType ? await db.select().from(ingredientCategoriesTable).where(eq(ingredientCategoriesTable.id, ingType.categoryId)) : [null];
             const globalTypeVolumes = await db.select().from(ingredientTypeVolumesTable).where(eq(ingredientTypeVolumesTable.ingredientTypeId, to.ingredientTypeId)).orderBy(ingredientTypeVolumesTable.sortOrder);
             const [typeDef] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, to.ingredientTypeId));
-            const allSlotVols = await db.select().from(drinkSlotVolumesTable2).where(eq(drinkSlotVolumesTable2.slotId, slot.id));
+            const allSlotVols = await db.select().from(drinkSlotVolumesTable).where(eq(drinkSlotVolumesTable.slotId, slot.id));
             const slotVolumeMap = new Map(allSlotVols.map((sv) => [sv.typeVolumeId, sv]));
             const templateVolumeMap = new Map(templateVolumes.map((tv) => [tv.typeVolumeId, tv]));
             const volIds = globalTypeVolumes.map((tv) => tv.volumeId);
@@ -78173,7 +77940,7 @@ async function computeDefaultPrice(drinkId, basePrice) {
     let effectiveTypeId = defaultTypeSelection?.ingredientTypeId ?? slot.ingredientTypeId;
     if (effectiveTypeId) {
       const globalTypeVolumes = await db.select().from(ingredientTypeVolumesTable).where(eq(ingredientTypeVolumesTable.ingredientTypeId, effectiveTypeId)).orderBy(ingredientTypeVolumesTable.sortOrder);
-      const slotVolumes = await db.select().from(drinkSlotVolumesTable2).where(eq(drinkSlotVolumesTable2.slotId, slot.id));
+      const slotVolumes = await db.select().from(drinkSlotVolumesTable).where(eq(drinkSlotVolumesTable.slotId, slot.id));
       let templateVolumes = [];
       if (slot.predefinedSlotId) {
         templateVolumes = await db.select().from(predefinedSlotVolumesTable).where(eq(predefinedSlotVolumesTable.predefinedSlotId, slot.predefinedSlotId));
@@ -78451,7 +78218,7 @@ router3.put("/drinks/:id/slots", async (req, res) => {
       await db.insert(drinkSlotTypeOptionsTable).values(slotTypeOptionRows);
     }
     if (slotVolumeRows.length > 0) {
-      await db.insert(drinkSlotVolumesTable2).values(slotVolumeRows);
+      await db.insert(drinkSlotVolumesTable).values(slotVolumeRows);
     }
   }
   const detail = await buildDrinkDetail(drinkId);
@@ -79214,13 +78981,13 @@ router7.get("/dashboard/summary", async (_req, res) => {
       sql`${ordersTable.status} != 'cancelled'`
     )
   );
-  const todayRevenue = todayOrders.reduce((sum2, o) => sum2 + parseFloat(o.total), 0);
+  const todayRevenue = todayOrders.reduce((sum, o) => sum + parseFloat(o.total), 0);
   const todayItems = await db.select().from(orderItemsTable).where(
     and(
       sql`${orderItemsTable.orderId} IN (SELECT id FROM orders WHERE created_at >= ${today.toISOString()} AND status != 'cancelled')`
     )
   );
-  const todayDrinks = todayItems.reduce((sum2, i) => sum2 + i.quantity, 0);
+  const todayDrinks = todayItems.reduce((sum, i) => sum + i.quantity, 0);
   const avgOrderValue = todayOrders.length > 0 ? todayRevenue / todayOrders.length : 0;
   const pendingOrders = todayOrders.filter(
     (o) => o.status === "pending" || o.status === "in_progress"
@@ -79252,6 +79019,7 @@ router7.get("/dashboard/active-orders", async (req, res) => {
       const itemsWithCustomizations = await Promise.all(
         items.map(async (item) => {
           const customizations = await db.select().from(orderItemCustomizationsTable).where(eq(orderItemCustomizationsTable.orderItemId, item.id));
+          console.log(`Item ID: ${item.id}, DB kitchenStation:`, item.kitchenStation);
           return {
             ...item,
             status: item.status,
@@ -79384,18 +79152,18 @@ router8.get("/catalog/categories", async (_req, res) => {
   res.json(rows);
 });
 router8.post("/catalog/categories", async (req, res) => {
-  const { name: name2, sortOrder } = req.body;
-  if (!name2) {
+  const { name, sortOrder } = req.body;
+  if (!name) {
     res.status(400).json({ error: "name required" });
     return;
   }
-  const [row] = await db.insert(ingredientCategoriesTable).values({ name: name2, sortOrder: sortOrder ?? 0 }).returning();
+  const [row] = await db.insert(ingredientCategoriesTable).values({ name, sortOrder: sortOrder ?? 0 }).returning();
   res.status(201).json(row);
 });
 router8.patch("/catalog/categories/:id", async (req, res) => {
   const id = parseInt(req.params.id);
-  const { name: name2, sortOrder } = req.body;
-  const [row] = await db.update(ingredientCategoriesTable).set({ ...name2 && { name: name2 }, ...sortOrder !== void 0 && { sortOrder } }).where(eq(ingredientCategoriesTable.id, id)).returning();
+  const { name, sortOrder } = req.body;
+  const [row] = await db.update(ingredientCategoriesTable).set({ ...name && { name }, ...sortOrder !== void 0 && { sortOrder } }).where(eq(ingredientCategoriesTable.id, id)).returning();
   if (!row) {
     res.status(404).json({ error: "Not found" });
     return;
@@ -79461,14 +79229,14 @@ router8.get("/catalog/types/:id", async (req, res) => {
   });
 });
 router8.post("/catalog/types", async (req, res) => {
-  const { categoryId, name: name2, inventoryIngredientId, processedQty, producedQty, unit, isActive, affectsCupSize, sortOrder, color } = req.body;
-  if (!categoryId || !name2) {
+  const { categoryId, name, inventoryIngredientId, processedQty, producedQty, unit, isActive, affectsCupSize, sortOrder, color } = req.body;
+  if (!categoryId || !name) {
     res.status(400).json({ error: "categoryId and name required" });
     return;
   }
   const [row] = await db.insert(ingredientTypesTable).values({
     categoryId,
-    name: name2,
+    name,
     inventoryIngredientId: inventoryIngredientId ?? null,
     processedQty: processedQty ?? "0",
     producedQty: producedQty ?? "0",
@@ -79482,10 +79250,10 @@ router8.post("/catalog/types", async (req, res) => {
 });
 router8.patch("/catalog/types/:id", async (req, res) => {
   const id = parseInt(req.params.id);
-  const { categoryId, name: name2, inventoryIngredientId, processedQty, producedQty, unit, isActive, affectsCupSize, sortOrder, color } = req.body;
+  const { categoryId, name, inventoryIngredientId, processedQty, producedQty, unit, isActive, affectsCupSize, sortOrder, color } = req.body;
   const patch = {};
   if (categoryId !== void 0) patch.categoryId = categoryId;
-  if (name2 !== void 0) patch.name = name2;
+  if (name !== void 0) patch.name = name;
   if (inventoryIngredientId !== void 0) patch.inventoryIngredientId = inventoryIngredientId;
   if (processedQty !== void 0) patch.processedQty = String(processedQty);
   if (producedQty !== void 0) patch.producedQty = String(producedQty);
@@ -79586,19 +79354,19 @@ router8.get("/catalog/volumes", async (_req, res) => {
   res.json(rows);
 });
 router8.post("/catalog/volumes", async (req, res) => {
-  const { name: name2, processedQty, producedQty, unit, sortOrder } = req.body;
-  if (!name2) {
+  const { name, processedQty, producedQty, unit, sortOrder } = req.body;
+  if (!name) {
     res.status(400).json({ error: "name required" });
     return;
   }
-  const [row] = await db.insert(ingredientVolumesTable).values({ name: name2, processedQty: processedQty ?? "0", producedQty: producedQty ?? "0", unit: unit ?? "ml", sortOrder: sortOrder ?? 0 }).returning();
+  const [row] = await db.insert(ingredientVolumesTable).values({ name, processedQty: processedQty ?? "0", producedQty: producedQty ?? "0", unit: unit ?? "ml", sortOrder: sortOrder ?? 0 }).returning();
   res.status(201).json(row);
 });
 router8.patch("/catalog/volumes/:id", async (req, res) => {
   const id = parseInt(req.params.id);
-  const { name: name2, processedQty, producedQty, unit, sortOrder } = req.body;
+  const { name, processedQty, producedQty, unit, sortOrder } = req.body;
   const patch = {};
-  if (name2 !== void 0) patch.name = name2;
+  if (name !== void 0) patch.name = name;
   if (processedQty !== void 0) patch.processedQty = processedQty;
   if (producedQty !== void 0) patch.producedQty = producedQty;
   if (unit !== void 0) patch.unit = unit;
@@ -79626,13 +79394,12 @@ router8.delete("/catalog/volumes/:id", async (req, res) => {
 });
 router8.get("/catalog/types/:id/overrides", async (req, res) => {
   const typeId = parseInt(req.params.id);
-  const { drinksTable: drinksTable3 } = await Promise.resolve().then(() => (init_src(), src_exports));
   const overrides = await db.select({
-    drinkId: drinksTable3.id,
-    drinkName: drinksTable3.name,
+    drinkId: drinksTable.id,
+    drinkName: drinksTable.name,
     slotId: drinkIngredientSlotsTable.id,
     slotLabel: drinkIngredientSlotsTable.slotLabel
-  }).from(drinkSlotVolumesTable).innerJoin(ingredientTypeVolumesTable, eq(drinkSlotVolumesTable.typeVolumeId, ingredientTypeVolumesTable.id)).innerJoin(drinkIngredientSlotsTable, eq(drinkSlotVolumesTable.slotId, drinkIngredientSlotsTable.id)).innerJoin(drinksTable3, eq(drinkIngredientSlotsTable.drinkId, drinksTable3.id)).where(eq(ingredientTypeVolumesTable.ingredientTypeId, typeId)).groupBy(drinksTable3.id, drinksTable3.name, drinkIngredientSlotsTable.id, drinkIngredientSlotsTable.slotLabel);
+  }).from(drinkSlotVolumesTable).innerJoin(ingredientTypeVolumesTable, eq(drinkSlotVolumesTable.typeVolumeId, ingredientTypeVolumesTable.id)).innerJoin(drinkIngredientSlotsTable, eq(drinkSlotVolumesTable.slotId, drinkIngredientSlotsTable.id)).innerJoin(drinksTable, eq(drinkIngredientSlotsTable.drinkId, drinksTable.id)).where(eq(ingredientTypeVolumesTable.ingredientTypeId, typeId)).groupBy(drinksTable.id, drinksTable.name, drinkIngredientSlotsTable.id, drinkIngredientSlotsTable.slotLabel);
   const grouped = overrides.reduce((acc, curr) => {
     let drink = acc.find((d) => d.id === curr.drinkId);
     if (!drink) {
@@ -79663,10 +79430,9 @@ router8.post("/catalog/types/:id/sync", async (req, res) => {
     return;
   }
   const slotIds = slots.map((s) => s.id);
-  const { inArray: inArray2, and: and2 } = await Promise.resolve().then(() => (init_drizzle_orm(), drizzle_orm_exports));
-  await db.delete(drinkSlotVolumesTable).where(and2(
-    inArray2(drinkSlotVolumesTable.slotId, slotIds),
-    inArray2(drinkSlotVolumesTable.typeVolumeId, tvIds)
+  await db.delete(drinkSlotVolumesTable).where(and(
+    inArray(drinkSlotVolumesTable.slotId, slotIds),
+    inArray(drinkSlotVolumesTable.typeVolumeId, tvIds)
   ));
   res.sendStatus(204);
 });
@@ -79697,9 +79463,9 @@ router9.patch("/drink-categories/:id", async (req, res) => {
     res.status(400).json({ error: "Invalid id" });
     return;
   }
-  const { name: name2, sortOrder, isActive } = req.body;
+  const { name, sortOrder, isActive } = req.body;
   const updateData = {};
-  if (name2 !== void 0) updateData.name = name2;
+  if (name !== void 0) updateData.name = name;
   if (sortOrder !== void 0) updateData.sortOrder = sortOrder;
   if (isActive !== void 0) updateData.isActive = isActive;
   const [category] = await db.update(drinkCategoriesTable).set(updateData).where(eq(drinkCategoriesTable.id, id)).returning();
@@ -79707,8 +79473,8 @@ router9.patch("/drink-categories/:id", async (req, res) => {
     res.status(404).json({ error: "Category not found" });
     return;
   }
-  if (name2 !== void 0) {
-    await db.update(drinksTable).set({ category: name2 }).where(eq(drinksTable.categoryId, id));
+  if (name !== void 0) {
+    await db.update(drinksTable).set({ category: name }).where(eq(drinksTable.categoryId, id));
   }
   res.json(category);
 });
@@ -79751,9 +79517,9 @@ router10.patch("/kitchen-stations/:id", async (req, res) => {
     res.status(400).json({ error: "Invalid id" });
     return;
   }
-  const { name: name2, sortOrder, isActive } = req.body;
+  const { name, sortOrder, isActive } = req.body;
   const updateData = {};
-  if (name2 !== void 0) updateData.name = name2;
+  if (name !== void 0) updateData.name = name;
   if (sortOrder !== void 0) updateData.sortOrder = sortOrder;
   if (isActive !== void 0) updateData.isActive = isActive;
   const [oldStation] = await db.select().from(kitchenStationsTable).where(eq(kitchenStationsTable.id, id));
@@ -79762,9 +79528,9 @@ router10.patch("/kitchen-stations/:id", async (req, res) => {
     return;
   }
   const [station] = await db.update(kitchenStationsTable).set(updateData).where(eq(kitchenStationsTable.id, id)).returning();
-  if (name2 !== void 0 && name2 !== oldStation.name) {
+  if (name !== void 0 && name !== oldStation.name) {
     const oldSlug = oldStation.name.toLowerCase().replace(/\s+/g, "-");
-    const newSlug = name2.toLowerCase().replace(/\s+/g, "-");
+    const newSlug = name.toLowerCase().replace(/\s+/g, "-");
     await db.update(drinksTable).set({ kitchenStation: newSlug }).where(eq(drinksTable.kitchenStation, oldSlug));
   }
   res.json(station);
@@ -79876,13 +79642,13 @@ router12.get("/catalog/predefined-slots/:id", async (req, res) => {
   res.json({ ...slot, typeOptions, volumes });
 });
 router12.post("/catalog/predefined-slots", async (req, res) => {
-  const { name: name2, slotLabel, isRequired, isDynamic, affectsCupSize, autoLoadCategoryId } = req.body;
-  if (!name2 || !slotLabel) {
+  const { name, slotLabel, isRequired, isDynamic, affectsCupSize, autoLoadCategoryId } = req.body;
+  if (!name || !slotLabel) {
     res.status(400).json({ error: "name and slotLabel required" });
     return;
   }
   const [slot] = await db.insert(predefinedSlotsTable).values({
-    name: name2,
+    name,
     slotLabel,
     isRequired: isRequired ?? true,
     isDynamic: isDynamic ?? false,
@@ -79921,9 +79687,9 @@ router12.post("/catalog/predefined-slots", async (req, res) => {
 });
 router12.patch("/catalog/predefined-slots/:id", async (req, res) => {
   const id = parseInt(req.params.id);
-  const { name: name2, slotLabel, isRequired, isDynamic, affectsCupSize, typeOptions, volumes } = req.body;
+  const { name, slotLabel, isRequired, isDynamic, affectsCupSize, typeOptions, volumes } = req.body;
   const patch = {};
-  if (name2 !== void 0) patch.name = name2;
+  if (name !== void 0) patch.name = name;
   if (slotLabel !== void 0) patch.slotLabel = slotLabel;
   if (isRequired !== void 0) patch.isRequired = isRequired;
   if (isDynamic !== void 0) patch.isDynamic = isDynamic;
@@ -80137,8 +79903,8 @@ var app_default = app;
 init_src();
 init_drizzle_orm();
 async function seedIfEmpty() {
-  const [{ count: count2 }] = await db.select({ count: sql`count(*)::int` }).from(usersTable);
-  if (count2 > 0) return;
+  const [{ count }] = await db.select({ count: sql`count(*)::int` }).from(usersTable);
+  if (count > 0) return;
   logger.info("Database is empty \u2014 seeding initial data...");
   await db.insert(usersTable).values([
     { name: "Admin User", role: "admin", pin: "000000" },
