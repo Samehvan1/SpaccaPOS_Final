@@ -40,13 +40,16 @@ type Drink = {
 
 type Mode = "add" | "edit" | null;
 
-const KITCHEN_STATIONS = [
-  { value: "main", label: "Main Bar" },
-  { value: "arabian", label: "Arabian Coffee" },
-  { value: "espresso", label: "Espresso Bar" },
-  { value: "cold", label: "Cold Bar" },
-  { value: "pastry", label: "Pastry / Food" },
-];
+function useKitchenStations() {
+  return useQuery<any[]>({
+    queryKey: ["kitchen-stations"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/kitchen-stations`);
+      if (!res.ok) throw new Error("Failed to fetch stations");
+      return res.json();
+    },
+  });
+}
 
 function useDrinkCategories() {
   return useQuery<DrinkCategory[]>({
@@ -64,6 +67,7 @@ export default function DrinksAdmin() {
   const [showInactive, setShowInactive] = useState(false);
   const { data: drinks, isLoading, refetch } = useListDrinks();
   const { data: categories = [] } = useDrinkCategories();
+  const { data: stations = [] } = useKitchenStations();
   const { toast } = useToast();
 
   const [mode, setMode] = useState<Mode>(null);
@@ -457,9 +461,15 @@ export default function DrinksAdmin() {
               <Select value={kitchenStation} onValueChange={setKitchenStation}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {KITCHEN_STATIONS.map(s => (
-                    <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
-                  ))}
+                  {stations.length === 0 ? (
+                    <SelectItem value="main">Main Bar (Default)</SelectItem>
+                  ) : (
+                    stations.map(s => (
+                      <SelectItem key={s.id} value={s.name.toLowerCase().replace(/\s+/g, '-')}>
+                        {s.name}
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
             </div>

@@ -1,5 +1,5 @@
 import type { QueryKey, UseMutationOptions, UseMutationResult, UseQueryOptions, UseQueryResult } from "@tanstack/react-query";
-import type { CategorySales, CreateDrinkBody, CreateIngredientBody, CreateIngredientOptionBody, CreateOrderBody, DashboardSummary, Drink, DrinkDetail, GetSalesByCategoryParams, GetTopDrinksParams, HealthStatus, Ingredient, IngredientDetail, IngredientOption, ListDrinksParams, ListIngredientsParams, ListOrdersParams, ListStockMovementsParams, LoginBody, LoginResponse, Order, OrderDetail, PriceBreakdown, PriceCalculationBody, RestockBody, StockAdjustmentBody, StockMovement, TopDrink, UpdateDrinkBody, UpdateIngredientBody, UpdateIngredientOptionBody, UpdateOrderStatusBody, User } from "./api.schemas";
+import type { CategorySales, CreateDrinkBody, CreateIngredientBody, CreateIngredientOptionBody, CreateOrderBody, DashboardSummary, Drink, DrinkDetail, GetSalesByCategoryParams, GetSettingsParams, GetTopDrinksParams, HealthStatus, Ingredient, IngredientDetail, IngredientOption, ListDrinksParams, ListIngredientsParams, ListOrdersParams, ListStockMovementsParams, LoginBody, LoginResponse, Order, OrderDetail, PriceBreakdown, PriceCalculationBody, RestockBody, Setting, StockAdjustmentBody, StockMovement, TopDrink, UpdateDrinkBody, UpdateIngredientBody, UpdateIngredientOptionBody, UpdateOrderStatusBody, UpdateSettingsBody, User } from "./api.schemas";
 import { customFetch } from "../custom-fetch";
 import type { ErrorType, BodyType } from "../custom-fetch";
 type AwaitedInput<T> = PromiseLike<T> | T;
@@ -757,5 +757,55 @@ export declare function useGetTopDrinks<TData = Awaited<ReturnType<typeof getTop
 }): UseQueryResult<TData, TError> & {
     queryKey: QueryKey;
 };
+/**
+ * @summary Get application settings
+ */
+export declare const getGetSettingsUrl: (params?: GetSettingsParams) => string;
+export declare const getSettings: (params?: GetSettingsParams, options?: RequestInit) => Promise<Setting[]>;
+export declare const getGetSettingsQueryKey: (params?: GetSettingsParams) => readonly ["/api/settings", ...GetSettingsParams[]];
+export declare const getGetSettingsQueryOptions: <TData = Awaited<ReturnType<typeof getSettings>>, TError = ErrorType<unknown>>(params?: GetSettingsParams, options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof getSettings>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseQueryOptions<Awaited<ReturnType<typeof getSettings>>, TError, TData> & {
+    queryKey: QueryKey;
+};
+export type GetSettingsQueryResult = NonNullable<Awaited<ReturnType<typeof getSettings>>>;
+export type GetSettingsQueryError = ErrorType<unknown>;
+/**
+ * @summary Get application settings
+ */
+export declare function useGetSettings<TData = Awaited<ReturnType<typeof getSettings>>, TError = ErrorType<unknown>>(params?: GetSettingsParams, options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof getSettings>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+};
+/**
+ * @summary Update application settings
+ */
+export declare const getUpdateSettingsUrl: () => string;
+export declare const updateSettings: (updateSettingsBody: UpdateSettingsBody, options?: RequestInit) => Promise<Setting[]>;
+export declare const getUpdateSettingsMutationOptions: <TError = ErrorType<unknown>, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof updateSettings>>, TError, {
+        data: BodyType<UpdateSettingsBody>;
+    }, TContext>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseMutationOptions<Awaited<ReturnType<typeof updateSettings>>, TError, {
+    data: BodyType<UpdateSettingsBody>;
+}, TContext>;
+export type UpdateSettingsMutationResult = NonNullable<Awaited<ReturnType<typeof updateSettings>>>;
+export type UpdateSettingsMutationBody = BodyType<UpdateSettingsBody>;
+export type UpdateSettingsMutationError = ErrorType<unknown>;
+/**
+ * @summary Update application settings
+ */
+export declare const useUpdateSettings: <TError = ErrorType<unknown>, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof updateSettings>>, TError, {
+        data: BodyType<UpdateSettingsBody>;
+    }, TContext>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseMutationResult<Awaited<ReturnType<typeof updateSettings>>, TError, {
+    data: BodyType<UpdateSettingsBody>;
+}, TContext>;
 export {};
 //# sourceMappingURL=api.d.ts.map

@@ -82,6 +82,8 @@ export declare const ListDrinksResponseItem: z.ZodObject<{
     prepTimeSeconds: z.ZodNumber;
     cupSizeMl: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
     kitchenStation: z.ZodOptional<z.ZodString>;
+    categoryId: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
+    sortOrder: z.ZodOptional<z.ZodNumber>;
     createdAt: z.ZodString;
     updatedAt: z.ZodString;
 }, "strip", z.ZodTypeAny, {
@@ -98,6 +100,8 @@ export declare const ListDrinksResponseItem: z.ZodObject<{
     defaultPrice?: number | undefined;
     cupSizeMl?: number | null | undefined;
     kitchenStation?: string | undefined;
+    categoryId?: number | null | undefined;
+    sortOrder?: number | undefined;
 }, {
     id: number;
     name: string;
@@ -112,6 +116,8 @@ export declare const ListDrinksResponseItem: z.ZodObject<{
     defaultPrice?: number | undefined;
     cupSizeMl?: number | null | undefined;
     kitchenStation?: string | undefined;
+    categoryId?: number | null | undefined;
+    sortOrder?: number | undefined;
 }>;
 export type ListDrinksResponseItem = Infer<typeof api.ListDrinksResponseItem>;
 export declare const ListDrinksResponse: z.ZodArray<z.ZodObject<{
@@ -126,6 +132,8 @@ export declare const ListDrinksResponse: z.ZodArray<z.ZodObject<{
     prepTimeSeconds: z.ZodNumber;
     cupSizeMl: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
     kitchenStation: z.ZodOptional<z.ZodString>;
+    categoryId: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
+    sortOrder: z.ZodOptional<z.ZodNumber>;
     createdAt: z.ZodString;
     updatedAt: z.ZodString;
 }, "strip", z.ZodTypeAny, {
@@ -142,6 +150,8 @@ export declare const ListDrinksResponse: z.ZodArray<z.ZodObject<{
     defaultPrice?: number | undefined;
     cupSizeMl?: number | null | undefined;
     kitchenStation?: string | undefined;
+    categoryId?: number | null | undefined;
+    sortOrder?: number | undefined;
 }, {
     id: number;
     name: string;
@@ -156,6 +166,8 @@ export declare const ListDrinksResponse: z.ZodArray<z.ZodObject<{
     defaultPrice?: number | undefined;
     cupSizeMl?: number | null | undefined;
     kitchenStation?: string | undefined;
+    categoryId?: number | null | undefined;
+    sortOrder?: number | undefined;
 }>, "many">;
 export type ListDrinksResponse = Infer<typeof api.ListDrinksResponse>;
 export declare const CreateDrinkBody: z.ZodObject<{
@@ -180,9 +192,9 @@ export declare const CreateDrinkBody: z.ZodObject<{
     }, "strip", z.ZodTypeAny, {
         ingredientId: number;
         slotLabel: string;
+        sortOrder?: number | undefined;
         isRequired?: boolean | undefined;
         defaultOptionId?: number | null | undefined;
-        sortOrder?: number | undefined;
         baristaSortOrder?: number | undefined;
         customerSortOrder?: number | undefined;
         isDynamic?: boolean | undefined;
@@ -190,14 +202,16 @@ export declare const CreateDrinkBody: z.ZodObject<{
     }, {
         ingredientId: number;
         slotLabel: string;
+        sortOrder?: number | undefined;
         isRequired?: boolean | undefined;
         defaultOptionId?: number | null | undefined;
-        sortOrder?: number | undefined;
         baristaSortOrder?: number | undefined;
         customerSortOrder?: number | undefined;
         isDynamic?: boolean | undefined;
         affectsCupSize?: boolean | null | undefined;
     }>, "many">>;
+    categoryId: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
+    sortOrder: z.ZodOptional<z.ZodNumber>;
 }, "strip", z.ZodTypeAny, {
     name: string;
     category: string;
@@ -207,12 +221,14 @@ export declare const CreateDrinkBody: z.ZodObject<{
     isActive?: boolean | undefined;
     prepTimeSeconds?: number | undefined;
     kitchenStation?: string | undefined;
+    categoryId?: number | null | undefined;
+    sortOrder?: number | undefined;
     slots?: {
         ingredientId: number;
         slotLabel: string;
+        sortOrder?: number | undefined;
         isRequired?: boolean | undefined;
         defaultOptionId?: number | null | undefined;
-        sortOrder?: number | undefined;
         baristaSortOrder?: number | undefined;
         customerSortOrder?: number | undefined;
         isDynamic?: boolean | undefined;
@@ -227,12 +243,14 @@ export declare const CreateDrinkBody: z.ZodObject<{
     isActive?: boolean | undefined;
     prepTimeSeconds?: number | undefined;
     kitchenStation?: string | undefined;
+    categoryId?: number | null | undefined;
+    sortOrder?: number | undefined;
     slots?: {
         ingredientId: number;
         slotLabel: string;
+        sortOrder?: number | undefined;
         isRequired?: boolean | undefined;
         defaultOptionId?: number | null | undefined;
-        sortOrder?: number | undefined;
         baristaSortOrder?: number | undefined;
         customerSortOrder?: number | undefined;
         isDynamic?: boolean | undefined;
@@ -260,6 +278,8 @@ export declare const GetDrinkResponse: z.ZodIntersection<z.ZodObject<{
     prepTimeSeconds: z.ZodNumber;
     cupSizeMl: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
     kitchenStation: z.ZodOptional<z.ZodString>;
+    categoryId: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
+    sortOrder: z.ZodOptional<z.ZodNumber>;
     createdAt: z.ZodString;
     updatedAt: z.ZodString;
 }, "strip", z.ZodTypeAny, {
@@ -276,6 +296,8 @@ export declare const GetDrinkResponse: z.ZodIntersection<z.ZodObject<{
     defaultPrice?: number | undefined;
     cupSizeMl?: number | null | undefined;
     kitchenStation?: string | undefined;
+    categoryId?: number | null | undefined;
+    sortOrder?: number | undefined;
 }, {
     id: number;
     name: string;
@@ -290,6 +312,8 @@ export declare const GetDrinkResponse: z.ZodIntersection<z.ZodObject<{
     defaultPrice?: number | undefined;
     cupSizeMl?: number | null | undefined;
     kitchenStation?: string | undefined;
+    categoryId?: number | null | undefined;
+    sortOrder?: number | undefined;
 }>, z.ZodObject<{
     slots: z.ZodArray<z.ZodObject<{
         id: z.ZodNumber;
@@ -305,11 +329,11 @@ export declare const GetDrinkResponse: z.ZodIntersection<z.ZodObject<{
         affectsCupSize: z.ZodOptional<z.ZodNullable<z.ZodBoolean>>;
     }, "strip", z.ZodTypeAny, {
         id: number;
+        sortOrder: number;
         ingredientId: number;
         slotLabel: string;
         isRequired: boolean;
         defaultOptionId: number | null;
-        sortOrder: number;
         baristaSortOrder: number;
         customerSortOrder: number;
         drinkId: number;
@@ -317,11 +341,11 @@ export declare const GetDrinkResponse: z.ZodIntersection<z.ZodObject<{
         affectsCupSize?: boolean | null | undefined;
     }, {
         id: number;
+        sortOrder: number;
         ingredientId: number;
         slotLabel: string;
         isRequired: boolean;
         defaultOptionId: number | null;
-        sortOrder: number;
         baristaSortOrder: number;
         customerSortOrder: number;
         drinkId: number;
@@ -331,11 +355,11 @@ export declare const GetDrinkResponse: z.ZodIntersection<z.ZodObject<{
 }, "strip", z.ZodTypeAny, {
     slots: {
         id: number;
+        sortOrder: number;
         ingredientId: number;
         slotLabel: string;
         isRequired: boolean;
         defaultOptionId: number | null;
-        sortOrder: number;
         baristaSortOrder: number;
         customerSortOrder: number;
         drinkId: number;
@@ -345,11 +369,11 @@ export declare const GetDrinkResponse: z.ZodIntersection<z.ZodObject<{
 }, {
     slots: {
         id: number;
+        sortOrder: number;
         ingredientId: number;
         slotLabel: string;
         isRequired: boolean;
         defaultOptionId: number | null;
-        sortOrder: number;
         baristaSortOrder: number;
         customerSortOrder: number;
         drinkId: number;
@@ -375,6 +399,8 @@ export declare const UpdateDrinkBody: z.ZodObject<{
     isActive: z.ZodOptional<z.ZodBoolean>;
     prepTimeSeconds: z.ZodOptional<z.ZodNumber>;
     kitchenStation: z.ZodOptional<z.ZodString>;
+    categoryId: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
+    sortOrder: z.ZodOptional<z.ZodNumber>;
 }, "strip", z.ZodTypeAny, {
     name?: string | undefined;
     category?: string | undefined;
@@ -384,6 +410,8 @@ export declare const UpdateDrinkBody: z.ZodObject<{
     isActive?: boolean | undefined;
     prepTimeSeconds?: number | undefined;
     kitchenStation?: string | undefined;
+    categoryId?: number | null | undefined;
+    sortOrder?: number | undefined;
 }, {
     name?: string | undefined;
     category?: string | undefined;
@@ -393,6 +421,8 @@ export declare const UpdateDrinkBody: z.ZodObject<{
     isActive?: boolean | undefined;
     prepTimeSeconds?: number | undefined;
     kitchenStation?: string | undefined;
+    categoryId?: number | null | undefined;
+    sortOrder?: number | undefined;
 }>;
 export type UpdateDrinkBody = Infer<typeof api.UpdateDrinkBody>;
 export declare const UpdateDrinkResponse: z.ZodObject<{
@@ -407,6 +437,8 @@ export declare const UpdateDrinkResponse: z.ZodObject<{
     prepTimeSeconds: z.ZodNumber;
     cupSizeMl: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
     kitchenStation: z.ZodOptional<z.ZodString>;
+    categoryId: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
+    sortOrder: z.ZodOptional<z.ZodNumber>;
     createdAt: z.ZodString;
     updatedAt: z.ZodString;
 }, "strip", z.ZodTypeAny, {
@@ -423,6 +455,8 @@ export declare const UpdateDrinkResponse: z.ZodObject<{
     defaultPrice?: number | undefined;
     cupSizeMl?: number | null | undefined;
     kitchenStation?: string | undefined;
+    categoryId?: number | null | undefined;
+    sortOrder?: number | undefined;
 }, {
     id: number;
     name: string;
@@ -437,6 +471,8 @@ export declare const UpdateDrinkResponse: z.ZodObject<{
     defaultPrice?: number | undefined;
     cupSizeMl?: number | null | undefined;
     kitchenStation?: string | undefined;
+    categoryId?: number | null | undefined;
+    sortOrder?: number | undefined;
 }>;
 export type UpdateDrinkResponse = Infer<typeof api.UpdateDrinkResponse>;
 export declare const DeleteDrinkParams: z.ZodObject<{
@@ -731,8 +767,8 @@ export declare const GetIngredientResponse: z.ZodIntersection<z.ZodObject<{
         sortOrder: z.ZodNumber;
     }, "strip", z.ZodTypeAny, {
         id: number;
-        ingredientId: number;
         sortOrder: number;
+        ingredientId: number;
         extraCost: number;
         label: string;
         processedQty: number;
@@ -742,8 +778,8 @@ export declare const GetIngredientResponse: z.ZodIntersection<z.ZodObject<{
         linkedIngredientId?: number | null | undefined;
     }, {
         id: number;
-        ingredientId: number;
         sortOrder: number;
+        ingredientId: number;
         extraCost: number;
         label: string;
         processedQty: number;
@@ -755,8 +791,8 @@ export declare const GetIngredientResponse: z.ZodIntersection<z.ZodObject<{
 }, "strip", z.ZodTypeAny, {
     options: {
         id: number;
-        ingredientId: number;
         sortOrder: number;
+        ingredientId: number;
         extraCost: number;
         label: string;
         processedQty: number;
@@ -768,8 +804,8 @@ export declare const GetIngredientResponse: z.ZodIntersection<z.ZodObject<{
 }, {
     options: {
         id: number;
-        ingredientId: number;
         sortOrder: number;
+        ingredientId: number;
         extraCost: number;
         label: string;
         processedQty: number;
@@ -1280,6 +1316,7 @@ export declare const GetOrderResponse: z.ZodIntersection<z.ZodObject<{
         unitPrice: z.ZodNumber;
         lineTotal: z.ZodNumber;
         specialNotes: z.ZodNullable<z.ZodString>;
+        kitchenStation: z.ZodOptional<z.ZodString>;
         customizations: z.ZodArray<z.ZodObject<{
             id: z.ZodNumber;
             orderItemId: z.ZodNumber;
@@ -1335,6 +1372,7 @@ export declare const GetOrderResponse: z.ZodIntersection<z.ZodObject<{
             optionId?: number | null | undefined;
             typeVolumeId?: number | null | undefined;
         }[];
+        kitchenStation?: string | undefined;
     }, {
         id: number;
         drinkId: number;
@@ -1356,6 +1394,7 @@ export declare const GetOrderResponse: z.ZodIntersection<z.ZodObject<{
             optionId?: number | null | undefined;
             typeVolumeId?: number | null | undefined;
         }[];
+        kitchenStation?: string | undefined;
     }>, "many">;
 }, "strip", z.ZodTypeAny, {
     items: {
@@ -1379,6 +1418,7 @@ export declare const GetOrderResponse: z.ZodIntersection<z.ZodObject<{
             optionId?: number | null | undefined;
             typeVolumeId?: number | null | undefined;
         }[];
+        kitchenStation?: string | undefined;
     }[];
 }, {
     items: {
@@ -1402,6 +1442,7 @@ export declare const GetOrderResponse: z.ZodIntersection<z.ZodObject<{
             optionId?: number | null | undefined;
             typeVolumeId?: number | null | undefined;
         }[];
+        kitchenStation?: string | undefined;
     }[];
 }>>;
 export type GetOrderResponse = Infer<typeof api.GetOrderResponse>;
@@ -1659,6 +1700,7 @@ export declare const GetActiveOrdersResponseItem: z.ZodIntersection<z.ZodObject<
         unitPrice: z.ZodNumber;
         lineTotal: z.ZodNumber;
         specialNotes: z.ZodNullable<z.ZodString>;
+        kitchenStation: z.ZodOptional<z.ZodString>;
         customizations: z.ZodArray<z.ZodObject<{
             id: z.ZodNumber;
             orderItemId: z.ZodNumber;
@@ -1714,6 +1756,7 @@ export declare const GetActiveOrdersResponseItem: z.ZodIntersection<z.ZodObject<
             optionId?: number | null | undefined;
             typeVolumeId?: number | null | undefined;
         }[];
+        kitchenStation?: string | undefined;
     }, {
         id: number;
         drinkId: number;
@@ -1735,6 +1778,7 @@ export declare const GetActiveOrdersResponseItem: z.ZodIntersection<z.ZodObject<
             optionId?: number | null | undefined;
             typeVolumeId?: number | null | undefined;
         }[];
+        kitchenStation?: string | undefined;
     }>, "many">;
 }, "strip", z.ZodTypeAny, {
     items: {
@@ -1758,6 +1802,7 @@ export declare const GetActiveOrdersResponseItem: z.ZodIntersection<z.ZodObject<
             optionId?: number | null | undefined;
             typeVolumeId?: number | null | undefined;
         }[];
+        kitchenStation?: string | undefined;
     }[];
 }, {
     items: {
@@ -1781,6 +1826,7 @@ export declare const GetActiveOrdersResponseItem: z.ZodIntersection<z.ZodObject<
             optionId?: number | null | undefined;
             typeVolumeId?: number | null | undefined;
         }[];
+        kitchenStation?: string | undefined;
     }[];
 }>>;
 export type GetActiveOrdersResponseItem = Infer<typeof api.GetActiveOrdersResponseItem>;
@@ -1842,6 +1888,7 @@ export declare const GetActiveOrdersResponse: z.ZodArray<z.ZodIntersection<z.Zod
         unitPrice: z.ZodNumber;
         lineTotal: z.ZodNumber;
         specialNotes: z.ZodNullable<z.ZodString>;
+        kitchenStation: z.ZodOptional<z.ZodString>;
         customizations: z.ZodArray<z.ZodObject<{
             id: z.ZodNumber;
             orderItemId: z.ZodNumber;
@@ -1897,6 +1944,7 @@ export declare const GetActiveOrdersResponse: z.ZodArray<z.ZodIntersection<z.Zod
             optionId?: number | null | undefined;
             typeVolumeId?: number | null | undefined;
         }[];
+        kitchenStation?: string | undefined;
     }, {
         id: number;
         drinkId: number;
@@ -1918,6 +1966,7 @@ export declare const GetActiveOrdersResponse: z.ZodArray<z.ZodIntersection<z.Zod
             optionId?: number | null | undefined;
             typeVolumeId?: number | null | undefined;
         }[];
+        kitchenStation?: string | undefined;
     }>, "many">;
 }, "strip", z.ZodTypeAny, {
     items: {
@@ -1941,6 +1990,7 @@ export declare const GetActiveOrdersResponse: z.ZodArray<z.ZodIntersection<z.Zod
             optionId?: number | null | undefined;
             typeVolumeId?: number | null | undefined;
         }[];
+        kitchenStation?: string | undefined;
     }[];
 }, {
     items: {
@@ -1964,6 +2014,7 @@ export declare const GetActiveOrdersResponse: z.ZodArray<z.ZodIntersection<z.Zod
             optionId?: number | null | undefined;
             typeVolumeId?: number | null | undefined;
         }[];
+        kitchenStation?: string | undefined;
     }[];
 }>>, "many">;
 export type GetActiveOrdersResponse = Infer<typeof api.GetActiveOrdersResponse>;

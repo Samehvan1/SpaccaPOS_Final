@@ -11,6 +11,14 @@ export const drinkCategoriesTable = pgTable("drink_categories", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+export const kitchenStationsTable = pgTable("kitchen_stations", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull().unique(),
+  isActive: boolean("is_active").notNull().default(true),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const drinksTable = pgTable("drinks", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
@@ -115,6 +123,7 @@ export const predefinedSlotVolumesTable = pgTable("predefined_slot_volumes", {
 
 export const insertDrinkSchema = createInsertSchema(drinksTable).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertDrinkCategorySchema = createInsertSchema(drinkCategoriesTable).omit({ id: true, createdAt: true });
+export const insertKitchenStationSchema = createInsertSchema(kitchenStationsTable).omit({ id: true, createdAt: true });
 export const insertDrinkSlotSchema = createInsertSchema(drinkIngredientSlotsTable).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertDrinkSlotVolumeSchema = createInsertSchema(drinkSlotVolumesTable).omit({ id: true });
 export const insertDrinkSlotTypeOptionSchema = createInsertSchema(drinkSlotTypeOptionsTable).omit({ id: true });
@@ -125,6 +134,8 @@ export type InsertDrinkCategory = typeof drinkCategoriesTable.$inferInsert;
 export type InsertDrinkSlot = typeof drinkIngredientSlotsTable.$inferInsert;
 export type Drink = typeof drinksTable.$inferSelect;
 export type DrinkCategory = typeof drinkCategoriesTable.$inferSelect;
+export type KitchenStation = typeof kitchenStationsTable.$inferSelect;
+export type InsertKitchenStation = typeof kitchenStationsTable.$inferInsert;
 export type DrinkIngredientSlot = typeof drinkIngredientSlotsTable.$inferSelect;
 export type DrinkSlotVolume = typeof drinkSlotVolumesTable.$inferSelect;
 export type DrinkSlotTypeOption = typeof drinkSlotTypeOptionsTable.$inferSelect;

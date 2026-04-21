@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 
 export type CupLayer = {
   id: string | number;
@@ -31,7 +32,7 @@ export function CupSimulator({ cupSizeMl, layers, showLabels = true, className =
   
   // Normalized layers (percentage of cup size)
   const visualizedLayers = useMemo(() => {
-    let currentY = 0; // Starts from bottom (100% in SVG coords)
+    let currentY = 0; // Starts from bottom (0 in normalized local space, but we map to SVG)
     return layers.map((layer) => {
       const heightPercent = (layer.volume / (cupSizeMl || 1)) * 100;
       const part = {
@@ -52,7 +53,7 @@ export function CupSimulator({ cupSizeMl, layers, showLabels = true, className =
     <div className={`relative flex flex-col items-center ${className}`}>
       <svg
         viewBox="0 0 100 120"
-        className="w-full h-full drop-shadow-md"
+        className="w-full h-full drop-shadow-md overflow-visible"
         preserveAspectRatio="xMidYMax meet"
       >
         <defs>
@@ -73,7 +74,7 @@ export function CupSimulator({ cupSizeMl, layers, showLabels = true, className =
           </linearGradient>
         </defs>
 
-        {/* Cup Glass/Background - SOLIFIED */}
+        {/* Cup Glass/Background */}
         <path
           d="M15,10 L85,10 L75,110 L25,110 Z"
           fill="#f8fafc" 
@@ -84,28 +85,42 @@ export function CupSimulator({ cupSizeMl, layers, showLabels = true, className =
 
         {/* Content Group (Masked) */}
         <g mask="url(#cup-mask)">
-          {/* Visualized Stacked Layers - SOLID */}
-          {visualizedLayers.map((layer, index) => (
-            <rect
-              key={`${layer.id}-${index}`}
-              x="0"
-              y={110 - layer.bottom - layer.height}
-              width="100"
-              height={layer.height + 0.8}
-              fill={layer.color}
-              className="transition-all duration-700 ease-in-out"
-            />
-          ))}
+          <AnimatePresence mode="popLayout">
+            {/* Visualized Stacked Layers */}
+            {visualizedLayers.map((layer, index) => (
+              <motion.rect
+                key={layer.id}
+                layout
+                initial={{ height: 0, y: 110 }}
+                animate={{ 
+                  height: layer.height + 0.8, 
+                  y: 110 - layer.bottom - layer.height,
+                  fill: layer.color
+                }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ 
+                  type: "spring", 
+                  stiffness: 100, 
+                  damping: 15,
+                  mass: 0.8
+                }}
+                x="0"
+                width="100"
+              />
+            ))}
+          </AnimatePresence>
 
-          {/* Dynamic Fill - SOLID Blue */}
+          {/* Dynamic Fill (Liquid on top) */}
           {hasDynamicFill && (
-            <rect
+            <motion.rect
+              initial={{ height: 0 }}
+              animate={{ height: dynamicFillHeight }}
+              transition={{ duration: 0.5 }}
               x="0"
-              y={110 - 100}
+              y="10"
               width="100"
-              height={dynamicFillHeight}
               fill="#BFDBFE" 
-              className="transition-all duration-700 ease-in-out"
+              fillOpacity="0.6"
             />
           )}
           

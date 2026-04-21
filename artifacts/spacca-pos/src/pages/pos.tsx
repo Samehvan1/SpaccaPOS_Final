@@ -238,6 +238,41 @@ export default function PosTerminal() {
     }
   }, [priceBreakdown]);
 
+  const [simulatorLayers, setSimulatorLayers] = useState<CupLayer[]>([]);
+
+  useEffect(() => {
+    if (priceBreakdown?.extras && Array.isArray(priceBreakdown.extras)) {
+      const CATEGORY_DEFAULTS: Record<string, string> = {
+        coffee: "#4b2c20",
+        milk: "#fdf5e6",
+        syrup: "#d4a373",
+        sauce: "#7f4f24",
+        sweetener: "#ffffff",
+        topping: "#fb8500",
+        other: "#9ca3af"
+      };
+
+      const newLayers: CupLayer[] = priceBreakdown.extras
+        .filter((ext: any) => ext.producedQty > 0)
+        .map((ext: any) => {
+          const category = ext.slotLabel?.toLowerCase() || "";
+          const defaultColor = CATEGORY_DEFAULTS[category] || 
+                               (category.includes("milk") ? CATEGORY_DEFAULTS.milk : 
+                                category.includes("coffee") ? CATEGORY_DEFAULTS.coffee : 
+                                CATEGORY_DEFAULTS.other);
+
+          return {
+            id: `${ext.slotLabel}-${ext.optionLabel}`,
+            label: ext.optionLabel,
+            volume: ext.producedQty,
+            color: ext.color || defaultColor,
+            category: ext.slotLabel,
+          };
+        });
+      setSimulatorLayers(newLayers);
+    }
+  }, [priceBreakdown]);
+
   useEffect(() => {
     if (activeDrink && currentSelectionsArray.length > 0) {
       calcRef.current(
@@ -257,6 +292,7 @@ export default function PosTerminal() {
     setActiveDrink(null);
     setSelections({});
     setSubSelections({});
+    setSimulatorLayers([]);
     setNotes("");
   };
 
@@ -626,39 +662,7 @@ export default function PosTerminal() {
               <div className="w-24 h-32 shrink-0 pr-6 mr-2">
                 <CupSimulator 
                   cupSizeMl={drinkDetail.cupSizeMl || 0}
-                  layers={(() => {
-                    const layers: CupLayer[] = [];
-                    const extras: any[] = (priceBreakdown as any)?.extras ?? [];
-                    
-                    const CATEGORY_DEFAULTS: Record<string, string> = {
-                      coffee: "#4b2c20",
-                      milk: "#fdf5e6",
-                      syrup: "#d4a373",
-                      sauce: "#7f4f24",
-                      sweetener: "#ffffff",
-                      topping: "#fb8500",
-                      other: "#9ca3af"
-                    };
-
-                    extras.forEach((ext: any, idx: number) => {
-                      if (ext.producedQty > 0) {
-                        const category = ext.slotLabel?.toLowerCase() || "";
-                        const defaultColor = CATEGORY_DEFAULTS[category] || 
-                                           (category.includes("milk") ? CATEGORY_DEFAULTS.milk : 
-                                            category.includes("coffee") ? CATEGORY_DEFAULTS.coffee : 
-                                            CATEGORY_DEFAULTS.other);
-
-                        layers.push({
-                          id: `ext-${idx}`,
-                          label: ext.optionLabel,
-                          volume: ext.producedQty,
-                          color: ext.color || defaultColor,
-                          category: ext.slotLabel,
-                        });
-                      }
-                    });
-                    return layers;
-                  })()}
+                  layers={simulatorLayers}
                   className="mb-2"
                 />
               </div>

@@ -58,6 +58,8 @@ export const ListDrinksResponseItem = zod.object({
   prepTimeSeconds: zod.number(),
   cupSizeMl: zod.number().nullish(),
   kitchenStation: zod.string().optional(),
+  categoryId: zod.number().nullable().optional(),
+  sortOrder: zod.number().optional(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
@@ -90,6 +92,8 @@ export const CreateDrinkBody = zod.object({
       }),
     )
     .optional(),
+  categoryId: zod.number().nullable().optional(),
+  sortOrder: zod.number().optional(),
 });
 
 /**
@@ -112,6 +116,8 @@ export const GetDrinkResponse = zod
     prepTimeSeconds: zod.number(),
     cupSizeMl: zod.number().nullish(),
     kitchenStation: zod.string().optional(),
+    categoryId: zod.number().nullable().optional(),
+    sortOrder: zod.number().optional(),
     createdAt: zod.string(),
     updatedAt: zod.string(),
   })
@@ -151,6 +157,8 @@ export const UpdateDrinkBody = zod.object({
   isActive: zod.boolean().optional(),
   prepTimeSeconds: zod.number().optional(),
   kitchenStation: zod.string().optional(),
+  categoryId: zod.number().nullable().optional(),
+  sortOrder: zod.number().optional(),
 });
 
 export const UpdateDrinkResponse = zod.object({
@@ -165,6 +173,8 @@ export const UpdateDrinkResponse = zod.object({
   prepTimeSeconds: zod.number(),
   cupSizeMl: zod.number().nullish(),
   kitchenStation: zod.string().optional(),
+  categoryId: zod.number().nullable().optional(),
+  sortOrder: zod.number().optional(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
@@ -570,6 +580,7 @@ export const GetOrderResponse = zod
           unitPrice: zod.number(),
           lineTotal: zod.number(),
           specialNotes: zod.string().nullable(),
+          kitchenStation: zod.string().optional(),
           customizations: zod.array(
             zod.object({
               id: zod.number(),
@@ -717,6 +728,7 @@ export const GetActiveOrdersResponseItem = zod
           unitPrice: zod.number(),
           lineTotal: zod.number(),
           specialNotes: zod.string().nullable(),
+          kitchenStation: zod.string().optional(),
           customizations: zod.array(
             zod.object({
               id: zod.number(),

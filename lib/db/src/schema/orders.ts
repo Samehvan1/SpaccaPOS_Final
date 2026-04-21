@@ -33,6 +33,7 @@ export const orderItemsTable = pgTable("order_items", {
   unitPrice: numeric("unit_price", { precision: 8, scale: 2 }).notNull(),
   lineTotal: numeric("line_total", { precision: 8, scale: 2 }).notNull(),
   specialNotes: text("special_notes"),
+  kitchenStation: text("kitchen_station").notNull().default("main"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

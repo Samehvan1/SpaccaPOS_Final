@@ -18,6 +18,7 @@ import StockAdmin from "@/pages/admin/stock";
 import DrinkRecipe from "@/pages/admin/drink-recipe";
 import ReportsPage from "@/pages/admin/reports";
 import CategoriesAdmin from "@/pages/admin/categories";
+import KitchenStationsAdmin from "@/pages/admin/kitchen-stations";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient();
@@ -101,6 +102,11 @@ function AppRoutes() {
       <Route path="/admin/categories">
         <MainLayout>
           <ProtectedRoute component={CategoriesAdmin} adminOnly={true} />
+        </MainLayout>
+      </Route>
+      <Route path="/admin/kitchen-stations">
+        <MainLayout>
+          <ProtectedRoute component={KitchenStationsAdmin} adminOnly={true} />
         </MainLayout>
       </Route>
 

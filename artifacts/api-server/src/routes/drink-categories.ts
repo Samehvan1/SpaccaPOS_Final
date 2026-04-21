@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq, asc } from "drizzle-orm";
-import { db, drinkCategoriesTable } from "@workspace/db";
+import { db, drinkCategoriesTable, drinksTable } from "@workspace/db";
 import { insertDrinkCategorySchema } from "@workspace/db";
 
 const router: IRouter = Router();
@@ -51,6 +51,14 @@ router.patch("/drink-categories/:id", async (req, res): Promise<void> => {
     .returning();
 
   if (!category) { res.status(404).json({ error: "Category not found" }); return; }
+
+  // Sync legacy 'category' field in drinksTable if the name changed
+  if (name !== undefined) {
+    await db.update(drinksTable)
+      .set({ category: name })
+      .where(eq(drinksTable.categoryId, id));
+  }
+
   res.json(category);
 });
 

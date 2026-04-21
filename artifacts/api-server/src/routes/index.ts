@@ -8,6 +8,7 @@ import stockRouter from "./stock";
 import dashboardRouter from "./dashboard";
 import catalogRouter from "./catalog";
 import drinkCategoriesRouter from "./drink-categories";
+import kitchenStationsRouter from "./kitchen-stations";
 import settingsRouter from "./settings";
 import predefinedSlotsRouter from "./predefined-slots";
 import { addSseClient } from "../lib/sse";
@@ -23,6 +24,7 @@ router.use(stockRouter);
 router.use(dashboardRouter);
 router.use(catalogRouter);
 router.use(drinkCategoriesRouter);
+router.use(kitchenStationsRouter);
 router.use(settingsRouter);
 router.use(predefinedSlotsRouter);
 

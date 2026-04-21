@@ -20807,27 +20807,27 @@ var require_router = __commonJS({
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var methods = METHODS.map((method) => method.toLowerCase());
-    module.exports = Router13;
+    module.exports = Router14;
     module.exports.Route = Route;
-    function Router13(options) {
-      if (!(this instanceof Router13)) {
-        return new Router13(options);
+    function Router14(options) {
+      if (!(this instanceof Router14)) {
+        return new Router14(options);
       }
       const opts = options || {};
-      function router13(req, res, next) {
-        router13.handle(req, res, next);
+      function router14(req, res, next) {
+        router14.handle(req, res, next);
       }
-      Object.setPrototypeOf(router13, this);
-      router13.caseSensitive = opts.caseSensitive;
-      router13.mergeParams = opts.mergeParams;
-      router13.params = {};
-      router13.strict = opts.strict;
-      router13.stack = [];
-      return router13;
+      Object.setPrototypeOf(router14, this);
+      router14.caseSensitive = opts.caseSensitive;
+      router14.mergeParams = opts.mergeParams;
+      router14.params = {};
+      router14.strict = opts.strict;
+      router14.stack = [];
+      return router14;
     }
-    Router13.prototype = function() {
+    Router14.prototype = function() {
     };
-    Router13.prototype.param = function param(name, fn) {
+    Router14.prototype.param = function param(name, fn) {
       if (!name) {
         throw new TypeError("argument name is required");
       }
@@ -20847,7 +20847,7 @@ var require_router = __commonJS({
       params.push(fn);
       return this;
     };
-    Router13.prototype.handle = function handle(req, res, callback) {
+    Router14.prototype.handle = function handle(req, res, callback) {
       if (!callback) {
         throw new TypeError("argument callback is required");
       }
@@ -20974,7 +20974,7 @@ var require_router = __commonJS({
         }
       }
     };
-    Router13.prototype.use = function use(handler) {
+    Router14.prototype.use = function use(handler) {
       let offset = 0;
       let path2 = "/";
       if (typeof handler !== "function") {
@@ -21007,7 +21007,7 @@ var require_router = __commonJS({
       }
       return this;
     };
-    Router13.prototype.route = function route(path2) {
+    Router14.prototype.route = function route(path2) {
       const route2 = new Route(path2);
       const layer = new Layer(path2, {
         sensitive: this.caseSensitive,
@@ -21022,7 +21022,7 @@ var require_router = __commonJS({
       return route2;
     };
     methods.concat("all").forEach(function(method) {
-      Router13.prototype[method] = function(path2) {
+      Router14.prototype[method] = function(path2) {
         const route = this.route(path2);
         route[method].apply(route, slice.call(arguments, 1));
         return this;
@@ -21205,13 +21205,13 @@ var require_application = __commonJS({
     var compileTrust = require_utils3().compileTrust;
     var resolve2 = __require("node:path").resolve;
     var once = require_once();
-    var Router13 = require_router();
+    var Router14 = require_router();
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var app2 = exports = module.exports = {};
     var trustProxyDefaultSymbol = "@@symbol:trust_proxy_default";
     app2.init = function init() {
-      var router13 = null;
+      var router14 = null;
       this.cache = /* @__PURE__ */ Object.create(null);
       this.engines = /* @__PURE__ */ Object.create(null);
       this.settings = /* @__PURE__ */ Object.create(null);
@@ -21220,13 +21220,13 @@ var require_application = __commonJS({
         configurable: true,
         enumerable: true,
         get: function getrouter() {
-          if (router13 === null) {
-            router13 = new Router13({
+          if (router14 === null) {
+            router14 = new Router14({
               caseSensitive: this.enabled("case sensitive routing"),
               strict: this.enabled("strict routing")
             });
           }
-          return router13;
+          return router14;
         }
       });
     };
@@ -21297,15 +21297,15 @@ var require_application = __commonJS({
       if (fns.length === 0) {
         throw new TypeError("app.use() requires a middleware function");
       }
-      var router13 = this.router;
+      var router14 = this.router;
       fns.forEach(function(fn2) {
         if (!fn2 || !fn2.handle || !fn2.set) {
-          return router13.use(path2, fn2);
+          return router14.use(path2, fn2);
         }
         debug(".use app under %s", path2);
         fn2.mountpath = path2;
         fn2.parent = this;
-        router13.use(path2, function mounted_app(req, res, next) {
+        router14.use(path2, function mounted_app(req, res, next) {
           var orig = req.app;
           fn2.handle(req, res, function(err) {
             Object.setPrototypeOf(req, orig.request);
@@ -23832,7 +23832,7 @@ var require_express = __commonJS({
     var EventEmitter = __require("node:events").EventEmitter;
     var mixin = require_merge_descriptors();
     var proto = require_application();
-    var Router13 = require_router();
+    var Router14 = require_router();
     var req = require_request();
     var res = require_response();
     exports = module.exports = createApplication;
@@ -23854,8 +23854,8 @@ var require_express = __commonJS({
     exports.application = proto;
     exports.request = req;
     exports.response = res;
-    exports.Route = Router13.Route;
-    exports.Router = Router13;
+    exports.Route = Router14.Route;
+    exports.Router = Router14;
     exports.json = bodyParser.json;
     exports.raw = bodyParser.raw;
     exports.static = require_serve_static();
@@ -55592,7 +55592,7 @@ var init_ingredients = __esm({
 });
 
 // ../../lib/db/src/schema/drinks.ts
-var drinkCategoriesTable, drinksTable, drinkIngredientSlotsTable, drinkSlotTypeOptionsTable, drinkSlotVolumesTable, predefinedSlotsTable, predefinedSlotTypeOptionsTable, predefinedSlotVolumesTable, insertDrinkSchema, insertDrinkCategorySchema, insertDrinkSlotSchema, insertDrinkSlotVolumeSchema, insertDrinkSlotTypeOptionSchema, insertPredefinedSlotSchema;
+var drinkCategoriesTable, kitchenStationsTable, drinksTable, drinkIngredientSlotsTable, drinkSlotTypeOptionsTable, drinkSlotVolumesTable, predefinedSlotsTable, predefinedSlotTypeOptionsTable, predefinedSlotVolumesTable, insertDrinkSchema, insertDrinkCategorySchema, insertKitchenStationSchema, insertDrinkSlotSchema, insertDrinkSlotVolumeSchema, insertDrinkSlotTypeOptionSchema, insertPredefinedSlotSchema;
 var init_drinks = __esm({
   "../../lib/db/src/schema/drinks.ts"() {
     "use strict";
@@ -55604,6 +55604,13 @@ var init_drinks = __esm({
       name: text("name").notNull().unique(),
       sortOrder: integer("sort_order").notNull().default(0),
       isActive: boolean("is_active").notNull().default(true),
+      createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+    });
+    kitchenStationsTable = pgTable("kitchen_stations", {
+      id: serial("id").primaryKey(),
+      name: text("name").notNull().unique(),
+      isActive: boolean("is_active").notNull().default(true),
+      sortOrder: integer("sort_order").notNull().default(0),
       createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
     });
     drinksTable = pgTable("drinks", {
@@ -55698,6 +55705,7 @@ var init_drinks = __esm({
     });
     insertDrinkSchema = createInsertSchema(drinksTable).omit({ id: true, createdAt: true, updatedAt: true });
     insertDrinkCategorySchema = createInsertSchema(drinkCategoriesTable).omit({ id: true, createdAt: true });
+    insertKitchenStationSchema = createInsertSchema(kitchenStationsTable).omit({ id: true, createdAt: true });
     insertDrinkSlotSchema = createInsertSchema(drinkIngredientSlotsTable).omit({ id: true, createdAt: true, updatedAt: true });
     insertDrinkSlotVolumeSchema = createInsertSchema(drinkSlotVolumesTable).omit({ id: true });
     insertDrinkSlotTypeOptionSchema = createInsertSchema(drinkSlotTypeOptionsTable).omit({ id: true });
@@ -55742,6 +55750,7 @@ var init_orders = __esm({
       unitPrice: numeric("unit_price", { precision: 8, scale: 2 }).notNull(),
       lineTotal: numeric("line_total", { precision: 8, scale: 2 }).notNull(),
       specialNotes: text("special_notes"),
+      kitchenStation: text("kitchen_station").notNull().default("main"),
       createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
       updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => /* @__PURE__ */ new Date())
     });
@@ -55844,11 +55853,13 @@ __export(schema_exports, {
   insertIngredientTypeSchema: () => insertIngredientTypeSchema,
   insertIngredientTypeVolumeSchema: () => insertIngredientTypeVolumeSchema,
   insertIngredientVolumeSchema: () => insertIngredientVolumeSchema,
+  insertKitchenStationSchema: () => insertKitchenStationSchema,
   insertOrderSchema: () => insertOrderSchema,
   insertPredefinedSlotSchema: () => insertPredefinedSlotSchema,
   insertSettingSchema: () => insertSettingSchema,
   insertStockMovementSchema: () => insertStockMovementSchema,
   insertUserSchema: () => insertUserSchema,
+  kitchenStationsTable: () => kitchenStationsTable,
   orderItemCustomizationsTable: () => orderItemCustomizationsTable,
   orderItemsTable: () => orderItemsTable,
   ordersTable: () => ordersTable,
@@ -55897,11 +55908,13 @@ __export(src_exports, {
   insertIngredientTypeSchema: () => insertIngredientTypeSchema,
   insertIngredientTypeVolumeSchema: () => insertIngredientTypeVolumeSchema,
   insertIngredientVolumeSchema: () => insertIngredientVolumeSchema,
+  insertKitchenStationSchema: () => insertKitchenStationSchema,
   insertOrderSchema: () => insertOrderSchema,
   insertPredefinedSlotSchema: () => insertPredefinedSlotSchema,
   insertSettingSchema: () => insertSettingSchema,
   insertStockMovementSchema: () => insertStockMovementSchema,
   insertUserSchema: () => insertUserSchema,
+  kitchenStationsTable: () => kitchenStationsTable,
   orderItemCustomizationsTable: () => orderItemCustomizationsTable,
   orderItemsTable: () => orderItemsTable,
   ordersTable: () => ordersTable,
@@ -72528,13 +72541,13 @@ var __dirname2 = dirname(__filename);
 (0, import_dotenv.config)({ path: resolve(__dirname2, "../../../.env") });
 
 // src/app.ts
-var import_express13 = __toESM(require_express2(), 1);
+var import_express14 = __toESM(require_express2(), 1);
 var import_cors = __toESM(require_lib3(), 1);
 var import_pino_http = __toESM(require_logger(), 1);
 var import_express_session = __toESM(require_express_session(), 1);
 
 // src/routes/index.ts
-var import_express12 = __toESM(require_express2(), 1);
+var import_express13 = __toESM(require_express2(), 1);
 
 // src/routes/health.ts
 var import_express = __toESM(require_express2(), 1);
@@ -76460,6 +76473,8 @@ var ListDrinksResponseItem = objectType({
   prepTimeSeconds: numberType(),
   cupSizeMl: numberType().nullish(),
   kitchenStation: stringType().optional(),
+  categoryId: numberType().nullable().optional(),
+  sortOrder: numberType().optional(),
   createdAt: stringType(),
   updatedAt: stringType()
 });
@@ -76485,7 +76500,9 @@ var CreateDrinkBody = objectType({
       isDynamic: booleanType().optional(),
       affectsCupSize: booleanType().nullish()
     })
-  ).optional()
+  ).optional(),
+  categoryId: numberType().nullable().optional(),
+  sortOrder: numberType().optional()
 });
 var GetDrinkParams = objectType({
   id: coerce.number()
@@ -76502,6 +76519,8 @@ var GetDrinkResponse = objectType({
   prepTimeSeconds: numberType(),
   cupSizeMl: numberType().nullish(),
   kitchenStation: stringType().optional(),
+  categoryId: numberType().nullable().optional(),
+  sortOrder: numberType().optional(),
   createdAt: stringType(),
   updatedAt: stringType()
 }).and(
@@ -76534,7 +76553,9 @@ var UpdateDrinkBody = objectType({
   imageUrl: stringType().optional(),
   isActive: booleanType().optional(),
   prepTimeSeconds: numberType().optional(),
-  kitchenStation: stringType().optional()
+  kitchenStation: stringType().optional(),
+  categoryId: numberType().nullable().optional(),
+  sortOrder: numberType().optional()
 });
 var UpdateDrinkResponse = objectType({
   id: numberType(),
@@ -76548,6 +76569,8 @@ var UpdateDrinkResponse = objectType({
   prepTimeSeconds: numberType(),
   cupSizeMl: numberType().nullish(),
   kitchenStation: stringType().optional(),
+  categoryId: numberType().nullable().optional(),
+  sortOrder: numberType().optional(),
   createdAt: stringType(),
   updatedAt: stringType()
 });
@@ -76880,6 +76903,7 @@ var GetOrderResponse = objectType({
         unitPrice: numberType(),
         lineTotal: numberType(),
         specialNotes: stringType().nullable(),
+        kitchenStation: stringType().optional(),
         customizations: arrayType(
           objectType({
             id: numberType(),
@@ -77002,6 +77026,7 @@ var GetActiveOrdersResponseItem = objectType({
         unitPrice: numberType(),
         lineTotal: numberType(),
         specialNotes: stringType().nullable(),
+        kitchenStation: stringType().optional(),
         customizations: arrayType(
           objectType({
             id: numberType(),
@@ -77730,16 +77755,24 @@ router3.post("/drinks", async (req, res) => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  const { slots: slotDefs, ...drinkData } = parsed.data;
+  const { slots: slotDefs } = parsed.data;
+  const drinkData = parsed.data;
+  let categoryName = drinkData.category;
+  if (drinkData.categoryId) {
+    const [cat] = await db.select({ name: drinkCategoriesTable.name }).from(drinkCategoriesTable).where(eq(drinkCategoriesTable.id, drinkData.categoryId));
+    if (cat) categoryName = cat.name;
+  }
   const [drink] = await db.insert(drinksTable).values({
     name: drinkData.name,
     description: drinkData.description ?? null,
-    category: drinkData.category,
+    category: categoryName,
+    categoryId: drinkData.categoryId ?? null,
+    sortOrder: drinkData.sortOrder ?? 0,
     basePrice: String(drinkData.basePrice),
     imageUrl: drinkData.imageUrl ?? null,
     isActive: drinkData.isActive ?? true,
     prepTimeSeconds: drinkData.prepTimeSeconds ?? 180,
-    kitchenStation: drinkData.kitchenStation ?? "main"
+    kitchenStation: drinkData.kitchenStation?.toLowerCase().replace(/\s+/g, "-") ?? "main"
   }).returning();
   if (slotDefs && slotDefs.length > 0) {
     await db.insert(drinkIngredientSlotsTable).values(
@@ -77786,14 +77819,26 @@ router3.patch("/drinks/:id", async (req, res) => {
   const updateData = {};
   if (parsed.data.name !== void 0) updateData.name = parsed.data.name;
   if (parsed.data.description !== void 0) updateData.description = parsed.data.description;
-  if (parsed.data.category !== void 0) updateData.category = parsed.data.category;
-  if (parsed.data.categoryId !== void 0) updateData.categoryId = parsed.data.categoryId;
+  if (parsed.data.categoryId !== void 0) {
+    const catId = parsed.data.categoryId;
+    updateData.categoryId = catId;
+    if (catId) {
+      const [cat] = await db.select({ name: drinkCategoriesTable.name }).from(drinkCategoriesTable).where(eq(drinkCategoriesTable.id, catId));
+      if (cat) updateData.category = cat.name;
+    } else {
+      updateData.category = "Uncategorized";
+    }
+  } else if (parsed.data.category !== void 0) {
+    updateData.category = parsed.data.category;
+  }
   if (parsed.data.sortOrder !== void 0) updateData.sortOrder = parsed.data.sortOrder;
   if (parsed.data.basePrice !== void 0) updateData.basePrice = String(parsed.data.basePrice);
   if (parsed.data.imageUrl !== void 0) updateData.imageUrl = parsed.data.imageUrl;
   if (parsed.data.isActive !== void 0) updateData.isActive = parsed.data.isActive;
   if (parsed.data.prepTimeSeconds !== void 0) updateData.prepTimeSeconds = parsed.data.prepTimeSeconds;
-  if (parsed.data.kitchenStation !== void 0) updateData.kitchenStation = parsed.data.kitchenStation;
+  if (parsed.data.kitchenStation !== void 0) {
+    updateData.kitchenStation = parsed.data.kitchenStation.toLowerCase().replace(/\s+/g, "-");
+  }
   const [drink] = await db.update(drinksTable).set(updateData).where(eq(drinksTable.id, params.data.id)).returning();
   if (!drink) {
     res.status(404).json({ error: "Drink not found" });
@@ -78389,6 +78434,7 @@ router5.post("/orders", async (req, res) => {
       itemDetails.push({
         drinkId: item.drinkId,
         drinkName: calcData.drink.name,
+        kitchenStation: calcData.drink.kitchenStation,
         quantity: item.quantity,
         unitPrice,
         lineTotal,
@@ -78436,7 +78482,8 @@ router5.post("/orders", async (req, res) => {
         quantity: item.quantity,
         unitPrice: String(item.unitPrice),
         lineTotal: String(item.lineTotal),
-        specialNotes: item.specialNotes
+        specialNotes: item.specialNotes,
+        kitchenStation: item.kitchenStation
       }).returning();
       if (item.customizations.length > 0) {
         await tx.insert(orderItemCustomizationsTable).values(
@@ -78479,7 +78526,7 @@ router5.post("/orders", async (req, res) => {
           }))
         );
       }
-      savedItems2.push({ ...orderItem, customizations: item.customizations });
+      savedItems2.push({ ...orderItem, customizations: item.customizations, kitchenStation: orderItem.kitchenStation });
     }
     return { order: order2, savedItems: savedItems2 };
   });
@@ -78497,6 +78544,7 @@ router5.post("/orders", async (req, res) => {
         changeDue: order.changeDue ? parseFloat(order.changeDue) : null,
         items: savedItems.map((item) => ({
           ...item,
+          kitchenStation: item.kitchenStation,
           unitPrice: parseFloat(item.unitPrice),
           lineTotal: parseFloat(item.lineTotal),
           customizations: item.customizations.map((c) => ({
@@ -78507,6 +78555,7 @@ router5.post("/orders", async (req, res) => {
             addedCost: c.addedCost,
             slotLabel: c.slotLabel,
             optionLabel: c.optionLabel,
+            baristaSortOrder: c.baristaSortOrder,
             orderItemId: item.id,
             id: 0
           }))
@@ -78697,7 +78746,8 @@ router7.get("/dashboard/active-orders", async (_req, res) => {
             customizations: customizations.map((c) => ({
               ...c,
               consumedQty: parseFloat(c.consumedQty),
-              addedCost: parseFloat(c.addedCost)
+              addedCost: parseFloat(c.addedCost),
+              baristaSortOrder: c.baristaSortOrder
             }))
           };
         })
@@ -79096,6 +79146,9 @@ router9.patch("/drink-categories/:id", async (req, res) => {
     res.status(404).json({ error: "Category not found" });
     return;
   }
+  if (name !== void 0) {
+    await db.update(drinksTable).set({ category: name }).where(eq(drinksTable.categoryId, id));
+  }
   res.json(category);
 });
 router9.delete("/drink-categories/:id", async (req, res) => {
@@ -79113,12 +79166,72 @@ router9.delete("/drink-categories/:id", async (req, res) => {
 });
 var drink_categories_default = router9;
 
-// src/routes/settings.ts
+// src/routes/kitchen-stations.ts
 var import_express10 = __toESM(require_express2(), 1);
 init_drizzle_orm();
 init_src();
 var router10 = (0, import_express10.Router)();
-router10.get("/settings", async (req, res) => {
+router10.get("/kitchen-stations", async (_req, res) => {
+  const stations = await db.select().from(kitchenStationsTable).orderBy(asc(kitchenStationsTable.sortOrder), asc(kitchenStationsTable.name));
+  res.json(stations);
+});
+router10.post("/kitchen-stations", async (req, res) => {
+  const parsed = insertKitchenStationSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+  const [station] = await db.insert(kitchenStationsTable).values(parsed.data).returning();
+  res.status(201).json(station);
+});
+router10.patch("/kitchen-stations/:id", async (req, res) => {
+  const id = parseInt(req.params.id);
+  if (isNaN(id)) {
+    res.status(400).json({ error: "Invalid id" });
+    return;
+  }
+  const { name, sortOrder, isActive } = req.body;
+  const updateData = {};
+  if (name !== void 0) updateData.name = name;
+  if (sortOrder !== void 0) updateData.sortOrder = sortOrder;
+  if (isActive !== void 0) updateData.isActive = isActive;
+  const [oldStation] = await db.select().from(kitchenStationsTable).where(eq(kitchenStationsTable.id, id));
+  if (!oldStation) {
+    res.status(404).json({ error: "Station not found" });
+    return;
+  }
+  const [station] = await db.update(kitchenStationsTable).set(updateData).where(eq(kitchenStationsTable.id, id)).returning();
+  if (name !== void 0 && name !== oldStation.name) {
+    const oldSlug = oldStation.name.toLowerCase().replace(/\s+/g, "-");
+    const newSlug = name.toLowerCase().replace(/\s+/g, "-");
+    await db.update(drinksTable).set({ kitchenStation: newSlug }).where(eq(drinksTable.kitchenStation, oldSlug));
+  }
+  res.json(station);
+});
+router10.delete("/kitchen-stations/:id", async (req, res) => {
+  const id = parseInt(req.params.id);
+  if (isNaN(id)) {
+    res.status(400).json({ error: "Invalid id" });
+    return;
+  }
+  const [station] = await db.delete(kitchenStationsTable).where(eq(kitchenStationsTable.id, id)).returning();
+  if (!station) {
+    res.status(404).json({ error: "Station not found" });
+    return;
+  }
+  const { drinksTable: drinksTable3 } = await Promise.resolve().then(() => (init_src(), src_exports));
+  const slug = station.name.toLowerCase().replace(/\s+/g, "-");
+  await db.update(drinksTable3).set({ kitchenStation: "main" }).where(eq(drinksTable3.kitchenStation, slug));
+  res.sendStatus(204);
+});
+var kitchen_stations_default = router10;
+
+// src/routes/settings.ts
+var import_express11 = __toESM(require_express2(), 1);
+init_drizzle_orm();
+init_src();
+var router11 = (0, import_express11.Router)();
+router11.get("/settings", async (req, res) => {
   const scope = req.query.scope;
   const currentUserId = req.session.userId;
   let query = db.select().from(settingsTable);
@@ -79134,7 +79247,7 @@ router10.get("/settings", async (req, res) => {
   const rows = await query;
   res.json(rows);
 });
-router10.patch("/settings", async (req, res) => {
+router11.patch("/settings", async (req, res) => {
   const { scope, settings } = req.body;
   const currentUserId = req.session.userId;
   if (!scope || !settings || !Array.isArray(settings)) {
@@ -79174,14 +79287,14 @@ router10.patch("/settings", async (req, res) => {
   }
   res.json(results);
 });
-var settings_default = router10;
+var settings_default = router11;
 
 // src/routes/predefined-slots.ts
-var import_express11 = __toESM(require_express2(), 1);
+var import_express12 = __toESM(require_express2(), 1);
 init_drizzle_orm();
 init_src();
-var router11 = (0, import_express11.Router)();
-router11.get("/catalog/predefined-slots", async (_req, res) => {
+var router12 = (0, import_express12.Router)();
+router12.get("/catalog/predefined-slots", async (_req, res) => {
   const slots = await db.select().from(predefinedSlotsTable).orderBy(asc(predefinedSlotsTable.name));
   const detail = await Promise.all(slots.map(async (slot) => {
     const typeOptions = await db.select().from(predefinedSlotTypeOptionsTable).where(eq(predefinedSlotTypeOptionsTable.predefinedSlotId, slot.id)).orderBy(predefinedSlotTypeOptionsTable.sortOrder);
@@ -79190,7 +79303,7 @@ router11.get("/catalog/predefined-slots", async (_req, res) => {
   }));
   res.json(detail);
 });
-router11.get("/catalog/predefined-slots/:id", async (req, res) => {
+router12.get("/catalog/predefined-slots/:id", async (req, res) => {
   const id = parseInt(req.params.id);
   const [slot] = await db.select().from(predefinedSlotsTable).where(eq(predefinedSlotsTable.id, id));
   if (!slot) {
@@ -79201,7 +79314,7 @@ router11.get("/catalog/predefined-slots/:id", async (req, res) => {
   const volumes = await db.select().from(predefinedSlotVolumesTable).where(eq(predefinedSlotVolumesTable.predefinedSlotId, id)).orderBy(predefinedSlotVolumesTable.sortOrder);
   res.json({ ...slot, typeOptions, volumes });
 });
-router11.post("/catalog/predefined-slots", async (req, res) => {
+router12.post("/catalog/predefined-slots", async (req, res) => {
   const { name, slotLabel, isRequired, isDynamic, affectsCupSize, autoLoadCategoryId } = req.body;
   if (!name || !slotLabel) {
     res.status(400).json({ error: "name and slotLabel required" });
@@ -79245,7 +79358,7 @@ router11.post("/catalog/predefined-slots", async (req, res) => {
   }
   res.status(201).json(slot);
 });
-router11.patch("/catalog/predefined-slots/:id", async (req, res) => {
+router12.patch("/catalog/predefined-slots/:id", async (req, res) => {
   const id = parseInt(req.params.id);
   const { name, slotLabel, isRequired, isDynamic, affectsCupSize, typeOptions, volumes } = req.body;
   const patch = {};
@@ -79286,7 +79399,7 @@ router11.patch("/catalog/predefined-slots/:id", async (req, res) => {
   }
   res.json({ success: true });
 });
-router11.delete("/catalog/predefined-slots/:id", async (req, res) => {
+router12.delete("/catalog/predefined-slots/:id", async (req, res) => {
   const id = parseInt(req.params.id);
   try {
     await db.delete(predefinedSlotsTable).where(eq(predefinedSlotsTable.id, id));
@@ -79299,22 +79412,23 @@ router11.delete("/catalog/predefined-slots/:id", async (req, res) => {
     }
   }
 });
-var predefined_slots_default = router11;
+var predefined_slots_default = router12;
 
 // src/routes/index.ts
-var router12 = (0, import_express12.Router)();
-router12.use(health_default);
-router12.use(auth_default);
-router12.use(drinks_default);
-router12.use(ingredients_default);
-router12.use(orders_default);
-router12.use(stock_default);
-router12.use(dashboard_default);
-router12.use(catalog_default);
-router12.use(drink_categories_default);
-router12.use(settings_default);
-router12.use(predefined_slots_default);
-router12.get("/events", (req, res) => {
+var router13 = (0, import_express13.Router)();
+router13.use(health_default);
+router13.use(auth_default);
+router13.use(drinks_default);
+router13.use(ingredients_default);
+router13.use(orders_default);
+router13.use(stock_default);
+router13.use(dashboard_default);
+router13.use(catalog_default);
+router13.use(drink_categories_default);
+router13.use(kitchen_stations_default);
+router13.use(settings_default);
+router13.use(predefined_slots_default);
+router13.get("/events", (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache, no-transform");
   res.setHeader("X-Accel-Buffering", "no");
@@ -79323,7 +79437,7 @@ router12.get("/events", (req, res) => {
   res.write("event: connected\ndata: {}\n\n");
   addSseClient(res);
 });
-var routes_default = router12;
+var routes_default = router13;
 
 // src/lib/logger.ts
 var import_pino = __toESM(require_pino(), 1);
@@ -79344,7 +79458,7 @@ var logger = (0, import_pino.default)({
 });
 
 // src/app.ts
-var app = (0, import_express13.default)();
+var app = (0, import_express14.default)();
 app.set("json replacer", (_key, value) => {
   if (value instanceof Date) return value.toISOString();
   return value;
@@ -79370,8 +79484,8 @@ app.use(
 );
 app.set("trust proxy", 1);
 app.use((0, import_cors.default)({ credentials: true, origin: true }));
-app.use(import_express13.default.json());
-app.use(import_express13.default.urlencoded({ extended: true }));
+app.use(import_express14.default.json());
+app.use(import_express14.default.urlencoded({ extended: true }));
 app.use(
   (0, import_express_session.default)({
     secret: process.env.SESSION_SECRET ?? "spacca-dev-secret",
@@ -79385,7 +79499,7 @@ app.use(
     }
   })
 );
-app.use("/uploads", import_express13.default.static("uploads"));
+app.use("/uploads", import_express14.default.static("uploads"));
 app.use("/api", routes_default);
 var app_default = app;
 

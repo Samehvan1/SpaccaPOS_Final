@@ -8,22 +8,37 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { ChefHat, CheckCircle2, Timer } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
-const STATIONS = [
-  { value: "all", label: "All Orders" },
-  { value: "main", label: "Main Bar" },
-  { value: "arabian", label: "Arabian Coffee" },
-  { value: "espresso", label: "Espresso Bar" },
-  { value: "cold", label: "Cold Bar" },
-  { value: "pastry", label: "Pastry / Food" },
-];
+import { useQuery } from "@tanstack/react-query";
 
-function stationLabel(value: string): string {
-  return STATIONS.find(s => s.value === value)?.label ?? value;
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "/api";
+
+function useKitchenStations() {
+  return useQuery<any[]>({
+    queryKey: ["kitchen-stations"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/kitchen-stations`);
+      if (!res.ok) throw new Error("Failed to fetch stations");
+      return res.json();
+    },
+  });
 }
 
 export default function KitchenDisplay() {
   const [activeStation, setActiveStation] = useState("all");
   const queryClient = useQueryClient();
+  const { data: stations = [] } = useKitchenStations();
+
+  const allStations = [
+    { value: "all", label: "All Orders" },
+    ...stations.map(s => ({
+      value: s.name.toLowerCase().replace(/\s+/g, '-'),
+      label: s.name
+    }))
+  ];
+
+  function stationLabel(value: string): string {
+    return allStations.find(s => s.value === value)?.label ?? value;
+  }
 
   const { data: activeOrders, isLoading } = useGetActiveOrders({
     query: { refetchInterval: 8000 }
@@ -59,12 +74,15 @@ export default function KitchenDisplay() {
   // Filter orders by station
   const filteredOrders = activeOrders?.filter(order => {
     if (activeStation === "all") return true;
-    return order.items.some((item: any) => (item.kitchenStation ?? "main") === activeStation);
+    return order.items.some((item: any) => {
+      const itemStation = (item.kitchenStation ?? "main").toLowerCase().replace(/\s+/g, '-');
+      return itemStation === activeStation;
+    });
   }) ?? [];
 
   // Count orders per station (excluding "all") for badge counts
   const stationCounts: Record<string, number> = {};
-  STATIONS.filter(s => s.value !== "all").forEach(s => {
+  allStations.filter(s => s.value !== "all").forEach(s => {
     stationCounts[s.value] = activeOrders?.filter(o =>
       o.items.some((item: any) => (item.kitchenStation ?? "main") === s.value)
     ).length ?? 0;
@@ -113,7 +131,7 @@ export default function KitchenDisplay() {
 
         {/* Station tabs */}
         <div className="flex gap-2 overflow-x-auto no-scrollbar">
-          {STATIONS.map(station => {
+          {allStations.map(station => {
             const count = station.value === "all"
               ? (activeOrders?.length ?? 0)
               : (stationCounts[station.value] ?? 0);
@@ -209,7 +227,7 @@ export default function KitchenDisplay() {
                               {isThisStation && item.customizations.length > 0 && (
                                 <ul className="mt-2 space-y-1">
                                   {item.customizations
-                                    .filter((cust: any) => (cust.baristaSortOrder ?? 1) > 0)
+                                    .filter((cust: any) => (cust.baristaSortOrder ?? 1) !== 0)
                                     .sort((a: any, b: any) => (a.baristaSortOrder ?? 1) - (b.baristaSortOrder ?? 1))
                                     .map((cust: any) => (
                                       <li key={cust.id} className="text-sm text-muted-foreground flex items-center gap-2">

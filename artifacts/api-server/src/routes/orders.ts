@@ -175,7 +175,7 @@ router.post("/orders", async (req, res): Promise<void> => {
     baristaSortOrder: number;
   };
   type ItemDetail = {
-    drinkId: number; drinkName: string; quantity: number;
+    drinkId: number; drinkName: string; kitchenStation: string; quantity: number;
     unitPrice: number; lineTotal: number; specialNotes: string | null;
     customizations: Customization[];
   };
@@ -204,6 +204,7 @@ router.post("/orders", async (req, res): Promise<void> => {
       itemDetails.push({ 
         drinkId: item.drinkId, 
         drinkName: calcData.drink.name, 
+        kitchenStation: calcData.drink.kitchenStation,
         quantity: item.quantity, 
         unitPrice, 
         lineTotal, 
@@ -262,6 +263,7 @@ router.post("/orders", async (req, res): Promise<void> => {
         unitPrice: String(item.unitPrice),
         lineTotal: String(item.lineTotal),
         specialNotes: item.specialNotes,
+        kitchenStation: item.kitchenStation,
       }).returning();
 
       if (item.customizations.length > 0) {
@@ -312,7 +314,7 @@ router.post("/orders", async (req, res): Promise<void> => {
         );
       }
 
-      savedItems.push({ ...orderItem, customizations: item.customizations });
+      savedItems.push({ ...orderItem, customizations: item.customizations, kitchenStation: orderItem.kitchenStation });
     }
 
     return { order, savedItems };
@@ -334,6 +336,7 @@ router.post("/orders", async (req, res): Promise<void> => {
         changeDue: order.changeDue ? parseFloat(order.changeDue) : null,
         items: savedItems.map((item) => ({
           ...item,
+          kitchenStation: item.kitchenStation,
           unitPrice: parseFloat(item.unitPrice),
           lineTotal: parseFloat(item.lineTotal),
           customizations: item.customizations.map((c) => ({
@@ -344,6 +347,7 @@ router.post("/orders", async (req, res): Promise<void> => {
             addedCost: c.addedCost,
             slotLabel: c.slotLabel,
             optionLabel: c.optionLabel,
+            baristaSortOrder: c.baristaSortOrder,
             orderItemId: item.id,
             id: 0,
           })),

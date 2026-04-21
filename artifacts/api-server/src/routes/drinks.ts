@@ -9,6 +9,7 @@ import {
   drinkIngredientSlotsTable,
   drinkSlotVolumesTable,
   drinkSlotTypeOptionsTable,
+  drinkCategoriesTable,
   ingredientsTable,
   ingredientOptionsTable,
   ingredientTypesTable,
@@ -399,19 +400,31 @@ router.post("/drinks", async (req, res): Promise<void> => {
     return;
   }
 
-  const { slots: slotDefs, ...drinkData } = parsed.data;
+  const { slots: slotDefs } = parsed.data;
+  const drinkData = parsed.data;
+
+  // Sync legacy category string if categoryId is provided
+  let categoryName = drinkData.category;
+  if (drinkData.categoryId) {
+    const [cat] = await db.select({ name: drinkCategoriesTable.name })
+      .from(drinkCategoriesTable)
+      .where(eq(drinkCategoriesTable.id, drinkData.categoryId));
+    if (cat) categoryName = cat.name;
+  }
 
   const [drink] = await db
     .insert(drinksTable)
     .values({
       name: drinkData.name,
       description: drinkData.description ?? null,
-      category: drinkData.category,
+      category: categoryName,
+      categoryId: (drinkData as any).categoryId ?? null,
+      sortOrder: (drinkData as any).sortOrder ?? 0,
       basePrice: String(drinkData.basePrice),
       imageUrl: drinkData.imageUrl ?? null,
       isActive: drinkData.isActive ?? true,
       prepTimeSeconds: drinkData.prepTimeSeconds ?? 180,
-      kitchenStation: drinkData.kitchenStation ?? "main",
+      kitchenStation: drinkData.kitchenStation?.toLowerCase().replace(/\s+/g, '-') ?? "main",
     })
     .returning();
 
@@ -463,14 +476,31 @@ router.patch("/drinks/:id", async (req, res): Promise<void> => {
   const updateData: Record<string, unknown> = {};
   if (parsed.data.name !== undefined) updateData.name = parsed.data.name;
   if (parsed.data.description !== undefined) updateData.description = parsed.data.description;
-  if (parsed.data.category !== undefined) updateData.category = parsed.data.category;
-  if ((parsed.data as any).categoryId !== undefined) updateData.categoryId = (parsed.data as any).categoryId;
+  
+  // Sync legacy category string if categoryId is provided
+  if ((parsed.data as any).categoryId !== undefined) {
+    const catId = (parsed.data as any).categoryId;
+    updateData.categoryId = catId;
+    if (catId) {
+      const [cat] = await db.select({ name: drinkCategoriesTable.name })
+        .from(drinkCategoriesTable)
+        .where(eq(drinkCategoriesTable.id, catId));
+      if (cat) updateData.category = cat.name;
+    } else {
+      updateData.category = "Uncategorized";
+    }
+  } else if (parsed.data.category !== undefined) {
+    updateData.category = parsed.data.category;
+  }
+
   if ((parsed.data as any).sortOrder !== undefined) updateData.sortOrder = (parsed.data as any).sortOrder;
   if (parsed.data.basePrice !== undefined) updateData.basePrice = String(parsed.data.basePrice);
   if (parsed.data.imageUrl !== undefined) updateData.imageUrl = parsed.data.imageUrl;
   if (parsed.data.isActive !== undefined) updateData.isActive = parsed.data.isActive;
   if (parsed.data.prepTimeSeconds !== undefined) updateData.prepTimeSeconds = parsed.data.prepTimeSeconds;
-  if (parsed.data.kitchenStation !== undefined) updateData.kitchenStation = parsed.data.kitchenStation;
+  if (parsed.data.kitchenStation !== undefined) {
+    updateData.kitchenStation = parsed.data.kitchenStation.toLowerCase().replace(/\s+/g, '-');
+  }
 
   const [drink] = await db.update(drinksTable).set(updateData).where(eq(drinksTable.id, params.data.id)).returning();
   if (!drink) { res.status(404).json({ error: "Drink not found" }); return; }

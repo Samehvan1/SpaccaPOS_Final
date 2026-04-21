@@ -90,6 +90,98 @@ export declare const drinkCategoriesTable: import("drizzle-orm/pg-core").PgTable
     };
     dialect: "pg";
 }>;
+export declare const kitchenStationsTable: import("drizzle-orm/pg-core").PgTableWithColumns<{
+    name: "kitchen_stations";
+    schema: undefined;
+    columns: {
+        id: import("drizzle-orm/pg-core").PgColumn<{
+            name: "id";
+            tableName: "kitchen_stations";
+            dataType: "number";
+            columnType: "PgSerial";
+            data: number;
+            driverParam: number;
+            notNull: true;
+            hasDefault: true;
+            isPrimaryKey: true;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: undefined;
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+        name: import("drizzle-orm/pg-core").PgColumn<{
+            name: "name";
+            tableName: "kitchen_stations";
+            dataType: "string";
+            columnType: "PgText";
+            data: string;
+            driverParam: string;
+            notNull: true;
+            hasDefault: false;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: [string, ...string[]];
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+        isActive: import("drizzle-orm/pg-core").PgColumn<{
+            name: "is_active";
+            tableName: "kitchen_stations";
+            dataType: "boolean";
+            columnType: "PgBoolean";
+            data: boolean;
+            driverParam: boolean;
+            notNull: true;
+            hasDefault: true;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: undefined;
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+        sortOrder: import("drizzle-orm/pg-core").PgColumn<{
+            name: "sort_order";
+            tableName: "kitchen_stations";
+            dataType: "number";
+            columnType: "PgInteger";
+            data: number;
+            driverParam: string | number;
+            notNull: true;
+            hasDefault: true;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: undefined;
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+        createdAt: import("drizzle-orm/pg-core").PgColumn<{
+            name: "created_at";
+            tableName: "kitchen_stations";
+            dataType: "date";
+            columnType: "PgTimestamp";
+            data: Date;
+            driverParam: string;
+            notNull: true;
+            hasDefault: true;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: undefined;
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+    };
+    dialect: "pg";
+}>;
 export declare const drinksTable: import("drizzle-orm/pg-core").PgTableWithColumns<{
     name: "drinks";
     schema: undefined;
@@ -1290,11 +1382,11 @@ export declare const predefinedSlotVolumesTable: import("drizzle-orm/pg-core").P
 }>;
 export declare const insertDrinkSchema: import("zod/v4").ZodObject<{
     name: import("zod/v4").ZodString;
-    sortOrder: import("zod/v4").ZodOptional<import("zod/v4").ZodInt>;
     isActive: import("zod/v4").ZodOptional<import("zod/v4").ZodBoolean>;
+    sortOrder: import("zod/v4").ZodOptional<import("zod/v4").ZodInt>;
+    categoryId: import("zod/v4").ZodOptional<import("zod/v4").ZodNullable<import("zod/v4").ZodInt>>;
     description: import("zod/v4").ZodOptional<import("zod/v4").ZodNullable<import("zod/v4").ZodString>>;
     category: import("zod/v4").ZodString;
-    categoryId: import("zod/v4").ZodOptional<import("zod/v4").ZodNullable<import("zod/v4").ZodInt>>;
     basePrice: import("zod/v4").ZodString;
     imageUrl: import("zod/v4").ZodOptional<import("zod/v4").ZodNullable<import("zod/v4").ZodString>>;
     prepTimeSeconds: import("zod/v4").ZodOptional<import("zod/v4").ZodInt>;
@@ -1306,18 +1398,26 @@ export declare const insertDrinkSchema: import("zod/v4").ZodObject<{
 }>;
 export declare const insertDrinkCategorySchema: import("zod/v4").ZodObject<{
     name: import("zod/v4").ZodString;
-    sortOrder: import("zod/v4").ZodOptional<import("zod/v4").ZodInt>;
     isActive: import("zod/v4").ZodOptional<import("zod/v4").ZodBoolean>;
+    sortOrder: import("zod/v4").ZodOptional<import("zod/v4").ZodInt>;
+}, {
+    out: {};
+    in: {};
+}>;
+export declare const insertKitchenStationSchema: import("zod/v4").ZodObject<{
+    name: import("zod/v4").ZodString;
+    isActive: import("zod/v4").ZodOptional<import("zod/v4").ZodBoolean>;
+    sortOrder: import("zod/v4").ZodOptional<import("zod/v4").ZodInt>;
 }, {
     out: {};
     in: {};
 }>;
 export declare const insertDrinkSlotSchema: import("zod/v4").ZodObject<{
-    sortOrder: import("zod/v4").ZodOptional<import("zod/v4").ZodInt>;
-    drinkId: import("zod/v4").ZodInt;
     ingredientId: import("zod/v4").ZodOptional<import("zod/v4").ZodNullable<import("zod/v4").ZodInt>>;
+    sortOrder: import("zod/v4").ZodOptional<import("zod/v4").ZodInt>;
     affectsCupSize: import("zod/v4").ZodOptional<import("zod/v4").ZodNullable<import("zod/v4").ZodBoolean>>;
     ingredientTypeId: import("zod/v4").ZodOptional<import("zod/v4").ZodNullable<import("zod/v4").ZodInt>>;
+    drinkId: import("zod/v4").ZodInt;
     slotLabel: import("zod/v4").ZodString;
     isRequired: import("zod/v4").ZodOptional<import("zod/v4").ZodBoolean>;
     defaultOptionId: import("zod/v4").ZodOptional<import("zod/v4").ZodNullable<import("zod/v4").ZodInt>>;
@@ -1330,12 +1430,12 @@ export declare const insertDrinkSlotSchema: import("zod/v4").ZodObject<{
     in: {};
 }>;
 export declare const insertDrinkSlotVolumeSchema: import("zod/v4").ZodObject<{
-    sortOrder: import("zod/v4").ZodOptional<import("zod/v4").ZodInt>;
     unit: import("zod/v4").ZodOptional<import("zod/v4").ZodNullable<import("zod/v4").ZodString>>;
     processedQty: import("zod/v4").ZodOptional<import("zod/v4").ZodNullable<import("zod/v4").ZodString>>;
     producedQty: import("zod/v4").ZodOptional<import("zod/v4").ZodNullable<import("zod/v4").ZodString>>;
     extraCost: import("zod/v4").ZodOptional<import("zod/v4").ZodNullable<import("zod/v4").ZodString>>;
     isDefault: import("zod/v4").ZodOptional<import("zod/v4").ZodBoolean>;
+    sortOrder: import("zod/v4").ZodOptional<import("zod/v4").ZodInt>;
     slotId: import("zod/v4").ZodInt;
     typeVolumeId: import("zod/v4").ZodInt;
     isEnabled: import("zod/v4").ZodOptional<import("zod/v4").ZodBoolean>;
@@ -1344,9 +1444,9 @@ export declare const insertDrinkSlotVolumeSchema: import("zod/v4").ZodObject<{
     in: {};
 }>;
 export declare const insertDrinkSlotTypeOptionSchema: import("zod/v4").ZodObject<{
+    isDefault: import("zod/v4").ZodOptional<import("zod/v4").ZodBoolean>;
     sortOrder: import("zod/v4").ZodOptional<import("zod/v4").ZodInt>;
     ingredientTypeId: import("zod/v4").ZodInt;
-    isDefault: import("zod/v4").ZodOptional<import("zod/v4").ZodBoolean>;
     slotId: import("zod/v4").ZodInt;
 }, {
     out: {};
@@ -1367,6 +1467,8 @@ export type InsertDrinkCategory = typeof drinkCategoriesTable.$inferInsert;
 export type InsertDrinkSlot = typeof drinkIngredientSlotsTable.$inferInsert;
 export type Drink = typeof drinksTable.$inferSelect;
 export type DrinkCategory = typeof drinkCategoriesTable.$inferSelect;
+export type KitchenStation = typeof kitchenStationsTable.$inferSelect;
+export type InsertKitchenStation = typeof kitchenStationsTable.$inferInsert;
 export type DrinkIngredientSlot = typeof drinkIngredientSlotsTable.$inferSelect;
 export type DrinkSlotVolume = typeof drinkSlotVolumesTable.$inferSelect;
 export type DrinkSlotTypeOption = typeof drinkSlotTypeOptionsTable.$inferSelect;
