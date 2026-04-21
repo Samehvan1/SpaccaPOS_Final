@@ -9,8 +9,13 @@ import { ChefHat, CheckCircle2, Timer, Flame, Coffee, Info, Zap, Loader2 } from 
 import { formatDistanceToNow } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
+import { useOrderEvents } from "@/hooks/use-order-events";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "/api";
+
+function slugifyStation(name: string) {
+  return (name ?? "main-bar").toLowerCase().trim().replace(/\s+/g, '-');
+}
 
 function useKitchenStations() {
   return useQuery<any[]>({
@@ -32,7 +37,7 @@ export default function KitchenDisplay() {
   const allStations = [
     { value: "all", label: "Global View" },
     ...stations.map(s => ({
-      value: s.name.toLowerCase().replace(/\s+/g, '-'),
+      value: slugifyStation(s.name),
       label: s.name
     }))
   ];
@@ -41,11 +46,13 @@ export default function KitchenDisplay() {
     return allStations.find(s => s.value === value)?.label ?? value;
   }
 
+  useOrderEvents();
+
   const { data: activeOrders, isLoading } = useGetActiveOrders(
-    activeStation === "all" ? undefined : { status: "paid" as any },
+    undefined,
     { 
       query: { 
-        refetchInterval: 5000 
+        // No polling needed, using SSE
       } as any
     }
   );
@@ -76,21 +83,28 @@ export default function KitchenDisplay() {
 
   // Filter orders by station
   const filteredOrders = (activeOrders as any[])?.filter(order => {
-    if (order.status === "pending" && activeStation !== "all") return false; 
+    // Basic status exclusions
     if (order.status === "ready" || order.status === "completed" || order.status === "cancelled") return false;
 
-    if (activeStation === "all") return true;
+    // In Global View: show everything that is paid or in_progress (and pending if you want, but user said after payment)
+    if (activeStation === "all") {
+       return order.status !== "pending"; 
+    }
     
-    return order.items.some((item: any) => {
-      const itemStation = (item.kitchenStation ?? "main").toLowerCase().replace(/\s+/g, '-');
-      return itemStation === activeStation && item.status === "pending";
-    });
+    // In Specific Station: show if order is paid/in_progress AND at least one item belongs to this station and is still pending
+      const hasItemsForThisStation = order.items.some((item: any) => {
+        const itemStation = slugifyStation(item.kitchenStation);
+        return itemStation === activeStation;
+      });
+
+      return (order.status === "paid" || order.status === "in_progress") && hasItemsForThisStation;
   }) ?? [];
 
   const stationCounts: Record<string, number> = {};
   allStations.filter(s => s.value !== "all").forEach(s => {
     stationCounts[s.value] = activeOrders?.filter(o =>
-      o.items.some((item: any) => (item.kitchenStation ?? "main") === s.value)
+      (o.status === "paid" || o.status === "in_progress") && 
+      o.items.some((item: any) => slugifyStation(item.kitchenStation) === s.value && item.status === "pending")
     ).length ?? 0;
   });
 
@@ -112,7 +126,10 @@ export default function KitchenDisplay() {
                 <ChefHat className="h-6 w-6" />
              </div>
              <div>
-                <h1 className="text-xl font-black tracking-tighter uppercase">Kitchen <span className="text-neon-cyan">Control</span></h1>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-xl font-bold tracking-tighter uppercase">Kitchen <span className="text-neon-cyan">Control</span></h1>
+                  <div className="w-1.5 h-1.5 rounded-full bg-neon-green/40 animate-pulse mt-1" title="Real-time Link Active" />
+                </div>
                 <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] mt-0.5">Production Queue</p>
              </div>
           </div>
@@ -171,12 +188,12 @@ export default function KitchenDisplay() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 items-start auto-rows-max pb-10">
             {filteredOrders.map(order => (
-              <Card key={order.id} className="glass-card border-white/10 ring-1 ring-white/5 rounded-3xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-500">
-                <CardHeader className="p-6 pb-4 border-b border-white/5 space-y-4">
+              <Card key={order.id} className="glass-card border-white/10 ring-1 ring-white/5 rounded-xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-500">
+                <CardHeader className="p-4 pb-2 border-b border-white/5 space-y-3">
                   <div className="flex justify-between items-start">
                     <div>
-                      <CardTitle className="text-3xl font-black tracking-tighter group-hover:neon-text-cyan transition-all">#{order.orderNumber}</CardTitle>
-                      <div className="text-[10px] font-black text-muted-foreground mt-1 uppercase tracking-widest truncate max-w-[150px]">
+                      <CardTitle className="text-xl font-bold tracking-tighter group-hover:neon-text-cyan transition-all">#{order.orderNumber}</CardTitle>
+                      <div className="text-[10px] font-bold text-muted-foreground mt-0.5 uppercase tracking-widest truncate max-w-[120px]">
                         {order.customerName || "Walk-in"}
                       </div>
                     </div>
@@ -195,55 +212,55 @@ export default function KitchenDisplay() {
                 <CardContent className="p-0">
                   <div className="divide-y divide-white/5">
                     {order.items.map((item: any) => {
-                      const itemStation = item.kitchenStation ?? "main";
+                      const itemStation = slugifyStation(item.kitchenStation);
                       const isThisStation = activeStation === "all" || itemStation === activeStation;
                       return (
                         <div
                           key={item.id}
-                          className={`p-6 transition-all relative ${
+                          className={`p-4 transition-all relative ${
                             isThisStation && item.status === "pending"
                               ? "bg-transparent"
                               : "bg-black/40 opacity-40 grayscale"
                           }`}
                         >
-                          <div className="flex items-start gap-4">
-                            <div className={`font-black w-10 h-10 rounded-xl flex items-center justify-center text-sm shrink-0 shadow-lg ${
+                          <div className="flex items-start gap-3">
+                            <div className={`font-bold w-8 h-8 rounded-lg flex items-center justify-center text-xs shrink-0 shadow-lg ${
                               isThisStation && item.status === "pending"
                                 ? "bg-neon-cyan/20 text-neon-cyan ring-1 ring-neon-cyan/40"
                                 : "bg-white/5 text-white/20 ring-1 ring-white/10"
                             }`}>
                               {item.quantity}x
                             </div>
-                            <div className="flex-1 space-y-2">
-                              <div className={`font-black text-xl leading-tight tracking-tight flex items-center gap-2 ${(!isThisStation || item.status === "ready") && "text-white/40"}`}>
+                            <div className="flex-1 space-y-1">
+                              <div className={`font-bold text-lg leading-tight tracking-tight flex items-center gap-2 ${(!isThisStation || item.status === "ready") && "text-white/40"}`}>
                                 {item.drinkName}
-                                {item.status === "ready" && <CheckCircle2 className="h-5 w-5 text-neon-green" />}
+                                {item.status === "ready" && <CheckCircle2 className="h-4 w-4 text-neon-green" />}
                               </div>
                               
                               {isThisStation && item.status === "pending" ? (
                                 <>
                                   {item.customizations.length > 0 && (
-                                    <ul className="mt-3 space-y-2">
+                                    <ul className="mt-1 space-y-0.5">
                                       {item.customizations
                                         .filter((cust: any) => (cust.baristaSortOrder ?? 1) !== 0)
                                         .sort((a: any, b: any) => (a.baristaSortOrder ?? 1) - (b.baristaSortOrder ?? 1))
                                         .map((cust: any) => (
-                                          <li key={cust.id} className="text-xs flex items-center gap-3">
-                                            <div className="w-1.5 h-1.5 rounded-full bg-neon-cyan" />
-                                            <span className="font-black text-white/40 uppercase tracking-widest">{cust.slotLabel}:</span>
-                                            <span className="font-bold text-foreground">{cust.optionLabel}</span>
+                                          <li key={cust.id} className="text-[11px] flex items-center gap-1.5">
+                                            <div className="w-1 h-1 rounded-full bg-neon-cyan" />
+                                            <span className="font-bold text-white/40 uppercase tracking-widest">{cust.slotLabel}:</span>
+                                            <span className="font-medium text-foreground">{cust.optionLabel}</span>
                                           </li>
                                         ))}
                                     </ul>
                                   )}
                                   {item.specialNotes && (
-                                    <div className="mt-4 p-3 bg-neon-yellow/5 text-neon-yellow border border-neon-yellow/20 rounded-xl text-xs font-bold italic flex gap-2">
-                                      <Info className="h-4 w-4 shrink-0" />
+                                    <div className="mt-2 p-2 bg-neon-yellow/5 text-neon-yellow border border-neon-yellow/20 rounded-lg text-[10px] font-bold italic flex gap-2">
+                                      <Info className="h-3.5 w-3.5 shrink-0" />
                                       {item.specialNotes}
                                     </div>
                                   )}
                                   <Button 
-                                    className="mt-6 w-full bg-neon-green hover:opacity-90 text-black font-black uppercase tracking-widest h-12 rounded-xl shadow-lg shadow-neon-green/10 active:scale-[0.98] transition-all"
+                                    className="mt-3 w-full bg-neon-green hover:opacity-90 text-black font-bold uppercase tracking-widest h-10 rounded-lg shadow-lg shadow-neon-green/10 active:scale-[0.98] transition-all"
                                     onClick={() => handleMarkItemReady(item.id)}
                                   >
                                     Produce Done
@@ -264,12 +281,12 @@ export default function KitchenDisplay() {
                   </div>
                 </CardContent>
 
-                <CardFooter className="px-6 py-3 border-t border-white/5 bg-white/[0.02] flex items-center justify-between">
-                   <div className="flex gap-1.5 items-center">
+                <CardFooter className="px-4 py-2 border-t border-white/5 bg-white/[0.02] flex items-center justify-between">
+                   <div className="flex gap-1 items-center">
                       <Coffee className="h-3 w-3 text-muted-foreground" />
-                      <span className="text-[9px] font-black text-muted-foreground uppercase tracking-[0.2em]">{stationLabel(activeStation)}</span>
+                      <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-[0.2em]">{stationLabel(activeStation)}</span>
                    </div>
-                   <div className="text-[10px] font-black text-neon-green uppercase tracking-widest">
+                   <div className="text-[10px] font-bold text-neon-green uppercase tracking-widest">
                      {order.items.filter((i:any) => i.status === 'ready').length}/{order.items.length} COMPLETE
                    </div>
                 </CardFooter>

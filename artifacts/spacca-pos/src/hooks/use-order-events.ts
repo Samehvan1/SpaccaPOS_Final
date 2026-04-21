@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
-const API_BASE = import.meta.env.BASE_URL.replace(/\/$/, "") + "/api";
+const API_BASE = import.meta.env.VITE_API_BASE_URL || (import.meta.env.BASE_URL.replace(/\/$/, "") + "/api");
 
 export function useOrderEvents(enabled = true) {
   const queryClient = useQueryClient();

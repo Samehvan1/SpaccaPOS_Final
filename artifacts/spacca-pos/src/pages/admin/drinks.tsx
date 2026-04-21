@@ -17,6 +17,11 @@ import { useQuery } from "@tanstack/react-query";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "/api";
 
+function slugifyStation(name: string) {
+  const n = (name ?? "main-bar").toLowerCase().trim().replace(/\s+/g, '-');
+  return n === "main" ? "main-bar" : n;
+}
+
 type DrinkCategory = {
   id: number;
   name: string;
@@ -79,7 +84,7 @@ export default function DrinksAdmin() {
   const [basePrice, setBasePrice] = useState("");
   const [isActive, setIsActive] = useState(true);
   const [prepTime, setPrepTime] = useState("120");
-  const [kitchenStation, setKitchenStation] = useState("main");
+  const [kitchenStation, setKitchenStation] = useState("main-bar");
   const [sortOrder, setSortOrder] = useState("0");
 
   // Image upload state
@@ -158,7 +163,7 @@ export default function DrinksAdmin() {
     setBasePrice("");
     setIsActive(true);
     setPrepTime("120");
-    setKitchenStation("main");
+    setKitchenStation("main-bar");
     setSortOrder("0");
     setImagePreview(null);
     setImageFile(null);
@@ -462,10 +467,10 @@ export default function DrinksAdmin() {
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {stations.length === 0 ? (
-                    <SelectItem value="main">Main Bar (Default)</SelectItem>
+                    <SelectItem value="main-bar">Main Bar (Default)</SelectItem>
                   ) : (
                     stations.map(s => (
-                      <SelectItem key={s.id} value={s.name.toLowerCase().replace(/\s+/g, '-')}>
+                      <SelectItem key={s.id} value={slugifyStation(s.name)}>
                         {s.name}
                       </SelectItem>
                     ))

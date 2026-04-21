@@ -100,15 +100,10 @@ router.get("/dashboard/active-orders", async (req, res): Promise<void> => {
             .from(orderItemCustomizationsTable)
             .where(eq(orderItemCustomizationsTable.orderItemId, item.id));
 
-          const [drink] = await db
-            .select({ kitchenStation: drinksTable.kitchenStation })
-            .from(drinksTable)
-            .where(eq(drinksTable.id, item.drinkId));
-
           return {
             ...item,
             status: item.status as "pending" | "ready",
-            kitchenStation: drink?.kitchenStation ?? "main",
+            kitchenStation: item.kitchenStation || "main",
             unitPrice: parseFloat(item.unitPrice),
             lineTotal: parseFloat(item.lineTotal),
             customizations: customizations.map((c) => ({

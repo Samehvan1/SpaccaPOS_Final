@@ -2,7 +2,7 @@
  * /api/catalog — Ingredient Categories, Types, and Volumes CRUD
  */
 import { Router, type IRouter } from "express";
-import { eq, asc } from "drizzle-orm";
+import { eq, asc, inArray, and } from "drizzle-orm";
 import {
   db,
   ingredientCategoriesTable,
@@ -12,6 +12,8 @@ import {
   ingredientsTable,
   drinkIngredientSlotsTable,
   drinkSlotTypeOptionsTable,
+  drinkSlotVolumesTable,
+  drinksTable,
 } from "@workspace/db";
 
 const router: IRouter = Router();
@@ -286,7 +288,6 @@ router.delete("/catalog/volumes/:id", async (req, res): Promise<void> => {
  */
 router.get("/catalog/types/:id/overrides", async (req, res): Promise<void> => {
   const typeId = parseInt(req.params.id);
-  const { drinksTable } = await import("@workspace/db");
   
   const overrides = await db.select({
     drinkId: drinksTable.id,
@@ -353,7 +354,6 @@ router.post("/catalog/types/:id/sync", async (req, res): Promise<void> => {
 
   // Delete overrides in drink_slot_volumes
   // Actually, we should only delete overrides WHERE typeVolumeId belongs to this type
-  const { inArray, and } = await import("drizzle-orm");
   
   await db.delete(drinkSlotVolumesTable)
     .where(and(

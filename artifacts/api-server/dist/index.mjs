@@ -79252,11 +79252,10 @@ router7.get("/dashboard/active-orders", async (req, res) => {
       const itemsWithCustomizations = await Promise.all(
         items.map(async (item) => {
           const customizations = await db.select().from(orderItemCustomizationsTable).where(eq(orderItemCustomizationsTable.orderItemId, item.id));
-          const [drink] = await db.select({ kitchenStation: drinksTable.kitchenStation }).from(drinksTable).where(eq(drinksTable.id, item.drinkId));
           return {
             ...item,
             status: item.status,
-            kitchenStation: drink?.kitchenStation ?? "main",
+            kitchenStation: item.kitchenStation || "main",
             unitPrice: parseFloat(item.unitPrice),
             lineTotal: parseFloat(item.lineTotal),
             customizations: customizations.map((c) => ({
