@@ -1,11 +1,13 @@
+import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Check, X, Loader2, Calculator, ClipboardList, User, DollarSign, ListChecks, CreditCard } from "lucide-react";
+import { Check, X, Loader2, Calculator, ClipboardList, User, DollarSign, ListChecks, CreditCard, Receipt, Printer, FileText } from "lucide-react";
 import { fmt } from "@/lib/currency";
 import { printCustomerReceipt, printAgentReceipts } from "@/components/receipt-printer";
 import { useSettings } from "@/hooks/use-settings";
@@ -18,6 +20,8 @@ export default function CashierPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { autoPrintCustomer, autoPrintAgent } = useSettings();
+  const [completedOrder, setCompletedOrder] = useState<any>(null);
+  const [isReceiptOpen, setIsReceiptOpen] = useState(false);
 
   useOrderEvents();
 
@@ -28,7 +32,15 @@ export default function CashierPage() {
 
   const { mutate: updateStatus, isPending } = useUpdateOrderStatus();
 
+  const handlePrintAll = (order: any) => {
+    printCustomerReceipt(order);
+    printAgentReceipts(order);
+  };
+
   const handleUpdateStatus = (orderId: any, status: string) => {
+    // Find current order details from local state as fallback
+    const currentOrder = orders.find(o => o.id === orderId);
+
     updateStatus(
       { id: orderId as any, data: { status: status as any } },
       {
@@ -37,8 +49,20 @@ export default function CashierPage() {
           
           if (status === "paid") {
             toast({ title: "Order Approved", description: `Order ${data.orderNumber} is now sent to KDS.` });
-            if (autoPrintCustomer) printCustomerReceipt(data as any);
-            if (autoPrintAgent) printAgentReceipts(data as any);
+            
+            // Merge response data with current local items if missing
+            const fullOrderData = {
+              ...currentOrder,
+              ...data,
+              // items might be missing in generated Order type, but server returns it
+              items: (data as any).items || currentOrder?.items || []
+            };
+
+            setCompletedOrder(fullOrderData);
+            setIsReceiptOpen(true);
+            
+            if (autoPrintCustomer) printCustomerReceipt(fullOrderData as any);
+            if (autoPrintAgent) printAgentReceipts(fullOrderData as any);
           } else if (status === "cancelled") {
             toast({ title: "Order Cancelled", description: `Order ${data.orderNumber} has been cancelled.` });
           }
@@ -275,6 +299,61 @@ export default function CashierPage() {
           <PosTerminal />
         </TabsContent>
       </Tabs>
+
+      {/* Receipt Options Dialog */}
+      <Dialog open={isReceiptOpen} onOpenChange={setIsReceiptOpen}>
+        <DialogContent className="sm:max-w-[380px] bg-[#0A0A0B] border-white/10 text-white">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-xl font-black uppercase tracking-tighter">
+              <Receipt className="h-6 w-6 text-neon-cyan" />
+              Order #{completedOrder?.orderNumber}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-4 text-sm text-muted-foreground font-medium">
+            Order approved successfully. Select receipts to print, or close to continue.
+          </div>
+          <div className="grid gap-4 py-2">
+            <Button
+              className="h-16 gap-4 text-base bg-white/5 hover:bg-neon-cyan/20 border border-neon-cyan/50 text-white transition-all duration-300 rounded-2xl group shadow-[0_0_20px_-5px_rgba(0,255,255,0.3)]"
+              onClick={() => completedOrder && handlePrintAll(completedOrder)}
+            >
+              <Receipt className="h-6 w-6 text-neon-cyan group-hover:scale-110 transition-transform" />
+              <div className="text-left">
+                <div className="font-black uppercase tracking-tight">Print All (Both)</div>
+                <div className="text-[10px] opacity-50 font-bold uppercase tracking-widest">Full receipt + all tickets</div>
+              </div>
+            </Button>
+
+            <div className="grid grid-cols-2 gap-4">
+              <Button
+                variant="outline"
+                className="h-20 flex-col gap-2 bg-white/5 hover:bg-neon-cyan/10 border-white/10 hover:border-neon-cyan/40 text-white transition-all duration-300 rounded-2xl group"
+                onClick={() => completedOrder && printCustomerReceipt(completedOrder)}
+              >
+                <FileText className="h-5 w-5 text-neon-cyan group-hover:scale-110 transition-transform" />
+                <div className="text-[10px] font-black uppercase tracking-tight">Customer</div>
+              </Button>
+              <Button
+                variant="outline"
+                className="h-20 flex-col gap-2 bg-white/5 hover:bg-neon-green/10 border-white/10 hover:border-neon-green/40 text-white transition-all duration-300 rounded-2xl group"
+                onClick={() => completedOrder && printAgentReceipts(completedOrder)}
+              >
+                <Printer className="h-5 w-5 text-neon-green group-hover:scale-110 transition-transform" />
+                <div className="text-[10px] font-black uppercase tracking-tight">Barista</div>
+              </Button>
+            </div>
+          </div>
+          <DialogFooter className="mt-4">
+            <Button 
+              variant="ghost" 
+              className="w-full h-12 font-black uppercase tracking-widest hover:bg-white/5 rounded-xl" 
+              onClick={() => setIsReceiptOpen(false)}
+            >
+              Done
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

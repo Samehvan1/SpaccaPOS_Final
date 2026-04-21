@@ -329,6 +329,8 @@ export interface OrderItemCustomization {
   optionLabel: string;
   /** @nullable */
   baristaSortOrder?: number | null;
+  /** @nullable */
+  customerSortOrder?: number | null;
 }
 
 export type OrderItemStatus =

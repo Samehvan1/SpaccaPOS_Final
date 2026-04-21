@@ -596,6 +596,7 @@ export const GetOrderResponse = zod
               slotLabel: zod.string(),
               optionLabel: zod.string(),
               baristaSortOrder: zod.number().nullish(),
+              customerSortOrder: zod.number().nullish(),
             }),
           ),
         }),
@@ -621,30 +622,64 @@ export const UpdateOrderStatusBody = zod.object({
   ]),
 });
 
-export const UpdateOrderStatusResponse = zod.object({
-  id: zod.number(),
-  orderNumber: zod.string(),
-  baristaId: zod.number(),
-  baristaName: zod.string(),
-  status: zod.enum([
-    "pending",
-    "paid",
-    "in_progress",
-    "ready",
-    "completed",
-    "cancelled",
-  ]),
-  customerName: zod.string().nullable(),
-  subtotal: zod.number(),
-  discount: zod.number(),
-  total: zod.number(),
-  paymentMethod: zod.enum(["cash", "card", "wallet"]),
-  amountTendered: zod.number().nullable(),
-  changeDue: zod.number().nullable(),
-  notes: zod.string().nullable(),
-  createdAt: zod.string(),
-  updatedAt: zod.string(),
-});
+export const UpdateOrderStatusResponse = zod
+  .object({
+    id: zod.number(),
+    orderNumber: zod.string(),
+    baristaId: zod.number(),
+    baristaName: zod.string(),
+    status: zod.enum([
+      "pending",
+      "paid",
+      "in_progress",
+      "ready",
+      "completed",
+      "cancelled",
+    ]),
+    customerName: zod.string().nullable(),
+    subtotal: zod.number(),
+    discount: zod.number(),
+    total: zod.number(),
+    paymentMethod: zod.enum(["cash", "card", "wallet"]),
+    amountTendered: zod.number().nullable(),
+    changeDue: zod.number().nullable(),
+    notes: zod.string().nullable(),
+    createdAt: zod.string(),
+    updatedAt: zod.string(),
+  })
+  .and(
+    zod.object({
+      items: zod.array(
+        zod.object({
+          id: zod.number(),
+          orderId: zod.number(),
+          drinkId: zod.number(),
+          drinkName: zod.string(),
+          quantity: zod.number(),
+          unitPrice: zod.number(),
+          lineTotal: zod.number(),
+          specialNotes: zod.string().nullable(),
+          kitchenStation: zod.string().optional(),
+          status: zod.enum(["pending", "ready"]),
+          customizations: zod.array(
+            zod.object({
+              id: zod.number(),
+              orderItemId: zod.number(),
+              ingredientId: zod.number().nullish(),
+              optionId: zod.number().nullish(),
+              typeVolumeId: zod.number().nullish(),
+              consumedQty: zod.number(),
+              addedCost: zod.number(),
+              slotLabel: zod.string(),
+              optionLabel: zod.string(),
+              baristaSortOrder: zod.number().nullish(),
+              customerSortOrder: zod.number().nullish(),
+            })
+          ),
+        })
+      ),
+    })
+  );
 
 /**
  * @summary Mark a specific order item as ready
@@ -784,6 +819,7 @@ export const GetActiveOrdersResponseItem = zod
               slotLabel: zod.string(),
               optionLabel: zod.string(),
               baristaSortOrder: zod.number().nullish(),
+              customerSortOrder: zod.number().nullish(),
             }),
           ),
         }),

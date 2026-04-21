@@ -29,6 +29,7 @@ export type CustomizationData = {
   slotLabel: string;
   optionLabel: string;
   baristaSortOrder: number;
+  customerSortOrder: number;
 };
 
 export async function calculateDrinkData(drinkId: number, selections: any[]) {
@@ -116,6 +117,7 @@ export async function calculateDrinkData(drinkId: number, selections: any[]) {
         slotLabel: slot.slotLabel,
         optionLabel,
         baristaSortOrder: slot.baristaSortOrder ?? 1,
+        customerSortOrder: slot.customerSortOrder ?? 1,
       });
       continue;
     }
@@ -148,6 +150,7 @@ export async function calculateDrinkData(drinkId: number, selections: any[]) {
           slotLabel: slot.slotLabel,
           optionLabel,
           baristaSortOrder: slot.baristaSortOrder ?? 1,
+          customerSortOrder: slot.customerSortOrder ?? 1,
         });
       }
       continue;
@@ -179,6 +182,7 @@ export async function calculateDrinkData(drinkId: number, selections: any[]) {
           slotLabel: slot.slotLabel,
           optionLabel: `${option.label} · ${subOption.label}`,
           baristaSortOrder: slot.baristaSortOrder ?? 1,
+          customerSortOrder: slot.customerSortOrder ?? 1,
         });
       }
       continue;
@@ -202,6 +206,7 @@ export async function calculateDrinkData(drinkId: number, selections: any[]) {
       slotLabel: slot.slotLabel,
       optionLabel: option.label,
       baristaSortOrder: slot.baristaSortOrder ?? 1,
+      customerSortOrder: slot.customerSortOrder ?? 1,
     });
   }
 
@@ -296,6 +301,7 @@ export async function calculateDrinkData(drinkId: number, selections: any[]) {
           slotLabel: dynamicSlot.slotLabel,
           optionLabel: ingredientType?.name ? `${ingredientType.name} (${Math.round(filledMl)}${unit})` : `Dynamic (${Math.round(filledMl)}${unit})`,
           baristaSortOrder: dynamicSlot.baristaSortOrder ?? 1,
+          customerSortOrder: dynamicSlot.customerSortOrder ?? 1,
         });
       }
     }
@@ -340,6 +346,7 @@ export async function calculateDrinkData(drinkId: number, selections: any[]) {
           slotLabel: dynamicSlot.slotLabel,
           optionLabel: `Dynamic (${Math.round(filledMl)}ml)`,
           baristaSortOrder: dynamicSlot.baristaSortOrder ?? 1,
+          customerSortOrder: dynamicSlot.customerSortOrder ?? 1,
         });
       }
     }

@@ -10,6 +10,7 @@ interface Customization {
   slotLabel: string;
   optionLabel: string;
   baristaSortOrder?: number | null;
+  customerSortOrder?: number | null;
 }
 
 interface OrderItem {
@@ -55,21 +56,44 @@ const BASE_STYLE = `
 `;
 
 function openPrintWindow(html: string) {
-  const win = window.open("", "_blank", "width=400,height=600,toolbar=0,menubar=0,location=0");
-  if (!win) { alert("Please allow pop-ups for printing"); return; }
-  win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Receipt</title><style>${BASE_STYLE}</style></head><body>${html}</body></html>`);
-  win.document.close();
-  win.onload = () => { win.print(); win.onafterprint = () => win.close(); };
+  const iframe = document.createElement('iframe');
+  iframe.style.position = 'fixed';
+  iframe.style.right = '0';
+  iframe.style.bottom = '0';
+  iframe.style.width = '0';
+  iframe.style.height = '0';
+  iframe.style.border = '0';
+  document.body.appendChild(iframe);
+
+  const doc = iframe.contentWindow?.document || iframe.contentDocument;
+  if (!doc) return;
+
+  doc.open();
+  doc.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Receipt</title><style>${BASE_STYLE}</style></head><body>${html}</body></html>`);
+  doc.close();
+
+  // Give it a moment to load and then print
+  setTimeout(() => {
+    iframe.contentWindow?.focus();
+    iframe.contentWindow?.print();
+    setTimeout(() => {
+      document.body.removeChild(iframe);
+    }, 1000);
+  }, 100);
 }
 
 export function printCustomerReceipt(order: CompletedOrder) {
+  if (!order.items) return;
   const date = format(new Date(order.createdAt), "MMM d, yyyy  h:mm a");
   const payLabel = order.paymentMethod.charAt(0).toUpperCase() + order.paymentMethod.slice(1);
 
   const itemRows = order.items.map(item => {
-    const customs = item.customizations.map(c =>
-      `<div class="indent">· ${c.slotLabel}: ${c.optionLabel}</div>`
-    ).join("");
+    const customs = (item.customizations ?? [])
+      .filter(c => (c.customerSortOrder ?? 1) > 0)
+      .sort((a, b) => (a.customerSortOrder ?? 1) - (b.customerSortOrder ?? 1))
+      .map(c =>
+        `<div class="indent">· ${c.slotLabel}: ${c.optionLabel}</div>`
+      ).join("");
     const notes = item.specialNotes ? `<div class="note">  "${item.specialNotes}"</div>` : "";
     const qty = item.quantity > 1 ? ` x${item.quantity}` : "";
     return `
@@ -115,6 +139,7 @@ export function printCustomerReceipt(order: CompletedOrder) {
 }
 
 export function printAgentReceipts(order: CompletedOrder) {
+  if (!order.items) return;
   const totalItems = order.items.reduce((s, i) => s + i.quantity, 0);
   let ticketNum = 0;
 

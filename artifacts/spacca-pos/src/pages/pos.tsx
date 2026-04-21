@@ -15,10 +15,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
-import { Coffee, Minus, Plus, ShoppingCart, Trash2, X, ChevronRight, Droplets, Printer, FileText, Receipt } from "lucide-react";
+import { Coffee, Minus, Plus, ShoppingCart, Trash2, X, ChevronRight, Droplets, Search } from "lucide-react";
 import { fmt } from "@/lib/currency";
 import { CupSimulator, type CupLayer } from "@/components/cup-simulator";
-import { printCustomerReceipt, printAgentReceipts } from "@/components/receipt-printer";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "/api";
 
@@ -62,25 +61,10 @@ type CartItem = {
   specialNotes?: string;
 };
 
-function detectSubcategory(name: string): string {
-  const words = name.split(" ");
-  return words[words.length - 1];
-}
-
-function buildSubcategories(drinks: Drink[]): Record<string, Drink[]> {
-  const groups: Record<string, Drink[]> = {};
-  drinks.forEach(d => {
-    const sub = detectSubcategory(d.name);
-    if (!groups[sub]) groups[sub] = [];
-    groups[sub].push(d);
-  });
-  return groups;
-}
 
 export default function PosTerminal() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { autoPrintCustomer, autoPrintAgent } = useSettings();
 
   const { data: drinks, isLoading: isLoadingDrinks } = useListDrinks({ active: true });
   const { data: allCategories = [] } = useDrinkCategories();
@@ -92,58 +76,33 @@ export default function PosTerminal() {
 
   // selectedCategory is now a DrinkCategory id (number) or null for "All"
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
-  const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null);
-
-  const categoryDrinks = useMemo(() => {
-    if (!drinks) return [];
-    if (selectedCategoryId === null) return drinks;
-    return drinks.filter(d => {
-      // Match by categoryId if available, else fall back to category name
-      const cat = categories.find(c => c.id === selectedCategoryId);
-      if ((d as any).categoryId === selectedCategoryId) return true;
-      if (cat && d.category === cat.name) return true;
-      return false;
-    });
-  }, [drinks, selectedCategoryId, categories]);
-
-  const subcategoryGroups = useMemo(() => buildSubcategories(categoryDrinks), [categoryDrinks]);
-
-  const visibleSubcategories = useMemo(() => {
-    return Object.entries(subcategoryGroups)
-      .filter(([, items]) => items.length >= 2)
-      .map(([sub]) => sub);
-  }, [subcategoryGroups]);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const filteredDrinks = useMemo(() => {
-    if (!selectedSubcategory) return categoryDrinks;
-    return categoryDrinks.filter(d => detectSubcategory(d.name) === selectedSubcategory);
-  }, [categoryDrinks, selectedSubcategory]);
-
-  const groupedDrinks = useMemo(() => {
-    if (selectedSubcategory) return null;
-    const groups: { label: string; drinks: Drink[] }[] = [];
-    const added = new Set<number>();
-    visibleSubcategories.forEach(sub => {
-      const items = subcategoryGroups[sub] || [];
-      if (items.length >= 2) {
-        groups.push({ label: sub, drinks: items });
-        items.forEach(d => added.add(d.id));
-      }
-    });
-    const rest = categoryDrinks.filter(d => !added.has(d.id));
-    if (rest.length > 0) {
-      groups.unshift({ label: "", drinks: rest });
+    if (!drinks) return [];
+    
+    // 1. Filter by Main Category
+    let result = drinks;
+    if (selectedCategoryId !== null) {
+      result = drinks.filter(d => {
+        const cat = categories.find(c => c.id === selectedCategoryId);
+        if ((d as any).categoryId === selectedCategoryId) return true;
+        if (cat && d.category === cat.name) return true;
+        return false;
+      });
     }
-    return groups;
-  }, [selectedSubcategory, categoryDrinks, visibleSubcategories, subcategoryGroups]);
+
+    // 2. Filter by Search Query
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      result = result.filter(d => d.name.toLowerCase().includes(q));
+    }
+
+    return result;
+  }, [drinks, selectedCategoryId, categories, searchQuery]);
 
   const handleCategoryChange = (catId: number | null) => {
     setSelectedCategoryId(catId);
-    setSelectedSubcategory(null);
-  };
-
-  const handleSubcategoryChange = (sub: string | null) => {
-    setSelectedSubcategory(sub);
   };
 
   // Customization dialog
@@ -387,14 +346,11 @@ export default function PosTerminal() {
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "card" | "wallet">("card");
   const [amountTendered, setAmountTendered] = useState("");
 
-  const [completedOrder, setCompletedOrder] = useState<any>(null);
-  const [isReceiptOpen, setIsReceiptOpen] = useState(false);
 
   const { mutate: createOrder, isPending: isCreatingOrder } = useCreateOrder({
     mutation: {
       onSuccess: (data) => {
-        setCompletedOrder(data);
-        setIsReceiptOpen(true);
+        toast({ title: "Order Created", description: `Order #${data.orderNumber} sent for cashier approval.` });
         setCart([]);
         setIsCartOpen(false);
         setIsCheckoutOpen(false);
@@ -462,6 +418,25 @@ export default function PosTerminal() {
           ))}
         </div>
 
+        {/* Search Input */}
+        <div className="relative w-48 md:w-64 shrink-0 mx-2">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+          <Input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search drinks..."
+            className="pl-9 h-9 rounded-full bg-muted/40 border-none focus-visible:ring-1 focus-visible:ring-primary/40 text-sm"
+          />
+          {searchQuery && (
+            <button 
+              onClick={() => setSearchQuery("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 hover:bg-muted rounded-full"
+            >
+              <X className="h-3 w-3 text-muted-foreground" />
+            </button>
+          )}
+        </div>
+
         {/* Cart toggle button */}
         <button
           onClick={() => setIsCartOpen(true)}
@@ -477,64 +452,25 @@ export default function PosTerminal() {
         </button>
       </div>
 
-      {/* Subcategory row */}
-      {visibleSubcategories.length > 0 && (
-        <div className="flex gap-2 px-4 py-2 bg-muted/40 border-b overflow-x-auto no-scrollbar shrink-0">
-          <button
-            onClick={() => handleSubcategoryChange(null)}
-            className={`px-3 py-1 rounded-full text-sm font-medium whitespace-nowrap transition-colors border ${selectedSubcategory === null
-                ? "bg-foreground text-background border-foreground"
-                : "bg-background text-muted-foreground border-border hover:border-foreground/40"
-              }`}
-          >
-            All
-          </button>
-          {visibleSubcategories.map(sub => (
-            <button
-              key={sub}
-              onClick={() => handleSubcategoryChange(selectedSubcategory === sub ? null : sub)}
-              className={`px-3 py-1 rounded-full text-sm font-medium whitespace-nowrap transition-colors border ${selectedSubcategory === sub
-                  ? "bg-foreground text-background border-foreground"
-                  : "bg-background text-muted-foreground border-border hover:border-foreground/40"
-                }`}
-            >
-              {sub}
-            </button>
-          ))}
-        </div>
-      )}
-
       {/* Drink Grid — full width */}
       <ScrollArea className="flex-1 p-4">
         {isLoadingDrinks ? (
           <div className={gridClass}>
-            {Array.from({ length: 10 }).map((_, i) => (
-              <div key={i} className="h-32 bg-muted animate-pulse rounded-lg border" />
+            {Array.from({ length: 12 }).map((_, i) => (
+              <div key={i} className="h-40 bg-muted/40 animate-pulse rounded-lg border border-white/5" />
             ))}
           </div>
-        ) : selectedSubcategory || !groupedDrinks ? (
+        ) : filteredDrinks.length > 0 ? (
           <div className={gridClass}>
             {filteredDrinks.map(drink => (
               <DrinkCard key={drink.id} drink={drink} onClick={() => handleSelectDrink(drink)} />
             ))}
           </div>
         ) : (
-          <div className="space-y-6">
-            {groupedDrinks.map(group => (
-              <div key={group.label || "__singles__"}>
-                {group.label && (
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="text-sm font-bold uppercase tracking-widest text-muted-foreground">{group.label}</span>
-                    <div className="flex-1 h-px bg-border" />
-                  </div>
-                )}
-                <div className={gridClass}>
-                  {group.drinks.map(drink => (
-                    <DrinkCard key={drink.id} drink={drink} onClick={() => handleSelectDrink(drink)} />
-                  ))}
-                </div>
-              </div>
-            ))}
+          <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
+            <Search className="h-12 w-12 opacity-10 mb-4" />
+            <p className="text-lg font-medium">No drinks found</p>
+            <p className="text-sm">Try a different category or search term.</p>
           </div>
         )}
       </ScrollArea>
@@ -923,48 +859,6 @@ export default function PosTerminal() {
         </DialogContent>
       </Dialog>
 
-      {/* Receipt Options Dialog */}
-      <Dialog open={isReceiptOpen} onOpenChange={setIsReceiptOpen}>
-        <DialogContent className="sm:max-w-[380px]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-xl">
-              <Receipt className="h-5 w-5 text-primary" />
-              Order #{completedOrder?.orderNumber}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="py-2 text-sm text-muted-foreground">
-            Order placed successfully. Select a receipt to print, or close to continue.
-          </div>
-          <div className="grid gap-3 py-2">
-            <Button
-              className="h-14 gap-3 text-base"
-              onClick={() => completedOrder && printCustomerReceipt(completedOrder)}
-            >
-              <FileText className="h-5 w-5" />
-              <div className="text-left">
-                <div className="font-bold">Customer Receipt</div>
-                <div className="text-xs opacity-75 font-normal">Full order summary with total</div>
-              </div>
-            </Button>
-            <Button
-              variant="outline"
-              className="h-14 gap-3 text-base"
-              onClick={() => completedOrder && printAgentReceipts(completedOrder)}
-            >
-              <Printer className="h-5 w-5" />
-              <div className="text-left">
-                <div className="font-bold">Barista Tickets</div>
-                <div className="text-xs text-muted-foreground font-normal">One ticket per drink with customizations</div>
-              </div>
-            </Button>
-          </div>
-          <DialogFooter>
-            <Button variant="ghost" className="w-full" onClick={() => setIsReceiptOpen(false)}>
-              Skip — No Receipt
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

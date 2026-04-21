@@ -174,6 +174,7 @@ router.post("/orders", async (req, res): Promise<void> => {
     slotLabel: string;
     optionLabel: string;
     baristaSortOrder: number;
+    customerSortOrder: number;
   };
   type ItemDetail = {
     drinkId: number; drinkName: string; kitchenStation: string; quantity: number;
@@ -196,7 +197,8 @@ router.post("/orders", async (req, res): Promise<void> => {
         addedCost: c.addedCost,
         slotLabel: c.slotLabel,
         optionLabel: c.optionLabel,
-        baristaSortOrder: c.baristaSortOrder
+        baristaSortOrder: c.baristaSortOrder,
+        customerSortOrder: c.customerSortOrder
       }));
 
       const unitPrice = calcData.totalPrice;
@@ -279,6 +281,7 @@ router.post("/orders", async (req, res): Promise<void> => {
             slotLabel: c.slotLabel,
             optionLabel: c.optionLabel,
             baristaSortOrder: c.baristaSortOrder,
+            customerSortOrder: c.customerSortOrder,
           }))
         );
       }
@@ -349,6 +352,7 @@ router.post("/orders", async (req, res): Promise<void> => {
             slotLabel: c.slotLabel,
             optionLabel: c.optionLabel,
             baristaSortOrder: c.baristaSortOrder,
+            customerSortOrder: (c as any).customerSortOrder,
             orderItemId: item.id,
             id: 0,
           })),
@@ -398,20 +402,14 @@ router.patch("/orders/:id/status", async (req, res): Promise<void> => {
     return;
   }
 
-  const [barista] = await db.select().from(usersTable).where(eq(usersTable.id, order.baristaId));
+  const detail = await buildOrderDetail(params.data.id);
+  if (!detail) {
+    res.status(404).json({ error: "Order not found" });
+    return;
+  }
 
   broadcastEvent("order_updated", { orderId: order.id, status: order.status });
-  res.json(
-    UpdateOrderStatusResponse.parse(serializeDates({
-      ...order,
-      baristaName: barista?.name ?? "Unknown",
-      subtotal: parseFloat(order.subtotal),
-      discount: parseFloat(order.discount),
-      total: parseFloat(order.total),
-      amountTendered: order.amountTendered ? parseFloat(order.amountTendered) : null,
-      changeDue: order.changeDue ? parseFloat(order.changeDue) : null,
-    }))
-  );
+  res.json(UpdateOrderStatusResponse.parse(serializeDates(detail)));
 });
 
 router.patch("/order-items/:id/ready", async (req, res): Promise<void> => {
