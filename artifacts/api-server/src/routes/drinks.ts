@@ -289,86 +289,14 @@ async function buildDrinkDetail(drinkId: number) {
   };
 }
 
-async function computeDefaultPrice(drinkId: number, basePrice: number): Promise<number> {
-  const slots = await db
-    .select()
-    .from(drinkIngredientSlotsTable)
-    .where(eq(drinkIngredientSlotsTable.drinkId, drinkId))
-    .orderBy(drinkIngredientSlotsTable.sortOrder);
-
-  let extras = 0;
-  for (const slot of slots) {
-    if (slot.isDynamic) continue;
-
-    // 1. Resolve Type Selection
-    const drinkTypeOptions = await db.select().from(drinkSlotTypeOptionsTable)
-      .where(eq(drinkSlotTypeOptionsTable.slotId, slot.id));
-    
-    let templateTypeOptions: any[] = [];
-    if (slot.predefinedSlotId) {
-      templateTypeOptions = await db.select().from(predefinedSlotTypeOptionsTable)
-        .where(eq(predefinedSlotTypeOptionsTable.predefinedSlotId, slot.predefinedSlotId));
-    }
-
-    const typeOptions = drinkTypeOptions.length > 0 ? drinkTypeOptions : templateTypeOptions;
-    let defaultTypeSelection = typeOptions.find(to => to.isDefault) ?? typeOptions[0];
-    let effectiveTypeId = defaultTypeSelection?.ingredientTypeId ?? slot.ingredientTypeId;
-
-    // Add type-level extra cost if applicable
-    if (effectiveTypeId) {
-      const [ingType] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, effectiveTypeId));
-      if (ingType) {
-        extras += Number(defaultTypeSelection?.extraCost ?? ingType.extraCost ?? 0);
-      }
-    }
-
-    // 2. Resolve Volume/Cost
-    if (effectiveTypeId) {
-      const globalTypeVolumes = await db.select().from(ingredientTypeVolumesTable)
-        .where(and(eq(ingredientTypeVolumesTable.ingredientTypeId, effectiveTypeId), eq(ingredientTypeVolumesTable.isActive, true)))
-        .orderBy(ingredientTypeVolumesTable.sortOrder);
-      
-      const slotVolumes = await db.select().from(drinkSlotVolumesTable).where(eq(drinkSlotVolumesTable.slotId, slot.id));
-      
-      let templateVolumes: any[] = [];
-      if (slot.predefinedSlotId) {
-        templateVolumes = await db.select().from(predefinedSlotVolumesTable)
-          .where(eq(predefinedSlotVolumesTable.predefinedSlotId, slot.predefinedSlotId));
-      }
-
-      const slotVolumeMap = new Map(slotVolumes.map((sv) => [sv.typeVolumeId, sv]));
-      const templateVolumeMap = new Map(templateVolumes.map((tv) => [tv.typeVolumeId, tv]));
-
-      const defaultTv = globalTypeVolumes.find((tv) => {
-        const sv = slotVolumeMap.get(tv.id);
-        const tvDef = templateVolumeMap.get(tv.id);
-        return sv ? sv.isDefault : (tvDef ? tvDef.isDefault : tv.isDefault);
-      }) ?? globalTypeVolumes[0];
-
-      if (defaultTv) {
-        const sv = slotVolumeMap.get(defaultTv.id);
-        const tvDef = templateVolumeMap.get(defaultTv.id);
-        extras += Number(sv?.extraCost ?? tvDef?.extraCost ?? defaultTv.extraCost);
-      }
-    } 
-    // Legacy support (old-style slots)
-    else if (slot.defaultOptionId) {
-      const [option] = await db.select().from(ingredientOptionsTable).where(eq(ingredientOptionsTable.id, slot.defaultOptionId));
-      if (option) {
-        if (option.linkedIngredientId) {
-          const linkedOpts = await db.select().from(ingredientOptionsTable)
-            .where(eq(ingredientOptionsTable.ingredientId, option.linkedIngredientId))
-            .orderBy(ingredientOptionsTable.sortOrder);
-          const subDefault = linkedOpts.find((o) => o.isDefault) ?? linkedOpts[0];
-          if (subDefault) extras += Number(subDefault.extraCost);
-        } else {
-          extras += Number(option.extraCost);
-        }
-      }
-    }
+async function computeDefaultPrice(drinkId: number): Promise<number> {
+  try {
+    const data = await calculateDrinkData(drinkId, []);
+    return data.totalPrice;
+  } catch (error) {
+    console.error(`Error computing default price for drink ${drinkId}:`, error);
+    return 0;
   }
-
-  return basePrice + extras;
 }
 
 router.get("/drinks", async (req, res): Promise<void> => {
@@ -402,7 +330,7 @@ router.get("/drinks", async (req, res): Promise<void> => {
   const drinksWithDefaultPrice = await Promise.all(
     filtered.map(async (d) => {
       const base = Number(d.basePrice);
-      const defaultPrice = await computeDefaultPrice(d.id, base);
+      const defaultPrice = await computeDefaultPrice(d.id);
       return { ...d, basePrice: base, defaultPrice };
     })
   );

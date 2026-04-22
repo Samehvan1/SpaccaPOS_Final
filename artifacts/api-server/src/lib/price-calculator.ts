@@ -55,21 +55,83 @@ export async function calculateDrinkData(drinkId: number, selections: any[]) {
   let usedVolumeMl = 0;
   let dynamicInfo: { slotLabel: string; ingredientName: string; filledMl: number; cost: number } | null = null;
 
-  for (const selection of selections) {
-    const sel = selection as any;
-    let slot: (typeof slots)[0] | undefined;
+  // Process all non-dynamic slots
+  for (const slot of slots) {
+    if (slot.isDynamic) continue;
 
-    // Identify slot: prefer explicit slotId, then ingredientTypeId, then ingredientId
-    if (sel.slotId) {
-      slot = slots.find((s) => s.id === sel.slotId);
-    } else if (sel.ingredientTypeId) {
-      slot = slots.find((s) => s.ingredientTypeId === sel.ingredientTypeId);
-    } else {
-      slot = slots.find((s) => s.ingredientId === sel.ingredientId);
+    // 1. Resolve effective selection (from provided selections or defaults)
+    let sel = selections.find((s: any) => s.slotId === slot.id);
+    if (!sel) {
+      // Legacy fallback: check by ingredientTypeId or ingredientId
+      if (slot.ingredientTypeId) {
+        sel = selections.find((s: any) => s.ingredientTypeId === slot.ingredientTypeId);
+      } else if (slot.ingredientId) {
+        sel = selections.find((s: any) => s.ingredientId === slot.ingredientId);
+      }
     }
-    if (!slot || slot.isDynamic) continue;
 
-    // New-style slot: typed selection (slotId + typeVolumeId)
+    // 2. If no selection provided, resolve standard defaults
+    if (!sel) {
+      const drinkTypeOptions = await db.select().from(drinkSlotTypeOptionsTable)
+        .where(eq(drinkSlotTypeOptionsTable.slotId, slot.id));
+      
+      let templateTypeOptions: any[] = [];
+      if (slot.predefinedSlotId) {
+        templateTypeOptions = await db.select().from(predefinedSlotTypeOptionsTable)
+          .where(eq(predefinedSlotTypeOptionsTable.predefinedSlotId, slot.predefinedSlotId));
+      }
+      
+      const typeOptions = drinkTypeOptions.length > 0 ? drinkTypeOptions : templateTypeOptions;
+      
+      if (typeOptions.length > 0) {
+        const defType = typeOptions.find(to => to.isDefault) ?? typeOptions[0];
+        if (defType) {
+          // Find default volume for this type
+          const typeVolumes = await db.select().from(ingredientTypeVolumesTable)
+            .where(and(eq(ingredientTypeVolumesTable.ingredientTypeId, defType.ingredientTypeId), eq(ingredientTypeVolumesTable.isActive, true)));
+          
+          if (typeVolumes.length > 0) {
+            const slotVolumes = await db.select().from(drinkSlotVolumesTable).where(eq(drinkSlotVolumesTable.slotId, slot.id));
+            const templateVolumes = slot.predefinedSlotId 
+              ? await db.select().from(predefinedSlotVolumesTable).where(eq(predefinedSlotVolumesTable.predefinedSlotId, slot.predefinedSlotId))
+              : [];
+            
+            const slotVolumeMap = new Map(slotVolumes.map((sv) => [sv.typeVolumeId, sv]));
+            const templateVolumeMap = new Map(templateVolumes.map((tv) => [tv.typeVolumeId, tv]));
+
+            const defVol = typeVolumes.find((tv) => {
+              const sv = slotVolumeMap.get(tv.id);
+              const tvDef = templateVolumeMap.get(tv.id);
+              return sv ? sv.isDefault : (tvDef ? tvDef.isDefault : tv.isDefault);
+            }) ?? typeVolumes[0];
+
+            sel = {
+              slotId: slot.id,
+              ingredientTypeId: defType.ingredientTypeId,
+              typeVolumeId: defVol?.id ?? null
+            };
+          } else {
+            // Type-only default
+            sel = {
+              slotId: slot.id,
+              ingredientTypeId: defType.ingredientTypeId
+            };
+          }
+        }
+      } else if (slot.ingredientId && slot.defaultOptionId) {
+        // Legacy default
+        sel = {
+          slotId: slot.id,
+          ingredientId: slot.ingredientId,
+          optionId: slot.defaultOptionId
+        };
+      }
+    }
+
+    // 3. Perform calculation if we have a selection (provided or default)
+    if (!sel) continue;
+
+    // --- New-style slot: typed selection (typeVolumeId) ---
     if (sel.typeVolumeId) {
       const [typeVol] = await db.select().from(ingredientTypeVolumesTable)
         .where(eq(ingredientTypeVolumesTable.id, sel.typeVolumeId));
@@ -82,6 +144,20 @@ export async function calculateDrinkData(drinkId: number, selections: any[]) {
         ));
 
       const [typeDef] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, typeVol.ingredientTypeId));
+      
+      // Type-level extra cost override
+      const drinkTypeOptions = await db.select().from(drinkSlotTypeOptionsTable)
+        .where(eq(drinkSlotTypeOptionsTable.slotId, slot.id));
+      let templateTypeOptions: any[] = [];
+      if (slot.predefinedSlotId) {
+        templateTypeOptions = await db.select().from(predefinedSlotTypeOptionsTable)
+          .where(eq(predefinedSlotTypeOptionsTable.predefinedSlotId, slot.predefinedSlotId));
+      }
+      const typeOptions = drinkTypeOptions.length > 0 ? drinkTypeOptions : templateTypeOptions;
+      const typeOpt = typeOptions.find(to => to.ingredientTypeId === typeVol.ingredientTypeId);
+      
+      const typeExtraCost = parseFloat(typeOpt?.extraCost ?? typeDef?.extraCost ?? "0") || 0;
+      
       const inventoryId = typeDef?.inventoryIngredientId ?? null;
       const typeName = typeDef?.name ?? "";
       
@@ -92,7 +168,8 @@ export async function calculateDrinkData(drinkId: number, selections: any[]) {
         ? await db.select().from(predefinedSlotVolumesTable).where(and(eq(predefinedSlotVolumesTable.predefinedSlotId, slot.predefinedSlotId), eq(predefinedSlotVolumesTable.typeVolumeId, sel.typeVolumeId)))
         : [null];
 
-      const extraCost = parseFloat(slotVol?.extraCost ?? templateDef?.extraCost ?? typeVol.extraCost) || 0;
+      const volExtraCost = parseFloat(slotVol?.extraCost ?? templateDef?.extraCost ?? typeVol.extraCost) || 0;
+      const extraCost = typeExtraCost + volExtraCost;
       totalExtras += extraCost;
 
       const consumedQty = parseFloat(slotVol?.processedQty ?? templateDef?.processedQty ?? typeVol.processedQty ?? volDef?.processedQty ?? "0") || 0;
@@ -122,7 +199,7 @@ export async function calculateDrinkData(drinkId: number, selections: any[]) {
       continue;
     }
 
-    // Typed slot but NO volume (type-only e.g. sugar)
+    // --- Typed slot but NO volume (type-only e.g. sugar) ---
     if (sel.ingredientTypeId) {
       const [ingType] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, sel.ingredientTypeId));
       if (ingType) {
@@ -167,13 +244,13 @@ export async function calculateDrinkData(drinkId: number, selections: any[]) {
       continue;
     }
 
-    // Old-style slot
-    if (!selection.optionId) continue;
-    const [option] = await db.select().from(ingredientOptionsTable).where(eq(ingredientOptionsTable.id, selection.optionId));
+    // --- Old-style legacy slot ---
+    if (!sel.optionId) continue;
+    const [option] = await db.select().from(ingredientOptionsTable).where(eq(ingredientOptionsTable.id, sel.optionId));
     if (!option) continue;
 
-    if (option.linkedIngredientId && selection.subOptionId) {
-      const [subOption] = await db.select().from(ingredientOptionsTable).where(eq(ingredientOptionsTable.id, selection.subOptionId));
+    if (option.linkedIngredientId && sel.subOptionId) {
+      const [subOption] = await db.select().from(ingredientOptionsTable).where(eq(ingredientOptionsTable.id, sel.subOptionId));
       if (subOption) {
         const extraCost = parseFloat(subOption.extraCost) || 0;
         totalExtras += extraCost;
@@ -183,7 +260,7 @@ export async function calculateDrinkData(drinkId: number, selections: any[]) {
         }
         customizations.push({
           ingredientId: option.linkedIngredientId,
-          optionId: selection.subOptionId,
+          optionId: sel.subOptionId,
           typeVolumeId: null,
           ingredientTypeId: null,
           consumedQty: parseFloat(subOption.processedQty) || 0,
@@ -206,8 +283,8 @@ export async function calculateDrinkData(drinkId: number, selections: any[]) {
       usedVolumeMl += parseFloat(option.producedQty) || 0;
     }
     customizations.push({
-      ingredientId: selection.ingredientId ?? slot.ingredientId ?? null,
-      optionId: selection.optionId,
+      ingredientId: sel.ingredientId ?? slot.ingredientId ?? null,
+      optionId: sel.optionId,
       typeVolumeId: null,
       ingredientTypeId: null,
       consumedQty: parseFloat(option.processedQty) || 0,
@@ -221,7 +298,7 @@ export async function calculateDrinkData(drinkId: number, selections: any[]) {
     });
   }
 
-  // Dynamic slot calculate
+  // --- Dynamic slot calculate ---
   const dynamicSlot = slots.find((s) => s.isDynamic);
   if (dynamicSlot && drink.cupSizeMl) {
     const filledMl = Math.max(0, drink.cupSizeMl - usedVolumeMl);
