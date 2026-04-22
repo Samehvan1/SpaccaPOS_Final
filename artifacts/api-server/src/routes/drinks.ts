@@ -138,7 +138,11 @@ async function buildDrinkDetail(drinkId: number) {
       // If it's a template, we only show those in typeOptions (whitelisted).
       
       if (effectiveTypeOptions.length === 0 && !slot.predefinedSlotId && slot.ingredientTypeId) {
-        effectiveTypeOptions = [{ id: 0, slotId: slot.id, ingredientTypeId: slot.ingredientTypeId, isDefault: true, sortOrder: 0 }];
+        effectiveTypeOptions = [{ 
+          id: 0, slotId: slot.id, ingredientTypeId: slot.ingredientTypeId, 
+          isDefault: true, sortOrder: 0,
+          processedQty: null, producedQty: null, unit: null, extraCost: null
+        }];
       }
 
       if (effectiveTypeOptions.length > 0 || (slot.predefinedSlotId && templateTypeOptions.length > 0)) {

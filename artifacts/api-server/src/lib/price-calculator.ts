@@ -287,13 +287,13 @@ export async function calculateDrinkData(drinkId: number, selections: any[]) {
         
         let cost = 0;
         let inventoryId = null;
+        
+        const slotTypeOpt = typeOptions.find(to => to.ingredientTypeId === effectiveTypeId);
+        const pricePerMl = parseFloat(slotTypeOpt?.extraCost ?? ingredientType?.extraCost ?? "0") || 0;
+        cost = filledMl * pricePerMl;
 
         if (ingredientType?.inventoryIngredientId) {
           inventoryId = ingredientType.inventoryIngredientId;
-          const [ingredient] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, inventoryId));
-          if (ingredient) {
-            cost = consumedQty * parseFloat(ingredient.costPerUnit);
-          }
         }
 
         totalExtras += cost;

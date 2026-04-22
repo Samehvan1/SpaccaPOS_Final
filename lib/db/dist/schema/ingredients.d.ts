@@ -675,6 +675,23 @@ export declare const ingredientTypesTable: import("drizzle-orm/pg-core").PgTable
             identity: undefined;
             generated: undefined;
         }, {}, {}>;
+        extraCost: import("drizzle-orm/pg-core").PgColumn<{
+            name: "extra_cost";
+            tableName: "ingredient_types";
+            dataType: "string";
+            columnType: "PgNumeric";
+            data: string;
+            driverParam: string;
+            notNull: true;
+            hasDefault: true;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: undefined;
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
         createdAt: import("drizzle-orm/pg-core").PgColumn<{
             name: "created_at";
             tableName: "ingredient_types";
@@ -987,6 +1004,23 @@ export declare const ingredientTypeVolumesTable: import("drizzle-orm/pg-core").P
             identity: undefined;
             generated: undefined;
         }, {}, {}>;
+        isActive: import("drizzle-orm/pg-core").PgColumn<{
+            name: "is_active";
+            tableName: "ingredient_type_volumes";
+            dataType: "boolean";
+            columnType: "PgBoolean";
+            data: boolean;
+            driverParam: boolean;
+            notNull: true;
+            hasDefault: true;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: undefined;
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
     };
     dialect: "pg";
 }>;
@@ -1039,6 +1073,7 @@ export declare const insertIngredientTypeSchema: import("zod/v4").ZodObject<{
     isActive: import("zod/v4").ZodOptional<import("zod/v4").ZodBoolean>;
     processedQty: import("zod/v4").ZodOptional<import("zod/v4").ZodString>;
     producedQty: import("zod/v4").ZodOptional<import("zod/v4").ZodString>;
+    extraCost: import("zod/v4").ZodOptional<import("zod/v4").ZodString>;
     sortOrder: import("zod/v4").ZodOptional<import("zod/v4").ZodInt>;
     categoryId: import("zod/v4").ZodInt;
     inventoryIngredientId: import("zod/v4").ZodOptional<import("zod/v4").ZodNullable<import("zod/v4").ZodInt>>;
@@ -1060,6 +1095,7 @@ export declare const insertIngredientVolumeSchema: import("zod/v4").ZodObject<{
 }>;
 export declare const insertIngredientTypeVolumeSchema: import("zod/v4").ZodObject<{
     unit: import("zod/v4").ZodOptional<import("zod/v4").ZodNullable<import("zod/v4").ZodString>>;
+    isActive: import("zod/v4").ZodOptional<import("zod/v4").ZodBoolean>;
     processedQty: import("zod/v4").ZodOptional<import("zod/v4").ZodNullable<import("zod/v4").ZodString>>;
     producedQty: import("zod/v4").ZodOptional<import("zod/v4").ZodNullable<import("zod/v4").ZodString>>;
     extraCost: import("zod/v4").ZodOptional<import("zod/v4").ZodString>;

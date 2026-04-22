@@ -447,9 +447,21 @@ function TypesTab({ inventoryItems }: { inventoryItems: Ingredient[] }) {
             ) : filteredTypes.map(t => (
               <TableRow key={t.id}>
                 <TableCell>
-                  <div className="h-6 w-6 rounded-md border shadow-sm" style={{ backgroundColor: t.color || "#e2e8f0" }} />
+                  <div 
+                    className={`h-6 w-6 rounded-md border shadow-sm flex items-center justify-center ${!t.color ? 'bg-muted border-dashed border-destructive/50' : ''}`} 
+                    style={{ backgroundColor: t.color || undefined }}
+                  >
+                    {!t.color && <Droplet className="h-3 w-3 text-destructive/40" />}
+                  </div>
                 </TableCell>
-                <TableCell className="font-medium">{t.name}</TableCell>
+                <TableCell className="font-medium">
+                  <div className="flex items-center gap-2">
+                    {t.name}
+                    {!t.color && (
+                      <Badge variant="destructive" className="h-4 px-1 text-[8px] font-black uppercase tracking-tighter shrink-0">No Color</Badge>
+                    )}
+                  </div>
+                </TableCell>
                 <TableCell>
                   {t.category ? (
                     <Badge variant="outline">{t.category.name}</Badge>

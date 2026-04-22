@@ -59,14 +59,14 @@ export declare const ordersTable: import("drizzle-orm/pg-core").PgTableWithColum
             tableName: "orders";
             dataType: "string";
             columnType: "PgText";
-            data: "pending" | "in_progress" | "ready" | "completed" | "cancelled";
+            data: "pending" | "paid" | "in_progress" | "ready" | "completed" | "cancelled";
             driverParam: string;
             notNull: true;
             hasDefault: true;
             isPrimaryKey: false;
             isAutoincrement: false;
             hasRuntimeDefault: false;
-            enumValues: ["pending", "in_progress", "ready", "completed", "cancelled"];
+            enumValues: ["pending", "paid", "in_progress", "ready", "completed", "cancelled"];
             baseColumn: never;
             identity: undefined;
             generated: undefined;
@@ -401,6 +401,23 @@ export declare const orderItemsTable: import("drizzle-orm/pg-core").PgTableWithC
             identity: undefined;
             generated: undefined;
         }, {}, {}>;
+        status: import("drizzle-orm/pg-core").PgColumn<{
+            name: "status";
+            tableName: "order_items";
+            dataType: "string";
+            columnType: "PgText";
+            data: "pending" | "ready";
+            driverParam: string;
+            notNull: true;
+            hasDefault: true;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: ["pending", "ready"];
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
         createdAt: import("drizzle-orm/pg-core").PgColumn<{
             name: "created_at";
             tableName: "order_items";
@@ -612,6 +629,23 @@ export declare const orderItemCustomizationsTable: import("drizzle-orm/pg-core")
             identity: undefined;
             generated: undefined;
         }, {}, {}>;
+        customerSortOrder: import("drizzle-orm/pg-core").PgColumn<{
+            name: "customer_sort_order";
+            tableName: "order_item_customizations";
+            dataType: "number";
+            columnType: "PgInteger";
+            data: number;
+            driverParam: string | number;
+            notNull: true;
+            hasDefault: true;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: undefined;
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
         createdAt: import("drizzle-orm/pg-core").PgColumn<{
             name: "created_at";
             tableName: "order_item_customizations";
@@ -637,6 +671,7 @@ export declare const insertOrderSchema: z.ZodObject<{
     baristaId: z.ZodInt;
     status: z.ZodOptional<z.ZodEnum<{
         pending: "pending";
+        paid: "paid";
         in_progress: "in_progress";
         ready: "ready";
         completed: "completed";

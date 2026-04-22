@@ -42,14 +42,14 @@ export declare const usersTable: import("drizzle-orm/pg-core").PgTableWithColumn
             tableName: "users";
             dataType: "string";
             columnType: "PgText";
-            data: "admin" | "barista" | "frontdesk";
+            data: "admin" | "barista" | "frontdesk" | "cashier" | "pickup";
             driverParam: string;
             notNull: true;
             hasDefault: true;
             isPrimaryKey: false;
             isAutoincrement: false;
             hasRuntimeDefault: false;
-            enumValues: ["admin", "barista", "frontdesk"];
+            enumValues: ["admin", "barista", "frontdesk", "cashier", "pickup"];
             baseColumn: never;
             identity: undefined;
             generated: undefined;
@@ -116,6 +116,8 @@ export declare const insertUserSchema: z.ZodObject<{
         admin: "admin";
         barista: "barista";
         frontdesk: "frontdesk";
+        cashier: "cashier";
+        pickup: "pickup";
     }>>;
     pin: z.ZodOptional<z.ZodNullable<z.ZodString>>;
 }, {

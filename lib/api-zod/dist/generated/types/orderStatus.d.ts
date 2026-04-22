@@ -8,6 +8,7 @@
 export type OrderStatus = (typeof OrderStatus)[keyof typeof OrderStatus];
 export declare const OrderStatus: {
     readonly pending: "pending";
+    readonly paid: "paid";
     readonly in_progress: "in_progress";
     readonly ready: "ready";
     readonly completed: "completed";

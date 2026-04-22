@@ -77733,12 +77733,11 @@ async function calculateDrinkData(drinkId, selections) {
         const consumedQty = filledMl * conversionRate;
         let cost = 0;
         let inventoryId = null;
+        const slotTypeOpt = typeOptions.find((to) => to.ingredientTypeId === effectiveTypeId);
+        const pricePerMl = parseFloat(slotTypeOpt?.extraCost ?? ingredientType?.extraCost ?? "0") || 0;
+        cost = filledMl * pricePerMl;
         if (ingredientType?.inventoryIngredientId) {
           inventoryId = ingredientType.inventoryIngredientId;
-          const [ingredient] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, inventoryId));
-          if (ingredient) {
-            cost = consumedQty * parseFloat(ingredient.costPerUnit);
-          }
         }
         totalExtras += cost;
         const ingredientName = ingredientType?.name ?? "Dynamic";
@@ -77874,7 +77873,17 @@ async function buildDrinkDetail(drinkId) {
       const typeOptions = await db.select().from(drinkSlotTypeOptionsTable).where(eq(drinkSlotTypeOptionsTable.slotId, slot.id)).orderBy(drinkSlotTypeOptionsTable.sortOrder);
       let effectiveTypeOptions = typeOptions;
       if (effectiveTypeOptions.length === 0 && !slot.predefinedSlotId && slot.ingredientTypeId) {
-        effectiveTypeOptions = [{ id: 0, slotId: slot.id, ingredientTypeId: slot.ingredientTypeId, isDefault: true, sortOrder: 0 }];
+        effectiveTypeOptions = [{
+          id: 0,
+          slotId: slot.id,
+          ingredientTypeId: slot.ingredientTypeId,
+          isDefault: true,
+          sortOrder: 0,
+          processedQty: null,
+          producedQty: null,
+          unit: null,
+          extraCost: null
+        }];
       }
       if (effectiveTypeOptions.length > 0 || slot.predefinedSlotId && templateTypeOptions.length > 0) {
         const typeOptionsWithVolumes = await Promise.all(

@@ -10,5 +10,7 @@ export declare const UserRole: {
     readonly admin: "admin";
     readonly barista: "barista";
     readonly frontdesk: "frontdesk";
+    readonly cashier: "cashier";
+    readonly pickup: "pickup";
 };
 //# sourceMappingURL=userRole.d.ts.map

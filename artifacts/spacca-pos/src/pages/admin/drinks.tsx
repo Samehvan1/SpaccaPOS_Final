@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 import { useListDrinks, useUpdateDrink, useCreateDrink, useDeleteDrink } from "@workspace/api-client-react";
 import { fmt } from "@/lib/currency";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -92,6 +92,15 @@ export default function DrinksAdmin() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  const stats = useMemo(() => {
+    if (!drinks) return { total: 0, active: 0, inactive: 0 };
+    return {
+      total: drinks.length,
+      active: drinks.filter(d => d.isActive).length,
+      inactive: drinks.filter(d => !d.isActive).length,
+    };
+  }, [drinks]);
 
   const { mutate: createDrink, isPending: isCreating } = useCreateDrink({
     mutation: {
@@ -259,6 +268,50 @@ export default function DrinksAdmin() {
             <Plus className="h-4 w-4" /> New Drink
           </Button>
         </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card className="bg-primary/5 border-primary/10">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Total Drinks</p>
+                <h3 className="text-2xl font-bold mt-1">{stats.total}</h3>
+              </div>
+              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <Tag className="h-5 w-5 text-primary" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card className="bg-green-500/5 border-green-500/10">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Active</p>
+                <h3 className="text-2xl font-bold mt-1 text-green-600 dark:text-green-400">{stats.active}</h3>
+              </div>
+              <div className="h-10 w-10 rounded-full bg-green-500/10 flex items-center justify-center">
+                <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-slate-500/5 border-slate-500/10">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Inactive</p>
+                <h3 className="text-2xl font-bold mt-1 text-slate-600 dark:text-slate-400">{stats.inactive}</h3>
+              </div>
+              <div className="h-10 w-10 rounded-full bg-slate-500/10 flex items-center justify-center">
+                <X className="h-5 w-5 text-slate-500" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
       </div>
 
       <Card>
