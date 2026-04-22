@@ -55559,6 +55559,7 @@ var init_ingredients = __esm({
       affectsCupSize: boolean("affects_cup_size").notNull().default(true),
       sortOrder: integer("sort_order").notNull().default(0),
       color: text("color"),
+      extraCost: numeric("extra_cost", { precision: 8, scale: 4 }).notNull().default("0"),
       createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
     });
     ingredientVolumesTable = pgTable("ingredient_volumes", {
@@ -55580,7 +55581,8 @@ var init_ingredients = __esm({
       unit: text("unit"),
       extraCost: numeric("extra_cost", { precision: 8, scale: 4 }).notNull().default("0"),
       isDefault: boolean("is_default").notNull().default(false),
-      sortOrder: integer("sort_order").notNull().default(0)
+      sortOrder: integer("sort_order").notNull().default(0),
+      isActive: boolean("is_active").notNull().default(true)
     });
     insertIngredientSchema = createInsertSchema(ingredientsTable).omit({ id: true, createdAt: true, updatedAt: true });
     insertIngredientOptionSchema = createInsertSchema(ingredientOptionsTable).omit({ id: true, createdAt: true, updatedAt: true });
@@ -55657,7 +55659,12 @@ var init_drinks = __esm({
       slotId: integer("slot_id").notNull().references(() => drinkIngredientSlotsTable.id, { onDelete: "cascade" }),
       ingredientTypeId: integer("ingredient_type_id").notNull().references(() => ingredientTypesTable.id, { onDelete: "cascade" }),
       isDefault: boolean("is_default").notNull().default(false),
-      sortOrder: integer("sort_order").notNull().default(0)
+      sortOrder: integer("sort_order").notNull().default(0),
+      // Per-drink overrides for the type itself (when no volume selected)
+      processedQty: numeric("processed_qty", { precision: 10, scale: 4 }),
+      producedQty: numeric("produced_qty", { precision: 10, scale: 4 }),
+      unit: text("unit"),
+      extraCost: numeric("extra_cost", { precision: 8, scale: 4 })
     });
     drinkSlotVolumesTable = pgTable("drink_slot_volumes", {
       id: serial("id").primaryKey(),
@@ -55689,7 +55696,11 @@ var init_drinks = __esm({
       predefinedSlotId: integer("predefined_slot_id").notNull().references(() => predefinedSlotsTable.id, { onDelete: "cascade" }),
       ingredientTypeId: integer("ingredient_type_id").notNull().references(() => ingredientTypesTable.id, { onDelete: "cascade" }),
       isDefault: boolean("is_default").notNull().default(false),
-      sortOrder: integer("sort_order").notNull().default(0)
+      sortOrder: integer("sort_order").notNull().default(0),
+      processedQty: numeric("processed_qty", { precision: 10, scale: 4 }),
+      producedQty: numeric("produced_qty", { precision: 10, scale: 4 }),
+      unit: text("unit"),
+      extraCost: numeric("extra_cost", { precision: 8, scale: 4 })
     });
     predefinedSlotVolumesTable = pgTable("predefined_slot_volumes", {
       id: serial("id").primaryKey(),
@@ -77599,22 +77610,27 @@ async function calculateDrinkData(drinkId, selections) {
     if (sel.ingredientTypeId) {
       const [ingType] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, sel.ingredientTypeId));
       if (ingType) {
-        const consumedQty = parseFloat(ingType.processedQty ?? "0") || 0;
-        const producedQty = parseFloat(ingType.producedQty ?? "0") || 0;
+        const [slotTypeOpt] = await db.select().from(drinkSlotTypeOptionsTable).where(and(eq(drinkSlotTypeOptionsTable.slotId, slot.id), eq(drinkSlotTypeOptionsTable.ingredientTypeId, sel.ingredientTypeId)));
+        const [templateTypeOpt] = slot.predefinedSlotId ? await db.select().from(predefinedSlotTypeOptionsTable).where(and(eq(predefinedSlotTypeOptionsTable.predefinedSlotId, slot.predefinedSlotId), eq(predefinedSlotTypeOptionsTable.ingredientTypeId, sel.ingredientTypeId))) : [null];
+        const consumedQty = parseFloat(slotTypeOpt?.processedQty ?? templateTypeOpt?.processedQty ?? ingType.processedQty ?? "0") || 0;
+        const producedQty = parseFloat(slotTypeOpt?.producedQty ?? templateTypeOpt?.producedQty ?? ingType.producedQty ?? "0") || 0;
+        const extraCost2 = parseFloat(slotTypeOpt?.extraCost ?? templateTypeOpt?.extraCost ?? ingType.extraCost ?? "0") || 0;
+        totalExtras += extraCost2;
         const shouldCount2 = slot.affectsCupSize ?? ingType.affectsCupSize ?? true;
         if (shouldCount2) {
           usedVolumeMl += producedQty;
         }
-        const optionLabel = producedQty > 0 || consumedQty > 0 ? `${ingType.name} (${producedQty > 0 ? producedQty : consumedQty}${ingType.unit ?? "g"})` : ingType.name;
+        const unit = slotTypeOpt?.unit ?? templateTypeOpt?.unit ?? ingType.unit ?? "g";
+        const optionLabel = producedQty > 0 || consumedQty > 0 ? `${ingType.name} (${producedQty > 0 ? producedQty : consumedQty}${unit})` : ingType.name;
         customizations.push({
           ingredientId: ingType.inventoryIngredientId ?? null,
           optionId: null,
           typeVolumeId: null,
-          ingredientTypeId: sel.ingredientTypeId,
+          ingredientTypeId: Number(sel.ingredientTypeId),
           consumedQty,
           producedQty,
           color: ingType.color ?? null,
-          addedCost: 0,
+          addedCost: extraCost2,
           slotLabel: slot.slotLabel,
           optionLabel,
           baristaSortOrder: slot.baristaSortOrder ?? 1,
@@ -77693,7 +77709,7 @@ async function calculateDrinkData(drinkId, selections) {
         const [ingredientType] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, effectiveTypeId));
         let typeVolumeId = dynamicSelection?.typeVolumeId ? Number(dynamicSelection.typeVolumeId) : null;
         if (!typeVolumeId || isNaN(typeVolumeId)) {
-          const typeVolumes = await db.select().from(ingredientTypeVolumesTable).where(eq(ingredientTypeVolumesTable.ingredientTypeId, effectiveTypeId));
+          const typeVolumes = await db.select().from(ingredientTypeVolumesTable).where(and(eq(ingredientTypeVolumesTable.ingredientTypeId, effectiveTypeId), eq(ingredientTypeVolumesTable.isActive, true)));
           const defVol = typeVolumes.find((tv) => tv.isDefault) ?? typeVolumes[0];
           typeVolumeId = defVol?.id ?? null;
         }
@@ -77813,7 +77829,7 @@ async function buildDrinkDetail(drinkId) {
   async function buildTypeVolumes(typeId, slotId) {
     const [[typeDef], typeVolumes] = await Promise.all([
       db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, typeId)),
-      db.select().from(ingredientTypeVolumesTable).where(eq(ingredientTypeVolumesTable.ingredientTypeId, typeId)).orderBy(ingredientTypeVolumesTable.sortOrder)
+      db.select().from(ingredientTypeVolumesTable).where(and(eq(ingredientTypeVolumesTable.ingredientTypeId, typeId), eq(ingredientTypeVolumesTable.isActive, true))).orderBy(ingredientTypeVolumesTable.sortOrder)
     ]);
     const allSlotVols = await db.select().from(drinkSlotVolumesTable).where(eq(drinkSlotVolumesTable.slotId, slotId));
     const slotVolumeMap = new Map(allSlotVols.map((sv) => [sv.typeVolumeId, sv]));
@@ -77827,10 +77843,10 @@ async function buildDrinkDetail(drinkId) {
         id: tv.id,
         volumeId: tv.volumeId,
         volumeName: vol?.name ?? "",
-        processedQty: parseFloat(override?.processedQty ?? tv.processedQty ?? vol?.processedQty ?? "0"),
-        producedQty: parseFloat(override?.producedQty ?? tv.producedQty ?? vol?.producedQty ?? "0"),
+        processedQty: Number(override?.processedQty ?? tv.processedQty ?? vol?.processedQty ?? 0),
+        producedQty: Number(override?.producedQty ?? tv.producedQty ?? vol?.producedQty ?? 0),
         unit: override?.unit ?? tv.unit ?? vol?.unit ?? "ml",
-        extraCost: parseFloat(override?.extraCost ?? tv.extraCost),
+        extraCost: Number(override?.extraCost ?? tv.extraCost),
         isDefault: override?.isDefault ?? tv.isDefault,
         isEnabled: override?.isEnabled ?? true,
         sortOrder: override?.sortOrder ?? tv.sortOrder,
@@ -77865,7 +77881,7 @@ async function buildDrinkDetail(drinkId) {
           effectiveTypeOptions.map(async (to) => {
             const [ingType] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, to.ingredientTypeId));
             const [category] = ingType ? await db.select().from(ingredientCategoriesTable).where(eq(ingredientCategoriesTable.id, ingType.categoryId)) : [null];
-            const globalTypeVolumes = await db.select().from(ingredientTypeVolumesTable).where(eq(ingredientTypeVolumesTable.ingredientTypeId, to.ingredientTypeId)).orderBy(ingredientTypeVolumesTable.sortOrder);
+            const globalTypeVolumes = await db.select().from(ingredientTypeVolumesTable).where(and(eq(ingredientTypeVolumesTable.ingredientTypeId, to.ingredientTypeId), eq(ingredientTypeVolumesTable.isActive, true))).orderBy(ingredientTypeVolumesTable.sortOrder);
             const [typeDef] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, to.ingredientTypeId));
             const allSlotVols = await db.select().from(drinkSlotVolumesTable).where(eq(drinkSlotVolumesTable.slotId, slot.id));
             const slotVolumeMap = new Map(allSlotVols.map((sv) => [sv.typeVolumeId, sv]));
@@ -77881,10 +77897,10 @@ async function buildDrinkDetail(drinkId) {
                 id: tv.id,
                 volumeId: tv.volumeId,
                 volumeName: vol?.name ?? "",
-                processedQty: parseFloat(override?.processedQty ?? templateDef?.processedQty ?? tv.processedQty ?? vol?.processedQty ?? "0"),
-                producedQty: parseFloat(override?.producedQty ?? templateDef?.producedQty ?? tv.producedQty ?? vol?.producedQty ?? "0"),
+                processedQty: Number(override?.processedQty ?? templateDef?.processedQty ?? tv.processedQty ?? vol?.processedQty ?? 0),
+                producedQty: Number(override?.producedQty ?? templateDef?.producedQty ?? tv.producedQty ?? vol?.producedQty ?? 0),
                 unit: override?.unit ?? templateDef?.unit ?? tv.unit ?? vol?.unit ?? "ml",
-                extraCost: parseFloat(override?.extraCost ?? templateDef?.extraCost ?? tv.extraCost),
+                extraCost: Number(override?.extraCost ?? templateDef?.extraCost ?? tv.extraCost),
                 isDefault: override?.isDefault ?? templateDef?.isDefault ?? tv.isDefault,
                 isEnabled: override?.isEnabled ?? templateDef?.isEnabled ?? true,
                 sortOrder: override?.sortOrder ?? templateDef?.sortOrder ?? tv.sortOrder,
@@ -77899,6 +77915,11 @@ async function buildDrinkDetail(drinkId) {
               categoryName: category?.name ?? "",
               isDefault: to.isDefault,
               sortOrder: to.sortOrder,
+              // Base type overrides
+              processedQty: Number(to.processedQty ?? ingType?.processedQty ?? 0),
+              producedQty: Number(to.producedQty ?? ingType?.producedQty ?? 0),
+              unit: to.unit ?? ingType?.unit ?? "ml",
+              extraCost: Number(to.extraCost ?? ingType?.extraCost ?? 0),
               volumes
             };
           })
@@ -77928,18 +77949,18 @@ async function buildDrinkDetail(drinkId) {
                 name: linked.name,
                 options: linkedOpts.map((lo) => ({
                   ...lo,
-                  processedQty: parseFloat(lo.processedQty),
-                  producedQty: parseFloat(lo.producedQty),
-                  extraCost: parseFloat(lo.extraCost)
+                  processedQty: Number(lo.processedQty),
+                  producedQty: Number(lo.producedQty),
+                  extraCost: Number(lo.extraCost)
                 }))
               };
             }
           }
           return {
             ...o,
-            processedQty: parseFloat(o.processedQty),
-            producedQty: parseFloat(o.producedQty),
-            extraCost: parseFloat(o.extraCost),
+            processedQty: Number(o.processedQty),
+            producedQty: Number(o.producedQty),
+            extraCost: Number(o.extraCost),
             linkedIngredientId: o.linkedIngredientId ?? null,
             linkedIngredient
           };
@@ -77950,9 +77971,9 @@ async function buildDrinkDetail(drinkId) {
         slotStyle: "legacy",
         ingredient: ingredient ? {
           ...ingredient,
-          costPerUnit: parseFloat(ingredient.costPerUnit),
-          stockQuantity: parseFloat(ingredient.stockQuantity),
-          lowStockThreshold: parseFloat(ingredient.lowStockThreshold),
+          costPerUnit: Number(ingredient.costPerUnit),
+          stockQuantity: Number(ingredient.stockQuantity),
+          lowStockThreshold: Number(ingredient.lowStockThreshold),
           options: enrichedOptions
         } : null,
         volumes: [],
@@ -77962,7 +77983,7 @@ async function buildDrinkDetail(drinkId) {
   );
   return {
     ...drink,
-    basePrice: parseFloat(drink.basePrice),
+    basePrice: Number(drink.basePrice),
     slots: slotsWithDetails
   };
 }
@@ -77980,7 +78001,13 @@ async function computeDefaultPrice(drinkId, basePrice) {
     let defaultTypeSelection = typeOptions.find((to) => to.isDefault) ?? typeOptions[0];
     let effectiveTypeId = defaultTypeSelection?.ingredientTypeId ?? slot.ingredientTypeId;
     if (effectiveTypeId) {
-      const globalTypeVolumes = await db.select().from(ingredientTypeVolumesTable).where(eq(ingredientTypeVolumesTable.ingredientTypeId, effectiveTypeId)).orderBy(ingredientTypeVolumesTable.sortOrder);
+      const [ingType] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, effectiveTypeId));
+      if (ingType) {
+        extras += Number(defaultTypeSelection?.extraCost ?? ingType.extraCost ?? 0);
+      }
+    }
+    if (effectiveTypeId) {
+      const globalTypeVolumes = await db.select().from(ingredientTypeVolumesTable).where(and(eq(ingredientTypeVolumesTable.ingredientTypeId, effectiveTypeId), eq(ingredientTypeVolumesTable.isActive, true))).orderBy(ingredientTypeVolumesTable.sortOrder);
       const slotVolumes = await db.select().from(drinkSlotVolumesTable).where(eq(drinkSlotVolumesTable.slotId, slot.id));
       let templateVolumes = [];
       if (slot.predefinedSlotId) {
@@ -77996,7 +78023,7 @@ async function computeDefaultPrice(drinkId, basePrice) {
       if (defaultTv) {
         const sv = slotVolumeMap.get(defaultTv.id);
         const tvDef = templateVolumeMap.get(defaultTv.id);
-        extras += parseFloat(sv?.extraCost ?? tvDef?.extraCost ?? defaultTv.extraCost);
+        extras += Number(sv?.extraCost ?? tvDef?.extraCost ?? defaultTv.extraCost);
       }
     } else if (slot.defaultOptionId) {
       const [option] = await db.select().from(ingredientOptionsTable).where(eq(ingredientOptionsTable.id, slot.defaultOptionId));
@@ -78004,9 +78031,9 @@ async function computeDefaultPrice(drinkId, basePrice) {
         if (option.linkedIngredientId) {
           const linkedOpts = await db.select().from(ingredientOptionsTable).where(eq(ingredientOptionsTable.ingredientId, option.linkedIngredientId)).orderBy(ingredientOptionsTable.sortOrder);
           const subDefault = linkedOpts.find((o) => o.isDefault) ?? linkedOpts[0];
-          if (subDefault) extras += parseFloat(subDefault.extraCost);
+          if (subDefault) extras += Number(subDefault.extraCost);
         } else {
-          extras += parseFloat(option.extraCost);
+          extras += Number(option.extraCost);
         }
       }
     }
@@ -78035,7 +78062,7 @@ router3.get("/drinks", async (req, res) => {
   });
   const drinksWithDefaultPrice = await Promise.all(
     filtered.map(async (d) => {
-      const base = parseFloat(d.basePrice);
+      const base = Number(d.basePrice);
       const defaultPrice = await computeDefaultPrice(d.id, base);
       return { ...d, basePrice: base, defaultPrice };
     })
@@ -78137,7 +78164,7 @@ router3.patch("/drinks/:id", async (req, res) => {
     res.status(404).json({ error: "Drink not found" });
     return;
   }
-  res.json(UpdateDrinkResponse2.parse(serializeDates({ ...drink, basePrice: parseFloat(drink.basePrice) })));
+  res.json(UpdateDrinkResponse2.parse(serializeDates({ ...drink, basePrice: Number(drink.basePrice) })));
 });
 router3.post("/drinks/:id/image", upload.single("image"), async (req, res) => {
   const id = parseInt(req.params.id);
@@ -78219,7 +78246,11 @@ router3.put("/drinks/:id/slots", async (req, res) => {
             slotId: slot.id,
             ingredientTypeId: to.ingredientTypeId,
             isDefault: to.isDefault ?? j === 0,
-            sortOrder: to.sortOrder ?? j
+            sortOrder: to.sortOrder ?? j,
+            processedQty: to.processedQty ?? null,
+            producedQty: to.producedQty ?? null,
+            unit: to.unit ?? null,
+            extraCost: to.extraCost ?? null
           });
           if (Array.isArray(to.slotVolumes)) {
             for (const sv of to.slotVolumes) {
@@ -79267,7 +79298,7 @@ router8.get("/catalog/types/:id", async (req, res) => {
   });
 });
 router8.post("/catalog/types", async (req, res) => {
-  const { categoryId, name, inventoryIngredientId, processedQty, producedQty, unit, isActive, affectsCupSize, sortOrder, color } = req.body;
+  const { categoryId, name, inventoryIngredientId, processedQty, producedQty, unit, isActive, affectsCupSize, sortOrder, color, extraCost } = req.body;
   if (!categoryId || !name) {
     res.status(400).json({ error: "categoryId and name required" });
     return;
@@ -79282,13 +79313,14 @@ router8.post("/catalog/types", async (req, res) => {
     isActive: isActive ?? true,
     affectsCupSize: affectsCupSize ?? true,
     sortOrder: sortOrder ?? 0,
-    color: color ?? null
+    color: color ?? null,
+    extraCost: extraCost ?? "0"
   }).returning();
   res.status(201).json(row);
 });
 router8.patch("/catalog/types/:id", async (req, res) => {
   const id = parseInt(req.params.id);
-  const { categoryId, name, inventoryIngredientId, processedQty, producedQty, unit, isActive, affectsCupSize, sortOrder, color } = req.body;
+  const { categoryId, name, inventoryIngredientId, processedQty, producedQty, unit, isActive, affectsCupSize, sortOrder, color, extraCost } = req.body;
   const patch = {};
   if (categoryId !== void 0) patch.categoryId = categoryId;
   if (name !== void 0) patch.name = name;
@@ -79300,6 +79332,7 @@ router8.patch("/catalog/types/:id", async (req, res) => {
   if (affectsCupSize !== void 0) patch.affectsCupSize = affectsCupSize;
   if (sortOrder !== void 0) patch.sortOrder = sortOrder;
   if (color !== void 0) patch.color = color;
+  if (extraCost !== void 0) patch.extraCost = String(extraCost);
   if (Object.keys(patch).length === 0) {
     res.status(400).json({ error: "No valid fields provided for update" });
     return;
@@ -79362,13 +79395,14 @@ router8.post("/catalog/types/:id/volumes", async (req, res) => {
     unit: unit ?? null,
     extraCost: extraCost ?? "0",
     isDefault: isDefault ?? false,
-    sortOrder: sortOrder ?? 0
+    sortOrder: sortOrder ?? 0,
+    isActive: true
   }).returning();
   res.status(201).json(row);
 });
 router8.patch("/catalog/type-volumes/:id", async (req, res) => {
   const id = parseInt(req.params.id);
-  const { processedQty, producedQty, unit, extraCost, isDefault, sortOrder } = req.body;
+  const { processedQty, producedQty, unit, extraCost, isDefault, sortOrder, isActive } = req.body;
   const patch = {};
   if (processedQty !== void 0) patch.processedQty = processedQty;
   if (producedQty !== void 0) patch.producedQty = producedQty;
@@ -79376,6 +79410,7 @@ router8.patch("/catalog/type-volumes/:id", async (req, res) => {
   if (extraCost !== void 0) patch.extraCost = extraCost;
   if (isDefault !== void 0) patch.isDefault = isDefault;
   if (sortOrder !== void 0) patch.sortOrder = sortOrder;
+  if (isActive !== void 0) patch.isActive = isActive;
   const [row] = await db.update(ingredientTypeVolumesTable).set(patch).where(eq(ingredientTypeVolumesTable.id, id)).returning();
   if (!row) {
     res.status(404).json({ error: "Not found" });
@@ -80213,7 +80248,11 @@ app_default.listen(port, (err) => {
     process.exit(1);
   }
   logger.info({ port }, "Server listening");
-  seedIfEmpty().catch((e) => logger.error({ err: e }, "Seed failed"));
+  seedIfEmpty().then(async () => {
+    const { db: db2, ingredientTypeVolumesTable: ingredientTypeVolumesTable3 } = await Promise.resolve().then(() => (init_src(), src_exports));
+    await db2.update(ingredientTypeVolumesTable3).set({ isActive: true });
+    logger.info("Auto-migration: All ingredient volumes activated.");
+  }).catch((e) => logger.error({ err: e }, "Seed or migration failed"));
 });
 /*! Bundled license information:
 

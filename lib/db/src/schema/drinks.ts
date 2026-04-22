@@ -68,6 +68,11 @@ export const drinkSlotTypeOptionsTable = pgTable("drink_slot_type_options", {
   ingredientTypeId: integer("ingredient_type_id").notNull().references(() => ingredientTypesTable.id, { onDelete: "cascade" }),
   isDefault: boolean("is_default").notNull().default(false),
   sortOrder: integer("sort_order").notNull().default(0),
+  // Per-drink overrides for the type itself (when no volume selected)
+  processedQty: numeric("processed_qty", { precision: 10, scale: 4 }),
+  producedQty: numeric("produced_qty", { precision: 10, scale: 4 }),
+  unit: text("unit"),
+  extraCost: numeric("extra_cost", { precision: 8, scale: 4 }),
 });
 
 /**
@@ -106,6 +111,10 @@ export const predefinedSlotTypeOptionsTable = pgTable("predefined_slot_type_opti
   ingredientTypeId: integer("ingredient_type_id").notNull().references(() => ingredientTypesTable.id, { onDelete: "cascade" }),
   isDefault: boolean("is_default").notNull().default(false),
   sortOrder: integer("sort_order").notNull().default(0),
+  processedQty: numeric("processed_qty", { precision: 10, scale: 4 }),
+  producedQty: numeric("produced_qty", { precision: 10, scale: 4 }),
+  unit: text("unit"),
+  extraCost: numeric("extra_cost", { precision: 8, scale: 4 }),
 });
 
 export const predefinedSlotVolumesTable = pgTable("predefined_slot_volumes", {

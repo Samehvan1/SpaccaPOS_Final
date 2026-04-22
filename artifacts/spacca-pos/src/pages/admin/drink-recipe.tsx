@@ -35,6 +35,11 @@ type SlotTypeOptionDraft = {
   sortOrder: number;
   slotVolumes: SlotVolumeDraft[];
   expanded: boolean;
+  // Overrides for the type itself
+  processedQty: string;
+  producedQty: string;
+  unit: string;
+  extraCost: string;
 };
 
 type SlotDraft = {
@@ -58,11 +63,12 @@ type SlotDraft = {
 type Category = { id: number; name: string; sortOrder: number };
 type IngType = {
   id: number; categoryId: number; name: string; isActive: boolean;
+  processedQty: string; producedQty: string; unit: string; extraCost: string;
   category?: { id: number; name: string } | null;
 };
 type TypeVolume = {
   id: number; volumeId: number; processedQty: string | null; producedQty: string | null;
-  unit: string | null; extraCost: string; isDefault: boolean;
+  unit: string | null; extraCost: string; isDefault: boolean; isActive: boolean;
   volume?: { id: number; name: string; processedQty: string; producedQty: string; unit: string } | null;
 };
 
@@ -173,6 +179,10 @@ export default function DrinkRecipe() {
             isDefault: v.isDefault ?? false,
             isEnabled: v.isEnabled ?? true,
           })),
+          processedQty: String(to.processedQty ?? 0),
+          producedQty: String(to.producedQty ?? 0),
+          unit: to.unit ?? "ml",
+          extraCost: String(to.extraCost ?? 0),
         }));
         return {
           key: newKey(), style: "typed" as SlotStyle,
@@ -258,6 +268,10 @@ export default function DrinkRecipe() {
         sortOrder: to.sortOrder,
         expanded: false,
         slotVolumes,
+        processedQty: String(to.processedQty ?? ingredientType?.processedQty ?? 0),
+        producedQty: String(to.producedQty ?? ingredientType?.producedQty ?? 0),
+        unit: to.unit ?? ingredientType?.unit ?? "ml",
+        extraCost: String(to.extraCost ?? ingredientType?.extraCost ?? 0),
       };
     }));
 
@@ -315,6 +329,10 @@ export default function DrinkRecipe() {
           isDefault: to.isDefault,
           sortOrder: to.sortOrder,
           slotVolumes: syncedVolumes, // Refresh volumes from template
+          processedQty: String(to.processedQty ?? ingredientType?.processedQty ?? 0),
+          producedQty: String(to.producedQty ?? ingredientType?.producedQty ?? 0),
+          unit: to.unit ?? ingredientType?.unit ?? "ml",
+          extraCost: String(to.extraCost ?? ingredientType?.extraCost ?? 0),
         });
       } else {
         // Add new option from template
@@ -327,6 +345,10 @@ export default function DrinkRecipe() {
           sortOrder: to.sortOrder,
           expanded: true,
           slotVolumes: syncedVolumes,
+          processedQty: String(to.processedQty ?? ingredientType?.processedQty ?? 0),
+          producedQty: String(to.producedQty ?? ingredientType?.producedQty ?? 0),
+          unit: to.unit ?? ingredientType?.unit ?? "ml",
+          extraCost: String(to.extraCost ?? ingredientType?.extraCost ?? 0),
         });
       }
     }
@@ -394,6 +416,10 @@ export default function DrinkRecipe() {
         sortOrder: s.typeOptions.length,
         expanded: true,
         slotVolumes: makeVolumeDrafts(vols),
+        processedQty: String(type?.processedQty ?? 0),
+        producedQty: String(type?.producedQty ?? 0),
+        unit: type?.unit ?? "ml",
+        extraCost: String(type?.extraCost ?? 0),
       };
       return { ...s, typeOptions: [...s.typeOptions, newOpt] };
     }));
@@ -478,6 +504,10 @@ export default function DrinkRecipe() {
                 isDefault: v.isDefault,
                 isEnabled: v.isEnabled,
               })),
+              processedQty: to.processedQty !== "" ? to.processedQty : null,
+              producedQty: to.producedQty !== "" ? to.producedQty : null,
+              unit: to.unit !== "" ? to.unit : null,
+              extraCost: to.extraCost !== "" ? to.extraCost : null,
             })),
           };
         }
@@ -827,6 +857,66 @@ export default function DrinkRecipe() {
                                   >
                                     <Trash2 className="h-3.5 w-3.5" />
                                   </Button>
+                                </div>
+                              </div>
+
+                              {/* Base Type Overrides */}
+                              <div className="px-3 py-2 border-b bg-primary/5 grid grid-cols-4 gap-2">
+                                <div className="grid gap-1">
+                                  <Label className="text-[10px] uppercase font-bold text-muted-foreground">Base Proc.</Label>
+                                  <Input 
+                                    type="number" step="0.1" className="h-7 text-xs" 
+                                    value={to.processedQty} 
+                                    onChange={e => {
+                                      const val = e.target.value;
+                                      setSlots(prev => prev.map(s => s.key === slot.key ? {
+                                        ...s, typeOptions: s.typeOptions.map(o => o.key === to.key ? { ...o, processedQty: val } : o)
+                                      } : s));
+                                      mark();
+                                    }} 
+                                  />
+                                </div>
+                                <div className="grid gap-1">
+                                  <Label className="text-[10px] uppercase font-bold text-muted-foreground">Base Prod.</Label>
+                                  <Input 
+                                    type="number" step="0.1" className="h-7 text-xs" 
+                                    value={to.producedQty} 
+                                    onChange={e => {
+                                      const val = e.target.value;
+                                      setSlots(prev => prev.map(s => s.key === slot.key ? {
+                                        ...s, typeOptions: s.typeOptions.map(o => o.key === to.key ? { ...o, producedQty: val } : o)
+                                      } : s));
+                                      mark();
+                                    }} 
+                                  />
+                                </div>
+                                <div className="grid gap-1">
+                                  <Label className="text-[10px] uppercase font-bold text-muted-foreground">Unit</Label>
+                                  <Input 
+                                    className="h-7 text-xs" 
+                                    value={to.unit} 
+                                    onChange={e => {
+                                      const val = e.target.value;
+                                      setSlots(prev => prev.map(s => s.key === slot.key ? {
+                                        ...s, typeOptions: s.typeOptions.map(o => o.key === to.key ? { ...o, unit: val } : o)
+                                      } : s));
+                                      mark();
+                                    }} 
+                                  />
+                                </div>
+                                <div className="grid gap-1">
+                                  <Label className="text-[10px] uppercase font-bold text-muted-foreground">Base Extra Cost</Label>
+                                  <Input 
+                                    type="number" step="0.01" className="h-7 text-xs" 
+                                    value={to.extraCost} 
+                                    onChange={e => {
+                                      const val = e.target.value;
+                                      setSlots(prev => prev.map(s => s.key === slot.key ? {
+                                        ...s, typeOptions: s.typeOptions.map(o => o.key === to.key ? { ...o, extraCost: val } : o)
+                                      } : s));
+                                      mark();
+                                    }} 
+                                  />
                                 </div>
                               </div>
 

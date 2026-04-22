@@ -67,7 +67,7 @@ async function buildDrinkDetail(drinkId: number) {
     const [[typeDef], typeVolumes] = await Promise.all([
       db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, typeId)),
       db.select().from(ingredientTypeVolumesTable)
-        .where(eq(ingredientTypeVolumesTable.ingredientTypeId, typeId))
+        .where(and(eq(ingredientTypeVolumesTable.ingredientTypeId, typeId), eq(ingredientTypeVolumesTable.isActive, true)))
         .orderBy(ingredientTypeVolumesTable.sortOrder)
     ]);
 
@@ -88,10 +88,10 @@ async function buildDrinkDetail(drinkId: number) {
         id: tv.id,
         volumeId: tv.volumeId,
         volumeName: vol?.name ?? "",
-        processedQty: parseFloat(override?.processedQty ?? tv.processedQty ?? vol?.processedQty ?? "0"),
-        producedQty: parseFloat(override?.producedQty ?? tv.producedQty ?? vol?.producedQty ?? "0"),
+        processedQty: Number(override?.processedQty ?? tv.processedQty ?? vol?.processedQty ?? 0),
+        producedQty: Number(override?.producedQty ?? tv.producedQty ?? vol?.producedQty ?? 0),
         unit: override?.unit ?? tv.unit ?? vol?.unit ?? "ml",
-        extraCost: parseFloat(override?.extraCost ?? tv.extraCost),
+        extraCost: Number(override?.extraCost ?? tv.extraCost),
         isDefault: override?.isDefault ?? tv.isDefault,
         isEnabled: override?.isEnabled ?? true,
         sortOrder: override?.sortOrder ?? tv.sortOrder,
@@ -157,7 +157,7 @@ async function buildDrinkDetail(drinkId: number) {
               
             // Volumes: merge slot-level overrides with template-level defaults or global type defaults
             const globalTypeVolumes = await db.select().from(ingredientTypeVolumesTable)
-              .where(eq(ingredientTypeVolumesTable.ingredientTypeId, to.ingredientTypeId))
+              .where(and(eq(ingredientTypeVolumesTable.ingredientTypeId, to.ingredientTypeId), eq(ingredientTypeVolumesTable.isActive, true)))
               .orderBy(ingredientTypeVolumesTable.sortOrder);
               
             const [typeDef] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, to.ingredientTypeId));
@@ -178,10 +178,10 @@ async function buildDrinkDetail(drinkId: number) {
                 id: tv.id,
                 volumeId: tv.volumeId,
                 volumeName: vol?.name ?? "",
-                processedQty: parseFloat(override?.processedQty ?? templateDef?.processedQty ?? tv.processedQty ?? vol?.processedQty ?? "0"),
-                producedQty: parseFloat(override?.producedQty ?? templateDef?.producedQty ?? tv.producedQty ?? vol?.producedQty ?? "0"),
+                processedQty: Number(override?.processedQty ?? templateDef?.processedQty ?? tv.processedQty ?? vol?.processedQty ?? 0),
+                producedQty: Number(override?.producedQty ?? templateDef?.producedQty ?? tv.producedQty ?? vol?.producedQty ?? 0),
                 unit: override?.unit ?? templateDef?.unit ?? tv.unit ?? vol?.unit ?? "ml",
-                extraCost: parseFloat(override?.extraCost ?? templateDef?.extraCost ?? tv.extraCost),
+                extraCost: Number(override?.extraCost ?? templateDef?.extraCost ?? tv.extraCost),
                 isDefault: override?.isDefault ?? templateDef?.isDefault ?? tv.isDefault,
                 isEnabled: override?.isEnabled ?? templateDef?.isEnabled ?? true,
                 sortOrder: override?.sortOrder ?? templateDef?.sortOrder ?? tv.sortOrder,
@@ -197,6 +197,11 @@ async function buildDrinkDetail(drinkId: number) {
               categoryName: category?.name ?? "",
               isDefault: to.isDefault,
               sortOrder: to.sortOrder,
+              // Base type overrides
+              processedQty: Number(to.processedQty ?? ingType?.processedQty ?? 0),
+              producedQty: Number(to.producedQty ?? ingType?.producedQty ?? 0),
+              unit: to.unit ?? ingType?.unit ?? "ml",
+              extraCost: Number(to.extraCost ?? ingType?.extraCost ?? 0),
               volumes,
             };
           })
@@ -239,18 +244,18 @@ async function buildDrinkDetail(drinkId: number) {
                 name: linked.name,
                 options: linkedOpts.map((lo) => ({
                   ...lo,
-                  processedQty: parseFloat(lo.processedQty),
-                  producedQty: parseFloat(lo.producedQty),
-                  extraCost: parseFloat(lo.extraCost),
+                  processedQty: Number(lo.processedQty),
+                  producedQty: Number(lo.producedQty),
+                  extraCost: Number(lo.extraCost),
                 })),
               };
             }
           }
           return {
             ...o,
-            processedQty: parseFloat(o.processedQty),
-            producedQty: parseFloat(o.producedQty),
-            extraCost: parseFloat(o.extraCost),
+            processedQty: Number(o.processedQty),
+            producedQty: Number(o.producedQty),
+            extraCost: Number(o.extraCost),
             linkedIngredientId: o.linkedIngredientId ?? null,
             linkedIngredient,
           };
@@ -262,9 +267,9 @@ async function buildDrinkDetail(drinkId: number) {
         slotStyle: "legacy" as const,
         ingredient: ingredient ? {
           ...ingredient,
-          costPerUnit: parseFloat(ingredient.costPerUnit),
-          stockQuantity: parseFloat(ingredient.stockQuantity),
-          lowStockThreshold: parseFloat(ingredient.lowStockThreshold),
+          costPerUnit: Number(ingredient.costPerUnit),
+          stockQuantity: Number(ingredient.stockQuantity),
+          lowStockThreshold: Number(ingredient.lowStockThreshold),
           options: enrichedOptions,
         } : null,
         volumes: [],
@@ -275,7 +280,7 @@ async function buildDrinkDetail(drinkId: number) {
 
   return {
     ...drink,
-    basePrice: parseFloat(drink.basePrice),
+    basePrice: Number(drink.basePrice),
     slots: slotsWithDetails,
   };
 }
@@ -305,10 +310,18 @@ async function computeDefaultPrice(drinkId: number, basePrice: number): Promise<
     let defaultTypeSelection = typeOptions.find(to => to.isDefault) ?? typeOptions[0];
     let effectiveTypeId = defaultTypeSelection?.ingredientTypeId ?? slot.ingredientTypeId;
 
+    // Add type-level extra cost if applicable
+    if (effectiveTypeId) {
+      const [ingType] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, effectiveTypeId));
+      if (ingType) {
+        extras += Number(defaultTypeSelection?.extraCost ?? ingType.extraCost ?? 0);
+      }
+    }
+
     // 2. Resolve Volume/Cost
     if (effectiveTypeId) {
       const globalTypeVolumes = await db.select().from(ingredientTypeVolumesTable)
-        .where(eq(ingredientTypeVolumesTable.ingredientTypeId, effectiveTypeId))
+        .where(and(eq(ingredientTypeVolumesTable.ingredientTypeId, effectiveTypeId), eq(ingredientTypeVolumesTable.isActive, true)))
         .orderBy(ingredientTypeVolumesTable.sortOrder);
       
       const slotVolumes = await db.select().from(drinkSlotVolumesTable).where(eq(drinkSlotVolumesTable.slotId, slot.id));
@@ -331,7 +344,7 @@ async function computeDefaultPrice(drinkId: number, basePrice: number): Promise<
       if (defaultTv) {
         const sv = slotVolumeMap.get(defaultTv.id);
         const tvDef = templateVolumeMap.get(defaultTv.id);
-        extras += parseFloat(sv?.extraCost ?? tvDef?.extraCost ?? defaultTv.extraCost);
+        extras += Number(sv?.extraCost ?? tvDef?.extraCost ?? defaultTv.extraCost);
       }
     } 
     // Legacy support (old-style slots)
@@ -343,9 +356,9 @@ async function computeDefaultPrice(drinkId: number, basePrice: number): Promise<
             .where(eq(ingredientOptionsTable.ingredientId, option.linkedIngredientId))
             .orderBy(ingredientOptionsTable.sortOrder);
           const subDefault = linkedOpts.find((o) => o.isDefault) ?? linkedOpts[0];
-          if (subDefault) extras += parseFloat(subDefault.extraCost);
+          if (subDefault) extras += Number(subDefault.extraCost);
         } else {
-          extras += parseFloat(option.extraCost);
+          extras += Number(option.extraCost);
         }
       }
     }
@@ -384,7 +397,7 @@ router.get("/drinks", async (req, res): Promise<void> => {
 
   const drinksWithDefaultPrice = await Promise.all(
     filtered.map(async (d) => {
-      const base = parseFloat(d.basePrice);
+      const base = Number(d.basePrice);
       const defaultPrice = await computeDefaultPrice(d.id, base);
       return { ...d, basePrice: base, defaultPrice };
     })
@@ -505,7 +518,7 @@ router.patch("/drinks/:id", async (req, res): Promise<void> => {
   const [drink] = await db.update(drinksTable).set(updateData).where(eq(drinksTable.id, params.data.id)).returning();
   if (!drink) { res.status(404).json({ error: "Drink not found" }); return; }
 
-  res.json(UpdateDrinkResponse.parse(serializeDates({ ...drink, basePrice: parseFloat(drink.basePrice) })));
+  res.json(UpdateDrinkResponse.parse(serializeDates({ ...drink, basePrice: Number(drink.basePrice) })));
 });
 
 // POST /drinks/:id/image — upload a drink image
@@ -603,6 +616,10 @@ router.put("/drinks/:id/slots", async (req, res): Promise<void> => {
             ingredientTypeId: to.ingredientTypeId,
             isDefault: to.isDefault ?? j === 0,
             sortOrder: to.sortOrder ?? j,
+            processedQty: to.processedQty ?? null,
+            producedQty: to.producedQty ?? null,
+            unit: to.unit ?? null,
+            extraCost: to.extraCost ?? null,
           });
           // Volume overrides per type option (all keyed by slotId + typeVolumeId)
           if (Array.isArray(to.slotVolumes)) {

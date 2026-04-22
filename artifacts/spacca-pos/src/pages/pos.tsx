@@ -667,10 +667,13 @@ export default function PosTerminal() {
                     const multiType = typeOptions.length > 1;
 
                     return (
-                      <div key={slot.id} className="space-y-2">
-                        <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground block">
-                          {slot.slotLabel}
-                        </Label>
+                      <div key={slot.id} className="space-y-3 p-3 rounded-xl border-2 border-primary/15 bg-muted/10 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.1)] dark:bg-muted/5">
+                        <div className="flex items-center gap-2">
+                          <Label className="text-[11px] font-black uppercase tracking-[0.15em] text-primary/70 block">
+                            {slot.slotLabel}
+                          </Label>
+                          <div className="flex-1 h-px bg-gradient-to-r from-primary/10 to-transparent" />
+                        </div>
 
                         {/* Level 1: Type option buttons (only shown if more than one type) */}
                         {multiType && (
@@ -742,10 +745,13 @@ export default function PosTerminal() {
                   const subOptions: any[] = selectedTypeOpt?.linkedIngredient?.options ?? [];
 
                   return (
-                    <div key={slot.id}>
-                      <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2 block">
-                        {slot.slotLabel}
-                      </Label>
+                    <div key={slot.id} className="space-y-3 p-3 rounded-xl border-2 border-primary/15 bg-muted/10 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.1)] dark:bg-muted/5">
+                      <div className="flex items-center gap-2">
+                        <Label className="text-[11px] font-black uppercase tracking-[0.15em] text-primary/70 block">
+                          {slot.slotLabel}
+                        </Label>
+                        <div className="flex-1 h-px bg-gradient-to-r from-primary/10 to-transparent" />
+                      </div>
 
                       {/* Type picker (or regular option picker) */}
                       <div className="grid grid-cols-3 gap-1">

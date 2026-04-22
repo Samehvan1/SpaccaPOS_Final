@@ -61,6 +61,7 @@ export const ingredientTypesTable = pgTable("ingredient_types", {
   affectsCupSize: boolean("affects_cup_size").notNull().default(true),
   sortOrder: integer("sort_order").notNull().default(0),
   color: text("color"),
+  extraCost: numeric("extra_cost", { precision: 8, scale: 4 }).notNull().default("0"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -94,6 +95,7 @@ export const ingredientTypeVolumesTable = pgTable("ingredient_type_volumes", {
   extraCost: numeric("extra_cost", { precision: 8, scale: 4 }).notNull().default("0"),
   isDefault: boolean("is_default").notNull().default(false),
   sortOrder: integer("sort_order").notNull().default(0),
+  isActive: boolean("is_active").notNull().default(true),
 });
 
 // ── Zod / type exports ─────────────────────────────────────────────────────

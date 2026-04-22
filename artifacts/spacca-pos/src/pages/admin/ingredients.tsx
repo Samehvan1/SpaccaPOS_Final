@@ -31,7 +31,7 @@ type IngredientOption = {
 type Category = { id: number; name: string; sortOrder: number };
 type IngType = {
   id: number; categoryId: number; name: string; inventoryIngredientId: number | null;
-  processedQty: string; producedQty: string; unit: string;
+  processedQty: string; producedQty: string; unit: string; extraCost: string;
   isActive: boolean; affectsCupSize: boolean; sortOrder: number; 
   color: string | null;
   category?: Category | null; inventoryIngredient?: { id: number; name: string; unit: string } | null;
@@ -48,6 +48,7 @@ type TypeVolume = {
   extraCost: string;
   isDefault: boolean;
   sortOrder: number;
+  isActive: boolean;
   volume?: Volume | null;
 };
 type DrinkOverride = {
@@ -183,6 +184,7 @@ function TypesTab({ inventoryItems }: { inventoryItems: Ingredient[] }) {
   const [affectsCupSize, setAffectsCupSize] = useState(true);
   const [processedQty, setProcessedQty] = useState("0");
   const [producedQty, setProducedQty] = useState("0");
+  const [extraCost, setExtraCost] = useState("0");
   const [color, setColor] = useState("#000000");
   const [saving, setSaving] = useState(false);
 
@@ -196,6 +198,7 @@ function TypesTab({ inventoryItems }: { inventoryItems: Ingredient[] }) {
   const [addingProcessedQty, setAddingProcessedQty] = useState("0");
   const [addingProducedQty, setAddingProducedQty] = useState("0");
   const [addingIsDefault, setAddingIsDefault] = useState(false);
+  const [showInactiveVols, setShowInactiveVols] = useState(false);
 
   const [editingExtraCost, setEditingExtraCost] = useState("0");
   const [editingTypeVolId, setEditingTypeVolId] = useState<number | null>(null);
@@ -224,7 +227,7 @@ function TypesTab({ inventoryItems }: { inventoryItems: Ingredient[] }) {
 
   const openAdd = () => { 
     setEditId(null); setName(""); setCategoryId(""); setInventoryIngId("none"); 
-    setProcessedQty("0"); setProducedQty("0"); setUnit("ml");
+    setProcessedQty("0"); setProducedQty("0"); setUnit("ml"); setExtraCost("0");
     setIsActive(true); setAffectsCupSize(true); setColor("#000000"); setShowForm(true); 
   };
   const openEdit = (t: IngType) => {
@@ -233,6 +236,7 @@ function TypesTab({ inventoryItems }: { inventoryItems: Ingredient[] }) {
     setProcessedQty(t.processedQty ?? "0");
     setProducedQty(t.producedQty ?? "0");
     setUnit(t.unit ?? "ml");
+    setExtraCost(t.extraCost ?? "0");
     setIsActive(t.isActive); setAffectsCupSize(t.affectsCupSize ?? true);
     setColor(t.color ?? "#000000");
     setShowForm(true);
@@ -245,7 +249,7 @@ function TypesTab({ inventoryItems }: { inventoryItems: Ingredient[] }) {
       const payload = {
         name: name.trim(), categoryId: parseInt(categoryId),
         inventoryIngredientId: inventoryIngId !== "none" ? parseInt(inventoryIngId) : null,
-        processedQty, producedQty, unit: unit || "ml",
+        processedQty, producedQty, unit: unit || "ml", extraCost,
         isActive, affectsCupSize, color
       };
       if (editId) {
@@ -332,12 +336,26 @@ function TypesTab({ inventoryItems }: { inventoryItems: Ingredient[] }) {
   };
 
   const handleDeleteTypeVolume = async (tvId: number) => {
-    if (!confirm("Remove this volume from this type?")) return;
+    if (!confirm("Remove this volume from this type? It will be hidden from new orders.")) return;
     try {
-      await api(`/api/catalog/type-volumes/${tvId}`, { method: "DELETE" });
+      await api(`/api/catalog/type-volumes/${tvId}`, { 
+        method: "PATCH",
+        body: JSON.stringify({ isActive: false })
+      });
       loadTypeVolumes(volTypeId!);
-      toast({ title: "Volume removed" });
-    } catch { toast({ variant: "destructive", title: "Failed to remove volume" }); }
+      toast({ title: "Volume deactivated" });
+    } catch { toast({ variant: "destructive", title: "Failed to deactivate volume" }); }
+  };
+
+  const handleReactivateTypeVolume = async (tvId: number) => {
+    try {
+      await api(`/api/catalog/type-volumes/${tvId}`, { 
+        method: "PATCH",
+        body: JSON.stringify({ isActive: true })
+      });
+      loadTypeVolumes(volTypeId!);
+      toast({ title: "Volume reactivated" });
+    } catch { toast({ variant: "destructive", title: "Failed to reactivate volume" }); }
   };
 
   const handleSyncDrink = async (drinkId: number) => {
@@ -510,7 +528,7 @@ function TypesTab({ inventoryItems }: { inventoryItems: Ingredient[] }) {
                 </SelectContent>
               </Select>
             </div>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-4 gap-3">
               <div className="grid gap-1.5">
                 <Label className="text-xs">Processed Qty</Label>
                 <Input type="number" step="0.1" value={processedQty} onChange={e => setProcessedQty(e.target.value)} />
@@ -522,6 +540,10 @@ function TypesTab({ inventoryItems }: { inventoryItems: Ingredient[] }) {
               <div className="grid gap-1.5">
                 <Label className="text-xs">Unit</Label>
                 <Input value={unit} onChange={e => setUnit(e.target.value)} placeholder="ml, g" />
+              </div>
+              <div className="grid gap-1.5">
+                <Label className="text-xs">Extra Cost</Label>
+                <Input type="number" step="0.01" value={extraCost} onChange={e => setExtraCost(e.target.value)} />
               </div>
             </div>
             <p className="text-xs text-muted-foreground">Base quantities to use if no volume is selected in the recipe.</p>
@@ -553,7 +575,19 @@ function TypesTab({ inventoryItems }: { inventoryItems: Ingredient[] }) {
             <DialogTitle>Volumes — {volTypeName}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
-            <p className="text-xs text-muted-foreground">Add the volumes available for this ingredient type, with extra cost and default flag.</p>
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-muted-foreground">Add the volumes available for this ingredient type, with extra cost and default flag.</p>
+              <div className="flex items-center gap-2">
+                <Switch 
+                  id="show-inactive-vols" 
+                  checked={showInactiveVols} 
+                  onCheckedChange={setShowInactiveVols} 
+                />
+                <Label htmlFor="show-inactive-vols" className="text-[10px] font-bold uppercase cursor-pointer">
+                  Show Deactivated
+                </Label>
+              </div>
+            </div>
 
             {loadingTypeVols ? (
               <div className="text-sm text-center py-4 text-muted-foreground">Loading…</div>
@@ -561,8 +595,9 @@ function TypesTab({ inventoryItems }: { inventoryItems: Ingredient[] }) {
               <div className="border border-dashed rounded-md p-4 text-center text-sm text-muted-foreground">No volumes yet.</div>
             ) : (
               <div className="border rounded-md divide-y">
-                {typeVolumes.filter(tv => tv && tv.id).map(tv => {
+                {typeVolumes.filter(tv => tv && tv.id && (tv.isActive || showInactiveVols)).map(tv => {
                   const isEditing = editingTypeVolId === tv.id;
+                  const isInactive = !tv.isActive;
                   return (
                     <div key={tv.id} className="flex flex-col px-3 py-2.5 bg-card">
                       <div className="flex items-center gap-3">
@@ -606,11 +641,11 @@ function TypesTab({ inventoryItems }: { inventoryItems: Ingredient[] }) {
                                 {tv.isDefault ? <Star className="h-4 w-4 fill-primary text-primary" /> : <StarOff className="h-4 w-4" />}
                               </button>
                               <button
-                                title="Remove"
-                                className="text-muted-foreground hover:text-destructive transition-colors p-1"
-                                onClick={() => handleDeleteTypeVolume(tv.id)}
+                                title={isInactive ? "Reactivate" : "Deactivate"}
+                                className={`transition-colors p-1 ${isInactive ? "text-green-600 hover:text-green-700" : "text-muted-foreground hover:text-destructive"}`}
+                                onClick={() => isInactive ? handleReactivateTypeVolume(tv.id) : handleDeleteTypeVolume(tv.id)}
                               >
-                                <Trash2 className="h-4 w-4" />
+                                {isInactive ? <RefreshCw className="h-4 w-4" /> : <Trash2 className="h-4 w-4" />}
                               </button>
                             </>
                           )}
