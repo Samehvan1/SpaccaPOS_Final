@@ -92,11 +92,11 @@ export async function calculateDrinkData(drinkId: number, selections: any[]) {
         ? await db.select().from(predefinedSlotVolumesTable).where(and(eq(predefinedSlotVolumesTable.predefinedSlotId, slot.predefinedSlotId), eq(predefinedSlotVolumesTable.typeVolumeId, sel.typeVolumeId)))
         : [null];
 
-      const extraCost = parseFloat(slotVol?.extraCost ?? templateDef?.extraCost ?? typeVol.extraCost);
+      const extraCost = parseFloat(slotVol?.extraCost ?? templateDef?.extraCost ?? typeVol.extraCost) || 0;
       totalExtras += extraCost;
 
-      const consumedQty = parseFloat(slotVol?.processedQty ?? templateDef?.processedQty ?? typeVol.processedQty ?? volDef?.processedQty ?? "0");
-      const producedQty = parseFloat(slotVol?.producedQty ?? templateDef?.producedQty ?? typeVol.producedQty ?? volDef?.producedQty ?? "0");
+      const consumedQty = parseFloat(slotVol?.processedQty ?? templateDef?.processedQty ?? typeVol.processedQty ?? volDef?.processedQty ?? "0") || 0;
+      const producedQty = parseFloat(slotVol?.producedQty ?? templateDef?.producedQty ?? typeVol.producedQty ?? volDef?.producedQty ?? "0") || 0;
       
       const shouldCount = slot.affectsCupSize ?? typeDef?.affectsCupSize ?? true;
       if (shouldCount) {
@@ -106,10 +106,10 @@ export async function calculateDrinkData(drinkId: number, selections: any[]) {
       const optionLabel = typeName && volumeName ? `${typeName} · ${volumeName}` : typeName || volumeName || "Catalog Item";
 
       customizations.push({
-        ingredientId: inventoryId,
+        ingredientId: inventoryId ? Number(inventoryId) : null,
         optionId: null,
-        typeVolumeId: sel.typeVolumeId,
-        ingredientTypeId: typeVol.ingredientTypeId,
+        typeVolumeId: sel.typeVolumeId ? Number(sel.typeVolumeId) : null,
+        ingredientTypeId: typeVol.ingredientTypeId ? Number(typeVol.ingredientTypeId) : null,
         consumedQty,
         producedQty,
         color: typeDef?.color ?? null,
@@ -126,8 +126,8 @@ export async function calculateDrinkData(drinkId: number, selections: any[]) {
     if (sel.ingredientTypeId) {
       const [ingType] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, sel.ingredientTypeId));
       if (ingType) {
-        const consumedQty = parseFloat(ingType.processedQty ?? "0");
-        const producedQty = parseFloat(ingType.producedQty ?? "0");
+        const consumedQty = parseFloat(ingType.processedQty ?? "0") || 0;
+        const producedQty = parseFloat(ingType.producedQty ?? "0") || 0;
         
         const shouldCount = slot.affectsCupSize ?? ingType.affectsCupSize ?? true;
         if (shouldCount) {
@@ -164,19 +164,19 @@ export async function calculateDrinkData(drinkId: number, selections: any[]) {
     if (option.linkedIngredientId && selection.subOptionId) {
       const [subOption] = await db.select().from(ingredientOptionsTable).where(eq(ingredientOptionsTable.id, selection.subOptionId));
       if (subOption) {
-        const extraCost = parseFloat(subOption.extraCost);
+        const extraCost = parseFloat(subOption.extraCost) || 0;
         totalExtras += extraCost;
         const shouldCount = slot.affectsCupSize ?? true;
         if (shouldCount) {
-          usedVolumeMl += parseFloat(subOption.producedQty);
+          usedVolumeMl += parseFloat(subOption.producedQty) || 0;
         }
         customizations.push({
           ingredientId: option.linkedIngredientId,
           optionId: selection.subOptionId,
           typeVolumeId: null,
           ingredientTypeId: null,
-          consumedQty: parseFloat(subOption.processedQty),
-          producedQty: parseFloat(subOption.producedQty),
+          consumedQty: parseFloat(subOption.processedQty) || 0,
+          producedQty: parseFloat(subOption.producedQty) || 0,
           color: null,
           addedCost: extraCost,
           slotLabel: slot.slotLabel,
@@ -188,19 +188,19 @@ export async function calculateDrinkData(drinkId: number, selections: any[]) {
       continue;
     }
 
-    const extraCost = parseFloat(option.extraCost);
+    const extraCost = parseFloat(option.extraCost) || 0;
     totalExtras += extraCost;
     const shouldCount = slot.affectsCupSize ?? true;
     if (shouldCount) {
-      usedVolumeMl += parseFloat(option.producedQty);
+      usedVolumeMl += parseFloat(option.producedQty) || 0;
     }
     customizations.push({
       ingredientId: selection.ingredientId ?? slot.ingredientId ?? null,
       optionId: selection.optionId,
       typeVolumeId: null,
       ingredientTypeId: null,
-      consumedQty: parseFloat(option.processedQty),
-      producedQty: parseFloat(option.producedQty),
+      consumedQty: parseFloat(option.processedQty) || 0,
+      producedQty: parseFloat(option.producedQty) || 0,
       color: null,
       addedCost: extraCost,
       slotLabel: slot.slotLabel,
@@ -240,12 +240,12 @@ export async function calculateDrinkData(drinkId: number, selections: any[]) {
         const [ingredientType] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, effectiveTypeId));
 
         // Try to fetch a type volume just to check for custom conversion rates, if none, default to 1:1
-        let typeVolumeId = dynamicSelection?.typeVolumeId;
-        if (!typeVolumeId) {
+        let typeVolumeId = dynamicSelection?.typeVolumeId ? Number(dynamicSelection.typeVolumeId) : null;
+        if (!typeVolumeId || isNaN(typeVolumeId)) {
           const typeVolumes = await db.select().from(ingredientTypeVolumesTable)
             .where(eq(ingredientTypeVolumesTable.ingredientTypeId, effectiveTypeId));
           const defVol = typeVolumes.find(tv => tv.isDefault) ?? typeVolumes[0];
-          typeVolumeId = defVol?.id;
+          typeVolumeId = defVol?.id ?? null;
         }
 
         const [slotVol] = await db.select().from(drinkSlotVolumesTable)
@@ -265,8 +265,8 @@ export async function calculateDrinkData(drinkId: number, selections: any[]) {
           const [volDef] = typeVolume?.volumeId ? await db.select().from(ingredientVolumesTable).where(eq(ingredientVolumesTable.id, typeVolume.volumeId)) : [null];
           
           if (typeVolume) {
-            const processedQty = parseFloat(slotVol?.processedQty ?? templateDef?.processedQty ?? typeVolume.processedQty ?? volDef?.processedQty ?? "0");
-            const producedQty = parseFloat(slotVol?.producedQty ?? templateDef?.producedQty ?? typeVolume.producedQty ?? volDef?.producedQty ?? "0");
+            const processedQty = parseFloat(slotVol?.processedQty ?? templateDef?.processedQty ?? typeVolume.processedQty ?? volDef?.processedQty ?? "0") || 0;
+            const producedQty = parseFloat(slotVol?.producedQty ?? templateDef?.producedQty ?? typeVolume.producedQty ?? volDef?.producedQty ?? "0") || 0;
             conversionRate = producedQty > 0 ? processedQty / producedQty : 1;
             unit = slotVol?.unit ?? templateDef?.unit ?? typeVolume.unit ?? volDef?.unit ?? "ml";
           }
@@ -290,10 +290,10 @@ export async function calculateDrinkData(drinkId: number, selections: any[]) {
         dynamicInfo = { slotLabel: dynamicSlot.slotLabel, ingredientName, filledMl, cost };
         
         customizations.push({
-          ingredientId: inventoryId,
+          ingredientId: inventoryId ? Number(inventoryId) : null,
           optionId: null,
-          typeVolumeId: typeVolumeId ?? null,
-          ingredientTypeId: effectiveTypeId,
+          typeVolumeId: typeVolumeId ? Number(typeVolumeId) : null,
+          ingredientTypeId: effectiveTypeId ? Number(effectiveTypeId) : null,
           consumedQty,
           producedQty: filledMl,
           color: ingredientType?.color ?? null,
@@ -318,8 +318,8 @@ export async function calculateDrinkData(drinkId: number, selections: any[]) {
         const [option] = await db.select().from(ingredientOptionsTable).where(eq(ingredientOptionsTable.id, optionId));
         
         if (option) {
-          const processedQty = parseFloat(option.processedQty);
-          const producedQty = parseFloat(option.producedQty);
+          const processedQty = parseFloat(option.processedQty) || 0;
+          const producedQty = parseFloat(option.producedQty) || 0;
           const conversionRate = producedQty > 0 ? processedQty / producedQty : 1;
           consumedQty = filledMl * conversionRate;
           

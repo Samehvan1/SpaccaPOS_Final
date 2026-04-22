@@ -273,11 +273,11 @@ router.post("/orders", async (req, res): Promise<void> => {
         await tx.insert(orderItemCustomizationsTable).values(
           item.customizations.map((c) => ({
             orderItemId: orderItem.id,
-            ingredientId: c.ingredientId,
-            optionId: c.optionId,
-            typeVolumeId: c.typeVolumeId,
-            consumedQty: String(c.consumedQty),
-            addedCost: String(c.addedCost),
+            ingredientId: c.ingredientId ? Number(c.ingredientId) : null,
+            optionId: c.optionId ? Number(c.optionId) : null,
+            typeVolumeId: c.typeVolumeId ? Number(c.typeVolumeId) : null,
+            consumedQty: String(c.consumedQty || 0),
+            addedCost: String(c.addedCost || 0),
             slotLabel: c.slotLabel,
             optionLabel: c.optionLabel,
             baristaSortOrder: c.baristaSortOrder,

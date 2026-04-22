@@ -77571,20 +77571,20 @@ async function calculateDrinkData(drinkId, selections) {
       const [volDef] = typeVol.volumeId ? await db.select().from(ingredientVolumesTable).where(eq(ingredientVolumesTable.id, typeVol.volumeId)) : [null];
       const volumeName = volDef?.name ?? "";
       const [templateDef] = slot.predefinedSlotId ? await db.select().from(predefinedSlotVolumesTable).where(and(eq(predefinedSlotVolumesTable.predefinedSlotId, slot.predefinedSlotId), eq(predefinedSlotVolumesTable.typeVolumeId, sel.typeVolumeId))) : [null];
-      const extraCost2 = parseFloat(slotVol?.extraCost ?? templateDef?.extraCost ?? typeVol.extraCost);
+      const extraCost2 = parseFloat(slotVol?.extraCost ?? templateDef?.extraCost ?? typeVol.extraCost) || 0;
       totalExtras += extraCost2;
-      const consumedQty = parseFloat(slotVol?.processedQty ?? templateDef?.processedQty ?? typeVol.processedQty ?? volDef?.processedQty ?? "0");
-      const producedQty = parseFloat(slotVol?.producedQty ?? templateDef?.producedQty ?? typeVol.producedQty ?? volDef?.producedQty ?? "0");
+      const consumedQty = parseFloat(slotVol?.processedQty ?? templateDef?.processedQty ?? typeVol.processedQty ?? volDef?.processedQty ?? "0") || 0;
+      const producedQty = parseFloat(slotVol?.producedQty ?? templateDef?.producedQty ?? typeVol.producedQty ?? volDef?.producedQty ?? "0") || 0;
       const shouldCount2 = slot.affectsCupSize ?? typeDef?.affectsCupSize ?? true;
       if (shouldCount2) {
         usedVolumeMl += producedQty;
       }
       const optionLabel = typeName && volumeName ? `${typeName} \xB7 ${volumeName}` : typeName || volumeName || "Catalog Item";
       customizations.push({
-        ingredientId: inventoryId,
+        ingredientId: inventoryId ? Number(inventoryId) : null,
         optionId: null,
-        typeVolumeId: sel.typeVolumeId,
-        ingredientTypeId: typeVol.ingredientTypeId,
+        typeVolumeId: sel.typeVolumeId ? Number(sel.typeVolumeId) : null,
+        ingredientTypeId: typeVol.ingredientTypeId ? Number(typeVol.ingredientTypeId) : null,
         consumedQty,
         producedQty,
         color: typeDef?.color ?? null,
@@ -77599,8 +77599,8 @@ async function calculateDrinkData(drinkId, selections) {
     if (sel.ingredientTypeId) {
       const [ingType] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, sel.ingredientTypeId));
       if (ingType) {
-        const consumedQty = parseFloat(ingType.processedQty ?? "0");
-        const producedQty = parseFloat(ingType.producedQty ?? "0");
+        const consumedQty = parseFloat(ingType.processedQty ?? "0") || 0;
+        const producedQty = parseFloat(ingType.producedQty ?? "0") || 0;
         const shouldCount2 = slot.affectsCupSize ?? ingType.affectsCupSize ?? true;
         if (shouldCount2) {
           usedVolumeMl += producedQty;
@@ -77629,19 +77629,19 @@ async function calculateDrinkData(drinkId, selections) {
     if (option.linkedIngredientId && selection.subOptionId) {
       const [subOption] = await db.select().from(ingredientOptionsTable).where(eq(ingredientOptionsTable.id, selection.subOptionId));
       if (subOption) {
-        const extraCost2 = parseFloat(subOption.extraCost);
+        const extraCost2 = parseFloat(subOption.extraCost) || 0;
         totalExtras += extraCost2;
         const shouldCount2 = slot.affectsCupSize ?? true;
         if (shouldCount2) {
-          usedVolumeMl += parseFloat(subOption.producedQty);
+          usedVolumeMl += parseFloat(subOption.producedQty) || 0;
         }
         customizations.push({
           ingredientId: option.linkedIngredientId,
           optionId: selection.subOptionId,
           typeVolumeId: null,
           ingredientTypeId: null,
-          consumedQty: parseFloat(subOption.processedQty),
-          producedQty: parseFloat(subOption.producedQty),
+          consumedQty: parseFloat(subOption.processedQty) || 0,
+          producedQty: parseFloat(subOption.producedQty) || 0,
           color: null,
           addedCost: extraCost2,
           slotLabel: slot.slotLabel,
@@ -77652,19 +77652,19 @@ async function calculateDrinkData(drinkId, selections) {
       }
       continue;
     }
-    const extraCost = parseFloat(option.extraCost);
+    const extraCost = parseFloat(option.extraCost) || 0;
     totalExtras += extraCost;
     const shouldCount = slot.affectsCupSize ?? true;
     if (shouldCount) {
-      usedVolumeMl += parseFloat(option.producedQty);
+      usedVolumeMl += parseFloat(option.producedQty) || 0;
     }
     customizations.push({
       ingredientId: selection.ingredientId ?? slot.ingredientId ?? null,
       optionId: selection.optionId,
       typeVolumeId: null,
       ingredientTypeId: null,
-      consumedQty: parseFloat(option.processedQty),
-      producedQty: parseFloat(option.producedQty),
+      consumedQty: parseFloat(option.processedQty) || 0,
+      producedQty: parseFloat(option.producedQty) || 0,
       color: null,
       addedCost: extraCost,
       slotLabel: slot.slotLabel,
@@ -77691,11 +77691,11 @@ async function calculateDrinkData(drinkId, selections) {
       }
       if (effectiveTypeId) {
         const [ingredientType] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, effectiveTypeId));
-        let typeVolumeId = dynamicSelection?.typeVolumeId;
-        if (!typeVolumeId) {
+        let typeVolumeId = dynamicSelection?.typeVolumeId ? Number(dynamicSelection.typeVolumeId) : null;
+        if (!typeVolumeId || isNaN(typeVolumeId)) {
           const typeVolumes = await db.select().from(ingredientTypeVolumesTable).where(eq(ingredientTypeVolumesTable.ingredientTypeId, effectiveTypeId));
           const defVol = typeVolumes.find((tv) => tv.isDefault) ?? typeVolumes[0];
-          typeVolumeId = defVol?.id;
+          typeVolumeId = defVol?.id ?? null;
         }
         const [slotVol] = await db.select().from(drinkSlotVolumesTable).where(and(
           eq(drinkSlotVolumesTable.slotId, dynamicSlot.id),
@@ -77708,8 +77708,8 @@ async function calculateDrinkData(drinkId, selections) {
           const [typeVolume] = await db.select().from(ingredientTypeVolumesTable).where(eq(ingredientTypeVolumesTable.id, typeVolumeId));
           const [volDef] = typeVolume?.volumeId ? await db.select().from(ingredientVolumesTable).where(eq(ingredientVolumesTable.id, typeVolume.volumeId)) : [null];
           if (typeVolume) {
-            const processedQty = parseFloat(slotVol?.processedQty ?? templateDef?.processedQty ?? typeVolume.processedQty ?? volDef?.processedQty ?? "0");
-            const producedQty = parseFloat(slotVol?.producedQty ?? templateDef?.producedQty ?? typeVolume.producedQty ?? volDef?.producedQty ?? "0");
+            const processedQty = parseFloat(slotVol?.processedQty ?? templateDef?.processedQty ?? typeVolume.processedQty ?? volDef?.processedQty ?? "0") || 0;
+            const producedQty = parseFloat(slotVol?.producedQty ?? templateDef?.producedQty ?? typeVolume.producedQty ?? volDef?.producedQty ?? "0") || 0;
             conversionRate = producedQty > 0 ? processedQty / producedQty : 1;
             unit = slotVol?.unit ?? templateDef?.unit ?? typeVolume.unit ?? volDef?.unit ?? "ml";
           }
@@ -77728,10 +77728,10 @@ async function calculateDrinkData(drinkId, selections) {
         const ingredientName = ingredientType?.name ?? "Dynamic";
         dynamicInfo = { slotLabel: dynamicSlot.slotLabel, ingredientName, filledMl, cost };
         customizations.push({
-          ingredientId: inventoryId,
+          ingredientId: inventoryId ? Number(inventoryId) : null,
           optionId: null,
-          typeVolumeId: typeVolumeId ?? null,
-          ingredientTypeId: effectiveTypeId,
+          typeVolumeId: typeVolumeId ? Number(typeVolumeId) : null,
+          ingredientTypeId: effectiveTypeId ? Number(effectiveTypeId) : null,
           consumedQty,
           producedQty: filledMl,
           color: ingredientType?.color ?? null,
@@ -77752,8 +77752,8 @@ async function calculateDrinkData(drinkId, selections) {
         let ingredientName = "Dynamic";
         const [option] = await db.select().from(ingredientOptionsTable).where(eq(ingredientOptionsTable.id, optionId));
         if (option) {
-          const processedQty = parseFloat(option.processedQty);
-          const producedQty = parseFloat(option.producedQty);
+          const processedQty = parseFloat(option.processedQty) || 0;
+          const producedQty = parseFloat(option.producedQty) || 0;
           const conversionRate = producedQty > 0 ? processedQty / producedQty : 1;
           consumedQty = filledMl * conversionRate;
           const [ingredient] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, dynamicSlot.ingredientId));
@@ -78784,11 +78784,11 @@ router5.post("/orders", async (req, res) => {
         await tx.insert(orderItemCustomizationsTable).values(
           item.customizations.map((c) => ({
             orderItemId: orderItem.id,
-            ingredientId: c.ingredientId,
-            optionId: c.optionId,
-            typeVolumeId: c.typeVolumeId,
-            consumedQty: String(c.consumedQty),
-            addedCost: String(c.addedCost),
+            ingredientId: c.ingredientId ? Number(c.ingredientId) : null,
+            optionId: c.optionId ? Number(c.optionId) : null,
+            typeVolumeId: c.typeVolumeId ? Number(c.typeVolumeId) : null,
+            consumedQty: String(c.consumedQty || 0),
+            addedCost: String(c.addedCost || 0),
             slotLabel: c.slotLabel,
             optionLabel: c.optionLabel,
             baristaSortOrder: c.baristaSortOrder,
