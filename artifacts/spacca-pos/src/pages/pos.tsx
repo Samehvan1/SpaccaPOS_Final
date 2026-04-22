@@ -62,6 +62,21 @@ type CartItem = {
 };
 
 
+function detectSubcategory(name: string): string {
+  const words = name.split(" ");
+  return words[words.length - 1];
+}
+
+function buildSubcategories(drinks: Drink[]): Record<string, Drink[]> {
+  const groups: Record<string, Drink[]> = {};
+  drinks.forEach(d => {
+    const sub = detectSubcategory(d.name);
+    if (!groups[sub]) groups[sub] = [];
+    groups[sub].push(d);
+  });
+  return groups;
+}
+
 export default function PosTerminal() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -100,6 +115,36 @@ export default function PosTerminal() {
 
     return result;
   }, [drinks, selectedCategoryId, categories, searchQuery]);
+
+  const subcategoryGroups = useMemo(() => buildSubcategories(filteredDrinks), [filteredDrinks]);
+
+  const visibleSubcategories = useMemo(() => {
+    return Object.entries(subcategoryGroups)
+      .filter(([, items]) => items.length >= 2)
+      .map(([sub]) => sub);
+  }, [subcategoryGroups]);
+
+  const groupedDrinks = useMemo(() => {
+    const groups: { label: string; drinks: Drink[] }[] = [];
+    const added = new Set<number>();
+    
+    // Group drinks by visible subcategories
+    visibleSubcategories.forEach(sub => {
+      const items = subcategoryGroups[sub] || [];
+      if (items.length >= 2) {
+        groups.push({ label: sub, drinks: items });
+        items.forEach(d => added.add(d.id));
+      }
+    });
+
+    // Handle "other" drinks that don't belong to a group
+    const rest = filteredDrinks.filter(d => !added.has(d.id));
+    if (rest.length > 0) {
+      groups.unshift({ label: "", drinks: rest });
+    }
+    
+    return groups;
+  }, [filteredDrinks, visibleSubcategories, subcategoryGroups]);
 
   const handleCategoryChange = (catId: number | null) => {
     setSelectedCategoryId(catId);
@@ -461,9 +506,21 @@ export default function PosTerminal() {
             ))}
           </div>
         ) : filteredDrinks.length > 0 ? (
-          <div className={gridClass}>
-            {filteredDrinks.map(drink => (
-              <DrinkCard key={drink.id} drink={drink} onClick={() => handleSelectDrink(drink)} />
+          <div className="space-y-8">
+            {groupedDrinks.map(group => (
+              <div key={group.label || "__singles__"}>
+                {group.label && (
+                  <div className="flex items-center gap-3 mb-4">
+                    <span className="text-xs font-black uppercase tracking-[0.2em] text-primary/60">{group.label}</span>
+                    <div className="flex-1 h-px bg-gradient-to-r from-primary/20 to-transparent" />
+                  </div>
+                )}
+                <div className={gridClass}>
+                  {group.drinks.map(drink => (
+                    <DrinkCard key={drink.id} drink={drink} onClick={() => handleSelectDrink(drink)} />
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
         ) : (

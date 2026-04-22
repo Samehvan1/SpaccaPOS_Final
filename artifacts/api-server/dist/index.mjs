@@ -55769,6 +55769,7 @@ var init_orders = __esm({
       slotLabel: text("slot_label").notNull(),
       optionLabel: text("option_label").notNull(),
       baristaSortOrder: integer("barista_sort_order").notNull().default(1),
+      customerSortOrder: integer("customer_sort_order").notNull().default(1),
       createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
     });
     insertOrderSchema = createInsertSchema(ordersTable).omit({ id: true, createdAt: true, updatedAt: true });
@@ -77074,7 +77075,8 @@ var GetOrderResponse = objectType({
             addedCost: numberType(),
             slotLabel: stringType(),
             optionLabel: stringType(),
-            baristaSortOrder: numberType().nullish()
+            baristaSortOrder: numberType().nullish(),
+            customerSortOrder: numberType().nullish()
           })
         )
       })
@@ -77117,7 +77119,39 @@ var UpdateOrderStatusResponse = objectType({
   notes: stringType().nullable(),
   createdAt: stringType(),
   updatedAt: stringType()
-});
+}).and(
+  objectType({
+    items: arrayType(
+      objectType({
+        id: numberType(),
+        orderId: numberType(),
+        drinkId: numberType(),
+        drinkName: stringType(),
+        quantity: numberType(),
+        unitPrice: numberType(),
+        lineTotal: numberType(),
+        specialNotes: stringType().nullable(),
+        kitchenStation: stringType().optional(),
+        status: enumType(["pending", "ready"]),
+        customizations: arrayType(
+          objectType({
+            id: numberType(),
+            orderItemId: numberType(),
+            ingredientId: numberType().nullish(),
+            optionId: numberType().nullish(),
+            typeVolumeId: numberType().nullish(),
+            consumedQty: numberType(),
+            addedCost: numberType(),
+            slotLabel: stringType(),
+            optionLabel: stringType(),
+            baristaSortOrder: numberType().nullish(),
+            customerSortOrder: numberType().nullish()
+          })
+        )
+      })
+    )
+  })
+);
 var MarkOrderItemReadyParams = objectType({
   id: coerce.number()
 });
@@ -77231,7 +77265,8 @@ var GetActiveOrdersResponseItem = objectType({
             addedCost: numberType(),
             slotLabel: stringType(),
             optionLabel: stringType(),
-            baristaSortOrder: numberType().nullish()
+            baristaSortOrder: numberType().nullish(),
+            customerSortOrder: numberType().nullish()
           })
         )
       })
@@ -77556,7 +77591,8 @@ async function calculateDrinkData(drinkId, selections) {
         addedCost: extraCost2,
         slotLabel: slot.slotLabel,
         optionLabel,
-        baristaSortOrder: slot.baristaSortOrder ?? 1
+        baristaSortOrder: slot.baristaSortOrder ?? 1,
+        customerSortOrder: slot.customerSortOrder ?? 1
       });
       continue;
     }
@@ -77581,7 +77617,8 @@ async function calculateDrinkData(drinkId, selections) {
           addedCost: 0,
           slotLabel: slot.slotLabel,
           optionLabel,
-          baristaSortOrder: slot.baristaSortOrder ?? 1
+          baristaSortOrder: slot.baristaSortOrder ?? 1,
+          customerSortOrder: slot.customerSortOrder ?? 1
         });
       }
       continue;
@@ -77609,7 +77646,8 @@ async function calculateDrinkData(drinkId, selections) {
           addedCost: extraCost2,
           slotLabel: slot.slotLabel,
           optionLabel: `${option.label} \xB7 ${subOption.label}`,
-          baristaSortOrder: slot.baristaSortOrder ?? 1
+          baristaSortOrder: slot.baristaSortOrder ?? 1,
+          customerSortOrder: slot.customerSortOrder ?? 1
         });
       }
       continue;
@@ -77631,7 +77669,8 @@ async function calculateDrinkData(drinkId, selections) {
       addedCost: extraCost,
       slotLabel: slot.slotLabel,
       optionLabel: option.label,
-      baristaSortOrder: slot.baristaSortOrder ?? 1
+      baristaSortOrder: slot.baristaSortOrder ?? 1,
+      customerSortOrder: slot.customerSortOrder ?? 1
     });
   }
   const dynamicSlot = slots.find((s) => s.isDynamic);
@@ -77699,7 +77738,8 @@ async function calculateDrinkData(drinkId, selections) {
           addedCost: cost,
           slotLabel: dynamicSlot.slotLabel,
           optionLabel: ingredientType?.name ? `${ingredientType.name} (${Math.round(filledMl)}${unit})` : `Dynamic (${Math.round(filledMl)}${unit})`,
-          baristaSortOrder: dynamicSlot.baristaSortOrder ?? 1
+          baristaSortOrder: dynamicSlot.baristaSortOrder ?? 1,
+          customerSortOrder: dynamicSlot.customerSortOrder ?? 1
         });
       }
     } else if (dynamicSlot.ingredientId) {
@@ -77736,7 +77776,8 @@ async function calculateDrinkData(drinkId, selections) {
           addedCost: cost,
           slotLabel: dynamicSlot.slotLabel,
           optionLabel: `Dynamic (${Math.round(filledMl)}ml)`,
-          baristaSortOrder: dynamicSlot.baristaSortOrder ?? 1
+          baristaSortOrder: dynamicSlot.baristaSortOrder ?? 1,
+          customerSortOrder: dynamicSlot.customerSortOrder ?? 1
         });
       }
     }
@@ -78679,7 +78720,8 @@ router5.post("/orders", async (req, res) => {
         addedCost: c.addedCost,
         slotLabel: c.slotLabel,
         optionLabel: c.optionLabel,
-        baristaSortOrder: c.baristaSortOrder
+        baristaSortOrder: c.baristaSortOrder,
+        customerSortOrder: c.customerSortOrder
       }));
       const unitPrice = calcData.totalPrice;
       const lineTotal = unitPrice * item.quantity;
@@ -78749,7 +78791,8 @@ router5.post("/orders", async (req, res) => {
             addedCost: String(c.addedCost),
             slotLabel: c.slotLabel,
             optionLabel: c.optionLabel,
-            baristaSortOrder: c.baristaSortOrder
+            baristaSortOrder: c.baristaSortOrder,
+            customerSortOrder: c.customerSortOrder
           }))
         );
       }
@@ -78809,6 +78852,7 @@ router5.post("/orders", async (req, res) => {
             slotLabel: c.slotLabel,
             optionLabel: c.optionLabel,
             baristaSortOrder: c.baristaSortOrder,
+            customerSortOrder: c.customerSortOrder,
             orderItemId: item.id,
             id: 0
           }))
@@ -78846,19 +78890,13 @@ router5.patch("/orders/:id/status", async (req, res) => {
     res.status(404).json({ error: "Order not found" });
     return;
   }
-  const [barista] = await db.select().from(usersTable).where(eq(usersTable.id, order.baristaId));
+  const detail = await buildOrderDetail(params.data.id);
+  if (!detail) {
+    res.status(404).json({ error: "Order not found" });
+    return;
+  }
   broadcastEvent("order_updated", { orderId: order.id, status: order.status });
-  res.json(
-    UpdateOrderStatusResponse2.parse(serializeDates({
-      ...order,
-      baristaName: barista?.name ?? "Unknown",
-      subtotal: parseFloat(order.subtotal),
-      discount: parseFloat(order.discount),
-      total: parseFloat(order.total),
-      amountTendered: order.amountTendered ? parseFloat(order.amountTendered) : null,
-      changeDue: order.changeDue ? parseFloat(order.changeDue) : null
-    }))
-  );
+  res.json(UpdateOrderStatusResponse2.parse(serializeDates(detail)));
 });
 router5.patch("/order-items/:id/ready", async (req, res) => {
   const itemId = parseInt(req.params.id);
@@ -79725,6 +79763,15 @@ router12.patch("/catalog/predefined-slots/:id", async (req, res) => {
     }
   }
   res.json({ success: true });
+});
+router12.get("/catalog/predefined-slots/:id/usage", async (req, res) => {
+  const id = parseInt(req.params.id);
+  const usage = await db.select({
+    drinkId: drinksTable.id,
+    drinkName: drinksTable.name,
+    slotLabel: drinkIngredientSlotsTable.slotLabel
+  }).from(drinkIngredientSlotsTable).innerJoin(drinksTable, eq(drinkIngredientSlotsTable.drinkId, drinksTable.id)).where(eq(drinkIngredientSlotsTable.predefinedSlotId, id));
+  res.json(usage);
 });
 router12.delete("/catalog/predefined-slots/:id", async (req, res) => {
   const id = parseInt(req.params.id);

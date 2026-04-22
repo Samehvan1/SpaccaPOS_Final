@@ -295,32 +295,59 @@ export default function DrinkRecipe() {
       } catch { return; }
     }
 
-    const missingTypes = (fullTemplate.typeOptions || []).filter(
-      (to: any) => !slot.typeOptions.some(existing => existing.ingredientTypeId === to.ingredientTypeId)
-    );
+    const templateOptions = fullTemplate.typeOptions || [];
+    const newSlotOptions: SlotTypeOptionDraft[] = [];
 
-    if (missingTypes.length === 0) {
-      toast({ title: "Already synced with template" });
-      return;
-    }
-
-    const newSlotOptions = [...slot.typeOptions];
-    for (const to of missingTypes) {
+    // Process all options from the template to ensure we update existing ones and add missing ones
+    for (const to of templateOptions) {
       const ingredientType = allTypes.find(at => at.id === to.ingredientTypeId);
       const vols = await loadTypeVolumes(to.ingredientTypeId);
-      newSlotOptions.push({
-        key: newKey(),
-        ingredientTypeId: to.ingredientTypeId,
-        typeName: ingredientType?.name ?? "",
-        categoryName: categories.find(c => c.id === ingredientType?.categoryId)?.name ?? "",
-        isDefault: to.isDefault && !newSlotOptions.some(ex => ex.isDefault),
-        sortOrder: to.sortOrder,
-        expanded: true,
-        slotVolumes: resolveSlotVolumes(vols, fullTemplate.volumes || []),
-      });
+      const existing = slot.typeOptions.find(ex => ex.ingredientTypeId === to.ingredientTypeId);
+      
+      const syncedVolumes = resolveSlotVolumes(vols, fullTemplate.volumes || []);
+
+      if (existing) {
+        // Update existing option with template data
+        newSlotOptions.push({
+          ...existing,
+          typeName: ingredientType?.name ?? existing.typeName,
+          categoryName: categories.find(c => c.id === ingredientType?.categoryId)?.name ?? existing.categoryName,
+          isDefault: to.isDefault,
+          sortOrder: to.sortOrder,
+          slotVolumes: syncedVolumes, // Refresh volumes from template
+        });
+      } else {
+        // Add new option from template
+        newSlotOptions.push({
+          key: newKey(),
+          ingredientTypeId: to.ingredientTypeId,
+          typeName: ingredientType?.name ?? "",
+          categoryName: categories.find(c => c.id === ingredientType?.categoryId)?.name ?? "",
+          isDefault: to.isDefault,
+          sortOrder: to.sortOrder,
+          expanded: true,
+          slotVolumes: syncedVolumes,
+        });
+      }
     }
 
-    updateSlot(slotKey, { typeOptions: newSlotOptions });
+    // Keep any existing options that were NOT in the template (user might have added them manually)
+    // Actually, usually sync means "make like the template", but to be safe we can keep them at the end
+    for (const ex of slot.typeOptions) {
+      if (!templateOptions.some((to: any) => to.ingredientTypeId === ex.ingredientTypeId)) {
+        newSlotOptions.push(ex);
+      }
+    }
+
+    updateSlot(slotKey, { 
+      typeOptions: newSlotOptions,
+      slotLabel: fullTemplate.slotLabel,
+      isRequired: fullTemplate.isRequired,
+      isDynamic: fullTemplate.isDynamic,
+      affectsCupSize: fullTemplate.affectsCupSize,
+    });
+    
+    toast({ title: "Slot synchronized with template" });
     mark();
   };
 

@@ -9,6 +9,8 @@ import {
   ingredientTypeVolumesTable,
   ingredientVolumesTable,
   ingredientCategoriesTable,
+  drinksTable,
+  drinkIngredientSlotsTable,
 } from "@workspace/db";
 
 const router: IRouter = Router();
@@ -143,6 +145,22 @@ router.patch("/catalog/predefined-slots/:id", async (req, res): Promise<void> =>
   }
   
   res.json({ success: true });
+});
+
+// Get template usage
+router.get("/catalog/predefined-slots/:id/usage", async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id);
+  
+  const usage = await db.select({
+    drinkId: drinksTable.id,
+    drinkName: drinksTable.name,
+    slotLabel: drinkIngredientSlotsTable.slotLabel,
+  })
+  .from(drinkIngredientSlotsTable)
+  .innerJoin(drinksTable, eq(drinkIngredientSlotsTable.drinkId, drinksTable.id))
+  .where(eq(drinkIngredientSlotsTable.predefinedSlotId, id));
+  
+  res.json(usage);
 });
 
 // Delete template

@@ -1319,7 +1319,6 @@ function TemplateOptionsDialog({ open, onOpenChange, template, onUpdate }: { ope
     setSaving(true);
     try {
       const currentVolumes = template.volumes || [];
-      const others = currentVolumes.filter((v: any) => v.typeVolumeId !== typeVolumeId);
       const existing = currentVolumes.find((v: any) => v.typeVolumeId === typeVolumeId);
 
       const updated = {
@@ -1330,9 +1329,14 @@ function TemplateOptionsDialog({ open, onOpenChange, template, onUpdate }: { ope
         isEnabled: existing ? existing.isEnabled : true
       };
       
+      // Preserve original order by mapping instead of filtering and appending
+      const updatedVolumes = currentVolumes.some((v: any) => v.typeVolumeId === typeVolumeId)
+        ? currentVolumes.map((v: any) => v.typeVolumeId === typeVolumeId ? updated : v)
+        : [...currentVolumes, updated];
+
       await api(`/api/catalog/predefined-slots/${template.id}`, {
         method: "PATCH",
-        body: JSON.stringify({ volumes: [...others, updated] })
+        body: JSON.stringify({ volumes: updatedVolumes })
       });
       
       setEditingTypeVolId(null);
@@ -1350,8 +1354,8 @@ function TemplateOptionsDialog({ open, onOpenChange, template, onUpdate }: { ope
     setSaving(true);
     try {
       const currentOptions = template.typeOptions || [];
-      const currentTypeIds = new Set(currentOptions.map((o: any) => o.ingredientTypeId));
       
+      // 1. Identify which categories are currently "linked" to this template
       const usedCategories = new Set<number>();
       for (const to of currentOptions) {
         const typeInfo = allTypes.find(at => at.id === to.ingredientTypeId);
@@ -1363,27 +1367,49 @@ function TemplateOptionsDialog({ open, onOpenChange, template, onUpdate }: { ope
         return;
       }
       
-      const missingTypes = allTypes.filter(at => 
-        usedCategories.has(at.categoryId) && !currentTypeIds.has(at.id)
-      );
+      // 2. Get ALL types from those categories from the catalog
+      const catalogTypes = allTypes.filter(at => usedCategories.has(at.categoryId));
       
-      if (missingTypes.length === 0) {
-        toast({ title: "Already up to date" });
-        return;
-      }
-      
-      const newOptionEntries = missingTypes.map((mt, i) => ({
-        ingredientTypeId: mt.id,
-        isDefault: false,
-        sortOrder: currentOptions.length + i
-      }));
+      // 3. Build new options list (updating existing, adding missing)
+      const updatedOptions = catalogTypes.map((mt, i) => {
+        const existing = currentOptions.find((o: any) => o.ingredientTypeId === mt.id);
+        return {
+          ingredientTypeId: mt.id,
+          isDefault: existing ? existing.isDefault : i === 0,
+          sortOrder: existing ? existing.sortOrder : i
+        };
+      });
+
+      // 4. Also sync volumes for these types
+      const catalogTypeIds = catalogTypes.map(t => t.id);
+      const catalogTypeVolumes = typeVolumes.filter(tv => catalogTypeIds.includes(tv.ingredientTypeId));
+      const currentVolumes = template.volumes || [];
+
+      const updatedVolumes = catalogTypeVolumes.map((ctv, i) => {
+        const existing = currentVolumes.find((v: any) => v.typeVolumeId === ctv.id);
+        return {
+          typeVolumeId: ctv.id,
+          // Sync quantities and cost from the catalog
+          processedQty: ctv.processedQty,
+          producedQty: ctv.producedQty,
+          unit: ctv.unit,
+          extraCost: ctv.extraCost,
+          // Preserve enablement and default status from the existing template if it was there
+          isDefault: existing ? existing.isDefault : ctv.isDefault,
+          isEnabled: existing ? existing.isEnabled : true,
+          sortOrder: existing ? existing.sortOrder : i
+        };
+      });
       
       await api(`/api/catalog/predefined-slots/${template.id}`, {
         method: "PATCH",
-        body: JSON.stringify({ typeOptions: [...currentOptions, ...newOptionEntries] })
+        body: JSON.stringify({ 
+          typeOptions: updatedOptions,
+          volumes: updatedVolumes
+        })
       });
       
-      toast({ title: `Added ${missingTypes.length} new types from categories` });
+      toast({ title: "Template synchronized with catalog categories" });
       onUpdate();
     } catch {
       toast({ variant: "destructive", title: "Failed to sync categories" });
@@ -1400,6 +1426,8 @@ function TemplateOptionsDialog({ open, onOpenChange, template, onUpdate }: { ope
         <DialogHeader>
           <DialogTitle>Configure Options — {template?.name}</DialogTitle>
         </DialogHeader>
+        
+        <UsageSection templateId={template?.id} />
         
         <div className="space-y-2.5 pt-2">
           <div className="flex items-center justify-between">
@@ -1469,7 +1497,6 @@ function TemplateOptionsDialog({ open, onOpenChange, template, onUpdate }: { ope
                                   checked={isEnabled} 
                                   onCheckedChange={async (val) => {
                                     const currentVolumes = template.volumes || [];
-                                    const others = currentVolumes.filter((v: any) => v.typeVolumeId !== tv.id);
                                     const u = override || { 
                                       typeVolumeId: tv.id, 
                                       processedQty: tv.processedQty, 
@@ -1478,9 +1505,15 @@ function TemplateOptionsDialog({ open, onOpenChange, template, onUpdate }: { ope
                                       extraCost: tv.extraCost,
                                       isDefault: tv.isDefault 
                                     };
+                                    const updated = { ...u, isEnabled: !!val };
+                                    
+                                    const updatedVolumes = currentVolumes.some((v: any) => v.typeVolumeId === tv.id)
+                                      ? currentVolumes.map((v: any) => v.typeVolumeId === tv.id ? updated : v)
+                                      : [...currentVolumes, updated];
+
                                     await api(`/api/catalog/predefined-slots/${template.id}`, {
                                       method: "PATCH",
-                                      body: JSON.stringify({ volumes: [...others, { ...u, isEnabled: !!val }] })
+                                      body: JSON.stringify({ volumes: updatedVolumes })
                                     });
                                     onUpdate();
                                   }}
@@ -1561,6 +1594,41 @@ function TemplateOptionsDialog({ open, onOpenChange, template, onUpdate }: { ope
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function UsageSection({ templateId }: { templateId?: number }) {
+  const [usage, setUsage] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (templateId) {
+      setLoading(true);
+      api(`/api/catalog/predefined-slots/${templateId}/usage`)
+        .then(setUsage)
+        .finally(() => setLoading(false));
+    }
+  }, [templateId]);
+
+  if (!templateId || (usage.length === 0 && !loading)) return null;
+
+  return (
+    <div className="bg-muted/30 rounded-lg p-3 border border-dashed border-primary/20 mb-4">
+      <div className="text-[10px] font-black uppercase tracking-widest text-primary/60 flex items-center gap-2 mb-2">
+        <FlaskConical className="h-3 w-3" /> Drinks using this template
+      </div>
+      {loading ? (
+        <div className="text-xs text-muted-foreground animate-pulse">Loading usage data...</div>
+      ) : (
+        <div className="flex flex-wrap gap-1.5">
+          {usage.map((u, i) => (
+            <Badge key={i} variant="outline" className="bg-background/50 text-[10px] py-0 px-2 h-5">
+              {u.drinkName} <span className="opacity-40 mx-1">·</span> {u.slotLabel}
+            </Badge>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
