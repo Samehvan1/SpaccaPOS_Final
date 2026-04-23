@@ -130,11 +130,11 @@ export function printCustomerReceipt(order: CompletedOrder) {
     <div class="section-title">Items</div>
     ${itemRows}
     <div class="divider"></div>
-    <div class="row"><span class="label">Before VAT:</span><span class="value">${fmt(beforeVat)}</span></div>
-    <div class="row"><span class="label">VAT (14%):</span><span class="value">${fmt(vatAmount)}</span></div>
-    <div class="divider"></div>
-    <div class="row"><span class="label">Subtotal:</span><span class="value">${fmt(order.subtotal)}</span></div>
+    <div class="row"><span class="label">Before Tax:</span><span class="value">${fmt(beforeVat)}</span></div>
     ${discount}
+    <div class="row"><span class="label">After Discount:</span><span class="value">${fmt(beforeVat - order.discount)}</span></div>
+    <div class="row"><span class="label">Tax Amount (14%):</span><span class="value">${fmt(vatAmount)}</span></div>
+    <div class="divider"></div>
     <div class="row bold big"><span class="label">TOTAL:</span><span class="value">${fmt(order.total)}</span></div>
     <div class="row"><span class="label">Payment:</span><span class="value">${payLabel}</span></div>
     ${tendered}
