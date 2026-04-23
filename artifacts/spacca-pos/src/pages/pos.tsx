@@ -15,7 +15,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
-import { Coffee, Minus, Plus, ShoppingCart, Trash2, X, ChevronRight, Droplets, Search } from "lucide-react";
+import { Coffee, Minus, Plus, ShoppingCart, Trash2, X, ChevronRight, Droplets, Search, Menu } from "lucide-react";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { fmt } from "@/lib/currency";
 import { CupSimulator, type CupLayer } from "@/components/cup-simulator";
 
@@ -100,10 +101,13 @@ export default function PosTerminal() {
     let result = drinks;
     if (selectedCategoryId !== null) {
       result = drinks.filter(d => {
+        // Use categoryId if available (preferred)
+        if ((d as any).categoryId !== undefined && (d as any).categoryId !== null) {
+          return (d as any).categoryId === selectedCategoryId;
+        }
+        // Fallback to name matching if categoryId is missing (e.g. older drinks)
         const cat = categories.find(c => c.id === selectedCategoryId);
-        if ((d as any).categoryId === selectedCategoryId) return true;
-        if (cat && d.category === cat.name) return true;
-        return false;
+        return cat && d.category === cat.name;
       });
     }
 
@@ -146,9 +150,14 @@ export default function PosTerminal() {
     return groups;
   }, [filteredDrinks, visibleSubcategories, subcategoryGroups]);
 
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+
   const handleCategoryChange = (catId: number | null) => {
     setSelectedCategoryId(catId);
+    setIsMenuOpen(false);
   };
+
+  // ... (customization dialog state and effects) ...
 
   // Customization dialog
   const [activeDrink, setActiveDrink] = useState<Drink | null>(null);
@@ -443,61 +452,99 @@ export default function PosTerminal() {
     <div className="flex flex-col h-full w-full bg-muted/20 overflow-hidden">
 
       {/* Top bar: category tabs + cart button */}
-      <div className="flex items-center gap-2 px-4 py-3 bg-background border-b shadow-sm z-10 shrink-0">
-        <div className="flex-1 flex gap-2 overflow-x-auto no-scrollbar">
-          <Button
-            variant={selectedCategoryId === null ? "default" : "outline"}
-            onClick={() => handleCategoryChange(null)}
-            className="rounded-full whitespace-nowrap shrink-0"
-            size="sm"
-          >
-            All Drinks
-          </Button>
-          {categories.map(cat => (
+      <div className="flex items-center gap-2 px-3 sm:px-4 py-3 bg-background border-b shadow-sm z-10 shrink-0">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          {/* Mobile Categories Menu */}
+          <div className="md:hidden">
+            <Sheet open={isMenuOpen} onOpenChange={setIsMenuOpen}>
+              <SheetTrigger asChild>
+                <Button variant="outline" size="icon" className="rounded-full shrink-0 h-9 w-9">
+                  <Menu className="h-5 w-5" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-64 p-0">
+                <SheetHeader className="p-4 border-b">
+                  <SheetTitle>Categories</SheetTitle>
+                </SheetHeader>
+                <div className="flex flex-col p-2">
+                  <Button
+                    variant={selectedCategoryId === null ? "default" : "ghost"}
+                    onClick={() => handleCategoryChange(null)}
+                    className="justify-start font-bold h-12"
+                  >
+                    All Drinks
+                  </Button>
+                  {categories.map(cat => (
+                    <Button
+                      key={cat.id}
+                      variant={selectedCategoryId === cat.id ? "default" : "ghost"}
+                      onClick={() => handleCategoryChange(cat.id)}
+                      className="justify-start font-bold h-12 capitalize"
+                    >
+                      {cat.name}
+                    </Button>
+                  ))}
+                </div>
+              </SheetContent>
+            </Sheet>
+          </div>
+
+          {/* Desktop Categories Tabs */}
+          <div className="hidden md:flex flex-1 gap-2 overflow-x-auto no-scrollbar">
             <Button
-              key={cat.id}
-              variant={selectedCategoryId === cat.id ? "default" : "outline"}
-              onClick={() => handleCategoryChange(cat.id)}
-              className="rounded-full whitespace-nowrap shrink-0 capitalize"
+              variant={selectedCategoryId === null ? "default" : "outline"}
+              onClick={() => handleCategoryChange(null)}
+              className="rounded-full whitespace-nowrap shrink-0"
               size="sm"
             >
-              {cat.name}
+              All Drinks
             </Button>
-          ))}
-        </div>
+            {categories.map(cat => (
+              <Button
+                key={cat.id}
+                variant={selectedCategoryId === cat.id ? "default" : "outline"}
+                onClick={() => handleCategoryChange(cat.id)}
+                className="rounded-full whitespace-nowrap shrink-0 capitalize"
+                size="sm"
+              >
+                {cat.name}
+              </Button>
+            ))}
+          </div>
 
-        {/* Search Input */}
-        <div className="relative w-48 md:w-64 shrink-0 mx-2">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-          <Input
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search drinks..."
-            className="pl-9 h-9 rounded-full bg-muted/40 border-none focus-visible:ring-1 focus-visible:ring-primary/40 text-sm"
-          />
-          {searchQuery && (
-            <button 
-              onClick={() => setSearchQuery("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 hover:bg-muted rounded-full"
-            >
-              <X className="h-3 w-3 text-muted-foreground" />
-            </button>
-          )}
-        </div>
+          {/* Search Input */}
+          <div className="relative flex-1 md:w-64 md:flex-initial mx-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+            <Input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search..."
+              className="pl-9 h-9 rounded-full bg-muted/40 border-none focus-visible:ring-1 focus-visible:ring-primary/40 text-sm w-full"
+            />
+            {searchQuery && (
+              <button 
+                onClick={() => setSearchQuery("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 hover:bg-muted rounded-full"
+              >
+                <X className="h-3 w-3 text-muted-foreground" />
+              </button>
+            )}
+          </div>
 
-        {/* Cart toggle button */}
-        <button
-          onClick={() => setIsCartOpen(true)}
-          className="relative shrink-0 flex items-center gap-2 bg-primary text-primary-foreground rounded-full px-4 py-2 font-semibold shadow-md hover:bg-primary/90 transition-colors"
-        >
-          <ShoppingCart className="h-4 w-4" />
-          <span>{fmt(cartTotal)}</span>
-          {cartCount > 0 && (
-            <span className="absolute -top-1.5 -right-1.5 bg-destructive text-destructive-foreground text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
-              {cartCount}
-            </span>
-          )}
-        </button>
+          {/* Cart toggle button */}
+          <button
+            onClick={() => setIsCartOpen(true)}
+            className="relative shrink-0 flex items-center gap-2 bg-primary text-primary-foreground rounded-full px-3 sm:px-4 py-2 font-semibold shadow-md hover:bg-primary/90 transition-colors h-9"
+          >
+            <ShoppingCart className="h-4 w-4" />
+            <span className="hidden sm:inline">{fmt(cartTotal)}</span>
+            {cartCount > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 bg-destructive text-destructive-foreground text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                {cartCount}
+              </span>
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Drink Grid — full width */}
@@ -509,9 +556,9 @@ export default function PosTerminal() {
             ))}
           </div>
         ) : filteredDrinks.length > 0 ? (
-          <div className="space-y-8">
+          <div className="space-y-8" key={selectedCategoryId ?? "all"}>
             {groupedDrinks.map(group => (
-              <div key={group.label || "__singles__"}>
+              <div key={`${selectedCategoryId ?? "all"}-${group.label || "__singles__"}`}>
                 {group.label && (
                   <div className="flex items-center gap-3 mb-4">
                     <span className="text-xs font-black uppercase tracking-[0.2em] text-primary/60">{group.label}</span>

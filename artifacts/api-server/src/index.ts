@@ -30,9 +30,7 @@ app.listen(port, (err) => {
 
   seedIfEmpty()
     .then(async () => {
-      const { db, ingredientTypeVolumesTable } = await import("@workspace/db");
-      await db.update(ingredientTypeVolumesTable).set({ isActive: true });
-      logger.info("Auto-migration: All ingredient volumes activated.");
+      // Auto-migration for ingredient volumes removed to allow persistence of deactivated states
     })
     .catch((e) => logger.error({ err: e }, "Seed or migration failed"));
 });

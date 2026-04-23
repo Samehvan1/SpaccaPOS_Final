@@ -80264,9 +80264,6 @@ app_default.listen(port, (err) => {
   }
   logger.info({ port }, "Server listening");
   seedIfEmpty().then(async () => {
-    const { db: db2, ingredientTypeVolumesTable: ingredientTypeVolumesTable3 } = await Promise.resolve().then(() => (init_src(), src_exports));
-    await db2.update(ingredientTypeVolumesTable3).set({ isActive: true });
-    logger.info("Auto-migration: All ingredient volumes activated.");
   }).catch((e) => logger.error({ err: e }, "Seed or migration failed"));
 });
 /*! Bundled license information:
