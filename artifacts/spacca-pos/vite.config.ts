@@ -20,9 +20,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       injectRegister: 'auto',
       manifest: {
-        name: 'Spacca POS',
+        name: 'Spacca POS & Kitchen',
         short_name: 'Spacca',
-        description: 'Premium Point of Sale and Kitchen Management System',
+        description: 'Premium Point of Sale and Kitchen Management System for Spacca',
         theme_color: '#080808',
         background_color: '#080808',
         display: 'standalone',
@@ -30,16 +30,22 @@ export default defineConfig({
         icons: [
           {
             src: '/favicon.svg',
-            sizes: '192x192',
+            sizes: 'any',
             type: 'image/svg+xml',
-            purpose: 'any maskable',
+            purpose: 'any',
           },
           {
-            src: '/favicon.svg',
+            src: '/icon-512.png',
             sizes: '512x512',
-            type: 'image/svg+xml',
-            purpose: 'any maskable',
+            type: 'image/png',
+            purpose: 'maskable',
           },
+          {
+            src: '/icon-512.png',
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'any',
+          }
         ],
         shortcuts: [
           {
@@ -47,20 +53,43 @@ export default defineConfig({
             short_name: 'Cashier',
             description: 'Open the Cashier Approval Dashboard',
             url: '/cashier',
-            icons: [{ src: '/favicon.svg', sizes: '192x192' }]
+            icons: [{ src: '/icon-512.png', sizes: '192x192' }]
           },
           {
             name: 'Pickup Dashboard',
             short_name: 'Pickup',
             description: 'Open the Order Pickup Dashboard',
             url: '/pickup',
-            icons: [{ src: '/favicon.svg', sizes: '192x192' }]
+            icons: [{ src: '/icon-512.png', sizes: '192x192' }]
+          },
+          {
+            name: 'POS Terminal',
+            short_name: 'POS',
+            description: 'Open the Main POS Terminal',
+            url: '/pos',
+            icons: [{ src: '/icon-512.png', sizes: '192x192' }]
           }
         ]
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         cleanupOutdatedCaches: true,
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'google-fonts-cache',
+              expiration: {
+                maxEntries: 10,
+                maxAgeSeconds: 60 * 60 * 24 * 365 // <== 365 days
+              },
+              cacheableResponse: {
+                statuses: [0, 200]
+              }
+            }
+          }
+        ]
       },
     }),
     ...(process.env.NODE_ENV !== "production" &&

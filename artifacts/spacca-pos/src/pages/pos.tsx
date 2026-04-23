@@ -256,21 +256,24 @@ export default function PosTerminal() {
         other: "#9ca3af"
       };
 
-      const newLayers: CupLayer[] = priceBreakdown.extras
-        .filter((ext: any) => ext.producedQty > 0)
+      const newLayers: CupLayer[] = (priceBreakdown.extras || [])
+        .filter((ext: any) => ext.producedQty >= 0) // Include zero/near-zero to prevent disappear
         .map((ext: any) => {
-          const category = ext.slotLabel?.toLowerCase() || "";
-          const defaultColor = CATEGORY_DEFAULTS[category] || 
-                               (category.includes("milk") ? CATEGORY_DEFAULTS.milk : 
-                                category.includes("coffee") ? CATEGORY_DEFAULTS.coffee : 
-                                CATEGORY_DEFAULTS.other);
+          // Better category inference
+          const slotLower = ext.slotLabel?.toLowerCase() || '';
+          let inferredCategory = 'other';
+          if (slotLower.includes('milk') || slotLower.includes('cream')) inferredCategory = 'milk';
+          else if (slotLower.includes('coffee') || slotLower.includes('espresso')) inferredCategory = 'coffee';
+          else if (slotLower.includes('syrup')) inferredCategory = 'syrup';
+          else if (slotLower.includes('topping')) inferredCategory = 'topping';
+          else if (slotLower.includes('ice') || slotLower.includes('water')) inferredCategory = 'water';
 
           return {
-            id: `${ext.slotLabel}-${ext.optionLabel}`,
-            label: ext.optionLabel,
-            volume: ext.producedQty,
-            color: ext.color || defaultColor,
-            category: ext.slotLabel,
+            id: `${ext.slotLabel}-${ext.optionLabel}-${ext.producedQty}`,
+            label: `${ext.optionLabel} (${Math.round(ext.producedQty)}ml)`,
+            volume: Math.max(0, ext.producedQty || 0), // Ensure non-negative
+            color: ext.color,
+            category: inferredCategory,
           };
         });
       setSimulatorLayers(newLayers);

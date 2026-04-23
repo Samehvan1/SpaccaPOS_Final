@@ -19,14 +19,19 @@ interface CupSimulatorProps {
 }
 
 const CATEGORY_COLORS: Record<string, string> = {
-  coffee: "#2D1B14", // Very deep brown
+  coffee: "#4b2c20",
   espresso: "#1A0F0A",
-  milk: "#FFFFFF", // Pure white for contrast
-  syrup: "#F59E0B", // Vibrant Amber
-  sweetener: "#FCD34D", // Amber 300
-  topping: "#78350F", // Brown 900
-  base: "#D1D5DB", // Gray 300
-  water: "#60A5FA", // Bright Blue
+  milk: "#fdf5e6",
+  syrup: "#d4a373",
+  sauce: "#7f4f24",
+  sweetener: "#ffffff",
+  topping: "#fb8500",
+  base: "#D1D5DB",
+  water: "#60A5FA",
+  other: "#9ca3af",
+  ice: "#E0F2FE",
+  cream: "#F5F5DC",
+  chocolate: "#5D4037",
 };
 
 // 3D Liquid Layer
@@ -43,10 +48,29 @@ function LiquidLayer({
   radiusBottom: number;
   radiusTop: number;
 }) {
-  const color = layer.color || CATEGORY_COLORS[layer.category?.toLowerCase() || ""] || "#9ca3af";
+  const getDynamicColor = (layer: CupLayer) => {
+    if (layer.color) return layer.color;
+
+    const lowerLabel = layer.label?.toLowerCase() || '';
+    const lowerCategory = layer.category?.toLowerCase() || '';
+
+    // Keyword matching from label/category
+    if (lowerLabel.includes('milk') || lowerCategory.includes('milk')) return CATEGORY_COLORS.milk;
+    if (lowerLabel.includes('coffee') || lowerCategory.includes('coffee') || lowerCategory.includes('espresso')) return CATEGORY_COLORS.coffee;
+    if (lowerLabel.includes('ice') || lowerCategory.includes('ice') || lowerCategory.includes('water')) return CATEGORY_COLORS.ice;
+    if (lowerLabel.includes('cream') || lowerCategory.includes('cream')) return CATEGORY_COLORS.cream;
+    if (lowerLabel.includes('chocolate') || lowerCategory.includes('chocolate')) return CATEGORY_COLORS.chocolate;
+    if (lowerLabel.includes('syrup') || lowerCategory.includes('syrup')) return CATEGORY_COLORS.syrup;
+    if (lowerLabel.includes('topping') || lowerCategory.includes('topping')) return CATEGORY_COLORS.topping;
+
+    // Fallback to category key
+    return CATEGORY_COLORS[lowerCategory] || CATEGORY_COLORS.other;
+  };
+
+  const color = getDynamicColor(layer);
 
   // Proof of concept: Embed dynamic items like ice or strawberry pieces based on label or category
-  const isIced = layer.category?.toLowerCase() === "water" || layer.label.toLowerCase().includes("ice");
+  const isIced = layer.category?.toLowerCase().includes("water" )|| layer.label.toLowerCase().includes("ice");
   const isStrawberry =
     layer.label.toLowerCase().includes("strawberry") ||
     (layer.category?.toLowerCase() === "syrup" && color.toLowerCase() === "#ef4444");
@@ -117,7 +141,8 @@ function CupAssembly({ cupSizeMl, layers }: { cupSizeMl: number; layers: CupLaye
     const maxVolume = cupSizeMl || 1;
     
     return layers.map((layer) => {
-      const volumePercent = layer.volume / maxVolume;
+      const effectiveVolume = Math.max(layer.volume, 0.1); // Min 0.1ml to prevent disappear
+      const volumePercent = effectiveVolume / maxVolume;
       const layerHeight = volumePercent * cupHeight;
 
       const startY = (currentVolume / maxVolume) * cupHeight;
@@ -129,7 +154,7 @@ function CupAssembly({ cupSizeMl, layers }: { cupSizeMl: number; layers: CupLaye
 
       const part = {
         ...layer,
-        height: layerHeight,
+        height: Math.max(layerHeight, 0.02), // Ensure visible height
         bottomY: startY - cupHeight / 2, // shift to center relative to cup
         radiusBottom: rB * 0.95, // slight inner offset so liquid doesn't z-fight with glass
         radiusTop: rT * 0.95,

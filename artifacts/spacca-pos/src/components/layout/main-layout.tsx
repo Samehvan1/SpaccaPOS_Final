@@ -4,9 +4,11 @@ import { useAuth } from "@/hooks/use-auth";
 import { useTheme } from "@/hooks/use-theme";
 import { useSettings } from "@/hooks/use-settings";
 import { useOrderEvents } from "@/hooks/use-order-events";
-import { Coffee, ChefHat, LayoutDashboard, LogOut, Sun, Moon, Printer } from "lucide-react";
+import { Coffee, ChefHat, LayoutDashboard, LogOut, Sun, Moon, Printer, Wifi, WifiOff, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useOnlineStatus } from "@/hooks/use-online-status";
+import { usePWAInstall } from "@/hooks/use-pwa-install";
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -16,6 +18,8 @@ export function MainLayout({ children }: MainLayoutProps) {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { autoPrintCustomer, setAutoPrintCustomer, autoPrintAgent, setAutoPrintAgent } = useSettings();
+  const isOnline = useOnlineStatus();
+  const { isInstallable, installApp } = usePWAInstall();
   useOrderEvents(!!user);
   const [location, setLocation] = useLocation();
 
@@ -80,8 +84,27 @@ export function MainLayout({ children }: MainLayoutProps) {
               </Badge>
            </div>
            
-           <div className="flex items-center gap-2">
-             <div className="hidden sm:flex flex-col items-end mr-2">
+            
+           <div className="flex items-center gap-4">
+             {!isOnline && (
+               <Badge variant="destructive" className="gap-1 animate-pulse px-2 py-0.5 text-[10px] uppercase font-black">
+                 <WifiOff className="h-3 w-3" /> Offline
+               </Badge>
+             )}
+             
+             {isInstallable && (
+               <Button 
+                 variant="outline" 
+                 size="sm" 
+                 onClick={installApp}
+                 className="h-8 gap-2 bg-primary/10 border-primary/30 text-primary hover:bg-primary hover:text-primary-foreground text-[10px] font-black uppercase tracking-tight"
+               >
+                 <Download className="h-3.5 w-3.5" />
+                 Install App
+               </Button>
+             )}
+
+             <div className="hidden sm:flex flex-col items-end">
                <span className="text-xs font-bold leading-none">{user.name}</span>
                <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Terminal ID: {user.id}</span>
              </div>
