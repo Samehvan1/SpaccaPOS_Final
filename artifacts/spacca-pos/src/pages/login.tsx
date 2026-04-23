@@ -78,7 +78,7 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-muted/30">
+    <div className="h-full w-full overflow-y-auto flex items-center justify-center bg-muted/30 p-4">
       <div className="w-full max-w-md p-8 bg-card border rounded-xl shadow-xl">
         <div className="text-center mb-10">
           <h1 className="text-4xl font-bold tracking-tighter text-primary mb-2">SPACCA</h1>

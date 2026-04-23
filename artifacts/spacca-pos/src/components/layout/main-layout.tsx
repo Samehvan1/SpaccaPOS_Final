@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useTheme } from "@/hooks/use-theme";
 import { useSettings } from "@/hooks/use-settings";
 import { useOrderEvents } from "@/hooks/use-order-events";
-import { Coffee, ChefHat, LayoutDashboard, LogOut, Sun, Moon, Printer, Wifi, WifiOff, Download } from "lucide-react";
+import { Coffee, ChefHat, LayoutDashboard, LogOut, Sun, Moon, Printer, Wifi, WifiOff, Download, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useOnlineStatus } from "@/hooks/use-online-status";
@@ -48,6 +48,17 @@ export function MainLayout({ children }: MainLayoutProps) {
               ) : (
                 <><Moon className="h-4 w-4" /><span className="hidden sm:inline">Dark</span></>
               )}
+            </Button>
+            
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-2 text-muted-foreground hover:text-foreground"
+              onClick={() => window.location.reload()}
+              title="Refresh App"
+            >
+              <RefreshCw className="h-4 w-4" />
+              <span className="hidden sm:inline">Refresh</span>
             </Button>
 
             <Button
@@ -116,6 +127,16 @@ export function MainLayout({ children }: MainLayoutProps) {
                className="rounded-lg h-8 w-8 p-0 text-muted-foreground hover:text-foreground hover:bg-muted"
              >
                 {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+             </Button>
+
+             <Button 
+               variant="ghost" 
+               size="sm" 
+               onClick={() => window.location.reload()}
+               className="rounded-lg h-8 w-8 p-0 text-muted-foreground hover:text-foreground hover:bg-muted"
+               title="Refresh App"
+             >
+                <RefreshCw className="h-4 w-4" />
              </Button>
              
              <Button 
@@ -216,6 +237,16 @@ export function MainLayout({ children }: MainLayoutProps) {
               </Button>
             </>
           )}
+
+          <Button
+            variant="ghost"
+            className="w-full justify-center md:justify-start gap-2 text-muted-foreground hover:text-foreground"
+            onClick={() => window.location.reload()}
+            title="Refresh App"
+          >
+            <RefreshCw className="h-5 w-5" />
+            <span className="hidden md:inline">Refresh App</span>
+          </Button>
 
           <Button
             variant="ghost"

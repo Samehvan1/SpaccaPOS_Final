@@ -35,14 +35,14 @@ export default defineConfig({
             purpose: 'any',
           },
           {
-            src: '/icon-512.png',
-            sizes: '512x512',
+            src: '/Asset 8@2x-8.png',
+            sizes: '192x192',
             type: 'image/png',
-            purpose: 'maskable',
+            purpose: 'any',
           },
           {
-            src: '/icon-512.png',
-            sizes: '192x192',
+            src: '/Asset 8@2x-8.png',
+            sizes: '512x512',
             type: 'image/png',
             purpose: 'any',
           }

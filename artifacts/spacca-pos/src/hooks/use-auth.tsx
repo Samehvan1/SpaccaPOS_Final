@@ -1,5 +1,6 @@
 import { createContext, useContext, ReactNode, useState, useEffect } from "react";
 import { useGetMe, useBaristaLogout, User } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 
 interface AuthContextType {
@@ -13,6 +14,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [, setLocation] = useLocation();
+  const queryClient = useQueryClient();
 
   const { data: user, isLoading, refetch } = useGetMe({
     query: {
@@ -23,7 +25,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logoutMutation = useBaristaLogout({
     mutation: {
       onSuccess: () => {
-        refetch();
+        queryClient.setQueryData(["me"], null);
+        queryClient.removeQueries();
         setLocation("/login");
       },
     },
