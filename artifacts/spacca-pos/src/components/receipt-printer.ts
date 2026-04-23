@@ -103,6 +103,10 @@ export function printCustomerReceipt(order: CompletedOrder) {
     `;
   }).join('<div style="margin-bottom:4px"></div>');
 
+  const VAT_RATE = 0.14;
+  const beforeVat = order.subtotal / (1 + VAT_RATE);
+  const vatAmount = order.subtotal - beforeVat;
+
   const change = order.changeDue != null && order.changeDue > 0
     ? `<div class="row"><span class="label">Change:</span><span class="value bold">${fmt(order.changeDue)}</span></div>` : "";
 
@@ -126,6 +130,10 @@ export function printCustomerReceipt(order: CompletedOrder) {
     <div class="section-title">Items</div>
     ${itemRows}
     <div class="divider"></div>
+    <div class="row"><span class="label">Before VAT:</span><span class="value">${fmt(beforeVat)}</span></div>
+    <div class="row"><span class="label">VAT (14%):</span><span class="value">${fmt(vatAmount)}</span></div>
+    <div class="divider"></div>
+    <div class="row"><span class="label">Subtotal:</span><span class="value">${fmt(order.subtotal)}</span></div>
     ${discount}
     <div class="row bold big"><span class="label">TOTAL:</span><span class="value">${fmt(order.total)}</span></div>
     <div class="row"><span class="label">Payment:</span><span class="value">${payLabel}</span></div>
