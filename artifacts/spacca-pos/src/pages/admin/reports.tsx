@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useGetDashboardSummary, useGetSalesByCategory, useGetTopDrinks, useListOrders, useGetDrink } from "@workspace/api-client-react";
+import { useGetDashboardSummary, useGetSalesByCategory, useGetTopDrinks, useListOrders, useGetDrink, useListDrinks } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -48,34 +48,45 @@ export default function ReportsPage() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [period, setPeriod] = useState(PERIODS[1]);
   const [drinksView, setDrinksView] = useState<"grouped" | "individual">("grouped");
+  const [showCustomizedOnly, setShowCustomizedOnly] = useState(false);
   const [selectedCustomizedItem, setSelectedCustomizedItem] = useState<any>(null);
 
-  // Fetch drink details for defaults when a customized item is selected
-  const { data: drinkDetail, isLoading: loadingDrinkDetail } = useGetDrink(selectedCustomizedItem?.drinkId || 0, {
-    query: { enabled: !!selectedCustomizedItem?.drinkId } as any
-  });
+  // Fetch all drinks with slots for precise customization detection in the list
+  const { data: allDrinksCatalog } = useListDrinks({ includeSlots: true } as any);
 
-  const defaultsMap = useMemo(() => {
-    if (!drinkDetail?.slots) return {} as Record<string, string>;
-    const map: Record<string, string> = {};
-    (drinkDetail.slots as any[]).forEach(slot => {
+  // Helper to build defaults map for any given set of drink slots
+  const buildDefaultsMap = (slots: any[]) => {
+    const map: Record<string, { label: string; isDynamic: boolean; typeName: string }> = {};
+    if (!slots) return map;
+    slots.forEach(slot => {
+      let label = "";
+      let typeName = "";
       if (slot.slotStyle === "typed") {
         const defType = slot.typeOptions?.find((to: any) => to.isDefault);
         const defVol = defType?.volumes?.find((v: any) => v.isDefault);
+        typeName = defType?.typeName ?? "";
         if (defType && defVol) {
-          map[slot.slotLabel] = `${defType.typeName} (${defVol.volumeName})`;
+          label = `${defType.typeName} · ${defVol.volumeName}`;
         } else if (defType) {
-          map[slot.slotLabel] = defType.typeName;
+          label = defType.typeName;
         }
       } else if (slot.slotStyle === "legacy") {
          const defOpt = slot.ingredient?.options?.find((o: any) => o.isDefault);
          if (defOpt) {
-           map[slot.slotLabel] = defOpt.label;
+           label = defOpt.label;
          }
       }
+      map[slot.slotLabel] = { label, isDynamic: !!slot.isDynamic, typeName };
     });
     return map;
-  }, [drinkDetail]);
+  };
+
+  // Fetch drink details for defaults when a customized item is selected (modal)
+  const { data: drinkDetail, isLoading: loadingDrinkDetail } = useGetDrink(selectedCustomizedItem?.drinkId || 0, {
+    query: { enabled: !!selectedCustomizedItem?.drinkId } as any
+  });
+
+  const defaultsMap = useMemo(() => buildDefaultsMap(drinkDetail?.slots as any[]), [drinkDetail]);
 
   // Dashboard Tab Data
   const { data: summary, isLoading: loadingSummary } = useGetDashboardSummary();
@@ -115,16 +126,49 @@ export default function ReportsPage() {
   // Drinks Report Processing
   const drinkItems = useMemo(() => {
     if (!reportOrders) return [];
-    return reportOrders.flatMap(order => (order.items || []).map(item => ({
-      ...item,
-      orderId: order.id,
-      orderNumber: order.orderNumber,
-      createdAt: order.createdAt,
-      orderDiscount: order.discount,
-      orderSubtotal: order.subtotal,
-      isCustomized: (item.customizations || []).some((c: any) => c.addedCost > 0) || (!!item.specialNotes && item.specialNotes.trim() !== "")
-    })));
-  }, [reportOrders]);
+    return reportOrders.flatMap(order => (order.items || []).map(item => {
+      const customizations = item.customizations || [];
+      const specialNotes = (item.specialNotes || "").trim();
+      
+      // Better customization check: compare with catalog defaults if available
+      let isActuallyCustomized = false;
+      if (specialNotes !== "") {
+        isActuallyCustomized = true;
+      } else {
+        const drinkInCatalog = allDrinksCatalog?.find((d: any) => d.id === item.drinkId) as any;
+        if (drinkInCatalog?.slots) {
+          const itemDefaults = buildDefaultsMap(drinkInCatalog.slots);
+          const norm = (s: string) => s.replace(/\s*[·()]\s*/g, "|").trim().toLowerCase();
+          
+          isActuallyCustomized = customizations.some(c => {
+            const def = itemDefaults[c.slotLabel];
+            if (!def) return false;
+            
+            // Exact same normalization and logic as the details modal
+            const norm = (s: string) => s.replace(/\s*[·()]\s*/g, "|").replace(/\|+$/, "").trim().toLowerCase();
+            
+            if (def.isDynamic) {
+              return !c.optionLabel.toLowerCase().startsWith(def.typeName.toLowerCase());
+            }
+            return norm(c.optionLabel) !== norm(def.label);
+          });
+        } else {
+          // If catalog not yet loaded, don't guess based on cost (defaults can have costs)
+          isActuallyCustomized = false;
+        }
+      }
+
+      return {
+        ...item,
+        orderId: order.id,
+        orderNumber: order.orderNumber,
+        createdAt: order.createdAt,
+        orderDiscount: order.discount,
+        orderSubtotal: order.subtotal,
+        isCustomized: isActuallyCustomized
+      };
+    })).filter(item => !showCustomizedOnly || item.isCustomized);
+  }, [reportOrders, allDrinksCatalog, showCustomizedOnly]);
 
   const groupedDrinkItems = useMemo(() => {
     const groups: Record<string, { drinkName: string; isCustomized: boolean; quantity: number; revenue: number }> = {};
@@ -742,25 +786,37 @@ export default function ReportsPage() {
                       <Download className="h-4 w-4" /> Export Drinks
                     </Button>
                   </div>
-                <div className="flex items-center gap-2 bg-muted/50 p-1 rounded-lg border">
-                  <Button 
-                    variant={drinksView === "grouped" ? "default" : "ghost"} 
-                    size="sm"
-                    onClick={() => setDrinksView("grouped")}
-                    className="gap-2 h-8 px-3"
-                  >
-                    <Layers className="h-4 w-4" />
-                    Grouped
-                  </Button>
-                  <Button 
-                    variant={drinksView === "individual" ? "default" : "ghost"} 
-                    size="sm"
-                    onClick={() => setDrinksView("individual")}
-                    className="gap-2 h-8 px-3"
-                  >
-                    <FileText className="h-4 w-4" />
-                    Individual
-                  </Button>
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2 bg-muted/30 px-3 py-1.5 rounded-lg border">
+                    <Label htmlFor="custom-only" className="text-xs font-medium cursor-pointer">Customized Only</Label>
+                    <input 
+                      id="custom-only"
+                      type="checkbox" 
+                      checked={showCustomizedOnly} 
+                      onChange={(e) => setShowCustomizedOnly(e.target.checked)}
+                      className="h-3.5 w-3.5 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2 bg-muted/50 p-1 rounded-lg border">
+                    <Button 
+                      variant={drinksView === "grouped" ? "default" : "ghost"} 
+                      size="sm"
+                      onClick={() => setDrinksView("grouped")}
+                      className="gap-2 h-8 px-3"
+                    >
+                      <Layers className="h-4 w-4" />
+                      Grouped
+                    </Button>
+                    <Button 
+                      variant={drinksView === "individual" ? "default" : "ghost"} 
+                      size="sm"
+                      onClick={() => setDrinksView("individual")}
+                      className="gap-2 h-8 px-3"
+                    >
+                      <FileText className="h-4 w-4" />
+                      Individual
+                    </Button>
+                  </div>
                 </div>
               </div>
             </CardHeader>
@@ -908,14 +964,25 @@ export default function ReportsPage() {
                     </TableRow>
                   ) : selectedCustomizedItem?.customizations?.length > 0 ? (
                     selectedCustomizedItem.customizations.map((c: any, i: number) => {
-                      const defaultValue = defaultsMap[c.slotLabel];
-                      const isModified = defaultValue && c.optionLabel !== defaultValue && !defaultValue.startsWith(c.optionLabel);
+                      const def = defaultsMap[c.slotLabel];
+                      // Normalize strings for comparison (remove spaces and separators, trim trailing pipes)
+                      const norm = (s: string) => s.replace(/\s*[·()]\s*/g, "|").replace(/\|+$/, "").trim().toLowerCase();
+                      
+                      let isModified = false;
+                      if (def) {
+                        if (def.isDynamic) {
+                          // For dynamic slots, we only care if the ingredient type changed, not the filled volume
+                          isModified = !c.optionLabel.toLowerCase().startsWith(def.typeName.toLowerCase());
+                        } else {
+                          isModified = norm(c.optionLabel) !== norm(def.label);
+                        }
+                      }
 
                       return (
                         <TableRow key={i} className={`hover:bg-transparent border-l-2 ${isModified ? "border-l-amber-500 bg-amber-50/20" : "border-l-transparent"}`}>
                           <TableCell className="py-2 text-sm font-medium">{c.slotLabel}</TableCell>
                           <TableCell className="py-2 text-xs text-muted-foreground italic">
-                            {defaultValue || "—"}
+                            {def?.label || "—"}
                           </TableCell>
                           <TableCell className={`py-2 text-sm ${isModified ? "text-amber-600 font-bold" : ""}`}>
                             {c.optionLabel}

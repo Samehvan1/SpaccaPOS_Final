@@ -44,6 +44,7 @@ export const GetMeResponse = zod.object({
 export const ListDrinksQueryParams = zod.object({
   category: zod.coerce.string().optional(),
   active: zod.coerce.boolean().optional(),
+  includeSlots: zod.coerce.boolean().optional(),
 });
 
 export const ListDrinksResponseItem = zod.object({
@@ -62,6 +63,7 @@ export const ListDrinksResponseItem = zod.object({
   kitchenStation: zod.string().optional(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
+  slots: zod.array(zod.any()).optional(),
 });
 export const ListDrinksResponse = zod.array(ListDrinksResponseItem);
 

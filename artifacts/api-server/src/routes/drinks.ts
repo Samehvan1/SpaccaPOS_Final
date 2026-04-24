@@ -327,15 +327,18 @@ router.get("/drinks", async (req, res): Promise<void> => {
     return (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
   });
 
-  const drinksWithDefaultPrice = await Promise.all(
+  const drinksWithDetails = await Promise.all(
     filtered.map(async (d) => {
+      if (params.success && params.data.includeSlots) {
+        return await buildDrinkDetail(d.id);
+      }
       const base = Number(d.basePrice);
       const defaultPrice = await computeDefaultPrice(d.id);
       return { ...d, basePrice: base, defaultPrice };
     })
   );
 
-  res.json(ListDrinksResponse.parse(serializeDates(drinksWithDefaultPrice)));
+  res.json(serializeDates(drinksWithDetails));
 });
 
 router.post("/drinks", async (req, res): Promise<void> => {
