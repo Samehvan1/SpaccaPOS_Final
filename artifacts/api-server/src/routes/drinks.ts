@@ -324,7 +324,8 @@ router.get("/drinks", async (req, res): Promise<void> => {
     const catA = a.categoryId != null ? (catOrderMap.get(a.categoryId) ?? 999) : 999;
     const catB = b.categoryId != null ? (catOrderMap.get(b.categoryId) ?? 999) : 999;
     if (catA !== catB) return catA - catB;
-    return (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
+    if ((a.sortOrder ?? 0) !== (b.sortOrder ?? 0)) return (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
+    return a.name.localeCompare(b.name);
   });
 
   const drinksWithDetails = await Promise.all(

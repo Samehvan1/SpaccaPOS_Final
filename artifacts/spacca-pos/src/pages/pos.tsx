@@ -144,10 +144,24 @@ export default function PosTerminal() {
     // Handle "other" drinks that don't belong to a group
     const rest = filteredDrinks.filter(d => !added.has(d.id));
     if (rest.length > 0) {
-      groups.unshift({ label: "", drinks: rest });
+      groups.push({ label: "", drinks: rest });
     }
     
-    return groups;
+    // Sort drinks within each group by index then name
+    groups.forEach(g => {
+      g.drinks.sort((a, b) => {
+        if ((a.sortOrder ?? 0) !== (b.sortOrder ?? 0)) return (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
+        return a.name.localeCompare(b.name);
+      });
+    });
+    
+    // Sort groups themselves by the minimum sortOrder of their drinks to respect admin positioning
+    return groups.sort((a, b) => {
+      const minA = Math.min(...a.drinks.map(d => d.sortOrder ?? 0));
+      const minB = Math.min(...b.drinks.map(d => d.sortOrder ?? 0));
+      if (minA !== minB) return minA - minB;
+      return (a.label || "").localeCompare(b.label || "");
+    });
   }, [filteredDrinks, visibleSubcategories, subcategoryGroups]);
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
