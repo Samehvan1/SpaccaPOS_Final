@@ -23,6 +23,8 @@ tags:
     description: Dashboard summaries
   - name: settings
     description: Application settings management
+  - name: discounts
+    description: Discount and coupon management
 
 paths:
   /healthz:
@@ -727,45 +729,96 @@ paths:
                 items:
                   $ref: "#/components/schemas/TopDrink"
 
-  /settings:
+  /discounts:
     get:
-      operationId: getSettings
-      tags: [settings]
-      summary: Get application settings
-      parameters:
-        - name: scope
-          in: query
-          schema:
-            type: string
-            enum: [global, user]
+      operationId: listDiscounts
+      tags: [discounts]
+      summary: List all discounts
       responses:
         "200":
-          description: List of settings
+          description: List of discounts
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/Setting"
-    patch:
-      operationId: updateSettings
-      tags: [settings]
-      summary: Update application settings
+                  $ref: "#/components/schemas/Discount"
+    post:
+      operationId: createDiscount
+      tags: [discounts]
+      summary: Create a discount
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/UpdateSettingsBody"
+              $ref: "#/components/schemas/CreateDiscountBody"
       responses:
-        "200":
-          description: Settings updated
+        "201":
+          description: Created
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Setting"
+                $ref: "#/components/schemas/Discount"
+
+  /discounts/{id}:
+    patch:
+      operationId: updateDiscount
+      tags: [discounts]
+      summary: Update a discount
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateDiscountBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Discount"
+    delete:
+      operationId: deleteDiscount
+      tags: [discounts]
+      summary: Delete a discount
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /discounts/validate/{code}:
+    get:
+      operationId: validateDiscount
+      tags: [discounts]
+      summary: Validate a discount code
+      parameters:
+        - in: path
+          name: code
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Discount details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Discount"
+        "404":
+          description: Invalid code
 
 components:
   schemas:
@@ -1351,6 +1404,13 @@ components:
           type: number
         discount:
           type: number
+        discountId:
+          type: ["integer", "null"]
+        discountValue:
+          type: ["number", "null"]
+        discountType:
+          type: ["string", "null"]
+          enum: [percentage, fixed]
         total:
           type: number
         paymentMethod:
@@ -1409,6 +1469,8 @@ components:
           type: string
         discount:
           type: number
+        discountCode:
+          type: string
         items:
           type: array
           items:
@@ -1619,3 +1681,60 @@ components:
       required:
         - scope
         - settings
+
+    Discount:
+      type: object
+      properties:
+        id:
+          type: integer
+        code:
+          type: string
+        type:
+          type: string
+          enum: [percentage, fixed]
+        value:
+          type: number
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - code
+        - type
+        - value
+        - isActive
+        - createdAt
+        - updatedAt
+
+    CreateDiscountBody:
+      type: object
+      properties:
+        code:
+          type: string
+        type:
+          type: string
+          enum: [percentage, fixed]
+        value:
+          type: number
+        isActive:
+          type: boolean
+      required:
+        - code
+        - type
+        - value
+
+    UpdateDiscountBody:
+      type: object
+      properties:
+        code:
+          type: string
+        type:
+          type: string
+          enum: [percentage, fixed]
+        value:
+          type: number
+        isActive:
+          type: boolean

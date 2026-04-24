@@ -12,6 +12,7 @@ import kitchenStationsRouter from "./kitchen-stations";
 import settingsRouter from "./settings";
 import predefinedSlotsRouter from "./predefined-slots";
 import usersRouter from "./users";
+import discountsRouter from "./discounts";
 import { addSseClient } from "../lib/sse";
 
 const router: IRouter = Router();
@@ -29,6 +30,7 @@ router.use(kitchenStationsRouter);
 router.use(settingsRouter);
 router.use(predefinedSlotsRouter);
 router.use(usersRouter);
+router.use(discountsRouter);
 
 // Server-Sent Events endpoint for real-time order push
 router.get("/events", (req, res) => {

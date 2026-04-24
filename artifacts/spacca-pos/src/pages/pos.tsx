@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
-import { Coffee, Minus, Plus, ShoppingCart, Trash2, X, ChevronRight, Droplets, Search, Menu } from "lucide-react";
+import { Coffee, Minus, Plus, ShoppingCart, Trash2, X, ChevronRight, Droplets, Search, Menu, RotateCcw, Ticket, Check, Loader2, Tag } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { fmt } from "@/lib/currency";
 import { CupSimulator, type CupLayer } from "@/components/cup-simulator";
@@ -172,7 +172,7 @@ export default function PosTerminal() {
   const [subSelections, setSubSelections] = useState<Record<number, number>>({});
   const [notes, setNotes] = useState("");
 
-  useEffect(() => {
+  const applyDefaults = () => {
     if (drinkDetail) {
       const initial: Record<number, number> = {};
       const initialSub: Record<number, number> = {};
@@ -209,6 +209,10 @@ export default function PosTerminal() {
       setSubSelections(initialSub);
       setNotes("");
     }
+  };
+
+  useEffect(() => {
+    applyDefaults();
   }, [drinkDetail]);
 
   const currentSelectionsArray = useMemo(() => {
@@ -315,7 +319,21 @@ export default function PosTerminal() {
   // Cart
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
-  const cartTotal = cart.reduce((sum, item) => sum + item.totalPrice * item.quantity, 0);
+  const [discountCode, setDiscountCode] = useState("");
+  const [appliedDiscount, setAppliedDiscount] = useState<any>(null);
+  const [isValidatingDiscount, setIsValidatingDiscount] = useState(false);
+
+  const cartSubtotal = cart.reduce((sum, item) => sum + item.totalPrice * item.quantity, 0);
+  const discountAmount = useMemo(() => {
+    if (!appliedDiscount) return 0;
+    if (appliedDiscount.type === "percentage") {
+      const beforeTax = cartSubtotal / 1.14;
+      return (beforeTax * appliedDiscount.value) / 100;
+    }
+    return appliedDiscount.value;
+  }, [appliedDiscount, cartSubtotal]);
+
+  const cartTotal = cartSubtotal - discountAmount;
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   const handleAddToCart = () => {
@@ -403,12 +421,34 @@ export default function PosTerminal() {
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "card" | "wallet">("card");
   const [amountTendered, setAmountTendered] = useState("");
 
+  const handleValidateDiscount = async () => {
+    if (!discountCode.trim()) return;
+    setIsValidatingDiscount(true);
+    try {
+      const res = await fetch(`${API_BASE}/discounts/validate/${discountCode.trim().toUpperCase()}`);
+      if (!res.ok) {
+        toast({ variant: "destructive", title: "Invalid coupon code" });
+        setAppliedDiscount(null);
+        return;
+      }
+      const discount = await res.json();
+      setAppliedDiscount(discount);
+      toast({ title: "Coupon applied!" });
+    } catch {
+      toast({ variant: "destructive", title: "Error validating coupon" });
+    } finally {
+      setIsValidatingDiscount(false);
+    }
+  };
+
 
   const { mutate: createOrder, isPending: isCreatingOrder } = useCreateOrder({
     mutation: {
       onSuccess: (data) => {
         toast({ title: "Order Created", description: `Order #${data.orderNumber} sent for cashier approval.` });
         setCart([]);
+        setAppliedDiscount(null);
+        setDiscountCode("");
         setIsCartOpen(false);
         setIsCheckoutOpen(false);
         setCustomerName("");
@@ -427,6 +467,7 @@ export default function PosTerminal() {
         customerName: customerName || undefined,
         paymentMethod,
         amountTendered: paymentMethod === "cash" && amountTendered ? parseFloat(amountTendered) : undefined,
+        discountCode: appliedDiscount?.code,
         items: cart.map(item => ({
           drinkId: item.drinkId,
           quantity: item.quantity,
@@ -681,8 +722,26 @@ export default function PosTerminal() {
           <DialogHeader className="px-5 pt-5 pb-5 border-b shrink-0 flex-row items-center gap-4">
             <div className="flex-1 min-w-0 pb-1">
               <DialogTitle className="text-xl truncate mb-1">{activeDrink?.name}</DialogTitle>
-              <div className={`text-2xl font-bold text-primary transition-opacity ${isCalculating ? "opacity-60" : "opacity-100"}`}>
-                {fmt(displayPrice)}
+              {drinkDetail?.description && (
+                <p className="text-[11px] text-muted-foreground line-clamp-2 mb-2 leading-tight">
+                  {drinkDetail.description}
+                </p>
+              )}
+              <div className="flex items-center gap-3">
+                <div className={`text-2xl font-bold text-primary transition-opacity ${isCalculating ? "opacity-60" : "opacity-100"}`}>
+                  {fmt(displayPrice)}
+                </div>
+                {drinkDetail && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={applyDefaults}
+                    className="h-7 px-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:text-primary hover:bg-primary/10 gap-1.5"
+                  >
+                    <RotateCcw className="h-3 w-3" />
+                    Reset
+                  </Button>
+                )}
               </div>
             </div>
             {drinkDetail && (
@@ -719,8 +778,19 @@ export default function PosTerminal() {
                     return (
                       <div key={slot.id} className="space-y-3 p-3 rounded-xl border-2 border-primary/15 bg-muted/10 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.1)] dark:bg-muted/5">
                         <div className="flex items-center gap-2">
-                          <Label className="text-[11px] font-black uppercase tracking-[0.15em] text-primary/70 block">
-                            {slot.slotLabel}
+                          <Label className="text-[11px] font-black uppercase tracking-[0.15em] text-primary/70 flex items-center gap-2">
+                            <span>{slot.slotLabel}</span>
+                            {(() => {
+                              const typeOptions: any[] = slot.typeOptions ?? [];
+                              const defTypeOpt = typeOptions.find((to: any) => to.isDefault) ?? typeOptions[0];
+                              const defVol = defTypeOpt?.volumes?.find((v: any) => v.isDefault) ?? defTypeOpt?.volumes?.[0];
+                              const defaultLabel = defTypeOpt ? `${defTypeOpt.typeName}${defVol?.volumeName ? ` · ${defVol.volumeName}` : ""}` : "";
+                              return defaultLabel && (
+                                <span className="normal-case font-medium text-[9px] text-muted-foreground/60 tracking-normal italic">
+                                  (Default: {defaultLabel})
+                                </span>
+                              );
+                            })()}
                           </Label>
                           <div className="flex-1 h-px bg-gradient-to-r from-primary/10 to-transparent" />
                         </div>
@@ -797,8 +867,17 @@ export default function PosTerminal() {
                   return (
                     <div key={slot.id} className="space-y-3 p-3 rounded-xl border-2 border-primary/15 bg-muted/10 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.1)] dark:bg-muted/5">
                       <div className="flex items-center gap-2">
-                        <Label className="text-[11px] font-black uppercase tracking-[0.15em] text-primary/70 block">
-                          {slot.slotLabel}
+                        <Label className="text-[11px] font-black uppercase tracking-[0.15em] text-primary/70 flex items-center gap-2">
+                          <span>{slot.slotLabel}</span>
+                          {(() => {
+                            const options: any[] = slot.ingredient?.options ?? [];
+                            const defOpt = options.find((o: any) => o.id === slot.defaultOptionId) || options[0];
+                            return defOpt && (
+                              <span className="normal-case font-medium text-[9px] text-muted-foreground/60 tracking-normal italic">
+                                (Default: {defOpt.label})
+                              </span>
+                            );
+                          })()}
                         </Label>
                         <div className="flex-1 h-px bg-gradient-to-r from-primary/10 to-transparent" />
                       </div>
@@ -956,9 +1035,64 @@ export default function PosTerminal() {
                 />
               </div>
             )}
-            <div className="flex justify-between items-center py-4 border-t border-b">
-              <span className="font-bold text-lg">Total Due</span>
-              <span className="font-bold text-2xl text-primary">{fmt(cartTotal)}</span>
+            <div className="grid gap-2">
+              <Label htmlFor="coupon">Discount Coupon</Label>
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Ticket className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="coupon"
+                    value={discountCode}
+                    onChange={e => setDiscountCode(e.target.value)}
+                    placeholder="Enter code"
+                    className="pl-9 font-mono font-bold uppercase"
+                    disabled={!!appliedDiscount || isValidatingDiscount}
+                  />
+                </div>
+                {appliedDiscount ? (
+                  <Button 
+                    variant="outline" 
+                    size="icon" 
+                    className="text-destructive border-destructive/20 hover:bg-destructive/5"
+                    onClick={() => { setAppliedDiscount(null); setDiscountCode(""); }}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                ) : (
+                  <Button 
+                    variant="secondary" 
+                    onClick={handleValidateDiscount}
+                    disabled={!discountCode.trim() || isValidatingDiscount}
+                  >
+                    {isValidatingDiscount ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                  </Button>
+                )}
+              </div>
+              {appliedDiscount && (
+                <p className="text-[10px] text-green-600 font-bold uppercase tracking-wider flex items-center gap-1 mt-0.5">
+                  <Check className="h-3 w-3" /> 
+                  Applied: {appliedDiscount.type === 'percentage' ? `${appliedDiscount.value}%` : `E£${fmt(appliedDiscount.value)}`} Off
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-1.5 py-4 border-t border-b">
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-muted-foreground">Subtotal</span>
+                <span className="font-medium">{fmt(cartSubtotal)}</span>
+              </div>
+              {discountAmount > 0 && (
+                <div className="flex justify-between items-center text-sm text-green-600 font-medium">
+                  <span className="flex items-center gap-1">
+                    <Tag className="h-3.5 w-3.5" /> Discount
+                  </span>
+                  <span>-{fmt(discountAmount)}</span>
+                </div>
+              )}
+              <div className="flex justify-between items-center pt-1">
+                <span className="font-bold text-lg">Total Due</span>
+                <span className="font-bold text-2xl text-primary">{fmt(cartTotal)}</span>
+              </div>
             </div>
           </div>
           <DialogFooter>

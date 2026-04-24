@@ -30,6 +30,9 @@ interface CompletedOrder {
   customerName?: string | null;
   subtotal: number;
   discount: number;
+  discountCode?: string | null;
+  discountValue?: number | null;
+  discountType?: "percentage" | "fixed" | null;
   total: number;
   paymentMethod: string;
   amountTendered?: number | null;
@@ -114,7 +117,7 @@ export function printCustomerReceipt(order: CompletedOrder) {
     ? `<div class="row"><span class="label">Tendered:</span><span class="value">${fmt(order.amountTendered)}</span></div>` : "";
 
   const discount = order.discount > 0
-    ? `<div class="row"><span class="label">Discount:</span><span class="value">-${fmt(order.discount)}</span></div>` : "";
+    ? `<div class="row"><span class="label">Discount${order.discountCode ? ` (${order.discountCode})` : ""}:</span><span class="value">-${fmt(order.discount)}</span></div>` : "";
 
   openPrintWindow(`
     <div class="center" style="margin-bottom:6px">

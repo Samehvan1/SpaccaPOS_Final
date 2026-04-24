@@ -500,6 +500,9 @@ export const ListOrdersResponseItem = zod.object({
   customerName: zod.string().nullable(),
   subtotal: zod.number(),
   discount: zod.number(),
+  discountId: zod.number().nullish(),
+  discountValue: zod.number().nullish(),
+  discountType: zod.enum(["percentage", "fixed"]).nullish(),
   total: zod.number(),
   paymentMethod: zod.enum(["cash", "card", "wallet"]),
   amountTendered: zod.number().nullable(),
@@ -519,6 +522,7 @@ export const CreateOrderBody = zod.object({
   amountTendered: zod.number().optional(),
   notes: zod.string().optional(),
   discount: zod.number().optional(),
+  discountCode: zod.string().optional(),
   items: zod.array(
     zod.object({
       drinkId: zod.number(),
@@ -704,6 +708,9 @@ export const MarkOrderItemReadyResponse = zod.object({
   customerName: zod.string().nullable(),
   subtotal: zod.number(),
   discount: zod.number(),
+  discountId: zod.number().nullish(),
+  discountValue: zod.number().nullish(),
+  discountType: zod.enum(["percentage", "fixed"]).nullish(),
   total: zod.number(),
   paymentMethod: zod.enum(["cash", "card", "wallet"]),
   amountTendered: zod.number().nullable(),
@@ -980,3 +987,26 @@ export const UpdateSettingsResponseItem = zod.object({
   userId: zod.number().nullish(),
 });
 export const UpdateSettingsResponse = zod.array(UpdateSettingsResponseItem);
+export const Discount = zod.object({
+  id: zod.number(),
+  code: zod.string(),
+  type: zod.enum(["percentage", "fixed"]),
+  value: zod.number(),
+  isActive: zod.boolean(),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+});
+
+export const CreateDiscountBody = zod.object({
+  code: zod.string(),
+  type: zod.enum(["percentage", "fixed"]),
+  value: zod.number(),
+  isActive: zod.boolean().optional(),
+});
+
+export const UpdateDiscountBody = zod.object({
+  code: zod.string().optional(),
+  type: zod.enum(["percentage", "fixed"]).optional(),
+  value: zod.number().optional(),
+  isActive: zod.boolean().optional(),
+});

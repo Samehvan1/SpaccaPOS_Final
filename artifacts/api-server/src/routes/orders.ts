@@ -19,6 +19,7 @@ import {
   ingredientTypeVolumesTable,
   drinkSlotVolumesTable,
   ingredientVolumesTable,
+  discountsTable,
 } from "@workspace/db";
 import {
   ListOrdersQueryParams,
@@ -79,6 +80,10 @@ async function buildOrderDetail(orderId: number) {
     baristaName: barista?.name ?? "Unknown",
     subtotal: parseFloat(order.subtotal),
     discount: parseFloat(order.discount),
+    discountId: order.discountId,
+    discountCode: order.discountCode,
+    discountValue: order.discountValue ? parseFloat(order.discountValue) : null,
+    discountType: order.discountType as "percentage" | "fixed" | null,
     total: parseFloat(order.total),
     amountTendered: order.amountTendered ? parseFloat(order.amountTendered) : null,
     changeDue: order.changeDue ? parseFloat(order.changeDue) : null,
@@ -133,6 +138,10 @@ router.get("/orders", async (req, res): Promise<void> => {
         baristaName: baristaMap[o.baristaId] ?? "Unknown",
         subtotal: parseFloat(o.subtotal),
         discount: parseFloat(o.discount),
+        discountId: o.discountId,
+        discountCode: o.discountCode,
+        discountValue: o.discountValue ? parseFloat(o.discountValue) : null,
+        discountType: o.discountType as "percentage" | "fixed" | null,
         total: parseFloat(o.total),
         amountTendered: o.amountTendered ? parseFloat(o.amountTendered) : null,
         changeDue: o.changeDue ? parseFloat(o.changeDue) : null,
@@ -223,8 +232,34 @@ router.post("/orders", async (req, res): Promise<void> => {
     }
   }
 
-  const discount = parsed.data.discount ?? 0;
-  const total = subtotal - discount;
+  let discountAmount = parsed.data.discount ?? 0;
+  let discountId: number | null = null;
+  let discountCode: string | null = null;
+  let discountValue: number | null = null;
+  let discountType: "percentage" | "fixed" | null = null;
+
+  if (parsed.data.discountCode) {
+    const [discountRow] = await db
+      .select()
+      .from(discountsTable)
+      .where(eq(discountsTable.code, parsed.data.discountCode));
+    
+    if (discountRow && discountRow.isActive) {
+      discountId = discountRow.id;
+      discountCode = discountRow.code;
+      discountValue = parseFloat(discountRow.value);
+      discountType = discountRow.type as "percentage" | "fixed";
+      
+      if (discountType === "percentage") {
+        const beforeTax = subtotal / 1.14;
+        discountAmount = (beforeTax * discountValue) / 100;
+      } else {
+        discountAmount = discountValue;
+      }
+    }
+  }
+
+  const total = subtotal - discountAmount;
   const amountTendered = parsed.data.amountTendered ?? null;
   const changeDue = amountTendered != null ? amountTendered - total : null;
 
@@ -237,7 +272,11 @@ router.post("/orders", async (req, res): Promise<void> => {
       status: "pending",
       customerName: parsed.data.customerName ?? null,
       subtotal: String(subtotal),
-      discount: String(discount),
+      discount: String(discountAmount),
+      discountId,
+      discountCode,
+      discountValue: discountValue != null ? String(discountValue) : null,
+      discountType,
       total: String(total),
       paymentMethod: parsed.data.paymentMethod,
       amountTendered: amountTendered != null ? String(amountTendered) : null,
@@ -335,6 +374,10 @@ router.post("/orders", async (req, res): Promise<void> => {
         baristaName: barista?.name ?? "Unknown",
         subtotal: parseFloat(order.subtotal),
         discount: parseFloat(order.discount),
+        discountId: order.discountId,
+        discountCode: order.discountCode,
+        discountValue: order.discountValue ? parseFloat(order.discountValue) : null,
+        discountType: order.discountType as "percentage" | "fixed" | null,
         total: parseFloat(order.total),
         amountTendered: order.amountTendered ? parseFloat(order.amountTendered) : null,
         changeDue: order.changeDue ? parseFloat(order.changeDue) : null,

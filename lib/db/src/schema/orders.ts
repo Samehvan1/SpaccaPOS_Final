@@ -4,6 +4,7 @@ import { z } from "zod/v4";
 import { usersTable } from "./users";
 import { drinksTable } from "./drinks";
 import { ingredientsTable, ingredientOptionsTable } from "./ingredients";
+import { discountsTable } from "./discounts";
 
 export const ordersTable = pgTable("orders", {
   id: serial("id").primaryKey(),
@@ -15,6 +16,10 @@ export const ordersTable = pgTable("orders", {
   customerName: text("customer_name"),
   subtotal: numeric("subtotal", { precision: 8, scale: 2 }).notNull(),
   discount: numeric("discount", { precision: 8, scale: 2 }).notNull().default("0"),
+  discountId: integer("discount_id").references(() => discountsTable.id),
+  discountCode: text("discount_code"),
+  discountValue: numeric("discount_value", { precision: 8, scale: 2 }),
+  discountType: text("discount_type", { enum: ["percentage", "fixed"] }),
   total: numeric("total", { precision: 8, scale: 2 }).notNull(),
   paymentMethod: text("payment_method", { enum: ["cash", "card", "wallet"] }).notNull().default("cash"),
   amountTendered: numeric("amount_tendered", { precision: 8, scale: 2 }),

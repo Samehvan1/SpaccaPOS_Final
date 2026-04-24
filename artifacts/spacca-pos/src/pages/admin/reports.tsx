@@ -6,10 +6,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { 
   ArrowLeft, BarChart2, TrendingUp, Coffee, Receipt, 
   DollarSign, Medal, Calendar, ChevronLeft, ChevronRight,
-  Download
+  Download, Tag
 } from "lucide-react";
 import { Link } from "wouter";
 import { fmt, CURRENCY } from "@/lib/currency";
@@ -449,6 +450,7 @@ export default function ReportsPage() {
               { label: "Range Revenue", value: fmt(reportTotalRevenue), icon: DollarSign, loading: loadingReportSummary },
               { label: "Range Orders", value: reportTotalOrders, icon: Receipt, loading: loadingReportSummary },
               { label: "Range Drinks", value: reportTotalDrinks, icon: Coffee, loading: loadingReportSummary },
+              { label: "Range Discounts", value: fmt(reportOrders?.reduce((s, o) => s + (o as any).discount, 0) || 0), icon: Tag, loading: loadingReportSummary },
               { label: "Range Avg", value: fmt(reportAvgOrder), icon: TrendingUp, loading: loadingReportSummary },
             ].map(({ label, value, icon: Icon, loading }) => (
               <Card key={label} className="bg-primary/5 border-primary/10">
@@ -500,6 +502,7 @@ export default function ReportsPage() {
                       <TableHead className="font-bold">Date</TableHead>
                       <TableHead className="font-bold">Time</TableHead>
                       <TableHead className="font-bold">Order #</TableHead>
+                      <TableHead className="font-bold">Coupon</TableHead>
                       <TableHead className="text-right font-bold whitespace-nowrap">Total Price (Gross)</TableHead>
                       <TableHead className="text-right font-bold whitespace-nowrap">Before Tax (Net)</TableHead>
                       <TableHead className="text-right font-bold">Tax amount</TableHead>
@@ -545,11 +548,22 @@ export default function ReportsPage() {
                             <TableCell className="font-medium text-muted-foreground">{order.id}</TableCell>
                             <TableCell className="whitespace-nowrap">{format(new Date(order.createdAt), "yyyy-MM-dd")}</TableCell>
                             <TableCell>{format(new Date(order.createdAt), "HH:mm")}</TableCell>
-                            <TableCell className="font-mono font-bold">#{order.orderNumber}</TableCell>
+                             <TableCell className="font-mono font-bold">#{order.orderNumber}</TableCell>
+                             <TableCell>
+                               {(order as any).discountId ? (
+                                 <Badge variant="outline" className="font-mono text-[10px] bg-primary/5">
+                                   {(order as any).discountCode || `ID:${(order as any).discountId}`}
+                                 </Badge>
+                               ) : <span className="text-muted-foreground text-xs">—</span>}
+                             </TableCell>
                             <TableCell className="text-right">{fmt(totalPrice)}</TableCell>
                             <TableCell className="text-right">{fmt(beforeTax)}</TableCell>
                             <TableCell className="text-right text-muted-foreground">{fmt(taxAmount)}</TableCell>
-                            <TableCell className="text-right">{discountPercent.toFixed(1)}%</TableCell>
+                            <TableCell className="text-right">
+                              {(order as any).discountType === 'percentage' 
+                                ? `${(order as any).discountValue}%` 
+                                : `${discountPercent.toFixed(1)}%`}
+                            </TableCell>
                             <TableCell className="text-right font-medium text-destructive">-{fmt(discountAmt)}</TableCell>
                             <TableCell className="text-right">{fmt(subtotalPrice)}</TableCell>
                             <TableCell className="text-right font-black text-primary">{fmt(finalPrice)}</TableCell>

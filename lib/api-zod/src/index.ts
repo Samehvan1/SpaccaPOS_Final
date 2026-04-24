@@ -201,3 +201,11 @@ export type GetTopDrinksResponseItem = Infer<
 >;
 export const GetTopDrinksResponse = api.GetTopDrinksResponse;
 export type GetTopDrinksResponse = Infer<typeof api.GetTopDrinksResponse>;
+
+// Discounts
+export const Discount = api.Discount;
+export type Discount = Infer<typeof api.Discount>;
+export const CreateDiscountBody = api.CreateDiscountBody;
+export type CreateDiscountBody = Infer<typeof api.CreateDiscountBody>;
+export const UpdateDiscountBody = api.UpdateDiscountBody;
+export type UpdateDiscountBody = Infer<typeof api.UpdateDiscountBody>;

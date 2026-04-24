@@ -20807,27 +20807,27 @@ var require_router = __commonJS({
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var methods = METHODS.map((method) => method.toLowerCase());
-    module.exports = Router15;
+    module.exports = Router16;
     module.exports.Route = Route;
-    function Router15(options) {
-      if (!(this instanceof Router15)) {
-        return new Router15(options);
+    function Router16(options) {
+      if (!(this instanceof Router16)) {
+        return new Router16(options);
       }
       const opts = options || {};
-      function router14(req, res, next) {
-        router14.handle(req, res, next);
+      function router15(req, res, next) {
+        router15.handle(req, res, next);
       }
-      Object.setPrototypeOf(router14, this);
-      router14.caseSensitive = opts.caseSensitive;
-      router14.mergeParams = opts.mergeParams;
-      router14.params = {};
-      router14.strict = opts.strict;
-      router14.stack = [];
-      return router14;
+      Object.setPrototypeOf(router15, this);
+      router15.caseSensitive = opts.caseSensitive;
+      router15.mergeParams = opts.mergeParams;
+      router15.params = {};
+      router15.strict = opts.strict;
+      router15.stack = [];
+      return router15;
     }
-    Router15.prototype = function() {
+    Router16.prototype = function() {
     };
-    Router15.prototype.param = function param(name, fn) {
+    Router16.prototype.param = function param(name, fn) {
       if (!name) {
         throw new TypeError("argument name is required");
       }
@@ -20847,7 +20847,7 @@ var require_router = __commonJS({
       params.push(fn);
       return this;
     };
-    Router15.prototype.handle = function handle(req, res, callback) {
+    Router16.prototype.handle = function handle(req, res, callback) {
       if (!callback) {
         throw new TypeError("argument callback is required");
       }
@@ -20974,7 +20974,7 @@ var require_router = __commonJS({
         }
       }
     };
-    Router15.prototype.use = function use(handler) {
+    Router16.prototype.use = function use(handler) {
       let offset = 0;
       let path2 = "/";
       if (typeof handler !== "function") {
@@ -21007,7 +21007,7 @@ var require_router = __commonJS({
       }
       return this;
     };
-    Router15.prototype.route = function route(path2) {
+    Router16.prototype.route = function route(path2) {
       const route2 = new Route(path2);
       const layer = new Layer(path2, {
         sensitive: this.caseSensitive,
@@ -21022,7 +21022,7 @@ var require_router = __commonJS({
       return route2;
     };
     methods.concat("all").forEach(function(method) {
-      Router15.prototype[method] = function(path2) {
+      Router16.prototype[method] = function(path2) {
         const route = this.route(path2);
         route[method].apply(route, slice.call(arguments, 1));
         return this;
@@ -21205,13 +21205,13 @@ var require_application = __commonJS({
     var compileTrust = require_utils3().compileTrust;
     var resolve2 = __require("node:path").resolve;
     var once = require_once();
-    var Router15 = require_router();
+    var Router16 = require_router();
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var app2 = exports = module.exports = {};
     var trustProxyDefaultSymbol = "@@symbol:trust_proxy_default";
     app2.init = function init() {
-      var router14 = null;
+      var router15 = null;
       this.cache = /* @__PURE__ */ Object.create(null);
       this.engines = /* @__PURE__ */ Object.create(null);
       this.settings = /* @__PURE__ */ Object.create(null);
@@ -21220,13 +21220,13 @@ var require_application = __commonJS({
         configurable: true,
         enumerable: true,
         get: function getrouter() {
-          if (router14 === null) {
-            router14 = new Router15({
+          if (router15 === null) {
+            router15 = new Router16({
               caseSensitive: this.enabled("case sensitive routing"),
               strict: this.enabled("strict routing")
             });
           }
-          return router14;
+          return router15;
         }
       });
     };
@@ -21297,15 +21297,15 @@ var require_application = __commonJS({
       if (fns.length === 0) {
         throw new TypeError("app.use() requires a middleware function");
       }
-      var router14 = this.router;
+      var router15 = this.router;
       fns.forEach(function(fn2) {
         if (!fn2 || !fn2.handle || !fn2.set) {
-          return router14.use(path2, fn2);
+          return router15.use(path2, fn2);
         }
         debug(".use app under %s", path2);
         fn2.mountpath = path2;
         fn2.parent = this;
-        router14.use(path2, function mounted_app(req, res, next) {
+        router15.use(path2, function mounted_app(req, res, next) {
           var orig = req.app;
           fn2.handle(req, res, function(err) {
             Object.setPrototypeOf(req, orig.request);
@@ -23832,7 +23832,7 @@ var require_express = __commonJS({
     var EventEmitter = __require("node:events").EventEmitter;
     var mixin = require_merge_descriptors();
     var proto = require_application();
-    var Router15 = require_router();
+    var Router16 = require_router();
     var req = require_request();
     var res = require_response();
     exports = module.exports = createApplication;
@@ -23854,8 +23854,8 @@ var require_express = __commonJS({
     exports.application = proto;
     exports.request = req;
     exports.response = res;
-    exports.Route = Router15.Route;
-    exports.Router = Router15;
+    exports.Route = Router16.Route;
+    exports.Router = Router16;
     exports.json = bodyParser.json;
     exports.raw = bodyParser.raw;
     exports.static = require_serve_static();
@@ -55724,6 +55724,26 @@ var init_drinks = __esm({
   }
 });
 
+// ../../lib/db/src/schema/discounts.ts
+var discountsTable, insertDiscountSchema;
+var init_discounts = __esm({
+  "../../lib/db/src/schema/discounts.ts"() {
+    "use strict";
+    init_pg_core();
+    init_drizzle_zod();
+    discountsTable = pgTable("discounts", {
+      id: serial("id").primaryKey(),
+      code: text("code").notNull().unique(),
+      type: text("type", { enum: ["percentage", "fixed"] }).notNull(),
+      value: numeric("value", { precision: 8, scale: 2 }).notNull(),
+      isActive: boolean("is_active").notNull().default(true),
+      createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+      updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => /* @__PURE__ */ new Date())
+    });
+    insertDiscountSchema = createInsertSchema(discountsTable).omit({ id: true, createdAt: true, updatedAt: true });
+  }
+});
+
 // ../../lib/db/src/schema/orders.ts
 var ordersTable, orderItemsTable, orderItemCustomizationsTable, insertOrderSchema;
 var init_orders = __esm({
@@ -55734,6 +55754,7 @@ var init_orders = __esm({
     init_users();
     init_drinks();
     init_ingredients();
+    init_discounts();
     ordersTable = pgTable("orders", {
       id: serial("id").primaryKey(),
       orderNumber: text("order_number").notNull().unique(),
@@ -55744,6 +55765,10 @@ var init_orders = __esm({
       customerName: text("customer_name"),
       subtotal: numeric("subtotal", { precision: 8, scale: 2 }).notNull(),
       discount: numeric("discount", { precision: 8, scale: 2 }).notNull().default("0"),
+      discountId: integer("discount_id").references(() => discountsTable.id),
+      discountCode: text("discount_code"),
+      discountValue: numeric("discount_value", { precision: 8, scale: 2 }),
+      discountType: text("discount_type", { enum: ["percentage", "fixed"] }),
       total: numeric("total", { precision: 8, scale: 2 }).notNull(),
       paymentMethod: text("payment_method", { enum: ["cash", "card", "wallet"] }).notNull().default("cash"),
       amountTendered: numeric("amount_tendered", { precision: 8, scale: 2 }),
@@ -55844,6 +55869,7 @@ var init_settings = __esm({
 // ../../lib/db/src/schema/index.ts
 var schema_exports = {};
 __export(schema_exports, {
+  discountsTable: () => discountsTable,
   drinkCategoriesTable: () => drinkCategoriesTable,
   drinkIngredientSlotsTable: () => drinkIngredientSlotsTable,
   drinkSlotTypeOptionsTable: () => drinkSlotTypeOptionsTable,
@@ -55855,6 +55881,7 @@ __export(schema_exports, {
   ingredientTypesTable: () => ingredientTypesTable,
   ingredientVolumesTable: () => ingredientVolumesTable,
   ingredientsTable: () => ingredientsTable,
+  insertDiscountSchema: () => insertDiscountSchema,
   insertDrinkCategorySchema: () => insertDrinkCategorySchema,
   insertDrinkSchema: () => insertDrinkSchema,
   insertDrinkSlotSchema: () => insertDrinkSlotSchema,
@@ -55892,6 +55919,7 @@ var init_schema2 = __esm({
     init_orders();
     init_stock();
     init_settings();
+    init_discounts();
   }
 });
 
@@ -55899,6 +55927,7 @@ var init_schema2 = __esm({
 var src_exports = {};
 __export(src_exports, {
   db: () => db,
+  discountsTable: () => discountsTable,
   drinkCategoriesTable: () => drinkCategoriesTable,
   drinkIngredientSlotsTable: () => drinkIngredientSlotsTable,
   drinkSlotTypeOptionsTable: () => drinkSlotTypeOptionsTable,
@@ -55910,6 +55939,7 @@ __export(src_exports, {
   ingredientTypesTable: () => ingredientTypesTable,
   ingredientVolumesTable: () => ingredientVolumesTable,
   ingredientsTable: () => ingredientsTable,
+  insertDiscountSchema: () => insertDiscountSchema,
   insertDrinkCategorySchema: () => insertDrinkCategorySchema,
   insertDrinkSchema: () => insertDrinkSchema,
   insertDrinkSlotSchema: () => insertDrinkSlotSchema,
@@ -72554,13 +72584,13 @@ var __dirname2 = dirname(__filename);
 (0, import_dotenv.config)({ path: resolve(__dirname2, "../../../.env") });
 
 // src/app.ts
-var import_express15 = __toESM(require_express2(), 1);
+var import_express16 = __toESM(require_express2(), 1);
 var import_cors = __toESM(require_lib3(), 1);
 var import_pino_http = __toESM(require_logger(), 1);
 var import_express_session = __toESM(require_express_session(), 1);
 
 // src/routes/index.ts
-var import_express14 = __toESM(require_express2(), 1);
+var import_express15 = __toESM(require_express2(), 1);
 
 // src/routes/health.ts
 var import_express = __toESM(require_express2(), 1);
@@ -77002,6 +77032,9 @@ var ListOrdersResponseItem = objectType({
   customerName: stringType().nullable(),
   subtotal: numberType(),
   discount: numberType(),
+  discountId: numberType().nullish(),
+  discountValue: numberType().nullish(),
+  discountType: enumType(["percentage", "fixed"]).nullish(),
   total: numberType(),
   paymentMethod: enumType(["cash", "card", "wallet"]),
   amountTendered: numberType().nullable(),
@@ -77017,6 +77050,7 @@ var CreateOrderBody = objectType({
   amountTendered: numberType().optional(),
   notes: stringType().optional(),
   discount: numberType().optional(),
+  discountCode: stringType().optional(),
   items: arrayType(
     objectType({
       drinkId: numberType(),
@@ -77182,6 +77216,9 @@ var MarkOrderItemReadyResponse = objectType({
   customerName: stringType().nullable(),
   subtotal: numberType(),
   discount: numberType(),
+  discountId: numberType().nullish(),
+  discountValue: numberType().nullish(),
+  discountType: enumType(["percentage", "fixed"]).nullish(),
   total: numberType(),
   paymentMethod: enumType(["cash", "card", "wallet"]),
   amountTendered: numberType().nullable(),
@@ -77394,6 +77431,27 @@ var UpdateSettingsResponseItem = objectType({
   userId: numberType().nullish()
 });
 var UpdateSettingsResponse = arrayType(UpdateSettingsResponseItem);
+var Discount = objectType({
+  id: numberType(),
+  code: stringType(),
+  type: enumType(["percentage", "fixed"]),
+  value: numberType(),
+  isActive: booleanType(),
+  createdAt: stringType(),
+  updatedAt: stringType()
+});
+var CreateDiscountBody = objectType({
+  code: stringType(),
+  type: enumType(["percentage", "fixed"]),
+  value: numberType(),
+  isActive: booleanType().optional()
+});
+var UpdateDiscountBody = objectType({
+  code: stringType().optional(),
+  type: enumType(["percentage", "fixed"]).optional(),
+  value: numberType().optional(),
+  isActive: booleanType().optional()
+});
 
 // ../../lib/api-zod/src/index.ts
 var HealthCheckResponse2 = HealthCheckResponse;
@@ -77443,6 +77501,8 @@ var GetSalesByCategoryQueryParams2 = GetSalesByCategoryQueryParams;
 var GetSalesByCategoryResponse2 = GetSalesByCategoryResponse;
 var GetTopDrinksQueryParams2 = GetTopDrinksQueryParams;
 var GetTopDrinksResponse2 = GetTopDrinksResponse;
+var CreateDiscountBody2 = CreateDiscountBody;
+var UpdateDiscountBody2 = UpdateDiscountBody;
 
 // src/routes/health.ts
 var router = (0, import_express.Router)();
@@ -78683,6 +78743,10 @@ async function buildOrderDetail(orderId) {
     baristaName: barista?.name ?? "Unknown",
     subtotal: parseFloat(order.subtotal),
     discount: parseFloat(order.discount),
+    discountId: order.discountId,
+    discountCode: order.discountCode,
+    discountValue: order.discountValue ? parseFloat(order.discountValue) : null,
+    discountType: order.discountType,
     total: parseFloat(order.total),
     amountTendered: order.amountTendered ? parseFloat(order.amountTendered) : null,
     changeDue: order.changeDue ? parseFloat(order.changeDue) : null,
@@ -78727,6 +78791,10 @@ router5.get("/orders", async (req, res) => {
         baristaName: baristaMap[o.baristaId] ?? "Unknown",
         subtotal: parseFloat(o.subtotal),
         discount: parseFloat(o.discount),
+        discountId: o.discountId,
+        discountCode: o.discountCode,
+        discountValue: o.discountValue ? parseFloat(o.discountValue) : null,
+        discountType: o.discountType,
         total: parseFloat(o.total),
         amountTendered: o.amountTendered ? parseFloat(o.amountTendered) : null,
         changeDue: o.changeDue ? parseFloat(o.changeDue) : null
@@ -78790,8 +78858,27 @@ router5.post("/orders", async (req, res) => {
       throw e;
     }
   }
-  const discount = parsed.data.discount ?? 0;
-  const total = subtotal - discount;
+  let discountAmount = parsed.data.discount ?? 0;
+  let discountId = null;
+  let discountCode = null;
+  let discountValue = null;
+  let discountType = null;
+  if (parsed.data.discountCode) {
+    const [discountRow] = await db.select().from(discountsTable).where(eq(discountsTable.code, parsed.data.discountCode));
+    if (discountRow && discountRow.isActive) {
+      discountId = discountRow.id;
+      discountCode = discountRow.code;
+      discountValue = parseFloat(discountRow.value);
+      discountType = discountRow.type;
+      if (discountType === "percentage") {
+        const beforeTax = subtotal / 1.14;
+        discountAmount = beforeTax * discountValue / 100;
+      } else {
+        discountAmount = discountValue;
+      }
+    }
+  }
+  const total = subtotal - discountAmount;
   const amountTendered = parsed.data.amountTendered ?? null;
   const changeDue = amountTendered != null ? amountTendered - total : null;
   const orderNumber = await generateOrderNumber();
@@ -78802,7 +78889,11 @@ router5.post("/orders", async (req, res) => {
       status: "pending",
       customerName: parsed.data.customerName ?? null,
       subtotal: String(subtotal),
-      discount: String(discount),
+      discount: String(discountAmount),
+      discountId,
+      discountCode,
+      discountValue: discountValue != null ? String(discountValue) : null,
+      discountType,
       total: String(total),
       paymentMethod: parsed.data.paymentMethod,
       amountTendered: amountTendered != null ? String(amountTendered) : null,
@@ -78881,6 +78972,10 @@ router5.post("/orders", async (req, res) => {
         baristaName: barista?.name ?? "Unknown",
         subtotal: parseFloat(order.subtotal),
         discount: parseFloat(order.discount),
+        discountId: order.discountId,
+        discountCode: order.discountCode,
+        discountValue: order.discountValue ? parseFloat(order.discountValue) : null,
+        discountType: order.discountType,
         total: parseFloat(order.total),
         amountTendered: order.amountTendered ? parseFloat(order.amountTendered) : null,
         changeDue: order.changeDue ? parseFloat(order.changeDue) : null,
@@ -79906,22 +80001,98 @@ usersRouter.delete("/users/:id", async (req, res) => {
 });
 var users_default = usersRouter;
 
-// src/routes/index.ts
+// src/routes/discounts.ts
+var import_express14 = __toESM(require_express2(), 1);
+init_drizzle_orm();
+init_src();
 var router13 = (0, import_express14.Router)();
-router13.use(health_default);
-router13.use(auth_default);
-router13.use(drinks_default);
-router13.use(ingredients_default);
-router13.use(orders_default);
-router13.use(stock_default);
-router13.use(dashboard_default);
-router13.use(catalog_default);
-router13.use(drink_categories_default);
-router13.use(kitchen_stations_default);
-router13.use(settings_default);
-router13.use(predefined_slots_default);
-router13.use(users_default);
-router13.get("/events", (req, res) => {
+router13.get("/discounts", async (req, res) => {
+  const discounts = await db.select().from(discountsTable);
+  res.json(
+    discounts.map((d) => ({
+      ...serializeDates(d),
+      value: parseFloat(d.value)
+    }))
+  );
+});
+router13.post("/discounts", async (req, res) => {
+  const parsed = CreateDiscountBody2.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+  const [discount] = await db.insert(discountsTable).values({
+    code: parsed.data.code,
+    type: parsed.data.type,
+    value: String(parsed.data.value),
+    isActive: parsed.data.isActive ?? true
+  }).returning();
+  res.status(201).json({
+    ...serializeDates(discount),
+    value: parseFloat(discount.value)
+  });
+});
+router13.patch("/discounts/:id", async (req, res) => {
+  const id = parseInt(req.params.id);
+  const parsed = UpdateDiscountBody2.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+  const updateData = {};
+  if (parsed.data.code !== void 0) updateData.code = parsed.data.code;
+  if (parsed.data.type !== void 0) updateData.type = parsed.data.type;
+  if (parsed.data.value !== void 0) updateData.value = String(parsed.data.value);
+  if (parsed.data.isActive !== void 0) updateData.isActive = parsed.data.isActive;
+  const [discount] = await db.update(discountsTable).set(updateData).where(eq(discountsTable.id, id)).returning();
+  if (!discount) {
+    res.status(404).json({ error: "Discount not found" });
+    return;
+  }
+  res.json({
+    ...serializeDates(discount),
+    value: parseFloat(discount.value)
+  });
+});
+router13.delete("/discounts/:id", async (req, res) => {
+  const id = parseInt(req.params.id);
+  const [deleted] = await db.delete(discountsTable).where(eq(discountsTable.id, id)).returning();
+  if (!deleted) {
+    res.status(404).json({ error: "Discount not found" });
+    return;
+  }
+  res.sendStatus(204);
+});
+router13.get("/discounts/validate/:code", async (req, res) => {
+  const [discount] = await db.select().from(discountsTable).where(eq(discountsTable.code, req.params.code));
+  if (!discount || !discount.isActive) {
+    res.status(404).json({ error: "Invalid or inactive discount code" });
+    return;
+  }
+  res.json({
+    ...serializeDates(discount),
+    value: parseFloat(discount.value)
+  });
+});
+var discounts_default = router13;
+
+// src/routes/index.ts
+var router14 = (0, import_express15.Router)();
+router14.use(health_default);
+router14.use(auth_default);
+router14.use(drinks_default);
+router14.use(ingredients_default);
+router14.use(orders_default);
+router14.use(stock_default);
+router14.use(dashboard_default);
+router14.use(catalog_default);
+router14.use(drink_categories_default);
+router14.use(kitchen_stations_default);
+router14.use(settings_default);
+router14.use(predefined_slots_default);
+router14.use(users_default);
+router14.use(discounts_default);
+router14.get("/events", (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache, no-transform");
   res.setHeader("X-Accel-Buffering", "no");
@@ -79930,7 +80101,7 @@ router13.get("/events", (req, res) => {
   res.write("event: connected\ndata: {}\n\n");
   addSseClient(res);
 });
-var routes_default = router13;
+var routes_default = router14;
 
 // src/lib/logger.ts
 var import_pino = __toESM(require_pino(), 1);
@@ -79951,7 +80122,7 @@ var logger = (0, import_pino.default)({
 });
 
 // src/app.ts
-var app = (0, import_express15.default)();
+var app = (0, import_express16.default)();
 app.set("json replacer", (_key, value) => {
   if (value instanceof Date) return value.toISOString();
   return value;
@@ -79977,8 +80148,8 @@ app.use(
 );
 app.set("trust proxy", 1);
 app.use((0, import_cors.default)({ credentials: true, origin: true }));
-app.use(import_express15.default.json());
-app.use(import_express15.default.urlencoded({ extended: true }));
+app.use(import_express16.default.json());
+app.use(import_express16.default.urlencoded({ extended: true }));
 app.use(
   (0, import_express_session.default)({
     secret: process.env.SESSION_SECRET ?? "spacca-dev-secret",
@@ -79992,7 +80163,7 @@ app.use(
     }
   })
 );
-app.use("/uploads", import_express15.default.static("uploads"));
+app.use("/uploads", import_express16.default.static("uploads"));
 app.use("/api", routes_default);
 var app_default = app;
 
@@ -80243,7 +80414,12 @@ async function seedIfEmpty() {
     { drinkId: whiteMokka.id, ingredientId: chocSauce.id, slotLabel: "Chocolate", isRequired: true, defaultOptionId: chLight.id, sortOrder: 1 },
     { drinkId: whiteMokka.id, ingredientId: milkType.id, slotLabel: "Milk", isRequired: true, defaultOptionId: mtWhole.id, sortOrder: 2 }
   ]);
-  logger.info("Seed complete \u2014 4 users, 13 ingredients, 5 catalog categories, 9 types, 16 volumes, 13 drinks inserted.");
+  await db.insert(discountsTable).values([
+    { code: "SUMMER10", type: "percentage", value: "10", isActive: true },
+    { code: "SAVE50", type: "fixed", value: "50", isActive: true },
+    { code: "WELCOME20", type: "percentage", value: "20", isActive: true }
+  ]);
+  logger.info("Seed complete \u2014 4 users, 13 ingredients, 5 catalog categories, 9 types, 16 volumes, 13 drinks, 3 discounts inserted.");
 }
 
 // src/index.ts

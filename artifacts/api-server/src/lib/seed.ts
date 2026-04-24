@@ -9,6 +9,7 @@ import {
   ingredientTypesTable,
   ingredientVolumesTable,
   ingredientTypeVolumesTable,
+  discountsTable,
 } from "@workspace/db";
 import { sql } from "drizzle-orm";
 import { logger } from "./logger";
@@ -244,6 +245,13 @@ export async function seedIfEmpty() {
     { drinkId: whiteMokka.id,        ingredientId: chocSauce.id,     slotLabel: "Chocolate",       isRequired: true,  defaultOptionId: chLight.id,    sortOrder: 1 },
     { drinkId: whiteMokka.id,        ingredientId: milkType.id,      slotLabel: "Milk",            isRequired: true,  defaultOptionId: mtWhole.id,    sortOrder: 2 },
   ]);
+  
+  // ── Discounts ─────────────────────────────────────────────────────────────
+  await db.insert(discountsTable).values([
+    { code: "SUMMER10",  type: "percentage", value: "10", isActive: true },
+    { code: "SAVE50",    type: "fixed",      value: "50", isActive: true },
+    { code: "WELCOME20", type: "percentage", value: "20", isActive: true },
+  ]);
 
-  logger.info("Seed complete — 4 users, 13 ingredients, 5 catalog categories, 9 types, 16 volumes, 13 drinks inserted.");
+  logger.info("Seed complete — 4 users, 13 ingredients, 5 catalog categories, 9 types, 16 volumes, 13 drinks, 3 discounts inserted.");
 }

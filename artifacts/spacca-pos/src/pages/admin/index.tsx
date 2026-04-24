@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Coffee, Droplet, LayoutDashboard, LineChart, PackageSearch, BarChart2, Tag, ChefHat, Users } from "lucide-react";
+import { Coffee, Droplet, LayoutDashboard, LineChart, PackageSearch, BarChart2, Tag, ChefHat, Users, Ticket } from "lucide-react";
 
 export default function AdminHub() {
   const { user } = useAuth();
@@ -76,6 +76,14 @@ export default function AdminHub() {
       href: "/admin/users",
       color: "text-indigo-500",
       bg: "bg-indigo-500/10"
+    },
+    {
+      title: "Discounts & Coupons",
+      description: "Manage discount codes and promotional coupons",
+      icon: Ticket,
+      href: "/admin/discounts",
+      color: "text-pink-500",
+      bg: "bg-pink-500/10"
     }
   ];
 

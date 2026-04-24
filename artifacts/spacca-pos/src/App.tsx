@@ -23,6 +23,7 @@ import ReportsPage from "@/pages/admin/reports";
 import CategoriesAdmin from "@/pages/admin/categories";
 import KitchenStationsAdmin from "@/pages/admin/kitchen-stations";
 import AdminUsers from "@/pages/admin/users";
+import DiscountsAdmin from "@/pages/admin/discounts";
 import NotFound from "@/pages/not-found";
 
 // PWA Helper to update title for "Add to Home Screen"
@@ -228,6 +229,11 @@ function AppRoutes() {
       <Route path="/admin/reports">
         <MainLayout>
           <ProtectedRoute component={ReportsPage} adminOnly={true} />
+        </MainLayout>
+      </Route>
+      <Route path="/admin/discounts">
+        <MainLayout>
+          <ProtectedRoute component={DiscountsAdmin} adminOnly={true} />
         </MainLayout>
       </Route>
       <Route path="/admin/users">
