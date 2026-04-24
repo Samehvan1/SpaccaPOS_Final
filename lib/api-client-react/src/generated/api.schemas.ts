@@ -405,6 +405,7 @@ export interface Order {
   notes: string | null;
   createdAt: string;
   updatedAt: string;
+  items?: OrderItem[];
 }
 
 export type OrderDetail = Order & {

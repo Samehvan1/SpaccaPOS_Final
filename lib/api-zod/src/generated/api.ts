@@ -510,6 +510,7 @@ export const ListOrdersResponseItem = zod.object({
   notes: zod.string().nullable(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
+  items: zod.array(zod.any()).optional(),
 });
 export const ListOrdersResponse = zod.array(ListOrdersResponseItem);
 

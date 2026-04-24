@@ -32,4 +32,5 @@ export interface Order {
   notes: string | null;
   createdAt: string;
   updatedAt: string;
+  items?: import("./orderItem").OrderItem[];
 }

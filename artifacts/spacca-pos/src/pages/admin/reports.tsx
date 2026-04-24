@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useGetDashboardSummary, useGetSalesByCategory, useGetTopDrinks, useListOrders } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,10 +10,10 @@ import { Badge } from "@/components/ui/badge";
 import { 
   ArrowLeft, BarChart2, TrendingUp, Coffee, Receipt, 
   DollarSign, Medal, Calendar, ChevronLeft, ChevronRight,
-  Download, Tag
+  Download, Tag, CheckCircle2, XCircle, FileText, Layers
 } from "lucide-react";
 import { Link } from "wouter";
-import { fmt, CURRENCY } from "@/lib/currency";
+import { fmt, pure, CURRENCY } from "@/lib/currency";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend,
@@ -40,6 +40,7 @@ const STATUS_COLORS: Record<string, string> = {
 export default function ReportsPage() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [period, setPeriod] = useState(PERIODS[1]);
+  const [drinksView, setDrinksView] = useState<"grouped" | "individual">("grouped");
 
   // Dashboard Tab Data
   const { data: summary, isLoading: loadingSummary } = useGetDashboardSummary();
@@ -76,7 +77,34 @@ export default function ReportsPage() {
   const reportTotalDrinks = reportSummary?.reduce((s, c) => s + c.totalDrinks, 0) ?? 0;
   const reportAvgOrder = reportTotalOrders > 0 ? reportTotalRevenue / reportTotalOrders : 0;
 
-  const handleExportCSV = () => {
+  // Drinks Report Processing
+  const drinkItems = useMemo(() => {
+    if (!reportOrders) return [];
+    return reportOrders.flatMap(order => (order.items || []).map(item => ({
+      ...item,
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      createdAt: order.createdAt,
+      orderDiscount: order.discount,
+      orderSubtotal: order.subtotal,
+      isCustomized: (item.customizations || []).some((c: any) => c.addedCost > 0) || (!!item.specialNotes && item.specialNotes.trim() !== "")
+    })));
+  }, [reportOrders]);
+
+  const groupedDrinkItems = useMemo(() => {
+    const groups: Record<string, { drinkName: string; isCustomized: boolean; quantity: number; revenue: number }> = {};
+    drinkItems.forEach((item: any) => {
+      const key = `${item.drinkName}_${item.isCustomized}`;
+      if (!groups[key]) {
+        groups[key] = { drinkName: item.drinkName, isCustomized: item.isCustomized, quantity: 0, revenue: 0 };
+      }
+      groups[key].quantity += item.quantity;
+      groups[key].revenue += item.lineTotal;
+    });
+    return Object.values(groups).sort((a, b) => b.revenue - a.revenue);
+  }, [drinkItems]);
+
+  const handleExportSalesCSV = () => {
     if (!reportOrders || reportOrders.length === 0) return;
 
     const headers = [
@@ -122,6 +150,48 @@ export default function ReportsPage() {
     document.body.removeChild(link);
   };
 
+  const handleExportDrinksCSV = () => {
+    if (!drinkItems || drinkItems.length === 0) return;
+
+    const headers = [
+      "Drink Name", "Type", "Order #", "Original (Gross)", "Before Tax", "Tax", "Discount", "After Disc.", "Final Price"
+    ];
+
+    const rows = drinkItems.map((item: any) => {
+      const itemGross = item.lineTotal;
+      const itemNet = itemGross / 1.14;
+      const itemTax = itemGross - itemNet;
+      const orderBeforeTax = item.orderSubtotal / 1.14;
+      const discountRatio = orderBeforeTax > 0 ? item.orderDiscount / orderBeforeTax : 0;
+      const itemDiscountAmt = itemNet * discountRatio;
+      const itemAfterDiscount = itemNet - itemDiscountAmt;
+      const itemFinalPrice = itemAfterDiscount + itemTax;
+
+      return [
+        item.drinkName,
+        item.isCustomized ? "Customized" : "Standard",
+        `#${item.orderNumber}`,
+        itemGross.toFixed(2),
+        itemNet.toFixed(2),
+        itemTax.toFixed(2),
+        itemDiscountAmt.toFixed(2),
+        itemAfterDiscount.toFixed(2),
+        itemFinalPrice.toFixed(2)
+      ].map(v => `"${v}"`).join(",");
+    });
+
+    const csvContent = [headers.join(","), ...rows].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `drinks_report_${reportStartDate}_to_${reportEndDate}.csv`);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="p-8 w-full flex flex-col gap-6 overflow-y-auto h-full">
       {/* Header */}
@@ -141,10 +211,75 @@ export default function ReportsPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 mb-8 h-12">
+        <TabsList className="grid w-full grid-cols-3 mb-8 h-12">
           <TabsTrigger value="dashboard" className="text-base font-semibold">Dashboard</TabsTrigger>
           <TabsTrigger value="sales" className="text-base font-semibold">Sales Report</TabsTrigger>
+          <TabsTrigger value="drinks" className="text-base font-semibold">Drinks Report</TabsTrigger>
         </TabsList>
+
+        {activeTab !== "dashboard" && (
+          <div className="flex flex-col gap-6 mb-8 animate-in fade-in duration-500">
+            {/* Shared Filters Banner */}
+            <Card className="bg-muted/30 border-primary/20 overflow-hidden">
+              <CardContent className="p-6">
+                <div className="flex flex-col md:flex-row items-end gap-6">
+                  <div className="grid gap-2 w-full md:w-auto">
+                    <Label htmlFor="start-date" className="flex items-center gap-2 text-sm font-bold">
+                      <Calendar className="h-4 w-4 text-primary" /> From
+                    </Label>
+                    <Input 
+                      id="start-date" 
+                      type="date" 
+                      value={reportStartDate} 
+                      onChange={e => { setReportStartDate(e.target.value); setReportPage(1); }}
+                      className="bg-background w-full md:w-48"
+                    />
+                  </div>
+                  <div className="grid gap-2 w-full md:w-auto">
+                    <Label htmlFor="end-date" className="flex items-center gap-2 text-sm font-bold">
+                      <Calendar className="h-4 w-4 text-primary" /> To
+                    </Label>
+                    <Input 
+                      id="end-date" 
+                      type="date" 
+                      value={reportEndDate} 
+                      onChange={e => { setReportEndDate(e.target.value); setReportPage(1); }}
+                      className="bg-background w-full md:w-48"
+                    />
+                  </div>
+                  <div className="md:ml-auto flex items-center gap-2">
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Shared Totals Banner */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              {[
+                { label: "Range Revenue", value: fmt(reportTotalRevenue), icon: DollarSign, loading: loadingReportSummary },
+                { label: "Range Orders", value: reportTotalOrders, icon: Receipt, loading: loadingReportSummary },
+                { label: "Range Drinks", value: reportTotalDrinks, icon: Coffee, loading: loadingReportSummary },
+                { label: "Range Discounts", value: fmt(reportOrders?.reduce((s, o) => s + (o as any).discount, 0) || 0), icon: Tag, loading: loadingReportSummary },
+              ].map((stat, i) => (
+                <Card key={i} className="border-none shadow-md bg-card/40 backdrop-blur-sm">
+                  <CardContent className="p-4 flex items-center gap-4">
+                    <div className="p-3 rounded-xl bg-primary/10">
+                      <stat.icon className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground font-medium">{stat.label}</p>
+                      {stat.loading ? (
+                        <div className="h-6 w-16 bg-muted animate-pulse rounded mt-1" />
+                      ) : (
+                        <p className="text-lg font-bold">{stat.value}</p>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
 
         <TabsContent value="dashboard" className="flex flex-col gap-6 animate-in fade-in duration-500">
           {/* Period selector */}
@@ -402,77 +537,22 @@ export default function ReportsPage() {
         </TabsContent>
 
         <TabsContent value="sales" className="flex flex-col gap-6 animate-in slide-in-from-right duration-500">
-          {/* Filters Banner */}
-          <Card className="bg-muted/30 border-primary/20 overflow-hidden">
-            <CardContent className="p-6">
-              <div className="flex flex-col md:flex-row items-end gap-6">
-                <div className="grid gap-2 w-full md:w-auto">
-                  <Label htmlFor="start-date" className="flex items-center gap-2 text-sm font-bold">
-                    <Calendar className="h-4 w-4 text-primary" /> From
-                  </Label>
-                  <Input 
-                    id="start-date" 
-                    type="date" 
-                    value={reportStartDate} 
-                    onChange={e => { setReportStartDate(e.target.value); setReportPage(1); }}
-                    className="bg-background w-full md:w-48"
-                  />
-                </div>
-                <div className="grid gap-2 w-full md:w-auto">
-                  <Label htmlFor="end-date" className="flex items-center gap-2 text-sm font-bold">
-                    <Calendar className="h-4 w-4 text-primary" /> To
-                  </Label>
-                  <Input 
-                    id="end-date" 
-                    type="date" 
-                    value={reportEndDate} 
-                    onChange={e => { setReportEndDate(e.target.value); setReportPage(1); }}
-                    className="bg-background w-full md:w-48"
-                  />
-                </div>
-                <div className="md:ml-auto flex items-center gap-2">
-                   <Button 
-                    variant="outline" 
-                    className="gap-2 shrink-0"
-                    onClick={handleExportCSV}
-                    disabled={!reportOrders || reportOrders.length === 0}
-                  >
-                      <Download className="h-4 w-4" /> Export CSV
-                   </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Totals Banner */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            {[
-              { label: "Range Revenue", value: fmt(reportTotalRevenue), icon: DollarSign, loading: loadingReportSummary },
-              { label: "Range Orders", value: reportTotalOrders, icon: Receipt, loading: loadingReportSummary },
-              { label: "Range Drinks", value: reportTotalDrinks, icon: Coffee, loading: loadingReportSummary },
-              { label: "Range Discounts", value: fmt(reportOrders?.reduce((s, o) => s + (o as any).discount, 0) || 0), icon: Tag, loading: loadingReportSummary },
-              { label: "Range Avg", value: fmt(reportAvgOrder), icon: TrendingUp, loading: loadingReportSummary },
-            ].map(({ label, value, icon: Icon, loading }) => (
-              <Card key={label} className="bg-primary/5 border-primary/10">
-                <CardHeader className="flex flex-row items-center justify-between pb-1 space-y-0">
-                  <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{label}</CardTitle>
-                  <Icon className="h-4 w-4 text-primary/60" />
-                </CardHeader>
-                <CardContent>
-                  {loading ? (
-                    <div className="h-7 bg-primary/10 animate-pulse rounded" />
-                  ) : (
-                    <div className="text-2xl font-black text-primary">{value}</div>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
-          </div>
 
           {/* Detailed Sales Table */}
-          <Card>
+          <Card className="border-none shadow-xl bg-card/50 backdrop-blur-sm overflow-hidden">
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Sales Transaction Log</CardTitle>
+              <div className="flex items-center gap-4">
+                <CardTitle>Sales Transaction Log</CardTitle>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="gap-2 h-8 px-3"
+                  onClick={handleExportSalesCSV}
+                  disabled={!reportOrders || reportOrders.length === 0}
+                >
+                  <Download className="h-4 w-4" /> Export Sales
+                </Button>
+              </div>
               <div className="flex items-center gap-2">
                 <Button 
                   variant="outline" 
@@ -556,17 +636,17 @@ export default function ReportsPage() {
                                  </Badge>
                                ) : <span className="text-muted-foreground text-xs">—</span>}
                              </TableCell>
-                            <TableCell className="text-right">{fmt(totalPrice)}</TableCell>
-                            <TableCell className="text-right">{fmt(beforeTax)}</TableCell>
-                            <TableCell className="text-right text-muted-foreground">{fmt(taxAmount)}</TableCell>
+                            <TableCell className="text-right">{pure(totalPrice)}</TableCell>
+                            <TableCell className="text-right">{pure(beforeTax)}</TableCell>
+                            <TableCell className="text-right text-muted-foreground">{pure(taxAmount)}</TableCell>
                             <TableCell className="text-right">
                               {(order as any).discountType === 'percentage' 
                                 ? `${(order as any).discountValue}%` 
                                 : `${discountPercent.toFixed(1)}%`}
                             </TableCell>
-                            <TableCell className="text-right font-medium text-destructive">-{fmt(discountAmt)}</TableCell>
-                            <TableCell className="text-right">{fmt(subtotalPrice)}</TableCell>
-                            <TableCell className="text-right font-black text-primary">{fmt(finalPrice)}</TableCell>
+                            <TableCell className="text-right font-medium text-destructive">-{pure(discountAmt)}</TableCell>
+                            <TableCell className="text-right">{pure(subtotalPrice)}</TableCell>
+                            <TableCell className="text-right font-black text-primary">{pure(finalPrice)}</TableCell>
                             <TableCell>
                               <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase whitespace-nowrap ${STATUS_COLORS[order.status] ?? "bg-muted text-muted-foreground"}`}>
                                 {order.status}
@@ -603,6 +683,151 @@ export default function ReportsPage() {
                       Next
                     </Button>
                  </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="drinks" className="flex flex-col gap-6 animate-in fade-in duration-500">
+          <Card className="border-none shadow-xl bg-card/50 backdrop-blur-sm overflow-hidden">
+            <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b">
+              <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-3">
+                    <CardTitle className="text-xl font-bold flex items-center gap-2">
+                      <Coffee className="h-5 w-5 text-primary" />
+                      Drinks Sales Report
+                    </CardTitle>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      className="gap-2 h-8 px-3"
+                      onClick={handleExportDrinksCSV}
+                      disabled={!drinkItems || drinkItems.length === 0}
+                    >
+                      <Download className="h-4 w-4" /> Export Drinks
+                    </Button>
+                  </div>
+                <div className="flex items-center gap-2 bg-muted/50 p-1 rounded-lg border">
+                  <Button 
+                    variant={drinksView === "grouped" ? "default" : "ghost"} 
+                    size="sm"
+                    onClick={() => setDrinksView("grouped")}
+                    className="gap-2 h-8 px-3"
+                  >
+                    <Layers className="h-4 w-4" />
+                    Grouped
+                  </Button>
+                  <Button 
+                    variant={drinksView === "individual" ? "default" : "ghost"} 
+                    size="sm"
+                    onClick={() => setDrinksView("individual")}
+                    className="gap-2 h-8 px-3"
+                  >
+                    <FileText className="h-4 w-4" />
+                    Individual
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader className="bg-muted/30">
+                    <TableRow>
+                      <TableHead className="w-[200px]">Drink Name</TableHead>
+                      <TableHead>Type</TableHead>
+                      {drinksView === "individual" ? (
+                        <>
+                          <TableHead>Order #</TableHead>
+                          <TableHead className="text-right">Original (Gross)</TableHead>
+                          <TableHead className="text-right">Before Tax</TableHead>
+                          <TableHead className="text-right text-xs">Tax</TableHead>
+                          <TableHead className="text-right">Discount</TableHead>
+                          <TableHead className="text-right whitespace-nowrap">After Disc.</TableHead>
+                          <TableHead className="text-right font-bold">Final Price</TableHead>
+                        </>
+                      ) : (
+                        <>
+                          <TableHead className="text-center">Quantity</TableHead>
+                          <TableHead className="text-right">Revenue</TableHead>
+                        </>
+                      )}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {drinksView === "grouped" ? (
+                      groupedDrinkItems.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={4} className="h-32 text-center text-muted-foreground">
+                            No drink data available for this period.
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        groupedDrinkItems.map((item, idx) => (
+                          <TableRow key={idx} className="hover:bg-muted/30 transition-colors">
+                            <TableCell className="font-semibold text-foreground">{item.drinkName}</TableCell>
+                            <TableCell>
+                              <Badge variant={item.isCustomized ? "outline" : "secondary"} className={item.isCustomized ? "border-amber-500 text-amber-600 bg-amber-50" : "bg-green-50 text-green-700"}>
+                                {item.isCustomized ? (
+                                  <span className="flex items-center gap-1"><Layers className="h-3 w-3" /> Customized</span>
+                                ) : (
+                                  <span className="flex items-center gap-1"><CheckCircle2 className="h-3 w-3" /> Standard</span>
+                                )}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-center font-medium">{item.quantity}</TableCell>
+                            <TableCell className="text-right font-bold text-primary">{pure(item.revenue)}</TableCell>
+                          </TableRow>
+                        ))
+                      )
+                    ) : (
+                      drinkItems.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={5} className="h-32 text-center text-muted-foreground">
+                            No individual drink items available.
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        drinkItems.map((item: any, idx: number) => {
+                        const itemGross = item.lineTotal;
+                        const itemNet = itemGross / 1.14;
+                        const itemTax = itemGross - itemNet;
+                        
+                        const orderBeforeTax = item.orderSubtotal / 1.14;
+                        const discountRatio = orderBeforeTax > 0 ? item.orderDiscount / orderBeforeTax : 0;
+                        const itemDiscountAmt = itemNet * discountRatio;
+                        const itemAfterDiscount = itemNet - itemDiscountAmt;
+                        const itemFinalPrice = itemAfterDiscount + itemTax;
+
+                        return (
+                          <TableRow key={idx} className="hover:bg-muted/30 transition-colors">
+                            <TableCell className="font-semibold text-foreground">
+                              {item.drinkName}
+                              {item.specialNotes && (
+                                <p className="text-[10px] text-muted-foreground font-normal italic mt-1 truncate max-w-[150px]">
+                                  {item.specialNotes}
+                                </p>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={item.isCustomized ? "outline" : "secondary"} className={item.isCustomized ? "border-amber-500 text-amber-600 bg-amber-50 text-[10px] px-1 h-5" : "bg-green-50 text-green-700 text-[10px] px-1 h-5"}>
+                                {item.isCustomized ? "Customized" : "Standard"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-muted-foreground font-mono text-xs">#{item.orderNumber}</TableCell>
+                            <TableCell className="text-right">{pure(itemGross)}</TableCell>
+                            <TableCell className="text-right text-muted-foreground">{pure(itemNet)}</TableCell>
+                            <TableCell className="text-right text-[10px] text-muted-foreground">{pure(itemTax)}</TableCell>
+                            <TableCell className="text-right text-destructive">-{pure(itemDiscountAmt)}</TableCell>
+                            <TableCell className="text-right font-medium">{pure(itemAfterDiscount)}</TableCell>
+                            <TableCell className="text-right font-bold text-primary">{pure(itemFinalPrice)}</TableCell>
+                          </TableRow>
+                        );
+                      })
+                      )
+                    )}
+                  </TableBody>
+                </Table>
               </div>
             </CardContent>
           </Card>

@@ -77041,7 +77041,8 @@ var ListOrdersResponseItem = objectType({
   changeDue: numberType().nullable(),
   notes: stringType().nullable(),
   createdAt: stringType(),
-  updatedAt: stringType()
+  updatedAt: stringType(),
+  items: arrayType(anyType()).optional()
 });
 var ListOrdersResponse = arrayType(ListOrdersResponseItem);
 var CreateOrderBody = objectType({
@@ -78781,9 +78782,32 @@ router5.get("/orders", async (req, res) => {
   const offset = params.success && params.data.offset ? params.data.offset : 0;
   const ordersRaw = conditions.length ? await db.select().from(ordersTable).where(and(...conditions)).orderBy(desc(ordersTable.createdAt)) : await db.select().from(ordersTable).orderBy(desc(ordersTable.createdAt));
   const paginated = ordersRaw.slice(offset, offset + limit);
-  const baristaIds = [...new Set(paginated.map((o) => o.baristaId))];
-  const baristas = baristaIds.length > 0 ? await db.select().from(usersTable).where(inArray(usersTable.id, baristaIds)) : [];
+  const orderIds = paginated.map((o) => o.id);
+  const [items, baristas] = await Promise.all([
+    orderIds.length > 0 ? db.select().from(orderItemsTable).where(inArray(orderItemsTable.orderId, orderIds)) : Promise.resolve([]),
+    db.select().from(usersTable)
+    // Fetch all baristas for mapping
+  ]);
+  const itemIds = items.map((i) => i.id);
+  const customizations = itemIds.length > 0 ? await db.select().from(orderItemCustomizationsTable).where(inArray(orderItemCustomizationsTable.orderItemId, itemIds)) : [];
   const baristaMap = Object.fromEntries(baristas.map((b) => [b.id, b.name]));
+  const custByItem = /* @__PURE__ */ new Map();
+  for (const c of customizations) {
+    const list = custByItem.get(c.orderItemId) ?? [];
+    list.push({ ...c, consumedQty: parseFloat(c.consumedQty), addedCost: parseFloat(c.addedCost) });
+    custByItem.set(c.orderItemId, list);
+  }
+  const itemsByOrder = /* @__PURE__ */ new Map();
+  for (const i of items) {
+    const list = itemsByOrder.get(i.orderId) ?? [];
+    list.push({
+      ...i,
+      unitPrice: parseFloat(i.unitPrice),
+      lineTotal: parseFloat(i.lineTotal),
+      customizations: custByItem.get(i.id) ?? []
+    });
+    itemsByOrder.set(i.orderId, list);
+  }
   res.json(
     ListOrdersResponse2.parse(
       serializeDates(paginated.map((o) => ({
@@ -78797,7 +78821,8 @@ router5.get("/orders", async (req, res) => {
         discountType: o.discountType,
         total: parseFloat(o.total),
         amountTendered: o.amountTendered ? parseFloat(o.amountTendered) : null,
-        changeDue: o.changeDue ? parseFloat(o.changeDue) : null
+        changeDue: o.changeDue ? parseFloat(o.changeDue) : null,
+        items: itemsByOrder.get(o.id) ?? []
       })))
     )
   );

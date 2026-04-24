@@ -76,7 +76,11 @@ function LiquidLayer({
       const r = Math.random() * 0.75 * ((radiusBottom + radiusTop) / 2);
       const theta = Math.random() * 2 * Math.PI;
       const y = (Math.random() - 0.5) * height * 0.8;
-      pts.push(new THREE.Vector3(r * Math.cos(theta), y, r * Math.sin(theta)));
+      pts.push({
+        position: new THREE.Vector3(r * Math.cos(theta), y, r * Math.sin(theta)),
+        rotation: [Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI] as [number, number, number],
+        scale: 0.8 + Math.random() * 0.4
+      });
     }
     return pts;
   }, [particleCount, height, radiusBottom, radiusTop]);
@@ -92,15 +96,6 @@ function LiquidLayer({
         <cylinderGeometry
           args={[radiusTop, radiusBottom, Math.max(height + SEAM_OVERLAP, 0.01), 32]}
         />
-        {/*
-          FIX: removed `transmission` from liquid layers.
-          transmission > 0 puts the mesh into Three.js's separate transmissive
-          render pass. Multiple stacked transmissive meshes are depth-sorted
-          incorrectly against each other, producing visible gaps/seams at every
-          layer boundary even when positions are mathematically flush.
-          Plain transparent + opacity gives the same visual translucency without
-          that render-pass issue.
-        */}
         <meshStandardMaterial
           color={color}
           transparent
@@ -110,18 +105,28 @@ function LiquidLayer({
         />
       </mesh>
 
-      {particles.map((pos, idx) => (
-        <mesh key={idx} position={pos} rotation={[Math.random() * Math.PI, Math.random() * Math.PI, 0]}>
+      {particles.map((p, idx) => (
+        <mesh 
+          key={idx} 
+          position={p.position} 
+          rotation={p.rotation}
+          scale={[p.scale, p.scale, p.scale]}
+        >
           {isIced ? (
             <boxGeometry args={[0.3, 0.3, 0.3]} />
           ) : (
             <sphereGeometry args={[0.15, 8, 8]} />
           )}
-          <meshStandardMaterial
-            color={isIced ? "#cceeff" : "#ef4444"}
-            transparent={isIced}
-            opacity={isIced ? 0.7 : 1}
-            roughness={isIced ? 0.1 : 0.6}
+          <meshPhysicalMaterial
+            color={isIced ? "#ffffff" : "#ef4444"}
+            transparent
+            opacity={isIced ? 0.4 : 1}
+            roughness={isIced ? 0.05 : 0.6}
+            metalness={isIced ? 0.05 : 0}
+            transmission={isIced ? 0.95 : 0}
+            thickness={0.2}
+            ior={1.31}
+            clearcoat={isIced ? 1 : 0}
           />
         </mesh>
       ))}
@@ -132,7 +137,7 @@ function LiquidLayer({
 function CupAssembly({ cupSizeMl, layers }: { cupSizeMl: number; layers: CupLayer[] }) {
   const cupHeight = 5;
   const cupRadiusTop = 1.6;
-  const cupRadiusBottom = 1.2;
+  const cupRadiusBottom = 1.1;
 
   const visualizedLayers = useMemo(() => {
     let currentEffectiveVolume = 0;
@@ -166,7 +171,7 @@ function CupAssembly({ cupSizeMl, layers }: { cupSizeMl: number; layers: CupLaye
     <group position={[0, 0, 0]}>
       {/* Glass shell — keep transmission only on the outer glass, not the liquids */}
       <mesh position={[0, 0, 0]}>
-        <cylinderGeometry args={[cupRadiusTop, cupRadiusBottom, cupHeight, 32]} />
+        <cylinderGeometry args={[cupRadiusTop, cupRadiusBottom, cupHeight, 64]} />
         <meshPhysicalMaterial
           color="#ffffff"
           transparent
