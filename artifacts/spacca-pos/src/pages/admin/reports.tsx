@@ -1,9 +1,16 @@
 import { useState, useMemo } from "react";
-import { useGetDashboardSummary, useGetSalesByCategory, useGetTopDrinks, useListOrders } from "@workspace/api-client-react";
+import { useGetDashboardSummary, useGetSalesByCategory, useGetTopDrinks, useListOrders, useGetDrink } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -41,6 +48,34 @@ export default function ReportsPage() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [period, setPeriod] = useState(PERIODS[1]);
   const [drinksView, setDrinksView] = useState<"grouped" | "individual">("grouped");
+  const [selectedCustomizedItem, setSelectedCustomizedItem] = useState<any>(null);
+
+  // Fetch drink details for defaults when a customized item is selected
+  const { data: drinkDetail, isLoading: loadingDrinkDetail } = useGetDrink(selectedCustomizedItem?.drinkId || 0, {
+    query: { enabled: !!selectedCustomizedItem?.drinkId } as any
+  });
+
+  const defaultsMap = useMemo(() => {
+    if (!drinkDetail?.slots) return {} as Record<string, string>;
+    const map: Record<string, string> = {};
+    (drinkDetail.slots as any[]).forEach(slot => {
+      if (slot.slotStyle === "typed") {
+        const defType = slot.typeOptions?.find((to: any) => to.isDefault);
+        const defVol = defType?.volumes?.find((v: any) => v.isDefault);
+        if (defType && defVol) {
+          map[slot.slotLabel] = `${defType.typeName} (${defVol.volumeName})`;
+        } else if (defType) {
+          map[slot.slotLabel] = defType.typeName;
+        }
+      } else if (slot.slotStyle === "legacy") {
+         const defOpt = slot.ingredient?.options?.find((o: any) => o.isDefault);
+         if (defOpt) {
+           map[slot.slotLabel] = defOpt.label;
+         }
+      }
+    });
+    return map;
+  }, [drinkDetail]);
 
   // Dashboard Tab Data
   const { data: summary, isLoading: loadingSummary } = useGetDashboardSummary();
@@ -810,7 +845,11 @@ export default function ReportsPage() {
                               )}
                             </TableCell>
                             <TableCell>
-                              <Badge variant={item.isCustomized ? "outline" : "secondary"} className={item.isCustomized ? "border-amber-500 text-amber-600 bg-amber-50 text-[10px] px-1 h-5" : "bg-green-50 text-green-700 text-[10px] px-1 h-5"}>
+                              <Badge 
+                                variant={item.isCustomized ? "outline" : "secondary"} 
+                                className={item.isCustomized ? "border-amber-500 text-amber-600 bg-amber-50 text-[10px] px-1 h-5 cursor-help hover:bg-amber-100 transition-colors" : "bg-green-50 text-green-700 text-[10px] px-1 h-5"}
+                                onClick={() => item.isCustomized && setSelectedCustomizedItem(item)}
+                              >
                                 {item.isCustomized ? "Customized" : "Standard"}
                               </Badge>
                             </TableCell>
@@ -833,6 +872,83 @@ export default function ReportsPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Customization Details Modal */}
+      <Dialog open={!!selectedCustomizedItem} onOpenChange={(open) => !open && setSelectedCustomizedItem(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Layers className="h-5 w-5 text-amber-500" />
+              Customization Details
+            </DialogTitle>
+            <DialogDescription>
+              Selections for <strong>{selectedCustomizedItem?.drinkName}</strong> (Order #{selectedCustomizedItem?.orderNumber})
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="rounded-md border overflow-hidden">
+              <Table>
+                <TableHeader className="bg-muted/50">
+                  <TableRow>
+                    <TableHead className="text-xs uppercase font-bold py-2">Slot/Component</TableHead>
+                    <TableHead className="text-xs uppercase font-bold py-2">Default</TableHead>
+                    <TableHead className="text-xs uppercase font-bold py-2">Selection</TableHead>
+                    <TableHead className="text-right text-xs uppercase font-bold py-2">Extra Cost</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {loadingDrinkDetail ? (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center py-8">
+                         <div className="flex items-center justify-center gap-2">
+                           <div className="h-4 w-4 border-2 border-primary border-t-transparent animate-spin rounded-full" />
+                           <span className="text-sm text-muted-foreground">Loading defaults...</span>
+                         </div>
+                      </TableCell>
+                    </TableRow>
+                  ) : selectedCustomizedItem?.customizations?.length > 0 ? (
+                    selectedCustomizedItem.customizations.map((c: any, i: number) => {
+                      const defaultValue = defaultsMap[c.slotLabel];
+                      const isModified = defaultValue && c.optionLabel !== defaultValue && !defaultValue.startsWith(c.optionLabel);
+
+                      return (
+                        <TableRow key={i} className={`hover:bg-transparent border-l-2 ${isModified ? "border-l-amber-500 bg-amber-50/20" : "border-l-transparent"}`}>
+                          <TableCell className="py-2 text-sm font-medium">{c.slotLabel}</TableCell>
+                          <TableCell className="py-2 text-xs text-muted-foreground italic">
+                            {defaultValue || "—"}
+                          </TableCell>
+                          <TableCell className={`py-2 text-sm ${isModified ? "text-amber-600 font-bold" : ""}`}>
+                            {c.optionLabel}
+                            {c.consumedQty > 0 && <span className="text-[10px] text-muted-foreground ml-1">({c.consumedQty}ml)</span>}
+                          </TableCell>
+                          <TableCell className="py-2 text-sm text-right font-mono">
+                            {c.addedCost > 0 ? `+${pure(c.addedCost)}` : "—"}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={3} className="text-center py-4 text-muted-foreground text-sm italic">
+                        No customizations found.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+            {selectedCustomizedItem?.specialNotes && (
+              <div className="bg-amber-50 border border-amber-100 p-3 rounded-lg">
+                <p className="text-xs font-bold text-amber-700 uppercase mb-1">Barista Notes:</p>
+                <p className="text-sm text-amber-900 italic">"{selectedCustomizedItem.specialNotes}"</p>
+              </div>
+            )}
+          </div>
+          <div className="flex justify-end">
+            <Button variant="outline" onClick={() => setSelectedCustomizedItem(null)}>Close</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
