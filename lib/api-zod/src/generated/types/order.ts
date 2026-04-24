@@ -18,6 +18,10 @@ export interface Order {
   customerName: string | null;
   subtotal: number;
   discount: number;
+  discountId?: number | null;
+  discountCode?: string | null;
+  discountValue?: number | null;
+  discountType?: "percentage" | "fixed" | null;
   total: number;
   paymentMethod: OrderPaymentMethod;
   /** @nullable */

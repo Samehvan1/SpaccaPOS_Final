@@ -10,6 +10,8 @@ export interface UpdateDrinkBody {
   name?: string;
   description?: string;
   category?: string;
+  categoryId?: number;
+  sortOrder?: number;
   basePrice?: number;
   imageUrl?: string;
   isActive?: boolean;

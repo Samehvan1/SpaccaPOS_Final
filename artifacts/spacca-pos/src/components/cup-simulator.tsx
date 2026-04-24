@@ -34,7 +34,6 @@ const CATEGORY_COLORS: Record<string, string> = {
   chocolate: "#5D4037",
 };
 
-// 3D Liquid Layer
 function LiquidLayer({
   layer,
   bottomY,
@@ -50,11 +49,8 @@ function LiquidLayer({
 }) {
   const getDynamicColor = (layer: CupLayer) => {
     if (layer.color) return layer.color;
-
     const lowerLabel = layer.label?.toLowerCase() || '';
     const lowerCategory = layer.category?.toLowerCase() || '';
-
-    // Keyword matching from label/category
     if (lowerLabel.includes('milk') || lowerCategory.includes('milk')) return CATEGORY_COLORS.milk;
     if (lowerLabel.includes('coffee') || lowerCategory.includes('coffee') || lowerCategory.includes('espresso')) return CATEGORY_COLORS.coffee;
     if (lowerLabel.includes('ice') || lowerCategory.includes('ice') || lowerCategory.includes('water')) return CATEGORY_COLORS.ice;
@@ -62,26 +58,21 @@ function LiquidLayer({
     if (lowerLabel.includes('chocolate') || lowerCategory.includes('chocolate')) return CATEGORY_COLORS.chocolate;
     if (lowerLabel.includes('syrup') || lowerCategory.includes('syrup')) return CATEGORY_COLORS.syrup;
     if (lowerLabel.includes('topping') || lowerCategory.includes('topping')) return CATEGORY_COLORS.topping;
-
-    // Fallback to category key
     return CATEGORY_COLORS[lowerCategory] || CATEGORY_COLORS.other;
   };
 
   const color = getDynamicColor(layer);
 
-  // Proof of concept: Embed dynamic items like ice or strawberry pieces based on label or category
-  const isIced = layer.category?.toLowerCase().includes("water" )|| layer.label.toLowerCase().includes("ice");
+  const isIced = layer.category?.toLowerCase().includes("water") || layer.label.toLowerCase().includes("ice");
   const isStrawberry =
     layer.label.toLowerCase().includes("strawberry") ||
     (layer.category?.toLowerCase() === "syrup" && color.toLowerCase() === "#ef4444");
 
   const particleCount = isIced ? 15 : isStrawberry ? 10 : 0;
 
-  // Random positions for particles inside this specific layer volume
   const particles = useMemo(() => {
     const pts = [];
     for (let i = 0; i < particleCount; i++) {
-      // Keep inside the cylinder roughly
       const r = Math.random() * 0.75 * ((radiusBottom + radiusTop) / 2);
       const theta = Math.random() * 2 * Math.PI;
       const y = (Math.random() - 0.5) * height * 0.8;
@@ -90,22 +81,35 @@ function LiquidLayer({
     return pts;
   }, [particleCount, height, radiusBottom, radiusTop]);
 
+  // Use a slightly negative epsilon to make each layer overlap the one below by a
+  // tiny amount. This closes the sub-pixel seam that the transmissive render pass
+  // leaves between adjacent cylinders without affecting the visible proportions.
+  const SEAM_OVERLAP = 0.005;
+
   return (
     <group position={[0, bottomY + height / 2, 0]}>
-      {/* Liquid Mesh */}
       <mesh>
-        <cylinderGeometry args={[radiusTop, radiusBottom, Math.max(height, 0.01), 32]} />
-        <meshPhysicalMaterial
+        <cylinderGeometry
+          args={[radiusTop, radiusBottom, Math.max(height + SEAM_OVERLAP, 0.01), 32]}
+        />
+        {/*
+          FIX: removed `transmission` from liquid layers.
+          transmission > 0 puts the mesh into Three.js's separate transmissive
+          render pass. Multiple stacked transmissive meshes are depth-sorted
+          incorrectly against each other, producing visible gaps/seams at every
+          layer boundary even when positions are mathematically flush.
+          Plain transparent + opacity gives the same visual translucency without
+          that render-pass issue.
+        */}
+        <meshStandardMaterial
           color={color}
           transparent
-          opacity={0.85}
-          roughness={0.1}
-          transmission={0.5}
-          thickness={0.5}
+          opacity={0.88}
+          roughness={0.15}
+          depthWrite={false}
         />
       </mesh>
 
-      {/* Embedded Particles (Ice / Strawberry pieces) */}
       {particles.map((pos, idx) => (
         <mesh key={idx} position={pos} rotation={[Math.random() * Math.PI, Math.random() * Math.PI, 0]}>
           {isIced ? (
@@ -113,13 +117,11 @@ function LiquidLayer({
           ) : (
             <sphereGeometry args={[0.15, 8, 8]} />
           )}
-          <meshPhysicalMaterial
-            color={isIced ? "#ffffff" : "#ef4444"}
+          <meshStandardMaterial
+            color={isIced ? "#cceeff" : "#ef4444"}
             transparent={isIced}
-            opacity={isIced ? 0.6 : 1}
+            opacity={isIced ? 0.7 : 1}
             roughness={isIced ? 0.1 : 0.6}
-            transmission={isIced ? 0.9 : 0}
-            ior={1.33}
           />
         </mesh>
       ))}
@@ -127,61 +129,57 @@ function LiquidLayer({
   );
 }
 
-// Full Cup Assembly
 function CupAssembly({ cupSizeMl, layers }: { cupSizeMl: number; layers: CupLayer[] }) {
-  const totalVolume = useMemo(() => layers.reduce((sum, l) => sum + l.volume, 0), [layers]);
-
-  const cupHeight = 5; // Fixed physical height of the cup in 3D units
+  const cupHeight = 5;
   const cupRadiusTop = 1.6;
   const cupRadiusBottom = 1.2;
 
-  // Normalized layers
   const visualizedLayers = useMemo(() => {
-    let currentVolume = 0;
+    let currentEffectiveVolume = 0;
     const maxVolume = cupSizeMl || 1;
-    
+
     return layers.map((layer) => {
-      const effectiveVolume = Math.max(layer.volume, 0.1); // Min 0.1ml to prevent disappear
+      const effectiveVolume = Math.max(layer.volume, 0.1);
       const volumePercent = effectiveVolume / maxVolume;
       const layerHeight = volumePercent * cupHeight;
 
-      const startY = (currentVolume / maxVolume) * cupHeight;
+      const startY = (currentEffectiveVolume / maxVolume) * cupHeight;
       const endY = startY + layerHeight;
 
-      // Interpolate radius for the tapered cup
       const rB = cupRadiusBottom + (cupRadiusTop - cupRadiusBottom) * (startY / cupHeight);
       const rT = cupRadiusBottom + (cupRadiusTop - cupRadiusBottom) * (endY / cupHeight);
 
       const part = {
         ...layer,
-        height: Math.max(layerHeight, 0.02), // Ensure visible height
-        bottomY: startY - cupHeight / 2, // shift to center relative to cup
-        radiusBottom: rB * 0.95, // slight inner offset so liquid doesn't z-fight with glass
+        height: layerHeight,
+        bottomY: startY - cupHeight / 2,
+        radiusBottom: rB * 0.95,
         radiusTop: rT * 0.95,
       };
-      currentVolume += layer.volume;
+
+      currentEffectiveVolume += effectiveVolume;
       return part;
     });
-  }, [layers, cupSizeMl, totalVolume]);
+  }, [layers, cupSizeMl]);
 
   return (
     <group position={[0, 0, 0]}>
-      {/* The Glass Cup Background / Shell */}
+      {/* Glass shell — keep transmission only on the outer glass, not the liquids */}
       <mesh position={[0, 0, 0]}>
         <cylinderGeometry args={[cupRadiusTop, cupRadiusBottom, cupHeight, 32]} />
         <meshPhysicalMaterial
           color="#ffffff"
           transparent
-          opacity={0.3}
+          opacity={0.15}
           roughness={0.05}
-          transmission={0.95} // Glass-like material
+          transmission={0.9}
           thickness={0.1}
           ior={1.5}
           side={THREE.DoubleSide}
+          depthWrite={false}
         />
       </mesh>
 
-      {/* Render each liquid layer */}
       {visualizedLayers.map((layer) => (
         <LiquidLayer
           key={layer.id}
@@ -205,11 +203,10 @@ export function CupSimulator({
   return (
     <div className={`relative flex flex-col items-center w-full h-full ${className}`}>
       <Canvas camera={{ position: [0, 2, 8], fov: 45 }}>
-        <ambientLight intensity={0.5} />
+        <ambientLight intensity={0.6} />
         <directionalLight position={[10, 10, 5]} intensity={1} />
         <directionalLight position={[-10, 10, -5]} intensity={0.5} />
 
-        {/* Environment reflection for realistic glass rendering */}
         <Environment preset="city" />
 
         <Float speed={2} rotationIntensity={0.5} floatIntensity={0.5}>
@@ -218,7 +215,6 @@ export function CupSimulator({
 
         <ContactShadows position={[0, -2.5, 0]} opacity={0.5} scale={10} blur={2} far={4} />
 
-        {/* Allows the user to rotate the cup to see 3D effect */}
         <OrbitControls enableZoom={false} autoRotate autoRotateSpeed={2} />
       </Canvas>
     </div>

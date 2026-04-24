@@ -227,6 +227,8 @@ export interface Drink {
   /** @nullable */
   description: string | null;
   category: string;
+  categoryId?: number;
+  sortOrder?: number;
   basePrice: number;
   defaultPrice?: number;
   /** @nullable */
@@ -262,6 +264,8 @@ export interface CreateDrinkBody {
   name: string;
   description?: string;
   category: string;
+  categoryId?: number;
+  sortOrder?: number;
   basePrice: number;
   imageUrl?: string;
   isActive?: boolean;
@@ -274,6 +278,8 @@ export interface UpdateDrinkBody {
   name?: string;
   description?: string;
   category?: string;
+  categoryId?: number;
+  sortOrder?: number;
   basePrice?: number;
   imageUrl?: string;
   isActive?: boolean;
@@ -385,6 +391,10 @@ export interface Order {
   customerName: string | null;
   subtotal: number;
   discount: number;
+  discountId?: number | null;
+  discountCode?: string | null;
+  discountValue?: number | null;
+  discountType?: "percentage" | "fixed" | null;
   total: number;
   paymentMethod: OrderPaymentMethod;
   /** @nullable */
@@ -432,6 +442,7 @@ export interface CreateOrderBody {
   amountTendered?: number;
   notes?: string;
   discount?: number;
+  discountCode?: string;
   items: CreateOrderBodyItemsItem[];
 }
 
