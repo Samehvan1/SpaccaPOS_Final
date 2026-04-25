@@ -132,7 +132,7 @@ function AppRoutes() {
 
       <Route path="/">
         {() => {
-          if (!user) return <Redirect to="/login" />;
+          if (!user) return <Redirect to="/pos" />;
           switch (user.role) {
             case "barista": return <Redirect to="/kitchen" />;
             case "cashier": return <Redirect to="/cashier" />;
@@ -145,10 +145,7 @@ function AppRoutes() {
 
       <Route path="/pos">
         <MainLayout>
-          <ProtectedRoute 
-            component={PosTerminal} 
-            allowedRoles={["frontdesk", "cashier"]} 
-          />
+          <PosTerminal />
         </MainLayout>
       </Route>
 

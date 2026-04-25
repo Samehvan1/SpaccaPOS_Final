@@ -76657,7 +76657,8 @@ var GetMeResponse = objectType({
 });
 var ListDrinksQueryParams = objectType({
   category: coerce.string().optional(),
-  active: coerce.boolean().optional()
+  active: coerce.boolean().optional(),
+  includeSlots: coerce.boolean().optional()
 });
 var ListDrinksResponseItem = objectType({
   id: numberType(),
@@ -76674,7 +76675,8 @@ var ListDrinksResponseItem = objectType({
   cupSizeMl: numberType().nullish(),
   kitchenStation: stringType().optional(),
   createdAt: stringType(),
-  updatedAt: stringType()
+  updatedAt: stringType(),
+  slots: arrayType(anyType()).optional()
 });
 var ListDrinksResponse = arrayType(ListDrinksResponseItem);
 var CreateDrinkBody = objectType({
@@ -77460,7 +77462,6 @@ var BaristaLoginBody2 = BaristaLoginBody;
 var BaristaLoginResponse2 = BaristaLoginResponse;
 var GetMeResponse2 = GetMeResponse;
 var ListDrinksQueryParams2 = ListDrinksQueryParams;
-var ListDrinksResponse2 = ListDrinksResponse;
 var CreateDrinkBody2 = CreateDrinkBody;
 var GetDrinkParams2 = GetDrinkParams;
 var UpdateDrinkParams2 = UpdateDrinkParams;
@@ -77609,9 +77610,9 @@ async function calculateDrinkData(drinkId, selections) {
     if (!template) return slot;
     return {
       ...slot,
-      slotLabel: template.slotLabel,
-      isRequired: template.isRequired,
-      isDynamic: template.isDynamic,
+      slotLabel: slot.slotLabel || template.slotLabel,
+      isRequired: slot.isRequired ?? template.isRequired,
+      isDynamic: slot.isDynamic ?? template.isDynamic,
       affectsCupSize: slot.affectsCupSize ?? template.affectsCupSize
     };
   }));
@@ -77973,9 +77974,9 @@ async function buildDrinkDetail(drinkId) {
       if (slot.predefinedSlotId) {
         const [template] = await db.select().from(predefinedSlotsTable).where(eq(predefinedSlotsTable.id, slot.predefinedSlotId));
         if (template) {
-          effectiveSlot.slotLabel = template.slotLabel;
-          effectiveSlot.isRequired = template.isRequired;
-          effectiveSlot.isDynamic = template.isDynamic;
+          effectiveSlot.slotLabel = slot.slotLabel || template.slotLabel;
+          effectiveSlot.isRequired = slot.isRequired ?? template.isRequired;
+          effectiveSlot.isDynamic = slot.isDynamic ?? template.isDynamic;
           effectiveSlot.affectsCupSize = slot.affectsCupSize ?? template.affectsCupSize;
           templateTypeOptions = await db.select().from(predefinedSlotTypeOptionsTable).where(eq(predefinedSlotTypeOptionsTable.predefinedSlotId, template.id));
           templateVolumes = await db.select().from(predefinedSlotVolumesTable).where(eq(predefinedSlotVolumesTable.predefinedSlotId, template.id));
@@ -77983,6 +77984,31 @@ async function buildDrinkDetail(drinkId) {
       }
       const typeOptions = await db.select().from(drinkSlotTypeOptionsTable).where(eq(drinkSlotTypeOptionsTable.slotId, slot.id)).orderBy(drinkSlotTypeOptionsTable.sortOrder);
       let effectiveTypeOptions = typeOptions;
+      if (slot.predefinedSlotId && templateTypeOptions.length > 0) {
+        const overrideMap = new Map(typeOptions.map((to) => [to.ingredientTypeId, to]));
+        const merged = [];
+        for (const tto of templateTypeOptions) {
+          const override = overrideMap.get(tto.ingredientTypeId);
+          if (override) {
+            merged.push(override);
+            overrideMap.delete(tto.ingredientTypeId);
+          } else {
+            merged.push({
+              id: 0,
+              slotId: slot.id,
+              ingredientTypeId: tto.ingredientTypeId,
+              isDefault: tto.isDefault,
+              sortOrder: tto.sortOrder,
+              processedQty: tto.processedQty,
+              producedQty: tto.producedQty,
+              unit: tto.unit,
+              extraCost: tto.extraCost
+            });
+          }
+        }
+        merged.push(...overrideMap.values());
+        effectiveTypeOptions = merged.sort((a, b) => a.sortOrder - b.sortOrder);
+      }
       if (effectiveTypeOptions.length === 0 && !slot.predefinedSlotId && slot.ingredientTypeId) {
         effectiveTypeOptions = [{
           id: 0,
@@ -77996,7 +78022,7 @@ async function buildDrinkDetail(drinkId) {
           extraCost: null
         }];
       }
-      if (effectiveTypeOptions.length > 0 || slot.predefinedSlotId && templateTypeOptions.length > 0) {
+      if (effectiveTypeOptions.length > 0) {
         const typeOptionsWithVolumes = await Promise.all(
           effectiveTypeOptions.map(async (to) => {
             const [ingType] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, to.ingredientTypeId));
@@ -78134,16 +78160,20 @@ router3.get("/drinks", async (req, res) => {
     const catA = a.categoryId != null ? catOrderMap.get(a.categoryId) ?? 999 : 999;
     const catB = b.categoryId != null ? catOrderMap.get(b.categoryId) ?? 999 : 999;
     if (catA !== catB) return catA - catB;
-    return (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
+    if ((a.sortOrder ?? 0) !== (b.sortOrder ?? 0)) return (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
+    return a.name.localeCompare(b.name);
   });
-  const drinksWithDefaultPrice = await Promise.all(
+  const drinksWithDetails = await Promise.all(
     filtered.map(async (d) => {
+      if (params.success && params.data.includeSlots) {
+        return await buildDrinkDetail(d.id);
+      }
       const base = Number(d.basePrice);
       const defaultPrice = await computeDefaultPrice(d.id);
       return { ...d, basePrice: base, defaultPrice };
     })
   );
-  res.json(ListDrinksResponse2.parse(serializeDates(drinksWithDefaultPrice)));
+  res.json(serializeDates(drinksWithDetails));
 });
 router3.post("/drinks", async (req, res) => {
   const parsed = CreateDrinkBody2.safeParse(req.body);

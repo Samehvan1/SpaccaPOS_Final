@@ -64,17 +64,62 @@ type CartItem = {
 
 
 function detectSubcategory(name: string): string {
-  const words = name.split(" ");
-  return words[words.length - 1];
+  const trimmed = name.trim();
+  const words = trimmed.split(/\s+/);
+  return words[words.length - 1] || "";
 }
 
 function buildSubcategories(drinks: Drink[]): Record<string, Drink[]> {
   const groups: Record<string, Drink[]> = {};
-  drinks.forEach(d => {
-    const sub = detectSubcategory(d.name);
-    if (!groups[sub]) groups[sub] = [];
-    groups[sub].push(d);
+  
+  // We want to identify "Core" names that multiple drinks share.
+  // Pattern A: Suffix-based (e.g. "Almond FlatWhite", "FlatWhite") -> Core is "FlatWhite"
+  // Pattern B: Prefix-based (e.g. "Americano", "Americano Large") -> Core is "Americano"
+  
+  const cleanDrinks = drinks.map(d => ({
+    drink: d,
+    name: d.name.trim(),
+    words: d.name.trim().split(/\s+/)
+  }));
+
+  // Pass 1: Try Suffix-based grouping (most common for variant-first names like "Oat Latte")
+  cleanDrinks.forEach(({ drink, words }) => {
+    if (words.length === 0) return;
+    const suffix = words[words.length - 1];
+    if (!groups[suffix]) groups[suffix] = [];
+    groups[suffix].push(drink);
   });
+
+  // Pass 2: If a drink is alone in its suffix group, try its prefix
+  // e.g. "Americano Large" is currently in group "Large" (likely alone)
+  // while "Americano" is in group "Americano".
+  Object.keys(groups).forEach(sub => {
+    if (groups[sub].length === 1) {
+      const drink = groups[sub][0];
+      const words = drink.name.trim().split(/\s+/);
+      if (words.length > 1) {
+        const prefix = words[0];
+        // If there's another drink that IS just the prefix, or starts with it
+        const prefixMatches = cleanDrinks.filter(d => d.name === prefix || d.name.startsWith(prefix + " "));
+        if (prefixMatches.length >= 2) {
+          // Move this drink to the prefix group
+          delete groups[sub];
+          if (!groups[prefix]) groups[prefix] = [];
+          // Avoid duplicates if they were already there
+          if (!groups[prefix].find(d => d.id === drink.id)) {
+             groups[prefix].push(drink);
+          }
+          // Ensure all prefix matches are in the group
+          prefixMatches.forEach(m => {
+            if (!groups[prefix].find(d => d.id === m.drink.id)) {
+              groups[prefix].push(m.drink);
+            }
+          });
+        }
+      }
+    }
+  });
+
   return groups;
 }
 
@@ -157,8 +202,8 @@ export default function PosTerminal() {
     
     // Sort groups themselves by the minimum sortOrder of their drinks to respect admin positioning
     return groups.sort((a, b) => {
-      const minA = Math.min(...a.drinks.map(d => d.sortOrder ?? 0));
-      const minB = Math.min(...b.drinks.map(d => d.sortOrder ?? 0));
+      const minA = Math.min(...a.drinks.map(d => d.sortOrder ?? 0), 9999);
+      const minB = Math.min(...b.drinks.map(d => d.sortOrder ?? 0), 9999);
       if (minA !== minB) return minA - minB;
       return (a.label || "").localeCompare(b.label || "");
     });
@@ -603,7 +648,7 @@ export default function PosTerminal() {
       </div>
 
       {/* Drink Grid — full width */}
-      <ScrollArea className="flex-1 p-4">
+      <ScrollArea className="flex-1 min-h-0 p-4">
         {isLoadingDrinks ? (
           <div className={gridClass}>
             {Array.from({ length: 12 }).map((_, i) => (

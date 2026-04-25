@@ -43,9 +43,9 @@ export async function calculateDrinkData(drinkId: number, selections: any[]) {
     if (!template) return slot;
     return {
       ...slot,
-      slotLabel: template.slotLabel,
-      isRequired: template.isRequired,
-      isDynamic: template.isDynamic,
+      slotLabel: slot.slotLabel || template.slotLabel,
+      isRequired: slot.isRequired ?? template.isRequired,
+      isDynamic: slot.isDynamic ?? template.isDynamic,
       affectsCupSize: slot.affectsCupSize ?? template.affectsCupSize,
     };
   }));

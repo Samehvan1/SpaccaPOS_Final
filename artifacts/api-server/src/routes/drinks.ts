@@ -111,10 +111,10 @@ async function buildDrinkDetail(drinkId: number) {
       if (slot.predefinedSlotId) {
         const [template] = await db.select().from(predefinedSlotsTable).where(eq(predefinedSlotsTable.id, slot.predefinedSlotId));
         if (template) {
-          // Inherit template properties (can be overridden by slot fields if they were non-null, but here we assume template wins for standard fields)
-          effectiveSlot.slotLabel = template.slotLabel;
-          effectiveSlot.isRequired = template.isRequired;
-          effectiveSlot.isDynamic = template.isDynamic;
+          // Inherit template properties only if not set on the slot (soft inheritance)
+          effectiveSlot.slotLabel = slot.slotLabel || template.slotLabel;
+          effectiveSlot.isRequired = slot.isRequired ?? template.isRequired;
+          effectiveSlot.isDynamic = slot.isDynamic ?? template.isDynamic;
           effectiveSlot.affectsCupSize = slot.affectsCupSize ?? template.affectsCupSize;
           
           templateTypeOptions = await db.select().from(predefinedSlotTypeOptionsTable)
@@ -129,14 +129,29 @@ async function buildDrinkDetail(drinkId: number) {
         .where(eq(drinkSlotTypeOptionsTable.slotId, slot.id))
         .orderBy(drinkSlotTypeOptionsTable.sortOrder);
 
-      // Multi-type OR template-based OR single-type
+      // Merge template options with drink-specific overrides
       let effectiveTypeOptions = typeOptions;
-      
-      // If we have a template but no drink-specific options yet, 
-      // or if we want to show all template options as available for selection:
-      // Actually, for the API response, we return what is ACTIVE.
-      // If it's a template, we only show those in typeOptions (whitelisted).
-      
+      if (slot.predefinedSlotId && templateTypeOptions.length > 0) {
+        const overrideMap = new Map(typeOptions.map(to => [to.ingredientTypeId, to]));
+        const merged: any[] = [];
+        for (const tto of templateTypeOptions) {
+          const override = overrideMap.get(tto.ingredientTypeId);
+          if (override) {
+            merged.push(override);
+            overrideMap.delete(tto.ingredientTypeId);
+          } else {
+            merged.push({
+              id: 0, slotId: slot.id, ingredientTypeId: tto.ingredientTypeId,
+              isDefault: tto.isDefault, sortOrder: tto.sortOrder,
+              processedQty: tto.processedQty, producedQty: tto.producedQty,
+              unit: tto.unit, extraCost: tto.extraCost
+            });
+          }
+        }
+        merged.push(...overrideMap.values());
+        effectiveTypeOptions = merged.sort((a, b) => a.sortOrder - b.sortOrder);
+      }
+
       if (effectiveTypeOptions.length === 0 && !slot.predefinedSlotId && slot.ingredientTypeId) {
         effectiveTypeOptions = [{ 
           id: 0, slotId: slot.id, ingredientTypeId: slot.ingredientTypeId, 
@@ -145,11 +160,8 @@ async function buildDrinkDetail(drinkId: number) {
         }];
       }
 
-      if (effectiveTypeOptions.length > 0 || (slot.predefinedSlotId && templateTypeOptions.length > 0)) {
+      if (effectiveTypeOptions.length > 0) {
         // Resolve Type Options
-        // If it's a template, we might want to return ALL template options but marked as enabled/disabled?
-        // No, POS usually only wants enabled ones. Admin will fetch template separately.
-        
         const typeOptionsWithVolumes = await Promise.all(
           effectiveTypeOptions.map(async (to) => {
             const [ingType] = await db.select().from(ingredientTypesTable)
