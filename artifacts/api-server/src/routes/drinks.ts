@@ -132,24 +132,19 @@ async function buildDrinkDetail(drinkId: number) {
       // Merge template options with drink-specific overrides
       let effectiveTypeOptions = typeOptions;
       if (slot.predefinedSlotId && templateTypeOptions.length > 0) {
-        const overrideMap = new Map(typeOptions.map(to => [to.ingredientTypeId, to]));
-        const merged: any[] = [];
-        for (const tto of templateTypeOptions) {
-          const override = overrideMap.get(tto.ingredientTypeId);
-          if (override) {
-            merged.push(override);
-            overrideMap.delete(tto.ingredientTypeId);
-          } else {
-            merged.push({
-              id: 0, slotId: slot.id, ingredientTypeId: tto.ingredientTypeId,
-              isDefault: tto.isDefault, sortOrder: tto.sortOrder,
-              processedQty: tto.processedQty, producedQty: tto.producedQty,
-              unit: tto.unit, extraCost: tto.extraCost
-            });
-          }
+        if (typeOptions.length > 0) {
+          // If the drink has ANY specific overrides for this slot, they define the exact list of options.
+          // This allows users to "remove" options from a template by simply not including them in the overrides.
+          effectiveTypeOptions = typeOptions;
+        } else {
+          // No overrides at all? Use the full template list.
+          effectiveTypeOptions = templateTypeOptions.map(tto => ({
+            id: 0, slotId: slot.id, ingredientTypeId: tto.ingredientTypeId,
+            isDefault: tto.isDefault, sortOrder: tto.sortOrder,
+            processedQty: tto.processedQty, producedQty: tto.producedQty,
+            unit: tto.unit, extraCost: tto.extraCost
+          }));
         }
-        merged.push(...overrideMap.values());
-        effectiveTypeOptions = merged.sort((a, b) => a.sortOrder - b.sortOrder);
       }
 
       if (effectiveTypeOptions.length === 0 && !slot.predefinedSlotId && slot.ingredientTypeId) {
