@@ -1065,6 +1065,21 @@ export default function DrinkRecipe() {
 
           {slots.length > 0 && (
             <div className="flex gap-2">
+              <Select onValueChange={(v) => v !== "none" && addFromTemplate(parseInt(v))}>
+                <SelectTrigger className="flex-1 border-dashed border gap-2 h-10 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+                  <Tag className="h-4 w-4 shrink-0" />
+                  <SelectValue placeholder="Add from Template…" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectLabel>Available Templates</SelectLabel>
+                    {predefinedSlots.length === 0 && <SelectItem value="none" disabled>No templates defined</SelectItem>}
+                    {predefinedSlots.map(t => (
+                      <SelectItem key={t.id} value={String(t.id)}>{t.name}</SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
               <Button variant="outline" className="gap-2 flex-1 border-dashed" onClick={() => addSlot("typed")}>
                 <Layers className="h-4 w-4" /> Add Catalog Slot
               </Button>

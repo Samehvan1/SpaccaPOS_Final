@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogT
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Plus, AlertTriangle, ArrowDownToLine, ArrowUpFromLine, PackageOpen } from "lucide-react";
+import { ArrowLeft, Plus, AlertTriangle, ArrowDownToLine, ArrowUpFromLine, PackageOpen, Download } from "lucide-react";
 import { Link } from "wouter";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -100,6 +100,46 @@ export default function StockAdmin() {
     }, 800);
   };
 
+  const handleExportStock = () => {
+    if (!ingredients || ingredients.length === 0) {
+      toast({ variant: "destructive", title: "No ingredients to export" });
+      return;
+    }
+
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const timestamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
+    const filename = `Current_Stock_${timestamp}.csv`;
+
+    const header = ['Name', 'Type', 'Unit', 'Current Stock', 'Low Stock Threshold', 'Status'];
+    const rows = ingredients.map(ing => {
+      const stock = Number(ing.stockQuantity ?? 0);
+      const threshold = Number(ing.lowStockThreshold ?? 0);
+      const status = stock <= threshold ? 'Low Stock' : 'OK';
+      return [
+        `"${(ing.name || '').replace(/"/g, '""')}"`,
+        ing.ingredientType,
+        ing.unit,
+        stock,
+        threshold,
+        status,
+      ].join(',');
+    });
+
+    const csv = [header.join(','), ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    toast({ title: `Stock exported as ${filename}` });
+  };
+
   const getMovementIcon = (type: string) => {
     if (type === 'restock' || type === 'opening') return <ArrowDownToLine className="h-4 w-4 text-green-500" />;
     return <ArrowUpFromLine className="h-4 w-4 text-destructive" />;
@@ -118,12 +158,16 @@ export default function StockAdmin() {
           </div>
         </div>
 
-        <Dialog open={isRestockOpen} onOpenChange={setIsRestockOpen}>
-          <DialogTrigger asChild>
-            <Button className="gap-2">
-              <Plus className="h-4 w-4" /> Receive Delivery
-            </Button>
-          </DialogTrigger>
+        <div className="flex gap-2">
+          <Button variant="outline" className="gap-2" onClick={handleExportStock}>
+            <Download className="h-4 w-4" /> Export Stock
+          </Button>
+          <Dialog open={isRestockOpen} onOpenChange={setIsRestockOpen}>
+            <DialogTrigger asChild>
+              <Button className="gap-2">
+                <Plus className="h-4 w-4" /> Receive Delivery
+              </Button>
+            </DialogTrigger>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Receive Delivery / Restock</DialogTitle>
@@ -154,7 +198,8 @@ export default function StockAdmin() {
               <Button onClick={handleRestock} disabled={isRestocking}>Save</Button>
             </DialogFooter>
           </DialogContent>
-        </Dialog>
+          </Dialog>
+        </div>
       </div>
 
       {lowStock && lowStock.length > 0 && (

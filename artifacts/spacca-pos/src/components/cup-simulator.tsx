@@ -1,5 +1,5 @@
-import { useMemo } from "react";
-import { Canvas } from "@react-three/fiber";
+import { useMemo, useRef } from "react";
+import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, Environment, Float, ContactShadows } from "@react-three/drei";
 import * as THREE from "three";
 
@@ -34,19 +34,122 @@ const CATEGORY_COLORS: Record<string, string> = {
   chocolate: "#5D4037",
 };
 
+/** Animated bubbles that float upward inside a liquid layer */
+function Bubbles({
+  count,
+  radiusBottom,
+  radiusTop,
+  height,
+  color,
+}: {
+  count: number;
+  radiusBottom: number;
+  radiusTop: number;
+  height: number;
+  color: string;
+}) {
+  const groupRef = useRef<THREE.Group>(null);
+  const avgR = (radiusBottom + radiusTop) / 2;
+
+  const bubbles = useMemo(() => {
+    const pts = [];
+    for (let i = 0; i < count; i++) {
+      const r = Math.random() * avgR * 0.7;
+      const theta = Math.random() * 2 * Math.PI;
+      const y = (Math.random() - 0.5) * height;
+      pts.push({
+        position: new THREE.Vector3(r * Math.cos(theta), y, r * Math.sin(theta)),
+        speed: 0.08 + Math.random() * 0.15,
+        size: 0.03 + Math.random() * 0.05,
+        wobble: Math.random() * Math.PI * 2,
+        wobbleSpeed: 0.5 + Math.random() * 1.5,
+      });
+    }
+    return pts;
+  }, [count, avgR, height]);
+
+  useFrame((_, dt) => {
+    if (!groupRef.current) return;
+    groupRef.current.children.forEach((child, i) => {
+      const b = bubbles[i];
+      if (!b) return;
+      child.position.y += b.speed * dt;
+      child.position.x += Math.sin(b.wobble + performance.now() * 0.001 * b.wobbleSpeed) * 0.002;
+      if (child.position.y > height / 2) {
+        child.position.y = -height / 2;
+      }
+    });
+  });
+
+  return (
+    <group ref={groupRef}>
+      {bubbles.map((b, i) => (
+        <mesh key={i} position={b.position}>
+          <sphereGeometry args={[b.size, 8, 8]} />
+          <meshPhysicalMaterial
+            color="#ffffff"
+            transparent
+            opacity={0.3}
+            roughness={0.05}
+            transmission={0.8}
+            thickness={0.05}
+            ior={1.33}
+          />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
+/** A liquid surface shimmer effect on the topmost layer */
+function SurfaceShimmer({
+  radiusTop,
+  bottomY,
+  height,
+}: {
+  radiusTop: number;
+  bottomY: number;
+  height: number;
+}) {
+  const ref = useRef<THREE.Mesh>(null);
+
+  useFrame(() => {
+    if (!ref.current) return;
+    ref.current.rotation.y += 0.005;
+  });
+
+  return (
+    <mesh ref={ref} position={[0, bottomY + height - 0.01, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+      <ringGeometry args={[0, radiusTop * 0.95, 32]} />
+      <meshStandardMaterial
+        color="#ffffff"
+        transparent
+        opacity={0.08}
+        roughness={0.1}
+        side={THREE.DoubleSide}
+        depthWrite={false}
+      />
+    </mesh>
+  );
+}
+
 function LiquidLayer({
   layer,
   bottomY,
   height,
   radiusBottom,
   radiusTop,
+  isTopLayer,
 }: {
   layer: CupLayer;
   bottomY: number;
   height: number;
   radiusBottom: number;
   radiusTop: number;
+  isTopLayer: boolean;
 }) {
+  const meshRef = useRef<THREE.Mesh>(null);
+
   const getDynamicColor = (layer: CupLayer) => {
     if (layer.color) return layer.color;
     const lowerLabel = layer.label?.toLowerCase() || '';
@@ -67,8 +170,11 @@ function LiquidLayer({
   const isStrawberry =
     layer.label.toLowerCase().includes("strawberry") ||
     (layer.category?.toLowerCase() === "syrup" && color.toLowerCase() === "#ef4444");
+  const isCoffee = layer.category?.toLowerCase().includes("coffee") || layer.category?.toLowerCase().includes("espresso") || layer.label.toLowerCase().includes("coffee");
+  const isMilk = layer.category?.toLowerCase().includes("milk") || layer.label.toLowerCase().includes("milk");
 
   const particleCount = isIced ? 15 : isStrawberry ? 10 : 0;
+  const bubbleCount = isCoffee ? 8 : isMilk ? 4 : 0;
 
   const particles = useMemo(() => {
     const pts = [];
@@ -85,6 +191,14 @@ function LiquidLayer({
     return pts;
   }, [particleCount, height, radiusBottom, radiusTop]);
 
+  // Subtle "breathing" animation on the liquid material opacity
+  useFrame(() => {
+    if (!meshRef.current) return;
+    const mat = meshRef.current.material as THREE.MeshStandardMaterial;
+    const pulse = Math.sin(performance.now() * 0.001) * 0.03;
+    mat.opacity = 0.88 + pulse;
+  });
+
   // Use a slightly negative epsilon to make each layer overlap the one below by a
   // tiny amount. This closes the sub-pixel seam that the transmissive render pass
   // leaves between adjacent cylinders without affecting the visible proportions.
@@ -92,7 +206,7 @@ function LiquidLayer({
 
   return (
     <group position={[0, bottomY + height / 2, 0]}>
-      <mesh>
+      <mesh ref={meshRef}>
         <cylinderGeometry
           args={[radiusTop, radiusBottom, Math.max(height + SEAM_OVERLAP, 0.01), 32]}
         />
@@ -105,6 +219,18 @@ function LiquidLayer({
         />
       </mesh>
 
+      {/* Bubbles inside coffee or milk layers */}
+      {bubbleCount > 0 && (
+        <Bubbles
+          count={bubbleCount}
+          radiusBottom={radiusBottom}
+          radiusTop={radiusTop}
+          height={height}
+          color={color}
+        />
+      )}
+
+      {/* Ice cubes and strawberry particles */}
       {particles.map((p, idx) => (
         <mesh 
           key={idx} 
@@ -130,6 +256,15 @@ function LiquidLayer({
           />
         </mesh>
       ))}
+
+      {/* Shimmer on the surface of the topmost layer */}
+      {isTopLayer && (
+        <SurfaceShimmer
+          radiusTop={radiusTop}
+          bottomY={-height / 2}
+          height={height}
+        />
+      )}
     </group>
   );
 }
@@ -185,7 +320,7 @@ function CupAssembly({ cupSizeMl, layers }: { cupSizeMl: number; layers: CupLaye
         />
       </mesh>
 
-      {visualizedLayers.map((layer) => (
+      {visualizedLayers.map((layer, idx) => (
         <LiquidLayer
           key={layer.id}
           layer={layer}
@@ -193,6 +328,7 @@ function CupAssembly({ cupSizeMl, layers }: { cupSizeMl: number; layers: CupLaye
           height={layer.height}
           radiusBottom={layer.radiusBottom}
           radiusTop={layer.radiusTop}
+          isTopLayer={idx === visualizedLayers.length - 1}
         />
       ))}
     </group>
