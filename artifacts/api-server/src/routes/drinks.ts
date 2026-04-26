@@ -582,8 +582,19 @@ router.put("/drinks/:id/slots", async (req, res): Promise<void> => {
     return cleaned;
   });
 
-  // Replace all slots (cascade deletes slot volumes)
-  await db.delete(drinkIngredientSlotsTable).where(eq(drinkIngredientSlotsTable.drinkId, drinkId));
+  // --- FRESH SAVE: Clear everything related to this drink ---
+  const existingSlots = await db.select({ id: drinkIngredientSlotsTable.id })
+    .from(drinkIngredientSlotsTable)
+    .where(eq(drinkIngredientSlotsTable.drinkId, drinkId));
+  
+  if (existingSlots.length > 0) {
+    const slotIds = existingSlots.map(s => s.id);
+    // Explicitly delete children first (just in case cascade is off)
+    await db.delete(drinkSlotVolumesTable).where(inArray(drinkSlotVolumesTable.slotId, slotIds));
+    await db.delete(drinkSlotTypeOptionsTable).where(inArray(drinkSlotTypeOptionsTable.slotId, slotIds));
+    // Delete parent slots
+    await db.delete(drinkIngredientSlotsTable).where(eq(drinkIngredientSlotsTable.drinkId, drinkId));
+  }
 
   if (cleanedSlots.length > 0) {
     const insertedSlots = await db.insert(drinkIngredientSlotsTable).values(
