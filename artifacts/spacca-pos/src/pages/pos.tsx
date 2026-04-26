@@ -201,7 +201,11 @@ export default function PosTerminal() {
     });
     
     // Sort groups themselves by the minimum sortOrder of their drinks to respect admin positioning
+    // However, we want the "Uncategorized" group (empty label) to always be at the end.
     return groups.sort((a, b) => {
+      if (a.label === "" && b.label !== "") return 1;
+      if (a.label !== "" && b.label === "") return -1;
+
       const minA = Math.min(...a.drinks.map(d => d.sortOrder ?? 0), 9999);
       const minB = Math.min(...b.drinks.map(d => d.sortOrder ?? 0), 9999);
       if (minA !== minB) return minA - minB;

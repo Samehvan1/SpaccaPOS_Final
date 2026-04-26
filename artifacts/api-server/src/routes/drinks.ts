@@ -221,7 +221,7 @@ async function buildDrinkDetail(drinkId: number) {
               volumes,
             };
           })
-        );
+        ).then(options => options.filter(o => o.typeName !== ""));
 
         return {
           ...effectiveSlot,
@@ -525,12 +525,69 @@ router.put("/drinks/:id/slots", async (req, res): Promise<void> => {
     await db.update(drinksTable).set({ cupSizeMl }).where(eq(drinksTable.id, drinkId));
   }
 
+  // --- Validate and Clean stale catalog references ---
+  const typeIds = new Set<number>();
+  const volIds = new Set<number>();
+  rawSlots.forEach(s => {
+    if (s.ingredientTypeId) typeIds.add(s.ingredientTypeId);
+    if (Array.isArray(s.slotTypeOptions)) {
+      s.slotTypeOptions.forEach((to: any) => {
+        if (to.ingredientTypeId) typeIds.add(to.ingredientTypeId);
+        if (Array.isArray(to.slotVolumes)) {
+          to.slotVolumes.forEach((sv: any) => { if (sv.typeVolumeId) volIds.add(sv.typeVolumeId); });
+        }
+      });
+    }
+    if (Array.isArray(s.slotVolumes)) {
+      s.slotVolumes.forEach((sv: any) => { if (sv.typeVolumeId) volIds.add(sv.typeVolumeId); });
+    }
+  });
+
+  const [validTypes, validVolumes] = await Promise.all([
+    typeIds.size > 0 
+      ? db.select({ id: ingredientTypesTable.id }).from(ingredientTypesTable).where(and(inArray(ingredientTypesTable.id, Array.from(typeIds)), eq(ingredientTypesTable.isActive, true)))
+      : Promise.resolve([]),
+    volIds.size > 0
+      ? db.select({ id: ingredientTypeVolumesTable.id, typeId: ingredientTypeVolumesTable.ingredientTypeId }).from(ingredientTypeVolumesTable).where(and(inArray(ingredientTypeVolumesTable.id, Array.from(volIds)), eq(ingredientTypeVolumesTable.isActive, true)))
+      : Promise.resolve([]),
+  ]);
+
+  const validTypeSet = new Set(validTypes.map(t => t.id));
+  const validVolMap = new Map(validVolumes.map(v => [v.id, v.typeId]));
+
+  // Clean rawSlots to only keep active references
+  const cleanedSlots = rawSlots.map(s => {
+    const cleaned = { ...s };
+    if (cleaned.ingredientTypeId && !validTypeSet.has(cleaned.ingredientTypeId)) cleaned.ingredientTypeId = null;
+    
+    if (Array.isArray(cleaned.slotTypeOptions)) {
+      cleaned.slotTypeOptions = cleaned.slotTypeOptions.filter((to: any) => validTypeSet.has(to.ingredientTypeId));
+      cleaned.slotTypeOptions.forEach((to: any) => {
+        if (Array.isArray(to.slotVolumes)) {
+          to.slotVolumes = to.slotVolumes.filter((sv: any) => {
+            const parentTypeId = validVolMap.get(sv.typeVolumeId);
+            return parentTypeId === to.ingredientTypeId;
+          });
+        }
+      });
+    }
+
+    if (Array.isArray(cleaned.slotVolumes)) {
+      cleaned.slotVolumes = cleaned.slotVolumes.filter((sv: any) => {
+        const parentTypeId = validVolMap.get(sv.typeVolumeId);
+        // If single type slot, check against that type
+        return !cleaned.ingredientTypeId || parentTypeId === cleaned.ingredientTypeId;
+      });
+    }
+    return cleaned;
+  });
+
   // Replace all slots (cascade deletes slot volumes)
   await db.delete(drinkIngredientSlotsTable).where(eq(drinkIngredientSlotsTable.drinkId, drinkId));
 
-  if (rawSlots.length > 0) {
+  if (cleanedSlots.length > 0) {
     const insertedSlots = await db.insert(drinkIngredientSlotsTable).values(
-      rawSlots.map((s: any, i: number) => ({
+      cleanedSlots.map((s: any, i: number) => ({
         drinkId,
         ingredientId: s.ingredientId ?? null,
         ingredientTypeId: s.ingredientTypeId ?? null,
@@ -550,8 +607,8 @@ router.put("/drinks/:id/slots", async (req, res): Promise<void> => {
     const slotTypeOptionRows: any[] = [];
     const slotVolumeRows: any[] = [];
 
-    for (let i = 0; i < rawSlots.length; i++) {
-      const s = rawSlots[i];
+    for (let i = 0; i < cleanedSlots.length; i++) {
+      const s = cleanedSlots[i];
       const slot = insertedSlots[i];
 
       // --- New multi-type-option style ---

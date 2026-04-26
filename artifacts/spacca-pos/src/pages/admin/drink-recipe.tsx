@@ -218,6 +218,23 @@ export default function DrinkRecipe() {
     setOptionsCache(prev => ({ ...initial, ...prev }));
   }, [drink]);
 
+  // Automatically pick default option when ingredient changes and options are loaded
+  useEffect(() => {
+    let changed = false;
+    const newSlots = slots.map(s => {
+      if (s.style === "legacy" && s.ingredientId && s.defaultOptionId === null) {
+        const options = optionsCache[s.ingredientId];
+        if (options && options.length > 0) {
+          const def = options.find(o => o.isDefault) || options[0];
+          changed = true;
+          return { ...s, defaultOptionId: def.id };
+        }
+      }
+      return s;
+    });
+    if (changed) setSlots(newSlots);
+  }, [optionsCache, slots]);
+
   const mark = () => setIsDirty(true);
 
   const addSlot = (style: SlotStyle) => {
