@@ -513,6 +513,8 @@ export interface StockAdjustmentBody {
 
 export interface DashboardSummary {
   todayRevenue: number;
+  todayCashRevenue: number;
+  todayCardRevenue: number;
   todayOrders: number;
   todayDrinks: number;
   averageOrderValue: number;
@@ -614,6 +616,9 @@ export type GetSalesByCategoryParams = {
 
 export type GetTopDrinksParams = {
   limit?: number;
+  days?: number;
+  startDate?: string;
+  endDate?: string;
 };
 
 export type GetSettingsParams = {

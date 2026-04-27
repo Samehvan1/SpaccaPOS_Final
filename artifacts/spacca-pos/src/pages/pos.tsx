@@ -71,59 +71,7 @@ function detectSubcategory(name: string): string {
   return words[words.length - 1] || "";
 }
 
-function buildSubcategories(drinks: Drink[]): Record<string, Drink[]> {
-  const groups: Record<string, Drink[]> = {};
-  
-  // We want to identify "Core" names that multiple drinks share.
-  // Pattern A: Suffix-based (e.g. "Almond FlatWhite", "FlatWhite") -> Core is "FlatWhite"
-  // Pattern B: Prefix-based (e.g. "Americano", "Americano Large") -> Core is "Americano"
-  
-  const cleanDrinks = drinks.map(d => ({
-    drink: d,
-    name: d.name.trim(),
-    words: d.name.trim().split(/\s+/)
-  }));
-
-  // Pass 1: Try Suffix-based grouping (most common for variant-first names like "Oat Latte")
-  cleanDrinks.forEach(({ drink, words }) => {
-    if (words.length === 0) return;
-    const suffix = words[words.length - 1];
-    if (!groups[suffix]) groups[suffix] = [];
-    groups[suffix].push(drink);
-  });
-
-  // Pass 2: If a drink is alone in its suffix group, try its prefix
-  // e.g. "Americano Large" is currently in group "Large" (likely alone)
-  // while "Americano" is in group "Americano".
-  Object.keys(groups).forEach(sub => {
-    if (groups[sub].length === 1) {
-      const drink = groups[sub][0];
-      const words = drink.name.trim().split(/\s+/);
-      if (words.length > 1) {
-        const prefix = words[0];
-        // If there's another drink that IS just the prefix, or starts with it
-        const prefixMatches = cleanDrinks.filter(d => d.name === prefix || d.name.startsWith(prefix + " "));
-        if (prefixMatches.length >= 2) {
-          // Move this drink to the prefix group
-          delete groups[sub];
-          if (!groups[prefix]) groups[prefix] = [];
-          // Avoid duplicates if they were already there
-          if (!groups[prefix].find(d => d.id === drink.id)) {
-             groups[prefix].push(drink);
-          }
-          // Ensure all prefix matches are in the group
-          prefixMatches.forEach(m => {
-            if (!groups[prefix].find(d => d.id === m.drink.id)) {
-              groups[prefix].push(m.drink);
-            }
-          });
-        }
-      }
-    }
-  });
-
-  return groups;
-}
+// Smart categorization disabled as per user request
 
 export default function PosTerminal() {
   const { user } = useAuth();
@@ -167,53 +115,15 @@ export default function PosTerminal() {
     return result;
   }, [drinks, selectedCategoryId, categories, searchQuery]);
 
-  const subcategoryGroups = useMemo(() => buildSubcategories(filteredDrinks), [filteredDrinks]);
-
-  const visibleSubcategories = useMemo(() => {
-    return Object.entries(subcategoryGroups)
-      .filter(([, items]) => items.length >= 2)
-      .map(([sub]) => sub);
-  }, [subcategoryGroups]);
-
   const groupedDrinks = useMemo(() => {
-    const groups: { label: string; drinks: Drink[] }[] = [];
-    const added = new Set<number>();
-    
-    // Group drinks by visible subcategories
-    visibleSubcategories.forEach(sub => {
-      const items = subcategoryGroups[sub] || [];
-      if (items.length >= 2) {
-        groups.push({ label: sub, drinks: items });
-        items.forEach(d => added.add(d.id));
-      }
+    const sorted = [...filteredDrinks].sort((a, b) => {
+      const sortA = a.sortOrder ?? 0;
+      const sortB = b.sortOrder ?? 0;
+      if (sortA !== sortB) return sortA - sortB;
+      return a.name.localeCompare(b.name);
     });
-
-    // Handle "other" drinks that don't belong to a group
-    const rest = filteredDrinks.filter(d => !added.has(d.id));
-    if (rest.length > 0) {
-      groups.push({ label: "", drinks: rest });
-    }
-    
-    // Sort drinks within each group by index then name
-    groups.forEach(g => {
-      g.drinks.sort((a, b) => {
-        if ((a.sortOrder ?? 0) !== (b.sortOrder ?? 0)) return (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
-        return a.name.localeCompare(b.name);
-      });
-    });
-    
-    // Sort groups themselves by the minimum sortOrder of their drinks to respect admin positioning
-    // However, we want the "Uncategorized" group (empty label) to always be at the end.
-    return groups.sort((a, b) => {
-      if (a.label === "" && b.label !== "") return 1;
-      if (a.label !== "" && b.label === "") return -1;
-
-      const minA = Math.min(...a.drinks.map(d => d.sortOrder ?? 0), 9999);
-      const minB = Math.min(...b.drinks.map(d => d.sortOrder ?? 0), 9999);
-      if (minA !== minB) return minA - minB;
-      return (a.label || "").localeCompare(b.label || "");
-    });
-  }, [filteredDrinks, visibleSubcategories, subcategoryGroups]);
+    return [{ label: "", drinks: sorted }];
+  }, [filteredDrinks]);
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
