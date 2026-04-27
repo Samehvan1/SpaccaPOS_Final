@@ -12,7 +12,7 @@ import { Check, X, Loader2, Calculator, ClipboardList, User, ListChecks, CreditC
 import { fmt } from "@/lib/currency";
 import { printCustomerReceipt, printAgentReceipts } from "@/components/receipt-printer";
 import { useSettings } from "@/hooks/use-settings";
-import { useGetActiveOrders, useUpdateOrderStatus } from "@workspace/api-client-react";
+import { useGetActiveOrders, useUpdateOrderStatus, useListOrders } from "@workspace/api-client-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import PosTerminal from "./pos";
 import { useOrderEvents } from "@/hooks/use-order-events";
@@ -203,19 +203,10 @@ export default function CashierPage() {
     { query: { refetchInterval: 5000 } as any }
   );
 
-  // Fetch recent orders for reprint/refund
-  const [recentOrders, setRecentOrders] = useState<any[]>([]);
-  const fetchRecent = useCallback(async () => {
-    const res = await fetch(`${API_BASE}/orders?limit=20&status=paid,completed,ready,in_progress,refunded`, { credentials: "include" });
-    const data = await res.json();
-    setRecentOrders(data.items || []);
-  }, []);
-
-  useEffect(() => {
-    fetchRecent();
-    const interval = setInterval(fetchRecent, 10000);
-    return () => clearInterval(interval);
-  }, [fetchRecent]);
+  const { data: recentOrders = [], refetch: refetchRecent } = useListOrders(
+    { limit: 20, status: "paid,completed,ready,in_progress,refunded" as any },
+    { query: { refetchInterval: 10000 } as any }
+  );
 
   const { mutate: updateStatus, isPending } = useUpdateOrderStatus();
 
@@ -239,7 +230,7 @@ export default function CashierPage() {
       setIsAdminAuthOpen(false);
       setAdminPin("");
       setRefundOrderId(null);
-      fetchRecent();
+      refetchRecent();
     } catch (e: any) {
       toast({ variant: "destructive", title: "Auth Failed", description: e.message });
       setAdminPin("");
@@ -388,7 +379,7 @@ export default function CashierPage() {
                                 </div>
                                 <div>
                                   <label className="text-[10px] font-black text-neon-green uppercase tracking-[0.2em] mb-1 block">Amount Due</label>
-                                  <div className="text-4xl font-black tracking-tighter text-neon-green">{fmt(parseFloat(heroOrder.total as any))}</div>
+                                  <div className="text-4xl font-black tracking-tighter text-neon-green">{fmt(heroOrder.total)}</div>
                                 </div>
                               </div>
                               <div className="pt-4 border-t border-white/5 flex flex-col md:flex-row gap-8 items-start">
@@ -422,7 +413,7 @@ export default function CashierPage() {
                               >
                                 <Check className="h-12 w-12 group-hover:scale-125 transition-transform" />
                                 <span className="text-xl font-black tracking-tighter uppercase">APPROVE</span>
-                                <span className="text-xs font-bold opacity-60 uppercase tracking-widest">{fmt(parseFloat(heroOrder.total as any))}</span>
+                                <span className="text-xs font-bold opacity-60 uppercase tracking-widest">{fmt(heroOrder.total)}</span>
                               </Button>
                               <Button
                                 variant="outline"
@@ -455,7 +446,7 @@ export default function CashierPage() {
                                   <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1 truncate max-w-[150px]">{order.customerName || "Walk-in"}</div>
                                 </div>
                                 <div className="text-right">
-                                  <div className="text-2xl font-black text-neon-green">{fmt(parseFloat(order.total as any))}</div>
+                                  <div className="text-2xl font-black text-neon-green">{fmt(order.total)}</div>
                                   <Badge variant="outline" className="mt-1 border-white/10 text-[10px] bg-white/5 uppercase">{order.paymentMethod}</Badge>
                                 </div>
                               </div>
@@ -506,10 +497,30 @@ export default function CashierPage() {
           </div>
           <ScrollArea className="flex-1">
             <div className="max-w-4xl mx-auto p-6 space-y-4">
-              {recentOrders.filter(o => 
-                o.orderNumber.includes(recentSearch) || 
-                (o.customerName || "").toLowerCase().includes(recentSearch.toLowerCase())
-              ).map((order) => (
+              {recentOrders.length === 0 ? (
+                <div className="text-center py-20">
+                  <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-4">
+                    <History className="h-8 w-8 text-muted-foreground opacity-20" />
+                  </div>
+                  <h3 className="text-xl font-bold opacity-50 uppercase tracking-tighter">No Recent Orders</h3>
+                  <p className="text-sm text-muted-foreground mt-2">Completed and paid orders will appear here.</p>
+                </div>
+              ) : recentOrders.filter(o => {
+                const search = recentSearch.toLowerCase();
+                const orderNum = String(o.orderNumber).toLowerCase();
+                const custName = (o.customerName || "").toLowerCase();
+                return orderNum.includes(search) || custName.includes(search);
+              }).length === 0 ? (
+                <div className="text-center py-20">
+                  <Search className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-20" />
+                  <p className="text-muted-foreground font-bold">No orders match "{recentSearch}"</p>
+                </div>
+              ) : recentOrders.filter(o => {
+                const search = recentSearch.toLowerCase();
+                const orderNum = String(o.orderNumber).toLowerCase();
+                const custName = (o.customerName || "").toLowerCase();
+                return orderNum.includes(search) || custName.includes(search);
+              }).map((order) => (
                 <Card key={order.id} className="glass-card border-white/5 overflow-hidden rounded-2xl">
                   <div className="p-4 flex items-center justify-between">
                     <div className="flex items-center gap-4">
@@ -523,7 +534,7 @@ export default function CashierPage() {
                     </div>
                     <div className="flex items-center gap-6">
                       <div className="text-right mr-4">
-                        <div className="text-lg font-black text-neon-green">{fmt(parseFloat(order.total))}</div>
+                        <div className="text-lg font-black text-neon-green">{fmt(order.total)}</div>
                         <Badge variant="outline" className={`text-[9px] uppercase border-white/10 ${
                           order.status === 'refunded' ? 'text-red-400 bg-red-400/10' : 
                           order.status === 'completed' ? 'text-neon-green bg-neon-green/10' : 'text-neon-cyan'

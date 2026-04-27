@@ -55760,7 +55760,7 @@ var init_orders = __esm({
       orderNumber: text("order_number").notNull().unique(),
       baristaId: integer("barista_id").notNull().references(() => usersTable.id),
       status: text("status", {
-        enum: ["pending", "paid", "in_progress", "ready", "completed", "cancelled"]
+        enum: ["pending", "paid", "in_progress", "ready", "completed", "cancelled", "refunded"]
       }).notNull().default("pending"),
       customerName: text("customer_name"),
       subtotal: numeric("subtotal", { precision: 8, scale: 2 }).notNull(),
@@ -77107,7 +77107,8 @@ var GetOrderResponse = objectType({
     "in_progress",
     "ready",
     "completed",
-    "cancelled"
+    "cancelled",
+    "refunded"
   ]),
   customerName: stringType().nullable(),
   subtotal: numberType(),
@@ -77162,7 +77163,8 @@ var UpdateOrderStatusBody = objectType({
     "in_progress",
     "ready",
     "completed",
-    "cancelled"
+    "cancelled",
+    "refunded"
   ])
 });
 var UpdateOrderStatusResponse = objectType({
@@ -77176,7 +77178,8 @@ var UpdateOrderStatusResponse = objectType({
     "in_progress",
     "ready",
     "completed",
-    "cancelled"
+    "cancelled",
+    "refunded"
   ]),
   customerName: stringType().nullable(),
   subtotal: numberType(),
@@ -77235,7 +77238,8 @@ var MarkOrderItemReadyResponse = objectType({
     "in_progress",
     "ready",
     "completed",
-    "cancelled"
+    "cancelled",
+    "refunded"
   ]),
   customerName: stringType().nullable(),
   subtotal: numberType(),
@@ -77302,7 +77306,8 @@ var GetActiveOrdersResponseItem = objectType({
     "in_progress",
     "ready",
     "completed",
-    "cancelled"
+    "cancelled",
+    "refunded"
   ]),
   customerName: stringType().nullable(),
   subtotal: numberType(),
@@ -78870,7 +78875,8 @@ router5.get("/orders", async (req, res) => {
   const params = ListOrdersQueryParams2.safeParse(req.query);
   const conditions = [];
   if (params.success && params.data.status) {
-    conditions.push(eq(ordersTable.status, params.data.status));
+    const statuses = params.data.status.split(",");
+    conditions.push(inArray(ordersTable.status, statuses));
   }
   if (params.success && params.data.startDate) {
     conditions.push(gte(ordersTable.createdAt, new Date(params.data.startDate)));
@@ -79200,6 +79206,26 @@ router5.patch("/order-items/:id/ready", async (req, res) => {
   const detail = await buildOrderDetail(item.orderId);
   res.json(GetOrderResponse2.parse(serializeDates(detail)));
 });
+router5.post("/orders/:id/refund", async (req, res) => {
+  const { id } = req.params;
+  const { adminPin } = req.body;
+  if (!adminPin) {
+    res.status(400).json({ error: "Admin PIN is required" });
+    return;
+  }
+  const [admin] = await db.select().from(usersTable).where(and(eq(usersTable.pin, adminPin), eq(usersTable.role, "admin")));
+  if (!admin) {
+    res.status(401).json({ error: "Invalid Admin PIN" });
+    return;
+  }
+  const [order] = await db.update(ordersTable).set({ status: "refunded" }).where(eq(ordersTable.id, parseInt(id))).returning();
+  if (!order) {
+    res.status(404).json({ error: "Order not found" });
+    return;
+  }
+  broadcastEvent("order_updated", { orderId: order.id, status: "refunded" });
+  res.json({ message: "Order refunded successfully", orderId: order.id });
+});
 var orders_default = router5;
 
 // src/routes/stock.ts
@@ -79289,7 +79315,7 @@ router7.get("/dashboard/summary", async (_req, res) => {
   const todayOrders = await db.select().from(ordersTable).where(
     and(
       gte(ordersTable.createdAt, today),
-      sql`${ordersTable.status} != 'cancelled'`
+      sql`${ordersTable.status} NOT IN ('cancelled', 'refunded')`
     )
   );
   const todayCashOrders = todayOrders.filter((o) => o.paymentMethod === "cash");
@@ -79382,7 +79408,7 @@ router7.get("/dashboard/low-stock", async (_req, res) => {
 });
 router7.get("/dashboard/sales-by-category", async (req, res) => {
   const params = GetSalesByCategoryQueryParams2.safeParse(req.query);
-  const conditions = [sql`${ordersTable.status} != 'cancelled'`];
+  const conditions = [sql`${ordersTable.status} NOT IN ('cancelled', 'refunded')`];
   if (params.success && params.data.startDate) {
     conditions.push(gte(ordersTable.createdAt, new Date(params.data.startDate)));
   }

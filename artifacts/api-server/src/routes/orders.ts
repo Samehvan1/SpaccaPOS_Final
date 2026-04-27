@@ -105,7 +105,8 @@ router.get("/orders", async (req, res): Promise<void> => {
   const params = ListOrdersQueryParams.safeParse(req.query);
   const conditions = [];
   if (params.success && params.data.status) {
-    conditions.push(eq(ordersTable.status, params.data.status as "pending" | "in_progress" | "ready" | "completed" | "cancelled"));
+    const statuses = params.data.status.split(",") as any[];
+    conditions.push(inArray(ordersTable.status, statuses));
   }
   if (params.success && params.data.startDate) {
     conditions.push(gte(ordersTable.createdAt, new Date(params.data.startDate)));
