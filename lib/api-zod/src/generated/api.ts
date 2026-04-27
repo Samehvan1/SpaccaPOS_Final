@@ -480,8 +480,8 @@ export const RestockIngredientResponse = zod.object({
  */
 export const ListOrdersQueryParams = zod.object({
   status: zod.coerce.string().optional(),
-  startDate: zod.date().optional(),
-  endDate: zod.date().optional(),
+  startDate: zod.coerce.string().optional(),
+  endDate: zod.coerce.string().optional(),
   limit: zod.coerce.number().optional(),
   offset: zod.coerce.number().optional(),
 });
@@ -764,6 +764,8 @@ export const CreateStockAdjustmentBody = zod.object({
  */
 export const GetDashboardSummaryResponse = zod.object({
   todayRevenue: zod.number(),
+  todayCashRevenue: zod.number(),
+  todayCardRevenue: zod.number(),
   todayOrders: zod.number(),
   todayDrinks: zod.number(),
   averageOrderValue: zod.number(),
@@ -925,8 +927,8 @@ export const DeleteUserParams = zod.object({
  */
 export const GetSalesByCategoryQueryParams = zod.object({
   days: zod.coerce.number().optional(),
-  startDate: zod.date().optional(),
-  endDate: zod.date().optional(),
+  startDate: zod.coerce.string().optional(),
+  endDate: zod.coerce.string().optional(),
 });
 
 export const GetSalesByCategoryResponseItem = zod.object({
@@ -944,6 +946,9 @@ export const GetSalesByCategoryResponse = zod.array(
  */
 export const GetTopDrinksQueryParams = zod.object({
   limit: zod.coerce.number().optional(),
+  days: zod.coerce.number().optional(),
+  startDate: zod.coerce.string().optional(),
+  endDate: zod.coerce.string().optional(),
 });
 
 export const GetTopDrinksResponseItem = zod.object({

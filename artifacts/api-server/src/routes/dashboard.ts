@@ -36,15 +36,18 @@ router.get("/dashboard/summary", async (_req, res): Promise<void> => {
       )
     );
 
+  const todayCashOrders = todayOrders.filter(o => o.paymentMethod === 'cash');
+  const todayCardOrders = todayOrders.filter(o => o.paymentMethod === 'card');
+  
   const todayRevenue = todayOrders.reduce((sum, o) => sum + parseFloat(o.total), 0);
+  const todayCashRevenue = todayCashOrders.reduce((sum, o) => sum + parseFloat(o.total), 0);
+  const todayCardRevenue = todayCardOrders.reduce((sum, o) => sum + parseFloat(o.total), 0);
 
   const todayItems = await db
     .select()
     .from(orderItemsTable)
     .where(
-      and(
-        sql`${orderItemsTable.orderId} IN (SELECT id FROM orders WHERE created_at >= ${today.toISOString()} AND status != 'cancelled')`
-      )
+      inArray(orderItemsTable.orderId, todayOrders.map(o => o.id).concat([-1]))
     );
 
   const todayDrinks = todayItems.reduce((sum, i) => sum + i.quantity, 0);
@@ -62,6 +65,8 @@ router.get("/dashboard/summary", async (_req, res): Promise<void> => {
   res.json(
     GetDashboardSummaryResponse.parse({
       todayRevenue,
+      todayCashRevenue,
+      todayCardRevenue,
       todayOrders: todayOrders.length,
       todayDrinks,
       averageOrderValue: avgOrderValue,
@@ -177,7 +182,7 @@ router.get("/dashboard/sales-by-category", async (req, res): Promise<void> => {
   }
 
   const orders = await db
-    .select()
+    .select({ id: ordersTable.id })
     .from(ordersTable)
     .where(and(...conditions));
 
@@ -190,13 +195,11 @@ router.get("/dashboard/sales-by-category", async (req, res): Promise<void> => {
   const items = await db
     .select()
     .from(orderItemsTable)
-    .where(
-      sql`${orderItemsTable.orderId} = ANY(ARRAY[${sql.join(orderIds.map(id => sql`${id}`), sql`, `)}]::int[])`
-    );
+    .where(inArray(orderItemsTable.orderId, orderIds));
 
   const drinkIds = [...new Set(items.map((i) => i.drinkId))];
   const drinks = drinkIds.length > 0
-    ? await db.select().from(drinksTable).where(sql`${drinksTable.id} = ANY(ARRAY[${sql.join(drinkIds.map(id => sql`${id}`), sql`, `)}]::int[])`)
+    ? await db.select().from(drinksTable).where(inArray(drinksTable.id, drinkIds))
     : [];
   const drinkCategoryMap = Object.fromEntries(drinks.map((d) => [d.id, d.category]));
 
@@ -225,8 +228,42 @@ router.get("/dashboard/sales-by-category", async (req, res): Promise<void> => {
 router.get("/dashboard/top-drinks", async (req, res): Promise<void> => {
   const params = GetTopDrinksQueryParams.safeParse(req.query);
   const limit = (params.success && params.data.limit) ? params.data.limit : 5;
+  
+  const conditions = [sql`${ordersTable.status} != 'cancelled'`];
 
-  const items = await db.select().from(orderItemsTable);
+  if (params.success && params.data.startDate) {
+    conditions.push(gte(ordersTable.createdAt, new Date(params.data.startDate)));
+  }
+  if (params.success && params.data.endDate) {
+    const end = new Date(params.data.endDate);
+    end.setHours(23, 59, 59, 999);
+    conditions.push(lte(ordersTable.createdAt, end));
+  }
+
+  // Fallback to days if no range provided
+  if (!params.success || (!params.data.startDate && !params.data.endDate)) {
+    const days = (params.success && params.data.days) ? params.data.days : 30;
+    const since = new Date();
+    since.setDate(since.getDate() - days);
+    since.setHours(0, 0, 0, 0);
+    conditions.push(gte(ordersTable.createdAt, since));
+  }
+
+  const orders = await db
+    .select({ id: ordersTable.id })
+    .from(ordersTable)
+    .where(and(...conditions));
+
+  const orderIds = orders.map((o) => o.id);
+  if (orderIds.length === 0) {
+    res.json(GetTopDrinksResponse.parse([]));
+    return;
+  }
+
+  const items = await db
+    .select()
+    .from(orderItemsTable)
+    .where(inArray(orderItemsTable.orderId, orderIds));
 
   const drinkStats: Record<number, { totalSold: number; totalRevenue: number }> = {};
   for (const item of items) {
@@ -239,7 +276,7 @@ router.get("/dashboard/top-drinks", async (req, res): Promise<void> => {
 
   const drinkIds = Object.keys(drinkStats).map(Number);
   const drinks = drinkIds.length > 0
-    ? await db.select().from(drinksTable).where(sql`${drinksTable.id} = ANY(ARRAY[${sql.join(drinkIds.map(id => sql`${id}`), sql`, `)}]::int[])`)
+    ? await db.select().from(drinksTable).where(inArray(drinksTable.id, drinkIds))
     : [];
   const drinkMap = Object.fromEntries(drinks.map((d) => [d.id, d]));
 

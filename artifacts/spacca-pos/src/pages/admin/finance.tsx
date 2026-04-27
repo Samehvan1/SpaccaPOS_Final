@@ -42,11 +42,26 @@ export default function FinanceDashboard() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Today's Revenue</CardTitle>
-            <DollarSign className="h-4 w-4 text-green-500" />
+            <div className="p-2 bg-green-100 rounded-lg">
+              <TrendingUp className="h-4 w-4 text-green-600" />
+            </div>
           </CardHeader>
           <CardContent>
             {isLoadingSummary ? <div className="h-8 bg-muted animate-pulse rounded" /> : (
-              <div className="text-3xl font-bold">{fmt(summary?.todayRevenue ?? 0)}</div>
+              <div className="space-y-1">
+                <div className="text-3xl font-bold">{fmt(summary?.todayRevenue ?? 0)}</div>
+                <div className="text-xs font-medium text-muted-foreground flex items-center gap-2">
+                  <span className="flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                    Cash: {fmt(summary?.todayCashRevenue ?? 0)}
+                  </span>
+                  <span className="text-muted-foreground/30">|</span>
+                  <span className="flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                    Card: {fmt(summary?.todayCardRevenue ?? 0)}
+                  </span>
+                </div>
+              </div>
             )}
           </CardContent>
         </Card>

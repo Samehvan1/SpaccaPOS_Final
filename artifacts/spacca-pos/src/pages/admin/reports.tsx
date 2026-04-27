@@ -16,7 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { 
   ArrowLeft, BarChart2, TrendingUp, Coffee, Receipt, 
-  DollarSign, Medal, Calendar, ChevronLeft, ChevronRight,
+  Banknote, Medal, Calendar, ChevronLeft, ChevronRight,
   Download, Tag, CheckCircle2, XCircle, FileText, Layers
 } from "lucide-react";
 import { Link } from "wouter";
@@ -91,8 +91,12 @@ export default function ReportsPage() {
   // Dashboard Tab Data
   const { data: summary, isLoading: loadingSummary } = useGetDashboardSummary();
   const { data: dashboardCategorySales, isLoading: loadingDashboardCategory } = useGetSalesByCategory({ days: period.days });
-  const { data: topDrinks, isLoading: loadingTop } = useGetTopDrinks({ limit: 10 });
-  const { data: recentOrders, isLoading: loadingRecentOrders } = useListOrders({ status: "completed", limit: 10 });
+  const { data: topDrinks, isLoading: loadingTop } = useGetTopDrinks({ limit: 10, days: period.days });
+  const { data: recentOrders, isLoading: loadingRecentOrders } = useListOrders({ 
+    status: "completed", 
+    limit: 10,
+    startDate: format(subDays(new Date(), period.days), "yyyy-MM-dd")
+  });
 
   const dashTotalRevenue = dashboardCategorySales?.reduce((s, c) => s + c.totalRevenue, 0) ?? 0;
   const dashTotalOrders = dashboardCategorySales?.reduce((s, c) => s + c.totalOrders, 0) ?? 0;
@@ -335,7 +339,7 @@ export default function ReportsPage() {
             {/* Shared Totals Banner */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               {[
-                { label: "Range Revenue", value: fmt(reportTotalRevenue), icon: DollarSign, loading: loadingReportSummary },
+                { label: "Range Revenue", value: fmt(reportTotalRevenue), icon: Banknote, loading: loadingReportSummary },
                 { label: "Range Orders", value: reportTotalOrders, icon: Receipt, loading: loadingReportSummary },
                 { label: "Range Drinks", value: reportTotalDrinks, icon: Coffee, loading: loadingReportSummary },
                 { label: "Range Discounts", value: fmt(reportOrders?.reduce((s, o) => s + (o as any).discount, 0) || 0), icon: Tag, loading: loadingReportSummary },
@@ -379,7 +383,7 @@ export default function ReportsPage() {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {[
               {
-                label: "Revenue", value: fmt(dashTotalRevenue), icon: DollarSign,
+                label: "Revenue", value: fmt(dashTotalRevenue), icon: Banknote,
                 sub: `vs today: ${fmt(summary?.todayRevenue ?? 0)}`, loading: loadingDashboardCategory
               },
               {
@@ -484,7 +488,7 @@ export default function ReportsPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Medal className="h-5 w-5 text-primary" />
-                  Top Drinks (All Time)
+                  Top Drinks ({period.label})
                 </CardTitle>
               </CardHeader>
               <CardContent>

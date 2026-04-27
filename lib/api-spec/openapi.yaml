@@ -719,6 +719,18 @@ paths:
           name: limit
           schema:
             type: integer
+        - in: query
+          name: days
+          schema:
+            type: integer
+        - in: query
+          name: startDate
+          schema:
+            type: string
+        - in: query
+          name: endDate
+          schema:
+            type: string
       responses:
         "200":
           description: Top drinks
@@ -1588,6 +1600,10 @@ components:
       properties:
         todayRevenue:
           type: number
+        todayCashRevenue:
+          type: number
+        todayCardRevenue:
+          type: number
         todayOrders:
           type: integer
         todayDrinks:
@@ -1600,6 +1616,8 @@ components:
           type: integer
       required:
         - todayRevenue
+        - todayCashRevenue
+        - todayCardRevenue
         - todayOrders
         - todayDrinks
         - averageOrderValue
