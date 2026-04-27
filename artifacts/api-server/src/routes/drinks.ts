@@ -68,7 +68,7 @@ async function buildDrinkDetail(drinkId: number) {
       db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, typeId)),
       db.select().from(ingredientTypeVolumesTable)
         .where(and(eq(ingredientTypeVolumesTable.ingredientTypeId, typeId), eq(ingredientTypeVolumesTable.isActive, true)))
-        .orderBy(ingredientTypeVolumesTable.sortOrder)
+        .orderBy(asc(ingredientTypeVolumesTable.sortOrder), asc(ingredientTypeVolumesTable.id))
     ]);
 
     const allSlotVols = await db.select().from(drinkSlotVolumesTable)
@@ -98,7 +98,8 @@ async function buildDrinkDetail(drinkId: number) {
         affectsCupSize: typeDef?.affectsCupSize ?? true,
         hasSlotOverride: !!override,
       };
-    }).filter((v) => v.isEnabled);
+    }).filter((v) => v.isEnabled)
+      .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0) || a.id - b.id);
   }
 
   const slotsWithDetails = await Promise.all(
@@ -169,7 +170,7 @@ async function buildDrinkDetail(drinkId: number) {
             // Volumes: merge slot-level overrides with template-level defaults or global type defaults
             const globalTypeVolumes = await db.select().from(ingredientTypeVolumesTable)
               .where(and(eq(ingredientTypeVolumesTable.ingredientTypeId, to.ingredientTypeId), eq(ingredientTypeVolumesTable.isActive, true)))
-              .orderBy(ingredientTypeVolumesTable.sortOrder);
+              .orderBy(asc(ingredientTypeVolumesTable.sortOrder), asc(ingredientTypeVolumesTable.id));
               
             const [typeDef] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, to.ingredientTypeId));
             const allSlotVols = await db.select().from(drinkSlotVolumesTable).where(eq(drinkSlotVolumesTable.slotId, slot.id));
@@ -199,7 +200,8 @@ async function buildDrinkDetail(drinkId: number) {
                 affectsCupSize: typeDef?.affectsCupSize ?? true,
                 hasSlotOverride: !!override,
               };
-            }).filter((v) => v.isEnabled);
+            }).filter((v) => v.isEnabled)
+              .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0) || a.id - b.id);
 
             return {
               typeOptionId: to.id,

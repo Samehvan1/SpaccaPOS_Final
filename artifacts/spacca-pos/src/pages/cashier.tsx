@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/componen
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Check, X, Loader2, Calculator, ClipboardList, User, DollarSign, ListChecks, CreditCard, Receipt, Printer, FileText } from "lucide-react";
+import { Check, X, Loader2, Calculator, ClipboardList, User, ListChecks, CreditCard, Receipt, Printer, FileText, LogOut, Clock, ShoppingBag, TrendingUp, Lock } from "lucide-react";
 import { fmt } from "@/lib/currency";
 import { printCustomerReceipt, printAgentReceipts } from "@/components/receipt-printer";
 import { useSettings } from "@/hooks/use-settings";
@@ -16,18 +16,183 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import PosTerminal from "./pos";
 import { useOrderEvents } from "@/hooks/use-order-events";
 
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "/api";
+
+type CashierUser = { id: number; name: string; role: string };
+type ActiveSession = { sessionId: number; cashier: CashierUser; startedAt: string } | null;
+
+function useCashierSession() {
+  const [session, setSession] = useState<ActiveSession>(null);
+  const [loading, setLoading] = useState(true);
+
+  const fetchActive = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/cashier/active`, { credentials: "include" });
+      const data = await res.json();
+      setSession(data);
+    } catch { setSession(null); }
+    finally { setLoading(false); }
+  };
+
+  useEffect(() => { fetchActive(); }, []);
+
+  const login = async (cashierId: number, pin: string) => {
+    const res = await fetch(`${API_BASE}/cashier/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ cashierId, pin }),
+      credentials: "include",
+    });
+    if (!res.ok) throw new Error((await res.json()).error ?? "Login failed");
+    const data = await res.json();
+    setSession(data);
+    return data;
+  };
+
+  const endSession = async () => {
+    await fetch(`${API_BASE}/cashier/end-session`, { method: "POST", credentials: "include" });
+    setSession(null);
+  };
+
+  return { session, loading, login, endSession, refetch: fetchActive };
+}
+
+function formatDuration(startedAt: string) {
+  const ms = Date.now() - new Date(startedAt).getTime();
+  const h = Math.floor(ms / 3_600_000);
+  const m = Math.floor((ms % 3_600_000) / 60_000);
+  return h > 0 ? `${h}h ${m}m` : `${m}m`;
+}
+
+function CashierPinLogin({ onSuccess }: { onSuccess: () => void }) {
+  const { toast } = useToast();
+  const { login } = useCashierSession();
+  const [cashiers, setCashiers] = useState<CashierUser[]>([]);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [pin, setPin] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    fetch(`${API_BASE}/cashier/list`, { credentials: "include" })
+      .then(r => r.json())
+      .then(setCashiers)
+      .catch((err) => console.error("Cashier list fetch error:", err));
+  }, []);
+
+  const handleDigit = (d: string) => { if (pin.length < 6) setPin(p => p + d); };
+  const handleBackspace = () => setPin(p => p.slice(0, -1));
+
+  const handleLogin = async () => {
+    if (!selectedId || pin.length < 4) return;
+    setLoading(true);
+    try {
+      await login(selectedId, pin);
+      onSuccess();
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Login Failed", description: e.message });
+      setPin("");
+    } finally { setLoading(false); }
+  };
+
+  return (
+    <div className="flex flex-col items-center justify-center h-full bg-background relative overflow-hidden">
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-neon-cyan/5 blur-[160px] rounded-full" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-neon-green/5 blur-[140px] rounded-full" />
+      </div>
+
+      <div className="relative z-10 w-full max-w-md px-6 space-y-8">
+        <div className="text-center space-y-2">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-neon-cyan/10 border border-neon-cyan/30 mb-2">
+            <Lock className="h-8 w-8 text-neon-cyan" />
+          </div>
+          <h1 className="text-3xl font-black tracking-tighter uppercase">Cashier <span className="text-neon-cyan">Login</span></h1>
+          <p className="text-muted-foreground text-sm font-medium">Select your name and enter your PIN</p>
+        </div>
+
+        {/* Cashier Selection */}
+        <div className="grid grid-cols-2 gap-3">
+          {cashiers.map(c => (
+            <button
+              key={c.id}
+              onClick={() => { setSelectedId(c.id); setPin(""); }}
+              className={`p-4 rounded-2xl border text-left transition-all font-bold text-sm ${
+                selectedId === c.id
+                  ? "border-neon-cyan bg-neon-cyan/10 text-neon-cyan"
+                  : "border-white/10 bg-white/5 text-foreground hover:border-white/20 hover:bg-white/10"
+              }`}
+            >
+              <User className="h-4 w-4 mb-2 opacity-60" />
+              {c.name}
+            </button>
+          ))}
+        </div>
+
+        {/* PIN Display */}
+        <div className="flex justify-center gap-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div
+              key={i}
+              className={`w-10 h-10 rounded-xl border-2 flex items-center justify-center transition-all ${
+                i < pin.length
+                  ? "border-neon-cyan bg-neon-cyan/20"
+                  : "border-white/20 bg-white/5"
+              }`}
+            >
+              {i < pin.length && <div className="w-3 h-3 rounded-full bg-neon-cyan" />}
+            </div>
+          ))}
+        </div>
+
+        {/* Numpad */}
+        <div className="grid grid-cols-3 gap-3">
+          {["1","2","3","4","5","6","7","8","9","","0","⌫"].map((d, i) => (
+            <button
+              key={i}
+              disabled={!selectedId || d === ""}
+              onClick={() => d === "⌫" ? handleBackspace() : d && handleDigit(d)}
+              className={`h-14 rounded-2xl text-xl font-black transition-all ${
+                d === "" ? "pointer-events-none" :
+                d === "⌫" ? "bg-white/5 border border-white/10 hover:bg-red-500/20 hover:border-red-500/30 hover:text-red-400" :
+                "bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 active:scale-95"
+              } disabled:opacity-30`}
+            >
+              {d}
+            </button>
+          ))}
+        </div>
+
+        <Button
+          className="w-full h-14 text-base font-black uppercase tracking-widest rounded-2xl bg-neon-green/20 hover:bg-neon-green text-neon-green hover:text-background border border-neon-green/40 transition-all duration-300 glow-green"
+          disabled={!selectedId || pin.length < 4 || loading}
+          onClick={handleLogin}
+        >
+          {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <><Check className="h-5 w-5 mr-2" /> Start Shift</>}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export default function CashierPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { autoPrintCustomer, autoPrintAgent } = useSettings();
   const [completedOrder, setCompletedOrder] = useState<any>(null);
   const [isReceiptOpen, setIsReceiptOpen] = useState(false);
+  const { session, loading: sessionLoading, endSession, refetch } = useCashierSession();
+  const [now, setNow] = useState(Date.now());
+
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(t);
+  }, []);
 
   useOrderEvents();
 
   const { data: orders = [], isLoading } = useGetActiveOrders(
     { status: "pending" as any },
-    { query: { } as any }
+    { query: {} as any }
   );
 
   const { mutate: updateStatus, isPending } = useUpdateOrderStatus();
@@ -38,48 +203,44 @@ export default function CashierPage() {
   };
 
   const handleUpdateStatus = (orderId: any, status: string) => {
-    // Find current order details from local state as fallback
-    const currentOrder = orders.find(o => o.id === orderId);
-
+    const currentOrder = orders.find((o: any) => o.id === orderId);
     updateStatus(
-      { id: orderId as any, data: { status: status as any } },
+      { id: orderId as any, data: { status: status as any, cashierId: session?.cashier?.id } as any },
       {
         onSuccess: (data) => {
           queryClient.invalidateQueries({ queryKey: ["/api/dashboard/active-orders"] });
-          
           if (status === "paid") {
-            toast({ title: "Order Approved", description: `Order ${data.orderNumber} is now sent to KDS.` });
-            
-            // Merge response data with current local items if missing
-            const fullOrderData = {
-              ...currentOrder,
-              ...data,
-              // items might be missing in generated Order type, but server returns it
-              items: (data as any).items || currentOrder?.items || []
-            };
-
+            toast({ title: "Order Approved", description: `Order ${data.orderNumber} sent to KDS.` });
+            const fullOrderData = { ...currentOrder, ...data, items: (data as any).items || currentOrder?.items || [] };
             setCompletedOrder(fullOrderData);
             setIsReceiptOpen(true);
-            
             if (autoPrintCustomer) printCustomerReceipt(fullOrderData as any);
             if (autoPrintAgent) printAgentReceipts(fullOrderData as any);
           } else if (status === "cancelled") {
-            toast({ title: "Order Cancelled", description: `Order ${data.orderNumber} has been cancelled.` });
+            toast({ title: "Order Cancelled", description: `Order ${data.orderNumber} cancelled.` });
           }
         },
-        onError: () => {
-          toast({ variant: "destructive", title: "Error", description: "Failed to update order status." });
-        },
+        onError: () => toast({ variant: "destructive", title: "Error", description: "Failed to update order." }),
       }
     );
   };
 
+  const handleEndSession = async () => {
+    if (!confirm("End your shift?")) return;
+    await endSession();
+    toast({ title: "Shift Ended", description: "Your session has been closed." });
+  };
+
+  if (sessionLoading) {
+    return <div className="flex-1 flex items-center justify-center bg-background"><Loader2 className="h-12 w-12 animate-spin text-neon-cyan" /></div>;
+  }
+
+  if (!session) {
+    return <CashierPinLogin onSuccess={refetch} />;
+  }
+
   if (isLoading) {
-    return (
-      <div className="flex-1 flex items-center justify-center bg-background">
-        <Loader2 className="h-12 w-12 animate-spin text-neon-cyan" />
-      </div>
-    );
+    return <div className="flex-1 flex items-center justify-center bg-background"><Loader2 className="h-12 w-12 animate-spin text-neon-cyan" /></div>;
   }
 
   const sortedOrders = [...orders].sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
@@ -88,14 +249,13 @@ export default function CashierPage() {
 
   return (
     <div className="flex flex-col h-full bg-background overflow-hidden relative">
-      {/* Background Glow */}
       <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-neon-cyan/5 blur-[120px] pointer-events-none rounded-full" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-neon-green/5 blur-[120px] pointer-events-none rounded-full" />
 
       <Tabs defaultValue="approvals" className="flex-1 flex flex-col overflow-hidden">
-        <div className="bg-background/40 backdrop-blur-md border-b border-white/5 px-8 h-16 shrink-0 flex items-center justify-between z-10">
-          <div className="flex items-center gap-8">
-            <h1 className="text-xl font-black tracking-tighter text-foreground uppercase select-none">
+        <div className="bg-background/40 backdrop-blur-md border-b border-white/5 px-6 h-16 shrink-0 flex items-center justify-between z-10">
+          <div className="flex items-center gap-6">
+            <h1 className="text-xl font-black tracking-tighter text-foreground uppercase">
               Cashier <span className="text-neon-green">Approval</span>
             </h1>
             <TabsList className="bg-white/5 border border-white/10 p-1 h-10">
@@ -109,12 +269,22 @@ export default function CashierPage() {
               </TabsTrigger>
             </TabsList>
           </div>
-          
-          <div className="flex items-center gap-4 text-xs font-bold text-muted-foreground uppercase tracking-widest">
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-neon-green animate-pulse" />
-              Live Dashboard
+
+          {/* Cashier Session Info */}
+          <div className="flex items-center gap-3">
+            <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10">
+              <User className="h-4 w-4 text-neon-cyan" />
+              <span className="text-sm font-bold">{session.cashier.name}</span>
+              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                <Clock className="h-3 w-3" /> {formatDuration(session.startedAt)}
+              </span>
             </div>
+            <button
+              onClick={handleEndSession}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 hover:border-red-500/40 text-red-400 text-xs font-bold transition-all"
+            >
+              <LogOut className="h-3.5 w-3.5" /> End Shift
+            </button>
           </div>
         </div>
 
@@ -132,107 +302,85 @@ export default function CashierPage() {
                 </div>
               ) : (
                 <>
-                  {/* Hero Order */}
                   {heroOrder && (
                     <div className="animate-in slide-in-from-top-4 duration-500">
                       <div className="mb-4 flex items-center justify-between">
-                         <h2 className="text-sm font-black uppercase tracking-widest text-neon-cyan flex items-center gap-2">
-                           <span className="w-8 h-[2px] bg-neon-cyan" />
-                           Next in queue
-                         </h2>
-                         <Badge variant="outline" className="border-neon-cyan/30 text-neon-cyan bg-neon-cyan/5">TOP PRIORITY</Badge>
+                        <h2 className="text-sm font-black uppercase tracking-widest text-neon-cyan flex items-center gap-2">
+                          <span className="w-8 h-[2px] bg-neon-cyan" />Next in queue
+                        </h2>
+                        <Badge variant="outline" className="border-neon-cyan/30 text-neon-cyan bg-neon-cyan/5">TOP PRIORITY</Badge>
                       </div>
                       <Card className="glass-card overflow-hidden border-neon-green/30 ring-1 ring-neon-green/10 rounded-3xl">
                         <CardContent className="p-0">
-                           <div className="flex flex-col lg:flex-row">
-                             <div className="flex-1 p-6 space-y-6">
-                               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                 <div>
-                                   <label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-1 block">Order Identity</label>
-                                   <div className="text-4xl font-black tracking-tighter neon-text-cyan">
-                                      #{heroOrder.orderNumber}
-                                   </div>
-                                   <div className="text-[10px] font-bold text-muted-foreground mt-1 uppercase flex items-center gap-2">
-                                     <span className="px-1.5 py-0.5 bg-white/5 rounded">LARGE</span>
-                                     <span className="px-1.5 py-0.5 bg-white/5 rounded">WHITE CUP</span>
-                                   </div>
-                                 </div>
-                                 <div>
-                                   <label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-1 block">Customer</label>
-                                   <div className="text-xl font-bold truncate">
-                                      {heroOrder.customerName || "Walk-in Guest"}
-                                   </div>
-                                   <div className="text-xs text-muted-foreground mt-0.5 font-medium">Standard Service • Dine-In</div>
-                                 </div>
-                                 <div>
-                                   <label className="text-[10px] font-black text-neon-green uppercase tracking-[0.2em] mb-1 block">Amount Due</label>
-                                   <div className="text-4xl font-black tracking-tighter text-neon-green">
-                                      {fmt(parseFloat(heroOrder.total as any))}
-                                   </div>
-                                 </div>
-                               </div>
-
-                               <div className="pt-4 border-t border-white/5 flex flex-col md:flex-row gap-8 items-start">
-                                  <div className="min-w-[140px]">
-                                    <label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-3 block">Payment Method</label>
-                                    <div className="flex items-center gap-2">
-                                       <div className="w-8 h-8 rounded-lg bg-neon-green/10 flex items-center justify-center text-neon-green border border-neon-green/20">
-                                          <CreditCard className="h-4 w-4" />
-                                       </div>
-                                       <span className="text-sm font-black uppercase tracking-tight">{heroOrder.paymentMethod || "Pending"}</span>
+                          <div className="flex flex-col lg:flex-row">
+                            <div className="flex-1 p-6 space-y-6">
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div>
+                                  <label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-1 block">Order</label>
+                                  <div className="text-4xl font-black tracking-tighter neon-text-cyan">#{heroOrder.orderNumber}</div>
+                                </div>
+                                <div>
+                                  <label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-1 block">Customer</label>
+                                  <div className="text-xl font-bold truncate">{heroOrder.customerName || "Walk-in Guest"}</div>
+                                </div>
+                                <div>
+                                  <label className="text-[10px] font-black text-neon-green uppercase tracking-[0.2em] mb-1 block">Amount Due</label>
+                                  <div className="text-4xl font-black tracking-tighter text-neon-green">{fmt(parseFloat(heroOrder.total as any))}</div>
+                                </div>
+                              </div>
+                              <div className="pt-4 border-t border-white/5 flex flex-col md:flex-row gap-8 items-start">
+                                <div className="min-w-[140px]">
+                                  <label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-3 block">Payment</label>
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-8 h-8 rounded-lg bg-neon-green/10 flex items-center justify-center text-neon-green border border-neon-green/20">
+                                      <CreditCard className="h-4 w-4" />
                                     </div>
+                                    <span className="text-sm font-black uppercase tracking-tight">{heroOrder.paymentMethod || "Pending"}</span>
                                   </div>
-
-                                  <div className="hidden md:block w-[1px] h-12 bg-white/10 self-center" />
-
-                                  <div className="flex-1">
-                                    <label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-3 block">Line Items</label>
-                                    <div className="flex flex-wrap gap-2">
-                                      {heroOrder.items.map((item: any) => (
-                                        <div key={item.id} className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-xl border border-white/5 hover:bg-white/10 transition-colors cursor-default">
-                                          <span className="w-5 h-5 rounded-full bg-neon-cyan/20 text-neon-cyan flex items-center justify-center text-[10px] font-black">{item.quantity}</span>
-                                          <span className="text-xs font-bold">{item.drinkName}</span>
-                                        </div>
-                                      ))}
-                                    </div>
+                                </div>
+                                <div className="hidden md:block w-[1px] h-12 bg-white/10 self-center" />
+                                <div className="flex-1">
+                                  <label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-3 block">Items</label>
+                                  <div className="flex flex-wrap gap-2">
+                                    {heroOrder.items.map((item: any) => (
+                                      <div key={item.id} className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-xl border border-white/5">
+                                        <span className="w-5 h-5 rounded-full bg-neon-cyan/20 text-neon-cyan flex items-center justify-center text-[10px] font-black">{item.quantity}</span>
+                                        <span className="text-xs font-bold">{item.drinkName}</span>
+                                      </div>
+                                    ))}
                                   </div>
-                               </div>
-                             </div>
-
-                             {/* Hero Actions - Large Square Buttons */}
-                             <div className="w-full lg:w-auto bg-white/[0.02] border-t lg:border-t-0 lg:border-l border-white/5 p-8 flex flex-row gap-6 items-center justify-center lg:min-w-[480px]">
-                                <Button 
-                                  className="w-44 h-44 rounded-3xl flex flex-col items-center justify-center gap-2 group bg-neon-green/10 hover:bg-neon-green text-neon-green hover:text-background transition-all duration-300 border border-neon-green/30 hover:border-glow-green glow-green shadow-xl"
-                                  onClick={() => handleUpdateStatus(heroOrder.id, "paid")}
-                                  disabled={isPending}
-                                >
-                                  <Check className="h-12 w-12 group-hover:scale-125 transition-transform" />
-                                  <span className="text-xl font-black tracking-tighter uppercase">APPROVE</span>
-                                  <span className="text-xs font-bold opacity-60 uppercase tracking-widest">{fmt(parseFloat(heroOrder.total as any))}</span>
-                                </Button>
-                                <Button 
-                                  variant="outline"
-                                  className="w-44 h-44 rounded-3xl flex flex-col items-center justify-center gap-2 group border-neon-red/30 text-neon-red hover:bg-neon-red hover:text-white transition-all duration-300 glow-red shadow-xl"
-                                  onClick={() => handleUpdateStatus(heroOrder.id, "cancelled")}
-                                  disabled={isPending}
-                                >
-                                  <X className="h-12 w-12 group-hover:rotate-90 transition-transform" />
-                                  <span className="text-xl font-bold tracking-tighter uppercase">CANCEL</span>
-                                  <span className="text-xs font-bold opacity-60 uppercase tracking-widest">Void</span>
-                                </Button>
-                             </div>
-                           </div>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="w-full lg:w-auto bg-white/[0.02] border-t lg:border-t-0 lg:border-l border-white/5 p-8 flex flex-row gap-6 items-center justify-center lg:min-w-[480px]">
+                              <Button
+                                className="w-44 h-44 rounded-3xl flex flex-col items-center justify-center gap-2 group bg-neon-green/10 hover:bg-neon-green text-neon-green hover:text-background transition-all duration-300 border border-neon-green/30 glow-green shadow-xl"
+                                onClick={() => handleUpdateStatus(heroOrder.id, "paid")} disabled={isPending}
+                              >
+                                <Check className="h-12 w-12 group-hover:scale-125 transition-transform" />
+                                <span className="text-xl font-black tracking-tighter uppercase">APPROVE</span>
+                                <span className="text-xs font-bold opacity-60 uppercase tracking-widest">{fmt(parseFloat(heroOrder.total as any))}</span>
+                              </Button>
+                              <Button
+                                variant="outline"
+                                className="w-44 h-44 rounded-3xl flex flex-col items-center justify-center gap-2 group border-neon-red/30 text-neon-red hover:bg-neon-red hover:text-white transition-all duration-300 glow-red shadow-xl"
+                                onClick={() => handleUpdateStatus(heroOrder.id, "cancelled")} disabled={isPending}
+                              >
+                                <X className="h-12 w-12 group-hover:rotate-90 transition-transform" />
+                                <span className="text-xl font-bold tracking-tighter uppercase">CANCEL</span>
+                                <span className="text-xs font-bold opacity-60 uppercase tracking-widest">Void</span>
+                              </Button>
+                            </div>
+                          </div>
                         </CardContent>
                       </Card>
                     </div>
                   )}
 
-                  {/* Other Orders Grid */}
                   {remainingOrders.length > 0 && (
                     <div className="space-y-6 pt-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
                       <h2 className="text-sm font-black uppercase tracking-widest text-muted-foreground flex items-center gap-3">
-                        <span className="w-8 h-[2px] bg-white/10" />
-                        Remaining orders ({remainingOrders.length})
+                        <span className="w-8 h-[2px] bg-white/10" />Remaining orders ({remainingOrders.length})
                       </h2>
                       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                         {remainingOrders.map((order: any) => (
@@ -241,9 +389,7 @@ export default function CashierPage() {
                               <div className="flex justify-between items-start">
                                 <div>
                                   <div className="text-2xl font-black tracking-tighter group-hover:text-neon-cyan transition-colors">#{order.orderNumber}</div>
-                                  <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1 truncate max-w-[150px]">
-                                    {order.customerName || "Walk-in"}
-                                  </div>
+                                  <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1 truncate max-w-[150px]">{order.customerName || "Walk-in"}</div>
                                 </div>
                                 <div className="text-right">
                                   <div className="text-2xl font-black text-neon-green">{fmt(parseFloat(order.total as any))}</div>
@@ -252,37 +398,25 @@ export default function CashierPage() {
                               </div>
                             </CardHeader>
                             <CardContent className="p-6 h-[180px] overflow-hidden relative">
-                               <ScrollArea className="h-full pr-2">
-                                 <div className="space-y-2">
-                                   {order.items.map((item: any) => (
-                                     <div key={item.id} className="flex justify-between text-sm items-center bg-white/5 p-2.5 rounded-xl border border-transparent hover:border-white/10 transition-all">
-                                       <span className="font-bold">
-                                         <span className="text-neon-cyan mr-2">{item.quantity}x</span>
-                                         {item.drinkName}
-                                       </span>
-                                       <span className="text-muted-foreground font-medium text-xs">{fmt(parseFloat(item.lineTotal as any))}</span>
-                                     </div>
-                                   ))}
-                                 </div>
-                               </ScrollArea>
-                               <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-card to-transparent pointer-events-none" />
+                              <ScrollArea className="h-full pr-2">
+                                <div className="space-y-2">
+                                  {order.items.map((item: any) => (
+                                    <div key={item.id} className="flex justify-between text-sm items-center bg-white/5 p-2.5 rounded-xl border border-transparent hover:border-white/10 transition-all">
+                                      <span className="font-bold"><span className="text-neon-cyan mr-2">{item.quantity}x</span>{item.drinkName}</span>
+                                      <span className="text-muted-foreground font-medium text-xs">{fmt(parseFloat(item.lineTotal as any))}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </ScrollArea>
+                              <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-card to-transparent pointer-events-none" />
                             </CardContent>
                             <CardFooter className="p-4 grid grid-cols-2 gap-3 bg-white/[0.02] border-t border-white/5">
-                               <Button 
-                                  variant="ghost" 
-                                  className="h-12 font-black text-xs uppercase tracking-widest hover:bg-neon-red/10 hover:text-neon-red transition-all rounded-xl"
-                                  onClick={() => handleUpdateStatus(order.id, "cancelled")}
-                                  disabled={isPending}
-                               >
-                                 <X className="w-4 h-4 mr-2" /> Cancel
-                               </Button>
-                               <Button 
-                                  className="h-12 font-black text-xs uppercase tracking-widest bg-white/5 hover:bg-neon-green/20 hover:text-neon-green text-foreground transition-all rounded-xl border border-white/5 hover:border-neon-green/30"
-                                  onClick={() => handleUpdateStatus(order.id, "paid")}
-                                  disabled={isPending}
-                               >
-                                 <Check className="w-4 h-4 mr-2" /> Approve
-                               </Button>
+                              <Button variant="ghost" className="h-12 font-black text-xs uppercase tracking-widest hover:bg-neon-red/10 hover:text-neon-red transition-all rounded-xl" onClick={() => handleUpdateStatus(order.id, "cancelled")} disabled={isPending}>
+                                <X className="w-4 h-4 mr-2" /> Cancel
+                              </Button>
+                              <Button className="h-12 font-black text-xs uppercase tracking-widest bg-white/5 hover:bg-neon-green/20 hover:text-neon-green text-foreground transition-all rounded-xl border border-white/5 hover:border-neon-green/30" onClick={() => handleUpdateStatus(order.id, "paid")} disabled={isPending}>
+                                <Check className="w-4 h-4 mr-2" /> Approve
+                              </Button>
                             </CardFooter>
                           </Card>
                         ))}
@@ -300,57 +434,30 @@ export default function CashierPage() {
         </TabsContent>
       </Tabs>
 
-      {/* Receipt Options Dialog */}
       <Dialog open={isReceiptOpen} onOpenChange={setIsReceiptOpen}>
         <DialogContent className="sm:max-w-[380px] bg-[#0A0A0B] border-white/10 text-white">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-xl font-black uppercase tracking-tighter">
-              <Receipt className="h-6 w-6 text-neon-cyan" />
-              Order #{completedOrder?.orderNumber}
+              <Receipt className="h-6 w-6 text-neon-cyan" />Order #{completedOrder?.orderNumber}
             </DialogTitle>
           </DialogHeader>
-          <div className="py-4 text-sm text-muted-foreground font-medium">
-            Order approved successfully. Select receipts to print, or close to continue.
-          </div>
+          <div className="py-4 text-sm text-muted-foreground font-medium">Order approved. Select receipts to print.</div>
           <div className="grid gap-4 py-2">
-            <Button
-              className="h-16 gap-4 text-base bg-white/5 hover:bg-neon-cyan/20 border border-neon-cyan/50 text-white transition-all duration-300 rounded-2xl group shadow-[0_0_20px_-5px_rgba(0,255,255,0.3)]"
-              onClick={() => completedOrder && handlePrintAll(completedOrder)}
-            >
-              <Receipt className="h-6 w-6 text-neon-cyan group-hover:scale-110 transition-transform" />
-              <div className="text-left">
-                <div className="font-black uppercase tracking-tight">Print All (Both)</div>
-                <div className="text-[10px] opacity-50 font-bold uppercase tracking-widest">Full receipt + all tickets</div>
-              </div>
+            <Button className="h-16 gap-4 text-base bg-white/5 hover:bg-neon-cyan/20 border border-neon-cyan/50 text-white transition-all duration-300 rounded-2xl group" onClick={() => completedOrder && handlePrintAll(completedOrder)}>
+              <Receipt className="h-6 w-6 text-neon-cyan" />
+              <div className="text-left"><div className="font-black uppercase tracking-tight">Print All (Both)</div><div className="text-[10px] opacity-50 font-bold uppercase tracking-widest">Full receipt + all tickets</div></div>
             </Button>
-
             <div className="grid grid-cols-2 gap-4">
-              <Button
-                variant="outline"
-                className="h-20 flex-col gap-2 bg-white/5 hover:bg-neon-cyan/10 border-white/10 hover:border-neon-cyan/40 text-white transition-all duration-300 rounded-2xl group"
-                onClick={() => completedOrder && printCustomerReceipt(completedOrder)}
-              >
-                <FileText className="h-5 w-5 text-neon-cyan group-hover:scale-110 transition-transform" />
-                <div className="text-[10px] font-black uppercase tracking-tight">Customer</div>
+              <Button variant="outline" className="h-20 flex-col gap-2 bg-white/5 hover:bg-neon-cyan/10 border-white/10 hover:border-neon-cyan/40 text-white transition-all duration-300 rounded-2xl group" onClick={() => completedOrder && printCustomerReceipt(completedOrder)}>
+                <FileText className="h-5 w-5 text-neon-cyan" /><div className="text-[10px] font-black uppercase tracking-tight">Customer</div>
               </Button>
-              <Button
-                variant="outline"
-                className="h-20 flex-col gap-2 bg-white/5 hover:bg-neon-green/10 border-white/10 hover:border-neon-green/40 text-white transition-all duration-300 rounded-2xl group"
-                onClick={() => completedOrder && printAgentReceipts(completedOrder)}
-              >
-                <Printer className="h-5 w-5 text-neon-green group-hover:scale-110 transition-transform" />
-                <div className="text-[10px] font-black uppercase tracking-tight">Barista</div>
+              <Button variant="outline" className="h-20 flex-col gap-2 bg-white/5 hover:bg-neon-green/10 border-white/10 hover:border-neon-green/40 text-white transition-all duration-300 rounded-2xl group" onClick={() => completedOrder && printAgentReceipts(completedOrder)}>
+                <Printer className="h-5 w-5 text-neon-green" /><div className="text-[10px] font-black uppercase tracking-tight">Barista</div>
               </Button>
             </div>
           </div>
           <DialogFooter className="mt-4">
-            <Button 
-              variant="ghost" 
-              className="w-full h-12 font-black uppercase tracking-widest hover:bg-white/5 rounded-xl" 
-              onClick={() => setIsReceiptOpen(false)}
-            >
-              Done
-            </Button>
+            <Button variant="ghost" className="w-full h-12 font-black uppercase tracking-widest hover:bg-white/5 rounded-xl" onClick={() => setIsReceiptOpen(false)}>Done</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

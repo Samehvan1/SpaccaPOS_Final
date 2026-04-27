@@ -376,6 +376,33 @@ function TypesTab({ inventoryItems }: { inventoryItems: Ingredient[] }) {
     } catch { toast({ variant: "destructive", title: "Failed to update default" }); }
   };
 
+  const handleMoveTypeVolume = async (tvId: number, direction: "up" | "down") => {
+    const visibleVols = [...typeVolumes]
+      .filter(tv => tv && tv.id && (tv.isActive || showInactiveVols))
+      .sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id);
+    
+    const idx = visibleVols.findIndex(tv => tv.id === tvId);
+    if (idx === -1) return;
+    if (direction === "up" && idx === 0) return;
+    if (direction === "down" && idx === visibleVols.length - 1) return;
+
+    const targetIdx = direction === "up" ? idx - 1 : idx + 1;
+    
+    try {
+      const updates = visibleVols.map((v, i) => {
+        let newOrder = i;
+        if (i === idx) newOrder = targetIdx;
+        else if (i === targetIdx) newOrder = idx;
+        return api(`/api/catalog/type-volumes/${v.id}`, { method: "PATCH", body: JSON.stringify({ sortOrder: newOrder }) });
+      });
+      
+      await Promise.all(updates);
+      loadTypeVolumes(volTypeId!);
+    } catch {
+      toast({ variant: "destructive", title: "Failed to reorder" });
+    }
+  };
+
   const availableVolumesToAdd = allVolumes
     .filter(v => v.name && !typeVolumes.some(tv => tv.volumeId === v.id))
     .sort((a, b) => a.name.localeCompare(b.name));
@@ -607,12 +634,28 @@ function TypesTab({ inventoryItems }: { inventoryItems: Ingredient[] }) {
               <div className="border border-dashed rounded-md p-4 text-center text-sm text-muted-foreground">No volumes yet.</div>
             ) : (
               <div className="border rounded-md divide-y">
-                {typeVolumes.filter(tv => tv && tv.id && (tv.isActive || showInactiveVols)).map(tv => {
+                {typeVolumes.filter(tv => tv && tv.id && (tv.isActive || showInactiveVols)).map((tv, idx, arr) => {
                   const isEditing = editingTypeVolId === tv.id;
                   const isInactive = !tv.isActive;
                   return (
                     <div key={tv.id} className="flex flex-col px-3 py-2.5 bg-card">
                       <div className="flex items-center gap-3">
+                        <div className="flex flex-col items-center gap-0.5">
+                          <button 
+                            onClick={() => handleMoveTypeVolume(tv.id, "up")} 
+                            disabled={idx === 0} 
+                            className="p-0.5 hover:bg-muted rounded text-muted-foreground disabled:opacity-20"
+                          >
+                            <ArrowLeft className="h-3.5 w-3.5 rotate-90" />
+                          </button>
+                          <button 
+                            onClick={() => handleMoveTypeVolume(tv.id, "down")} 
+                            disabled={idx === arr.length - 1} 
+                            className="p-0.5 hover:bg-muted rounded text-muted-foreground disabled:opacity-20"
+                          >
+                            <ArrowLeft className="h-3.5 w-3.5 -rotate-90" />
+                          </button>
+                        </div>
                         <div className="flex-1 min-w-0">
                           <div className="font-semibold text-sm text-primary flex items-center gap-2">
                             {tv.volume?.name ?? `#${tv.volumeId}`}

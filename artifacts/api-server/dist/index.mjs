@@ -20807,27 +20807,27 @@ var require_router = __commonJS({
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var methods = METHODS.map((method) => method.toLowerCase());
-    module.exports = Router17;
+    module.exports = Router18;
     module.exports.Route = Route;
-    function Router17(options) {
-      if (!(this instanceof Router17)) {
-        return new Router17(options);
+    function Router18(options) {
+      if (!(this instanceof Router18)) {
+        return new Router18(options);
       }
       const opts = options || {};
-      function router16(req, res, next) {
-        router16.handle(req, res, next);
+      function router17(req, res, next) {
+        router17.handle(req, res, next);
       }
-      Object.setPrototypeOf(router16, this);
-      router16.caseSensitive = opts.caseSensitive;
-      router16.mergeParams = opts.mergeParams;
-      router16.params = {};
-      router16.strict = opts.strict;
-      router16.stack = [];
-      return router16;
+      Object.setPrototypeOf(router17, this);
+      router17.caseSensitive = opts.caseSensitive;
+      router17.mergeParams = opts.mergeParams;
+      router17.params = {};
+      router17.strict = opts.strict;
+      router17.stack = [];
+      return router17;
     }
-    Router17.prototype = function() {
+    Router18.prototype = function() {
     };
-    Router17.prototype.param = function param(name, fn) {
+    Router18.prototype.param = function param(name, fn) {
       if (!name) {
         throw new TypeError("argument name is required");
       }
@@ -20847,7 +20847,7 @@ var require_router = __commonJS({
       params.push(fn);
       return this;
     };
-    Router17.prototype.handle = function handle(req, res, callback) {
+    Router18.prototype.handle = function handle(req, res, callback) {
       if (!callback) {
         throw new TypeError("argument callback is required");
       }
@@ -20974,7 +20974,7 @@ var require_router = __commonJS({
         }
       }
     };
-    Router17.prototype.use = function use(handler) {
+    Router18.prototype.use = function use(handler) {
       let offset = 0;
       let path2 = "/";
       if (typeof handler !== "function") {
@@ -21007,7 +21007,7 @@ var require_router = __commonJS({
       }
       return this;
     };
-    Router17.prototype.route = function route(path2) {
+    Router18.prototype.route = function route(path2) {
       const route2 = new Route(path2);
       const layer = new Layer(path2, {
         sensitive: this.caseSensitive,
@@ -21022,7 +21022,7 @@ var require_router = __commonJS({
       return route2;
     };
     methods.concat("all").forEach(function(method) {
-      Router17.prototype[method] = function(path2) {
+      Router18.prototype[method] = function(path2) {
         const route = this.route(path2);
         route[method].apply(route, slice.call(arguments, 1));
         return this;
@@ -21205,13 +21205,13 @@ var require_application = __commonJS({
     var compileTrust = require_utils3().compileTrust;
     var resolve2 = __require("node:path").resolve;
     var once = require_once();
-    var Router17 = require_router();
+    var Router18 = require_router();
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var app2 = exports = module.exports = {};
     var trustProxyDefaultSymbol = "@@symbol:trust_proxy_default";
     app2.init = function init() {
-      var router16 = null;
+      var router17 = null;
       this.cache = /* @__PURE__ */ Object.create(null);
       this.engines = /* @__PURE__ */ Object.create(null);
       this.settings = /* @__PURE__ */ Object.create(null);
@@ -21220,13 +21220,13 @@ var require_application = __commonJS({
         configurable: true,
         enumerable: true,
         get: function getrouter() {
-          if (router16 === null) {
-            router16 = new Router17({
+          if (router17 === null) {
+            router17 = new Router18({
               caseSensitive: this.enabled("case sensitive routing"),
               strict: this.enabled("strict routing")
             });
           }
-          return router16;
+          return router17;
         }
       });
     };
@@ -21297,15 +21297,15 @@ var require_application = __commonJS({
       if (fns.length === 0) {
         throw new TypeError("app.use() requires a middleware function");
       }
-      var router16 = this.router;
+      var router17 = this.router;
       fns.forEach(function(fn2) {
         if (!fn2 || !fn2.handle || !fn2.set) {
-          return router16.use(path2, fn2);
+          return router17.use(path2, fn2);
         }
         debug(".use app under %s", path2);
         fn2.mountpath = path2;
         fn2.parent = this;
-        router16.use(path2, function mounted_app(req, res, next) {
+        router17.use(path2, function mounted_app(req, res, next) {
           var orig = req.app;
           fn2.handle(req, res, function(err) {
             Object.setPrototypeOf(req, orig.request);
@@ -23832,7 +23832,7 @@ var require_express = __commonJS({
     var EventEmitter = __require("node:events").EventEmitter;
     var mixin = require_merge_descriptors();
     var proto = require_application();
-    var Router17 = require_router();
+    var Router18 = require_router();
     var req = require_request();
     var res = require_response();
     exports = module.exports = createApplication;
@@ -23854,8 +23854,8 @@ var require_express = __commonJS({
     exports.application = proto;
     exports.request = req;
     exports.response = res;
-    exports.Route = Router17.Route;
-    exports.Router = Router17;
+    exports.Route = Router18.Route;
+    exports.Router = Router18;
     exports.json = bodyParser.json;
     exports.raw = bodyParser.raw;
     exports.static = require_serve_static();
@@ -30810,10 +30810,10 @@ var init_subquery = __esm({
     init_entity();
     Subquery = class {
       static [entityKind] = "Subquery";
-      constructor(sql2, fields, alias, isWith = false, usedTables = []) {
+      constructor(sql3, fields, alias, isWith = false, usedTables = []) {
         this._ = {
           brand: "Subquery",
-          sql: sql2,
+          sql: sql3,
           selectedFields: fields,
           alias,
           isWith,
@@ -31268,19 +31268,19 @@ var init_sql = __esm({
         return new SQL([this]);
       }
     };
-    ((sql2) => {
+    ((sql22) => {
       function empty() {
         return new SQL([]);
       }
-      sql2.empty = empty;
+      sql22.empty = empty;
       function fromList(list) {
         return new SQL(list);
       }
-      sql2.fromList = fromList;
+      sql22.fromList = fromList;
       function raw(str) {
         return new SQL([new StringChunk(str)]);
       }
-      sql2.raw = raw;
+      sql22.raw = raw;
       function join(chunks, separator) {
         const result = [];
         for (const [i, chunk] of chunks.entries()) {
@@ -31291,24 +31291,24 @@ var init_sql = __esm({
         }
         return new SQL(result);
       }
-      sql2.join = join;
+      sql22.join = join;
       function identifier(value) {
         return new Name(value);
       }
-      sql2.identifier = identifier;
+      sql22.identifier = identifier;
       function placeholder2(name2) {
         return new Placeholder(name2);
       }
-      sql2.placeholder = placeholder2;
+      sql22.placeholder = placeholder2;
       function param2(value, encoder) {
         return new Param(value, encoder);
       }
-      sql2.param = param2;
+      sql22.param = param2;
     })(sql || (sql = {}));
     ((SQL2) => {
       class Aliased {
-        constructor(sql2, fieldAlias) {
-          this.sql = sql2;
+        constructor(sql22, fieldAlias) {
+          this.sql = sql22;
           this.fieldAlias = fieldAlias;
         }
         static [entityKind] = "SQL.Aliased";
@@ -39884,8 +39884,8 @@ var init_dialect = __esm({
           return "none";
         }
       }
-      sqlToQuery(sql2, invokeSource) {
-        return sql2.toQuery({
+      sqlToQuery(sql22, invokeSource) {
+        return sql22.toQuery({
           casing: this.casing,
           escapeName: this.escapeName,
           escapeParam: this.escapeParam,
@@ -42627,10 +42627,10 @@ var init_raw = __esm({
     init_entity();
     init_query_promise();
     PgRaw = class extends QueryPromise {
-      constructor(execute, sql2, query, mapBatchResult) {
+      constructor(execute, sql3, query, mapBatchResult) {
         super();
         this.execute = execute;
-        this.sql = sql2;
+        this.sql = sql3;
         this.query = query;
         this.mapBatchResult = mapBatchResult;
       }
@@ -42950,8 +42950,8 @@ var init_db = __esm({
 });
 
 // ../../node_modules/.pnpm/drizzle-orm@0.45.1_@types+pg@8.18.0_pg@8.20.0/node_modules/drizzle-orm/cache/core/cache.js
-async function hashQuery(sql2, params) {
-  const dataToHash = `${sql2}-${JSON.stringify(params)}`;
+async function hashQuery(sql3, params) {
+  const dataToHash = `${sql3}-${JSON.stringify(params)}`;
   const encoder = new TextEncoder();
   const data = encoder.encode(dataToHash);
   const hashBuffer = await crypto.subtle.digest("SHA-256", data);
@@ -43222,8 +43222,8 @@ var init_session = __esm({
         ).all();
       }
       /** @internal */
-      async count(sql2, token) {
-        const res = await this.execute(sql2, token);
+      async count(sql22, token) {
+        const res = await this.execute(sql22, token);
         return Number(
           res[0]["count"]
         );
@@ -43499,8 +43499,8 @@ var init_session2 = __esm({
           if (isPool) session2.client.release();
         }
       }
-      async count(sql2) {
-        const res = await this.execute(sql2);
+      async count(sql22) {
+        const res = await this.execute(sql22);
         return Number(
           res["rows"][0]["count"]
         );
@@ -55774,6 +55774,7 @@ var init_orders = __esm({
       amountTendered: numeric("amount_tendered", { precision: 8, scale: 2 }),
       changeDue: numeric("change_due", { precision: 8, scale: 2 }),
       notes: text("notes"),
+      cashierId: integer("cashier_id").references(() => usersTable.id, { onDelete: "set null" }),
       createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
       updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => /* @__PURE__ */ new Date())
     });
@@ -55866,9 +55867,27 @@ var init_settings = __esm({
   }
 });
 
+// ../../lib/db/src/schema/cashier-sessions.ts
+var cashierSessionsTable;
+var init_cashier_sessions = __esm({
+  "../../lib/db/src/schema/cashier-sessions.ts"() {
+    "use strict";
+    init_pg_core();
+    init_users();
+    cashierSessionsTable = pgTable("cashier_sessions", {
+      id: serial("id").primaryKey(),
+      cashierId: integer("cashier_id").notNull().references(() => usersTable.id),
+      startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+      endedAt: timestamp("ended_at", { withTimezone: true }),
+      notes: text("notes")
+    });
+  }
+});
+
 // ../../lib/db/src/schema/index.ts
 var schema_exports = {};
 __export(schema_exports, {
+  cashierSessionsTable: () => cashierSessionsTable,
   discountsTable: () => discountsTable,
   drinkCategoriesTable: () => drinkCategoriesTable,
   drinkIngredientSlotsTable: () => drinkIngredientSlotsTable,
@@ -55920,12 +55939,14 @@ var init_schema2 = __esm({
     init_stock();
     init_settings();
     init_discounts();
+    init_cashier_sessions();
   }
 });
 
 // ../../lib/db/src/index.ts
 var src_exports = {};
 __export(src_exports, {
+  cashierSessionsTable: () => cashierSessionsTable,
   db: () => db,
   discountsTable: () => discountsTable,
   drinkCategoriesTable: () => drinkCategoriesTable,
@@ -72584,13 +72605,13 @@ var __dirname2 = dirname(__filename);
 (0, import_dotenv.config)({ path: resolve(__dirname2, "../../../.env") });
 
 // src/app.ts
-var import_express17 = __toESM(require_express2(), 1);
+var import_express18 = __toESM(require_express2(), 1);
 var import_cors = __toESM(require_lib3(), 1);
 var import_pino_http = __toESM(require_logger(), 1);
 var import_express_session = __toESM(require_express_session(), 1);
 
 // src/routes/index.ts
-var import_express16 = __toESM(require_express2(), 1);
+var import_express17 = __toESM(require_express2(), 1);
 
 // src/routes/health.ts
 var import_express = __toESM(require_express2(), 1);
@@ -77013,8 +77034,8 @@ var RestockIngredientResponse = objectType({
 });
 var ListOrdersQueryParams = objectType({
   status: coerce.string().optional(),
-  startDate: dateType().optional(),
-  endDate: dateType().optional(),
+  startDate: coerce.string().optional(),
+  endDate: coerce.string().optional(),
   limit: coerce.number().optional(),
   offset: coerce.number().optional()
 });
@@ -77259,6 +77280,8 @@ var CreateStockAdjustmentBody = objectType({
 });
 var GetDashboardSummaryResponse = objectType({
   todayRevenue: numberType(),
+  todayCashRevenue: numberType(),
+  todayCardRevenue: numberType(),
   todayOrders: numberType(),
   todayDrinks: numberType(),
   averageOrderValue: numberType(),
@@ -77385,8 +77408,8 @@ var DeleteUserParams = objectType({
 });
 var GetSalesByCategoryQueryParams = objectType({
   days: coerce.number().optional(),
-  startDate: dateType().optional(),
-  endDate: dateType().optional()
+  startDate: coerce.string().optional(),
+  endDate: coerce.string().optional()
 });
 var GetSalesByCategoryResponseItem = objectType({
   category: stringType(),
@@ -77398,7 +77421,10 @@ var GetSalesByCategoryResponse = arrayType(
   GetSalesByCategoryResponseItem
 );
 var GetTopDrinksQueryParams = objectType({
-  limit: coerce.number().optional()
+  limit: coerce.number().optional(),
+  days: coerce.number().optional(),
+  startDate: coerce.string().optional(),
+  endDate: coerce.string().optional()
 });
 var GetTopDrinksResponseItem = objectType({
   drinkId: numberType(),
@@ -77940,7 +77966,7 @@ async function buildDrinkDetail(drinkId) {
   async function buildTypeVolumes(typeId, slotId) {
     const [[typeDef], typeVolumes] = await Promise.all([
       db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, typeId)),
-      db.select().from(ingredientTypeVolumesTable).where(and(eq(ingredientTypeVolumesTable.ingredientTypeId, typeId), eq(ingredientTypeVolumesTable.isActive, true))).orderBy(ingredientTypeVolumesTable.sortOrder)
+      db.select().from(ingredientTypeVolumesTable).where(and(eq(ingredientTypeVolumesTable.ingredientTypeId, typeId), eq(ingredientTypeVolumesTable.isActive, true))).orderBy(asc(ingredientTypeVolumesTable.sortOrder), asc(ingredientTypeVolumesTable.id))
     ]);
     const allSlotVols = await db.select().from(drinkSlotVolumesTable).where(eq(drinkSlotVolumesTable.slotId, slotId));
     const slotVolumeMap = new Map(allSlotVols.map((sv) => [sv.typeVolumeId, sv]));
@@ -77964,7 +77990,7 @@ async function buildDrinkDetail(drinkId) {
         affectsCupSize: typeDef?.affectsCupSize ?? true,
         hasSlotOverride: !!override
       };
-    }).filter((v) => v.isEnabled);
+    }).filter((v) => v.isEnabled).sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0) || a.id - b.id);
   }
   const slotsWithDetails = await Promise.all(
     slots.map(async (slot) => {
@@ -78019,7 +78045,7 @@ async function buildDrinkDetail(drinkId) {
           effectiveTypeOptions.map(async (to) => {
             const [ingType] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, to.ingredientTypeId));
             const [category] = ingType ? await db.select().from(ingredientCategoriesTable).where(eq(ingredientCategoriesTable.id, ingType.categoryId)) : [null];
-            const globalTypeVolumes = await db.select().from(ingredientTypeVolumesTable).where(and(eq(ingredientTypeVolumesTable.ingredientTypeId, to.ingredientTypeId), eq(ingredientTypeVolumesTable.isActive, true))).orderBy(ingredientTypeVolumesTable.sortOrder);
+            const globalTypeVolumes = await db.select().from(ingredientTypeVolumesTable).where(and(eq(ingredientTypeVolumesTable.ingredientTypeId, to.ingredientTypeId), eq(ingredientTypeVolumesTable.isActive, true))).orderBy(asc(ingredientTypeVolumesTable.sortOrder), asc(ingredientTypeVolumesTable.id));
             const [typeDef] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, to.ingredientTypeId));
             const allSlotVols = await db.select().from(drinkSlotVolumesTable).where(eq(drinkSlotVolumesTable.slotId, slot.id));
             const slotVolumeMap = new Map(allSlotVols.map((sv) => [sv.typeVolumeId, sv]));
@@ -78045,7 +78071,7 @@ async function buildDrinkDetail(drinkId) {
                 affectsCupSize: typeDef?.affectsCupSize ?? true,
                 hasSlotOverride: !!override
               };
-            }).filter((v) => v.isEnabled);
+            }).filter((v) => v.isEnabled).sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0) || a.id - b.id);
             return {
               typeOptionId: to.id,
               ingredientTypeId: to.ingredientTypeId,
@@ -79127,7 +79153,12 @@ router5.patch("/orders/:id/status", async (req, res) => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  const [order] = await db.update(ordersTable).set({ status: parsed.data.status }).where(eq(ordersTable.id, params.data.id)).returning();
+  const updateData = { status: parsed.data.status };
+  if (parsed.data.status === "paid") {
+    const cashierId = req.body.cashierId ?? req.session.cashierId ?? null;
+    if (cashierId) updateData.cashierId = cashierId;
+  }
+  const [order] = await db.update(ordersTable).set(updateData).where(eq(ordersTable.id, params.data.id)).returning();
   if (!order) {
     res.status(404).json({ error: "Order not found" });
     return;
@@ -79261,11 +79292,13 @@ router7.get("/dashboard/summary", async (_req, res) => {
       sql`${ordersTable.status} != 'cancelled'`
     )
   );
+  const todayCashOrders = todayOrders.filter((o) => o.paymentMethod === "cash");
+  const todayCardOrders = todayOrders.filter((o) => o.paymentMethod === "card");
   const todayRevenue = todayOrders.reduce((sum, o) => sum + parseFloat(o.total), 0);
+  const todayCashRevenue = todayCashOrders.reduce((sum, o) => sum + parseFloat(o.total), 0);
+  const todayCardRevenue = todayCardOrders.reduce((sum, o) => sum + parseFloat(o.total), 0);
   const todayItems = await db.select().from(orderItemsTable).where(
-    and(
-      sql`${orderItemsTable.orderId} IN (SELECT id FROM orders WHERE created_at >= ${today.toISOString()} AND status != 'cancelled')`
-    )
+    inArray(orderItemsTable.orderId, todayOrders.map((o) => o.id).concat([-1]))
   );
   const todayDrinks = todayItems.reduce((sum, i) => sum + i.quantity, 0);
   const avgOrderValue = todayOrders.length > 0 ? todayRevenue / todayOrders.length : 0;
@@ -79279,6 +79312,8 @@ router7.get("/dashboard/summary", async (_req, res) => {
   res.json(
     GetDashboardSummaryResponse2.parse({
       todayRevenue,
+      todayCashRevenue,
+      todayCardRevenue,
       todayOrders: todayOrders.length,
       todayDrinks,
       averageOrderValue: avgOrderValue,
@@ -79363,17 +79398,15 @@ router7.get("/dashboard/sales-by-category", async (req, res) => {
     since.setHours(0, 0, 0, 0);
     conditions.push(gte(ordersTable.createdAt, since));
   }
-  const orders = await db.select().from(ordersTable).where(and(...conditions));
+  const orders = await db.select({ id: ordersTable.id }).from(ordersTable).where(and(...conditions));
   const orderIds = orders.map((o) => o.id);
   if (orderIds.length === 0) {
     res.json(GetSalesByCategoryResponse2.parse([]));
     return;
   }
-  const items = await db.select().from(orderItemsTable).where(
-    sql`${orderItemsTable.orderId} = ANY(ARRAY[${sql.join(orderIds.map((id) => sql`${id}`), sql`, `)}]::int[])`
-  );
+  const items = await db.select().from(orderItemsTable).where(inArray(orderItemsTable.orderId, orderIds));
   const drinkIds = [...new Set(items.map((i) => i.drinkId))];
-  const drinks = drinkIds.length > 0 ? await db.select().from(drinksTable).where(sql`${drinksTable.id} = ANY(ARRAY[${sql.join(drinkIds.map((id) => sql`${id}`), sql`, `)}]::int[])`) : [];
+  const drinks = drinkIds.length > 0 ? await db.select().from(drinksTable).where(inArray(drinksTable.id, drinkIds)) : [];
   const drinkCategoryMap = Object.fromEntries(drinks.map((d) => [d.id, d.category]));
   const categoryStats = {};
   for (const item of items) {
@@ -79396,7 +79429,29 @@ router7.get("/dashboard/sales-by-category", async (req, res) => {
 router7.get("/dashboard/top-drinks", async (req, res) => {
   const params = GetTopDrinksQueryParams2.safeParse(req.query);
   const limit = params.success && params.data.limit ? params.data.limit : 5;
-  const items = await db.select().from(orderItemsTable);
+  const conditions = [sql`${ordersTable.status} != 'cancelled'`];
+  if (params.success && params.data.startDate) {
+    conditions.push(gte(ordersTable.createdAt, new Date(params.data.startDate)));
+  }
+  if (params.success && params.data.endDate) {
+    const end = new Date(params.data.endDate);
+    end.setHours(23, 59, 59, 999);
+    conditions.push(lte(ordersTable.createdAt, end));
+  }
+  if (!params.success || !params.data.startDate && !params.data.endDate) {
+    const days = params.success && params.data.days ? params.data.days : 30;
+    const since = /* @__PURE__ */ new Date();
+    since.setDate(since.getDate() - days);
+    since.setHours(0, 0, 0, 0);
+    conditions.push(gte(ordersTable.createdAt, since));
+  }
+  const orders = await db.select({ id: ordersTable.id }).from(ordersTable).where(and(...conditions));
+  const orderIds = orders.map((o) => o.id);
+  if (orderIds.length === 0) {
+    res.json(GetTopDrinksResponse2.parse([]));
+    return;
+  }
+  const items = await db.select().from(orderItemsTable).where(inArray(orderItemsTable.orderId, orderIds));
   const drinkStats = {};
   for (const item of items) {
     if (!drinkStats[item.drinkId]) {
@@ -79406,7 +79461,7 @@ router7.get("/dashboard/top-drinks", async (req, res) => {
     drinkStats[item.drinkId].totalRevenue += parseFloat(item.lineTotal);
   }
   const drinkIds = Object.keys(drinkStats).map(Number);
-  const drinks = drinkIds.length > 0 ? await db.select().from(drinksTable).where(sql`${drinksTable.id} = ANY(ARRAY[${sql.join(drinkIds.map((id) => sql`${id}`), sql`, `)}]::int[])`) : [];
+  const drinks = drinkIds.length > 0 ? await db.select().from(drinksTable).where(inArray(drinksTable.id, drinkIds)) : [];
   const drinkMap = Object.fromEntries(drinks.map((d) => [d.id, d]));
   const result = Object.entries(drinkStats).map(([drinkId, stats]) => {
     const drink = drinkMap[Number(drinkId)];
@@ -79495,7 +79550,7 @@ router8.get("/catalog/types/:id", async (req, res) => {
     res.status(404).json({ error: "Not found" });
     return;
   }
-  const typeVolumes = await db.select().from(ingredientTypeVolumesTable).where(eq(ingredientTypeVolumesTable.ingredientTypeId, id)).orderBy(asc(ingredientTypeVolumesTable.sortOrder));
+  const typeVolumes = await db.select().from(ingredientTypeVolumesTable).where(eq(ingredientTypeVolumesTable.ingredientTypeId, id)).orderBy(asc(ingredientTypeVolumesTable.sortOrder), asc(ingredientTypeVolumesTable.id));
   const volIds = typeVolumes.map((v) => v.volumeId);
   const volumes = volIds.length > 0 ? await db.select().from(ingredientVolumesTable).where(eq(ingredientVolumesTable.id, volIds[0])) : [];
   const allVols = volIds.length > 0 ? await Promise.all(volIds.map((vid) => db.select().from(ingredientVolumesTable).where(eq(ingredientVolumesTable.id, vid)))) : [];
@@ -79575,12 +79630,12 @@ router8.delete("/catalog/types/:id", async (req, res) => {
   }
 });
 router8.get("/catalog/type-volumes", async (_req, res) => {
-  const rows = await db.select().from(ingredientTypeVolumesTable).orderBy(asc(ingredientTypeVolumesTable.sortOrder));
+  const rows = await db.select().from(ingredientTypeVolumesTable).orderBy(asc(ingredientTypeVolumesTable.sortOrder), asc(ingredientTypeVolumesTable.id));
   res.json(rows);
 });
 router8.get("/catalog/types/:id/volumes", async (req, res) => {
   const id = parseInt(req.params.id);
-  const typeVolumes = await db.select().from(ingredientTypeVolumesTable).where(eq(ingredientTypeVolumesTable.ingredientTypeId, id)).orderBy(asc(ingredientTypeVolumesTable.sortOrder));
+  const typeVolumes = await db.select().from(ingredientTypeVolumesTable).where(eq(ingredientTypeVolumesTable.ingredientTypeId, id)).orderBy(asc(ingredientTypeVolumesTable.sortOrder), asc(ingredientTypeVolumesTable.id));
   if (typeVolumes.length === 0) {
     res.json([]);
     return;
@@ -80375,24 +80430,158 @@ router14.get("/admin/customers", async (req, res) => {
 });
 var customers_default = router14;
 
-// src/routes/index.ts
+// src/routes/cashier-sessions.ts
+var import_express16 = __toESM(require_express2(), 1);
+init_drizzle_orm();
+init_src();
 var router15 = (0, import_express16.Router)();
-router15.use(health_default);
-router15.use(auth_default);
-router15.use(drinks_default);
-router15.use(ingredients_default);
-router15.use(orders_default);
-router15.use(stock_default);
-router15.use(dashboard_default);
-router15.use(catalog_default);
-router15.use(drink_categories_default);
-router15.use(kitchen_stations_default);
-router15.use(settings_default);
-router15.use(predefined_slots_default);
-router15.use(users_default);
-router15.use(discounts_default);
-router15.use(customers_default);
-router15.get("/events", (req, res) => {
+var CashierLoginBody = external_exports.object({
+  cashierId: external_exports.number().int().positive(),
+  pin: external_exports.string().min(4).max(6)
+});
+router15.post("/cashier/login", async (req, res) => {
+  const parsed = CashierLoginBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "cashierId and pin required" });
+    return;
+  }
+  const [user] = await db.select().from(usersTable).where(and(eq(usersTable.id, parsed.data.cashierId), eq(usersTable.pin, parsed.data.pin))).limit(1);
+  if (!user) {
+    res.status(401).json({ error: "Invalid PIN" });
+    return;
+  }
+  if (user.role !== "cashier" && user.role !== "admin") {
+    res.status(403).json({ error: "User is not a cashier" });
+    return;
+  }
+  await db.update(cashierSessionsTable).set({ endedAt: /* @__PURE__ */ new Date() }).where(and(eq(cashierSessionsTable.cashierId, user.id), isNull(cashierSessionsTable.endedAt)));
+  const [session2] = await db.insert(cashierSessionsTable).values({ cashierId: user.id }).returning();
+  req.session.cashierSessionId = session2.id;
+  req.session.cashierId = user.id;
+  req.session.save((err) => {
+    if (err) {
+      res.status(500).json({ error: "Session error" });
+      return;
+    }
+    res.json({
+      sessionId: session2.id,
+      cashier: { id: user.id, name: user.name, role: user.role },
+      startedAt: session2.startedAt
+    });
+  });
+});
+router15.post("/cashier/end-session", async (req, res) => {
+  const sessionId = req.session.cashierSessionId;
+  if (!sessionId) {
+    res.status(400).json({ error: "No active cashier session" });
+    return;
+  }
+  await db.update(cashierSessionsTable).set({ endedAt: /* @__PURE__ */ new Date() }).where(eq(cashierSessionsTable.id, sessionId));
+  delete req.session.cashierSessionId;
+  delete req.session.cashierId;
+  req.session.save(() => {
+    res.json({ ok: true });
+  });
+});
+router15.get("/cashier/active", async (req, res) => {
+  const sessionId = req.session.cashierSessionId;
+  if (!sessionId) {
+    res.json(null);
+    return;
+  }
+  const [session2] = await db.select().from(cashierSessionsTable).where(eq(cashierSessionsTable.id, sessionId));
+  if (!session2 || session2.endedAt) {
+    res.json(null);
+    return;
+  }
+  const [cashier] = await db.select({ id: usersTable.id, name: usersTable.name, role: usersTable.role }).from(usersTable).where(eq(usersTable.id, session2.cashierId));
+  res.json({
+    sessionId: session2.id,
+    cashier: cashier ?? null,
+    startedAt: session2.startedAt
+  });
+});
+router15.get("/cashier/performance/:cashierId", async (req, res) => {
+  const cashierId = parseInt(req.params.cashierId);
+  if (isNaN(cashierId)) {
+    res.status(400).json({ error: "Invalid cashierId" });
+    return;
+  }
+  const { startDate, endDate } = req.query;
+  const conditions = [eq(ordersTable.cashierId, cashierId)];
+  if (startDate) conditions.push(gte(ordersTable.createdAt, new Date(startDate)));
+  if (endDate) {
+    const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999);
+    conditions.push(lte(ordersTable.createdAt, end));
+  }
+  const orders = await db.select({
+    id: ordersTable.id,
+    total: ordersTable.total,
+    paymentMethod: ordersTable.paymentMethod,
+    status: ordersTable.status,
+    createdAt: ordersTable.createdAt
+  }).from(ordersTable).where(and(...conditions));
+  const completedOrders = orders.filter((o) => o.status === "completed" || o.status === "paid" || o.status === "ready" || o.status === "in_progress");
+  const totalRevenue = completedOrders.reduce((sum, o) => sum + parseFloat(o.total), 0);
+  const cashRevenue = completedOrders.filter((o) => o.paymentMethod === "cash").reduce((sum, o) => sum + parseFloat(o.total), 0);
+  const cardRevenue = completedOrders.filter((o) => o.paymentMethod === "card").reduce((sum, o) => sum + parseFloat(o.total), 0);
+  const walletRevenue = completedOrders.filter((o) => o.paymentMethod === "wallet").reduce((sum, o) => sum + parseFloat(o.total), 0);
+  const [cashier] = await db.select({ id: usersTable.id, name: usersTable.name }).from(usersTable).where(eq(usersTable.id, cashierId));
+  res.json({
+    cashier: cashier ?? null,
+    totalOrders: completedOrders.length,
+    totalRevenue,
+    cashRevenue,
+    cardRevenue,
+    walletRevenue,
+    avgOrderValue: completedOrders.length > 0 ? totalRevenue / completedOrders.length : 0
+  });
+});
+router15.get("/cashier/sessions", async (req, res) => {
+  const { cashierId, startDate, endDate } = req.query;
+  const conditions = [];
+  if (cashierId) conditions.push(eq(cashierSessionsTable.cashierId, parseInt(cashierId)));
+  if (startDate) conditions.push(gte(cashierSessionsTable.startedAt, new Date(startDate)));
+  if (endDate) {
+    const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999);
+    conditions.push(lte(cashierSessionsTable.startedAt, end));
+  }
+  const sessions = await db.select().from(cashierSessionsTable).where(conditions.length > 0 ? and(...conditions) : void 0).orderBy(desc(cashierSessionsTable.startedAt));
+  const cashierIds = [...new Set(sessions.map((s) => s.cashierId))];
+  const cashiers = cashierIds.length > 0 ? await db.select({ id: usersTable.id, name: usersTable.name }).from(usersTable) : [];
+  const cashierMap = new Map(cashiers.map((c) => [c.id, c.name]));
+  res.json(sessions.map((s) => ({
+    ...s,
+    cashierName: cashierMap.get(s.cashierId) ?? "Unknown"
+  })));
+});
+router15.get("/cashier/list", async (_req, res) => {
+  const cashiers = await db.select({ id: usersTable.id, name: usersTable.name, role: usersTable.role }).from(usersTable).where(inArray(usersTable.role, ["cashier", "admin"]));
+  res.json(cashiers);
+});
+var cashier_sessions_default = router15;
+
+// src/routes/index.ts
+var router16 = (0, import_express17.Router)();
+router16.use(health_default);
+router16.use(auth_default);
+router16.use(drinks_default);
+router16.use(ingredients_default);
+router16.use(orders_default);
+router16.use(stock_default);
+router16.use(dashboard_default);
+router16.use(catalog_default);
+router16.use(drink_categories_default);
+router16.use(kitchen_stations_default);
+router16.use(settings_default);
+router16.use(predefined_slots_default);
+router16.use(users_default);
+router16.use(discounts_default);
+router16.use(customers_default);
+router16.use(cashier_sessions_default);
+router16.get("/events", (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache, no-transform");
   res.setHeader("X-Accel-Buffering", "no");
@@ -80401,7 +80590,7 @@ router15.get("/events", (req, res) => {
   res.write("event: connected\ndata: {}\n\n");
   addSseClient(res);
 });
-var routes_default = router15;
+var routes_default = router16;
 
 // src/lib/logger.ts
 var import_pino = __toESM(require_pino(), 1);
@@ -80422,7 +80611,7 @@ var logger = (0, import_pino.default)({
 });
 
 // src/app.ts
-var app = (0, import_express17.default)();
+var app = (0, import_express18.default)();
 app.set("json replacer", (_key, value) => {
   if (value instanceof Date) return value.toISOString();
   return value;
@@ -80448,8 +80637,8 @@ app.use(
 );
 app.set("trust proxy", 1);
 app.use((0, import_cors.default)({ credentials: true, origin: true }));
-app.use(import_express17.default.json());
-app.use(import_express17.default.urlencoded({ extended: true }));
+app.use(import_express18.default.json());
+app.use(import_express18.default.urlencoded({ extended: true }));
 app.use(
   (0, import_express_session.default)({
     secret: process.env.SESSION_SECRET ?? "spacca-dev-secret",
@@ -80463,7 +80652,7 @@ app.use(
     }
   })
 );
-app.use("/uploads", import_express17.default.static("uploads"));
+app.use("/uploads", import_express18.default.static("uploads"));
 app.use("/api", routes_default);
 var app_default = app;
 

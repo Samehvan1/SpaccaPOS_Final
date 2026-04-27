@@ -463,9 +463,16 @@ router.patch("/orders/:id/status", async (req, res): Promise<void> => {
     return;
   }
 
+  // Attach cashierId when approving — comes from the frontend cashier session
+  const updateData: Record<string, unknown> = { status: parsed.data.status };
+  if (parsed.data.status === "paid") {
+    const cashierId = (req.body as any).cashierId ?? (req.session as any).cashierId ?? null;
+    if (cashierId) updateData.cashierId = cashierId;
+  }
+
   const [order] = await db
     .update(ordersTable)
-    .set({ status: parsed.data.status })
+    .set(updateData)
     .where(eq(ordersTable.id, params.data.id))
     .returning();
 

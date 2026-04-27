@@ -28,6 +28,7 @@ import NotFound from "@/pages/not-found";
 import CustomerAuth from "@/pages/customer-auth";
 import CustomerProfile from "@/pages/customer-profile";
 import { CustomerAuthProvider } from "@/hooks/use-customer-auth";
+import CashierPerformancePage from "@/pages/admin/cashier-performance";
 
 // PWA Helper to update title for "Add to Home Screen"
 function PWAContextHandler() {
@@ -162,12 +163,7 @@ function AppRoutes() {
       </Route>
       
       <Route path="/cashier">
-        <MainLayout>
-          <ProtectedRoute 
-            component={CashierPage} 
-            allowedRoles={["cashier"]} 
-          />
-        </MainLayout>
+        <CashierPage />
       </Route>
 
       <Route path="/pickup">
@@ -239,6 +235,12 @@ function AppRoutes() {
       <Route path="/admin/users">
         <MainLayout>
           <ProtectedRoute component={AdminUsers} adminOnly={true} />
+        </MainLayout>
+      </Route>
+
+      <Route path="/admin/cashier-performance">
+        <MainLayout>
+          <ProtectedRoute component={CashierPerformancePage} adminOnly={true} />
         </MainLayout>
       </Route>
 

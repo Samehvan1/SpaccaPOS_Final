@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Coffee, Droplet, LayoutDashboard, LineChart, PackageSearch, BarChart2, Tag, ChefHat, Users, Ticket } from "lucide-react";
+import { Coffee, Droplet, LayoutDashboard, LineChart, PackageSearch, BarChart2, Tag, ChefHat, Users, Ticket, UserCheck } from "lucide-react";
 
 export default function AdminHub() {
   const { user } = useAuth();
@@ -84,6 +84,14 @@ export default function AdminHub() {
       href: "/admin/discounts",
       color: "text-pink-500",
       bg: "bg-pink-500/10"
+    },
+    {
+      title: "Cashier Performance",
+      description: "Track per-cashier sales, revenue, and shift history",
+      icon: UserCheck,
+      href: "/admin/cashier-performance",
+      color: "text-teal-500",
+      bg: "bg-teal-500/10"
     }
   ];
 

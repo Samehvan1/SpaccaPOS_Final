@@ -25,6 +25,7 @@ export const ordersTable = pgTable("orders", {
   amountTendered: numeric("amount_tendered", { precision: 8, scale: 2 }),
   changeDue: numeric("change_due", { precision: 8, scale: 2 }),
   notes: text("notes"),
+  cashierId: integer("cashier_id").references(() => usersTable.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });
