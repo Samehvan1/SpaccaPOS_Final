@@ -11,7 +11,7 @@ export const ordersTable = pgTable("orders", {
   orderNumber: text("order_number").notNull().unique(),
   baristaId: integer("barista_id").notNull().references(() => usersTable.id),
   status: text("status", {
-    enum: ["pending", "paid", "in_progress", "ready", "completed", "cancelled"],
+    enum: ["pending", "paid", "in_progress", "ready", "completed", "cancelled", "refunded"],
   }).notNull().default("pending"),
   customerName: text("customer_name"),
   subtotal: numeric("subtotal", { precision: 8, scale: 2 }).notNull(),

@@ -1,13 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Check, X, Loader2, Calculator, ClipboardList, User, ListChecks, CreditCard, Receipt, Printer, FileText, LogOut, Clock, ShoppingBag, TrendingUp, Lock } from "lucide-react";
+import { Check, X, Loader2, Calculator, ClipboardList, User, ListChecks, CreditCard, Banknote, Wallet, Receipt, Printer, FileText, LogOut, Clock, ShoppingBag, TrendingUp, Lock, RotateCcw, Search, History } from "lucide-react";
 import { fmt } from "@/lib/currency";
 import { printCustomerReceipt, printAgentReceipts } from "@/components/receipt-printer";
 import { useSettings } from "@/hooks/use-settings";
@@ -180,6 +181,13 @@ export default function CashierPage() {
   const { autoPrintCustomer, autoPrintAgent } = useSettings();
   const [completedOrder, setCompletedOrder] = useState<any>(null);
   const [isReceiptOpen, setIsReceiptOpen] = useState(false);
+  const [shiftSummary, setShiftSummary] = useState<any>(null);
+  const [isSummaryOpen, setIsSummaryOpen] = useState(false);
+  const [refundOrderId, setRefundOrderId] = useState<number | null>(null);
+  const [isAdminAuthOpen, setIsAdminAuthOpen] = useState(false);
+  const [adminPin, setAdminPin] = useState("");
+  const [isRefunding, setIsRefunding] = useState(false);
+  const [recentSearch, setRecentSearch] = useState("");
   const { session, loading: sessionLoading, endSession, refetch } = useCashierSession();
   const [now, setNow] = useState(Date.now());
 
@@ -192,14 +200,52 @@ export default function CashierPage() {
 
   const { data: orders = [], isLoading } = useGetActiveOrders(
     { status: "pending" as any },
-    { query: {} as any }
+    { query: { refetchInterval: 5000 } as any }
   );
+
+  // Fetch recent orders for reprint/refund
+  const [recentOrders, setRecentOrders] = useState<any[]>([]);
+  const fetchRecent = useCallback(async () => {
+    const res = await fetch(`${API_BASE}/orders?limit=20&status=paid,completed,ready,in_progress,refunded`, { credentials: "include" });
+    const data = await res.json();
+    setRecentOrders(data.items || []);
+  }, []);
+
+  useEffect(() => {
+    fetchRecent();
+    const interval = setInterval(fetchRecent, 10000);
+    return () => clearInterval(interval);
+  }, [fetchRecent]);
 
   const { mutate: updateStatus, isPending } = useUpdateOrderStatus();
 
   const handlePrintAll = (order: any) => {
     printCustomerReceipt(order);
     printAgentReceipts(order);
+  };
+
+  const handleRefund = async () => {
+    if (!refundOrderId || !adminPin) return;
+    setIsRefunding(true);
+    try {
+      const res = await fetch(`${API_BASE}/orders/${refundOrderId}/refund`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ adminPin }),
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error((await res.json()).error ?? "Refund failed");
+      toast({ title: "Order Refunded", description: "The order has been marked as refunded." });
+      setIsAdminAuthOpen(false);
+      setAdminPin("");
+      setRefundOrderId(null);
+      fetchRecent();
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Auth Failed", description: e.message });
+      setAdminPin("");
+    } finally {
+      setIsRefunding(false);
+    }
   };
 
   const handleUpdateStatus = (orderId: any, status: string) => {
@@ -226,8 +272,21 @@ export default function CashierPage() {
   };
 
   const handleEndSession = async () => {
-    if (!confirm("End your shift?")) return;
+    if (!session) return;
+    try {
+      const res = await fetch(`${API_BASE}/cashier/sessions/${session.sessionId}/performance`, { credentials: "include" });
+      const data = await res.json();
+      setShiftSummary(data);
+      setIsSummaryOpen(true);
+    } catch {
+      toast({ variant: "destructive", title: "Error", description: "Could not load shift summary." });
+    }
+  };
+
+  const confirmEndSession = async () => {
     await endSession();
+    setIsSummaryOpen(false);
+    setShiftSummary(null);
     toast({ title: "Shift Ended", description: "Your session has been closed." });
   };
 
@@ -262,6 +321,10 @@ export default function CashierPage() {
               <TabsTrigger value="approvals" className="gap-2 px-4 data-[state=active]:bg-white/10 data-[state=active]:text-neon-cyan">
                 <ClipboardList className="h-4 w-4" />
                 Approvals {orders.length > 0 && <span className="ml-1 px-1.5 py-0 rounded-full bg-neon-cyan/20 text-neon-cyan text-[10px] font-black">{orders.length}</span>}
+              </TabsTrigger>
+              <TabsTrigger value="recent" className="gap-2 px-4 data-[state=active]:bg-white/10 data-[state=active]:text-amber-400">
+                <History className="h-4 w-4" />
+                Recent
               </TabsTrigger>
               <TabsTrigger value="terminal" className="gap-2 px-4 data-[state=active]:bg-white/10 data-[state=active]:text-neon-green">
                 <Calculator className="h-4 w-4" />
@@ -429,6 +492,63 @@ export default function CashierPage() {
           </ScrollArea>
         </TabsContent>
 
+        <TabsContent value="recent" className="flex-1 flex flex-col overflow-hidden m-0 p-0">
+          <div className="p-6 border-b border-white/5 bg-white/[0.01]">
+            <div className="relative max-w-md mx-auto">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input 
+                placeholder="Search by Order # or Name..." 
+                className="pl-10 h-12 bg-white/5 border-white/10 rounded-xl"
+                value={recentSearch}
+                onChange={(e) => setRecentSearch(e.target.value)}
+              />
+            </div>
+          </div>
+          <ScrollArea className="flex-1">
+            <div className="max-w-4xl mx-auto p-6 space-y-4">
+              {recentOrders.filter(o => 
+                o.orderNumber.includes(recentSearch) || 
+                (o.customerName || "").toLowerCase().includes(recentSearch.toLowerCase())
+              ).map((order) => (
+                <Card key={order.id} className="glass-card border-white/5 overflow-hidden rounded-2xl">
+                  <div className="p-4 flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center text-lg font-black neon-text-cyan">
+                        #{order.orderNumber}
+                      </div>
+                      <div>
+                        <div className="font-bold">{order.customerName || "Walk-in Guest"}</div>
+                        <div className="text-[10px] text-muted-foreground uppercase tracking-widest">{new Date(order.createdAt).toLocaleTimeString()} · {order.paymentMethod}</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-6">
+                      <div className="text-right mr-4">
+                        <div className="text-lg font-black text-neon-green">{fmt(parseFloat(order.total))}</div>
+                        <Badge variant="outline" className={`text-[9px] uppercase border-white/10 ${
+                          order.status === 'refunded' ? 'text-red-400 bg-red-400/10' : 
+                          order.status === 'completed' ? 'text-neon-green bg-neon-green/10' : 'text-neon-cyan'
+                        }`}>
+                          {order.status}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button variant="outline" size="sm" className="h-10 px-3 border-white/10 hover:bg-neon-cyan/10 hover:text-neon-cyan gap-2 rounded-xl" onClick={() => handlePrintAll(order)}>
+                          <Printer className="h-4 w-4" /> <span className="text-xs font-bold">Reprint</span>
+                        </Button>
+                        {order.status !== 'refunded' && (
+                          <Button variant="outline" size="sm" className="h-10 px-3 border-red-500/20 text-red-400 hover:bg-red-500/10 gap-2 rounded-xl" onClick={() => { setRefundOrderId(order.id); setIsAdminAuthOpen(true); }}>
+                            <RotateCcw className="h-4 w-4" /> <span className="text-xs font-bold">Refund</span>
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </ScrollArea>
+        </TabsContent>
+
         <TabsContent value="terminal" className="flex-1 flex flex-col overflow-hidden m-0">
           <PosTerminal />
         </TabsContent>
@@ -458,6 +578,134 @@ export default function CashierPage() {
           </div>
           <DialogFooter className="mt-4">
             <Button variant="ghost" className="w-full h-12 font-black uppercase tracking-widest hover:bg-white/5 rounded-xl" onClick={() => setIsReceiptOpen(false)}>Done</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Shift Summary Dialog */}
+      <Dialog open={isSummaryOpen} onOpenChange={setIsSummaryOpen}>
+        <DialogContent className="sm:max-w-[450px] bg-[#0A0A0B] border-white/10 text-white">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-xl font-black uppercase tracking-tighter">
+              <TrendingUp className="h-6 w-6 text-neon-green" />
+              Shift Summary
+            </DialogTitle>
+          </DialogHeader>
+          
+          {shiftSummary && (
+            <div className="space-y-6 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
+                  <div className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Total Revenue</div>
+                  <div className="text-2xl font-black text-neon-green">{fmt(shiftSummary.totalRevenue)}</div>
+                </div>
+                <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
+                  <div className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Total Orders</div>
+                  <div className="text-2xl font-black text-neon-cyan">{shiftSummary.totalOrders}</div>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex justify-between items-center p-3 rounded-xl bg-white/[0.02] border border-white/5">
+                  <div className="flex items-center gap-3 text-sm font-bold">
+                    <Banknote className="h-4 w-4 text-amber-500" /> Cash
+                  </div>
+                  <div className="font-black">{fmt(shiftSummary.cashRevenue)}</div>
+                </div>
+                <div className="flex justify-between items-center p-3 rounded-xl bg-white/[0.02] border border-white/5">
+                  <div className="flex items-center gap-3 text-sm font-bold">
+                    <CreditCard className="h-4 w-4 text-purple-500" /> Card
+                  </div>
+                  <div className="font-black">{fmt(shiftSummary.cardRevenue)}</div>
+                </div>
+                <div className="flex justify-between items-center p-3 rounded-xl bg-white/[0.02] border border-white/5">
+                  <div className="flex items-center gap-3 text-sm font-bold">
+                    <Wallet className="h-4 w-4 text-neon-cyan" /> Wallet
+                  </div>
+                  <div className="font-black">{fmt(shiftSummary.walletRevenue)}</div>
+                </div>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-neon-cyan/5 border border-neon-cyan/20">
+                <div className="flex items-center gap-2 text-xs font-bold text-neon-cyan uppercase tracking-widest mb-2">
+                  <Clock className="h-3.5 w-3.5" /> Shift Timing
+                </div>
+                <div className="grid grid-cols-2 text-xs gap-4">
+                  <div>
+                    <div className="opacity-50">Started At</div>
+                    <div className="font-bold">{new Date(shiftSummary.startedAt).toLocaleTimeString()}</div>
+                  </div>
+                  <div>
+                    <div className="opacity-50">Duration</div>
+                    <div className="font-bold">{formatDuration(shiftSummary.startedAt)}</div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="text-center text-[10px] font-bold text-muted-foreground uppercase tracking-widest px-4">
+                Please verify the drawer amount matches the cash revenue before ending the shift.
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="flex-col gap-3 sm:flex-col">
+            <Button 
+              className="w-full h-14 text-base font-black uppercase tracking-widest rounded-2xl bg-red-500/20 hover:bg-red-500 text-red-500 hover:text-white border border-red-500/40 transition-all duration-300"
+              onClick={confirmEndSession}
+            >
+              Close Shift & Logout
+            </Button>
+            <Button 
+              variant="ghost" 
+              className="w-full h-10 font-bold uppercase text-xs tracking-widest" 
+              onClick={() => setIsSummaryOpen(false)}
+            >
+              Continue Working
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Admin Auth for Refunds */}
+      <Dialog open={isAdminAuthOpen} onOpenChange={setIsAdminAuthOpen}>
+        <DialogContent className="sm:max-w-[400px] bg-[#0A0A0B] border-white/10 text-white">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-xl font-black uppercase tracking-tighter">
+              <RotateCcw className="h-6 w-6 text-red-500" />
+              Authorize Refund
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-6 space-y-6">
+            <div className="text-center space-y-2">
+              <p className="text-sm text-muted-foreground">Admin or Supervisor PIN required to proceed with refund for Order <span className="text-neon-cyan">#{recentOrders.find(o => o.id === refundOrderId)?.orderNumber}</span></p>
+            </div>
+            
+            <div className="flex justify-center gap-3">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className={`w-10 h-10 rounded-xl border-2 flex items-center justify-center transition-all ${i < adminPin.length ? "border-red-500 bg-red-500/20" : "border-white/20 bg-white/5"}`}>
+                  {i < adminPin.length && <div className="w-3 h-3 rounded-full bg-red-500" />}
+                </div>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              {["1","2","3","4","5","6","7","8","9","","0","⌫"].map((d, i) => (
+                <button key={i} disabled={d === ""} onClick={() => d === "⌫" ? setAdminPin(p => p.slice(0, -1)) : d && adminPin.length < 6 && setAdminPin(p => p + d)}
+                  className={`h-14 rounded-2xl text-xl font-black transition-all ${d === "" ? "pointer-events-none" : "bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 active:scale-95"}`}
+                >
+                  {d}
+                </button>
+              ))}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              className="w-full h-14 text-base font-black uppercase tracking-widest rounded-2xl bg-red-500 hover:bg-red-600 text-white border-none shadow-lg shadow-red-500/20"
+              disabled={adminPin.length < 4 || isRefunding}
+              onClick={handleRefund}
+            >
+              {isRefunding ? <Loader2 className="h-5 w-5 animate-spin" /> : "Confirm Refund"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

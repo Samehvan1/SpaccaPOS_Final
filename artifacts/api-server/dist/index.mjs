@@ -80561,6 +80561,45 @@ router15.get("/cashier/list", async (_req, res) => {
   const cashiers = await db.select({ id: usersTable.id, name: usersTable.name, role: usersTable.role }).from(usersTable).where(inArray(usersTable.role, ["cashier", "admin"]));
   res.json(cashiers);
 });
+router15.get("/cashier/sessions/:id/performance", async (req, res) => {
+  const sessionId = parseInt(req.params.id);
+  if (isNaN(sessionId)) {
+    res.status(400).json({ error: "Invalid sessionId" });
+    return;
+  }
+  const [session2] = await db.select().from(cashierSessionsTable).where(eq(cashierSessionsTable.id, sessionId));
+  if (!session2) {
+    res.status(404).json({ error: "Session not found" });
+    return;
+  }
+  const start = session2.startedAt;
+  const end = session2.endedAt || /* @__PURE__ */ new Date();
+  const orders = await db.select({
+    total: ordersTable.total,
+    paymentMethod: ordersTable.paymentMethod,
+    status: ordersTable.status
+  }).from(ordersTable).where(and(
+    eq(ordersTable.cashierId, session2.cashierId),
+    gte(ordersTable.createdAt, start),
+    lte(ordersTable.createdAt, end)
+  ));
+  const completedOrders = orders.filter((o) => ["completed", "paid", "ready", "in_progress"].includes(o.status));
+  const totalRevenue = completedOrders.reduce((sum, o) => sum + parseFloat(o.total), 0);
+  const cashRevenue = completedOrders.filter((o) => o.paymentMethod === "cash").reduce((sum, o) => sum + parseFloat(o.total), 0);
+  const cardRevenue = completedOrders.filter((o) => o.paymentMethod === "card").reduce((sum, o) => sum + parseFloat(o.total), 0);
+  const walletRevenue = completedOrders.filter((o) => o.paymentMethod === "wallet").reduce((sum, o) => sum + parseFloat(o.total), 0);
+  const [cashier] = await db.select({ name: usersTable.name }).from(usersTable).where(eq(usersTable.id, session2.cashierId));
+  res.json({
+    cashierName: cashier?.name ?? "Unknown",
+    startedAt: session2.startedAt,
+    endedAt: session2.endedAt,
+    totalOrders: completedOrders.length,
+    totalRevenue,
+    cashRevenue,
+    cardRevenue,
+    walletRevenue
+  });
+});
 var cashier_sessions_default = router15;
 
 // src/routes/index.ts

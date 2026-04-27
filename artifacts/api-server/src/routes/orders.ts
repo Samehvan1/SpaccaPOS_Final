@@ -545,4 +545,40 @@ router.patch("/order-items/:id/ready", async (req, res): Promise<void> => {
   res.json(GetOrderResponse.parse(serializeDates(detail)));
 });
 
+router.post("/orders/:id/refund", async (req, res): Promise<void> => {
+  const { id } = req.params;
+  const { adminPin } = req.body;
+
+  if (!adminPin) {
+    res.status(400).json({ error: "Admin PIN is required" });
+    return;
+  }
+
+  // 1. Verify if the PIN belongs to an admin
+  const [admin] = await db
+    .select()
+    .from(usersTable)
+    .where(and(eq(usersTable.pin, adminPin), eq(usersTable.role, "admin")));
+
+  if (!admin) {
+    res.status(401).json({ error: "Invalid Admin PIN" });
+    return;
+  }
+
+  // 2. Update order status
+  const [order] = await db
+    .update(ordersTable)
+    .set({ status: "refunded" })
+    .where(eq(ordersTable.id, parseInt(id)))
+    .returning();
+
+  if (!order) {
+    res.status(404).json({ error: "Order not found" });
+    return;
+  }
+
+  broadcastEvent("order_updated", { orderId: order.id, status: "refunded" });
+  res.json({ message: "Order refunded successfully", orderId: order.id });
+});
+
 export default router;

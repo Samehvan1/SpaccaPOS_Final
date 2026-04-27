@@ -9,10 +9,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { ArrowLeft, Users, TrendingUp, ShoppingBag, CreditCard, Banknote, Wallet, Clock, Calendar, BarChart2 } from "lucide-react";
 import { Link } from "wouter";
 
-const API = (path: string) => fetch(path).then(r => r.json());
+const API = (path: string) => fetch(path, { credentials: "include" }).then(r => {
+  if (!r.ok) throw new Error("API error");
+  return r.json();
+});
 
 type CashierUser = { id: number; name: string; role: string };
 type Performance = {
@@ -67,6 +71,8 @@ export default function CashierPerformancePage() {
   const [performances, setPerformances] = useState<Performance[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(false);
+  const [viewingSessionStats, setViewingSessionStats] = useState<any>(null);
+  const [isStatsDialogOpen, setIsStatsDialogOpen] = useState(false);
 
   useEffect(() => {
     API("/api/cashier/list").then(setCashiers).catch(() => {});
@@ -97,6 +103,16 @@ export default function CashierPerformancePage() {
       toast({ variant: "destructive", title: "Failed to load data" });
     } finally { setLoading(false); }
   }, [selectedCashier, startDate, endDate, cashiers, toast]);
+
+  const loadSessionStats = async (sessionId: number) => {
+    try {
+      const data = await API(`/api/cashier/sessions/${sessionId}/performance`);
+      setViewingSessionStats(data);
+      setIsStatsDialogOpen(true);
+    } catch {
+      toast({ variant: "destructive", title: "Failed to load session stats" });
+    }
+  };
 
   useEffect(() => {
     if (cashiers.length > 0) load();
@@ -228,11 +244,12 @@ export default function CashierPerformancePage() {
                     <TableHead>Ended</TableHead>
                     <TableHead>Duration</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Action</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {sessions.length === 0 ? (
-                    <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No sessions found</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">No sessions found</TableCell></TableRow>
                   ) : sessions.map(s => (
                     <TableRow key={s.id}>
                       <TableCell className="font-medium">
@@ -262,6 +279,11 @@ export default function CashierPerformancePage() {
                           {s.endedAt ? "Ended" : "Active"}
                         </Badge>
                       </TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="sm" className="h-8 gap-2" onClick={() => loadSessionStats(s.id)}>
+                          <BarChart2 className="h-3.5 w-3.5" /> Details
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -270,6 +292,58 @@ export default function CashierPerformancePage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Session Stats Dialog */}
+      <Dialog open={isStatsDialogOpen} onOpenChange={setIsStatsDialogOpen}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-primary" /> Shift Summary
+            </DialogTitle>
+          </DialogHeader>
+          {viewingSessionStats && (
+            <div className="space-y-4 py-2">
+              <div className="flex justify-between items-center pb-2 border-b">
+                <span className="text-sm text-muted-foreground">Cashier</span>
+                <span className="font-bold">{viewingSessionStats.cashierName}</span>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-muted/50 p-3 rounded-lg text-center">
+                  <div className="text-[10px] uppercase font-bold text-muted-foreground mb-1">Total Revenue</div>
+                  <div className="text-xl font-black text-green-600">{fmt(viewingSessionStats.totalRevenue)}</div>
+                </div>
+                <div className="bg-muted/50 p-3 rounded-lg text-center">
+                  <div className="text-[10px] uppercase font-bold text-muted-foreground mb-1">Orders</div>
+                  <div className="text-xl font-black text-blue-600">{viewingSessionStats.totalOrders}</div>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="flex items-center gap-2"><Banknote className="h-3.5 w-3.5 opacity-60" /> Cash</span>
+                  <span className="font-semibold">{fmt(viewingSessionStats.cashRevenue)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="flex items-center gap-2"><CreditCard className="h-3.5 w-3.5 opacity-60" /> Card</span>
+                  <span className="font-semibold">{fmt(viewingSessionStats.cardRevenue)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="flex items-center gap-2"><Wallet className="h-3.5 w-3.5 opacity-60" /> Wallet</span>
+                  <span className="font-semibold">{fmt(viewingSessionStats.walletRevenue)}</span>
+                </div>
+              </div>
+              <div className="pt-2 border-t mt-2">
+                <div className="flex justify-between text-[11px] text-muted-foreground">
+                  <span>Start: {new Date(viewingSessionStats.startedAt).toLocaleString()}</span>
+                  {viewingSessionStats.endedAt && <span>End: {new Date(viewingSessionStats.endedAt).toLocaleTimeString()}</span>}
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" className="w-full" onClick={() => setIsStatsDialogOpen(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

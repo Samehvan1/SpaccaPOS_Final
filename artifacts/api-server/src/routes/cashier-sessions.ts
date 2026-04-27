@@ -210,4 +210,61 @@ router.get("/cashier/list", async (_req, res): Promise<void> => {
   res.json(cashiers);
 });
 
+// GET /cashier/sessions/:id/performance — stats for a specific session
+router.get("/cashier/sessions/:id/performance", async (req, res): Promise<void> => {
+  const sessionId = parseInt(req.params.id);
+  if (isNaN(sessionId)) {
+    res.status(400).json({ error: "Invalid sessionId" });
+    return;
+  }
+
+  const [session] = await db
+    .select()
+    .from(cashierSessionsTable)
+    .where(eq(cashierSessionsTable.id, sessionId));
+
+  if (!session) {
+    res.status(404).json({ error: "Session not found" });
+    return;
+  }
+
+  const start = session.startedAt;
+  const end = session.endedAt || new Date();
+
+  const orders = await db
+    .select({
+      total: ordersTable.total,
+      paymentMethod: ordersTable.paymentMethod,
+      status: ordersTable.status,
+    })
+    .from(ordersTable)
+    .where(and(
+      eq(ordersTable.cashierId, session.cashierId),
+      gte(ordersTable.createdAt, start),
+      lte(ordersTable.createdAt, end)
+    ));
+
+  const completedOrders = orders.filter(o => ["completed", "paid", "ready", "in_progress"].includes(o.status));
+  const totalRevenue = completedOrders.reduce((sum, o) => sum + parseFloat(o.total as any), 0);
+  const cashRevenue = completedOrders.filter(o => o.paymentMethod === "cash").reduce((sum, o) => sum + parseFloat(o.total as any), 0);
+  const cardRevenue = completedOrders.filter(o => o.paymentMethod === "card").reduce((sum, o) => sum + parseFloat(o.total as any), 0);
+  const walletRevenue = completedOrders.filter(o => o.paymentMethod === "wallet").reduce((sum, o) => sum + parseFloat(o.total as any), 0);
+
+  const [cashier] = await db
+    .select({ name: usersTable.name })
+    .from(usersTable)
+    .where(eq(usersTable.id, session.cashierId));
+
+  res.json({
+    cashierName: cashier?.name ?? "Unknown",
+    startedAt: session.startedAt,
+    endedAt: session.endedAt,
+    totalOrders: completedOrders.length,
+    totalRevenue,
+    cashRevenue,
+    cardRevenue,
+    walletRevenue,
+  });
+});
+
 export default router;

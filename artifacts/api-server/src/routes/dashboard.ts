@@ -32,7 +32,7 @@ router.get("/dashboard/summary", async (_req, res): Promise<void> => {
     .where(
       and(
         gte(ordersTable.createdAt, today),
-        sql`${ordersTable.status} != 'cancelled'`
+        sql`${ordersTable.status} NOT IN ('cancelled', 'refunded')`
       )
     );
 
@@ -161,7 +161,7 @@ router.get("/dashboard/low-stock", async (_req, res): Promise<void> => {
 
 router.get("/dashboard/sales-by-category", async (req, res): Promise<void> => {
   const params = GetSalesByCategoryQueryParams.safeParse(req.query);
-  const conditions = [sql`${ordersTable.status} != 'cancelled'`];
+  const conditions = [sql`${ordersTable.status} NOT IN ('cancelled', 'refunded')`];
 
   if (params.success && params.data.startDate) {
     conditions.push(gte(ordersTable.createdAt, new Date(params.data.startDate)));
