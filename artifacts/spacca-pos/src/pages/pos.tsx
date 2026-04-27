@@ -15,10 +15,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
-import { Coffee, Minus, Plus, ShoppingCart, Trash2, X, ChevronRight, Droplets, Search, Menu, RotateCcw, Ticket, Check, Loader2, Tag } from "lucide-react";
+import { Coffee, Minus, Plus, ShoppingCart, Trash2, X, ChevronRight, Droplets, Search, Menu, RotateCcw, Ticket, Check, Loader2, Tag, User } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { fmt } from "@/lib/currency";
 import { CupSimulator, type CupLayer } from "@/components/cup-simulator";
+import { useCustomerAuth } from "@/hooks/use-customer-auth";
+import { Link } from "wouter";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "/api";
 
@@ -552,6 +554,8 @@ export default function PosTerminal() {
     ? "grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-6"
     : "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6";
 
+  const { customer: loggedCustomer } = useCustomerAuth();
+
   return (
     <div className="flex flex-col h-full w-full bg-muted/20 overflow-hidden">
 
@@ -634,6 +638,16 @@ export default function PosTerminal() {
               </button>
             )}
           </div>
+
+          {/* Customer login/profile button */}
+          <Link href={loggedCustomer ? "/customer/profile" : "/customer/auth"}>
+            <button className="shrink-0 flex items-center gap-2 bg-stone-800 hover:bg-stone-700 border border-stone-600 text-stone-200 rounded-full px-3 py-2 text-sm font-medium transition-colors h-9">
+              <User className="h-4 w-4 text-amber-400" />
+              <span className="hidden sm:inline max-w-[90px] truncate">
+                {loggedCustomer ? loggedCustomer.name.split(" ")[0] : "Sign In"}
+              </span>
+            </button>
+          </Link>
 
           {/* Cart toggle button */}
           <button

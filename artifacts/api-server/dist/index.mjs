@@ -20807,27 +20807,27 @@ var require_router = __commonJS({
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var methods = METHODS.map((method) => method.toLowerCase());
-    module.exports = Router16;
+    module.exports = Router17;
     module.exports.Route = Route;
-    function Router16(options) {
-      if (!(this instanceof Router16)) {
-        return new Router16(options);
+    function Router17(options) {
+      if (!(this instanceof Router17)) {
+        return new Router17(options);
       }
       const opts = options || {};
-      function router15(req, res, next) {
-        router15.handle(req, res, next);
+      function router16(req, res, next) {
+        router16.handle(req, res, next);
       }
-      Object.setPrototypeOf(router15, this);
-      router15.caseSensitive = opts.caseSensitive;
-      router15.mergeParams = opts.mergeParams;
-      router15.params = {};
-      router15.strict = opts.strict;
-      router15.stack = [];
-      return router15;
+      Object.setPrototypeOf(router16, this);
+      router16.caseSensitive = opts.caseSensitive;
+      router16.mergeParams = opts.mergeParams;
+      router16.params = {};
+      router16.strict = opts.strict;
+      router16.stack = [];
+      return router16;
     }
-    Router16.prototype = function() {
+    Router17.prototype = function() {
     };
-    Router16.prototype.param = function param(name, fn) {
+    Router17.prototype.param = function param(name, fn) {
       if (!name) {
         throw new TypeError("argument name is required");
       }
@@ -20847,7 +20847,7 @@ var require_router = __commonJS({
       params.push(fn);
       return this;
     };
-    Router16.prototype.handle = function handle(req, res, callback) {
+    Router17.prototype.handle = function handle(req, res, callback) {
       if (!callback) {
         throw new TypeError("argument callback is required");
       }
@@ -20974,7 +20974,7 @@ var require_router = __commonJS({
         }
       }
     };
-    Router16.prototype.use = function use(handler) {
+    Router17.prototype.use = function use(handler) {
       let offset = 0;
       let path2 = "/";
       if (typeof handler !== "function") {
@@ -21007,7 +21007,7 @@ var require_router = __commonJS({
       }
       return this;
     };
-    Router16.prototype.route = function route(path2) {
+    Router17.prototype.route = function route(path2) {
       const route2 = new Route(path2);
       const layer = new Layer(path2, {
         sensitive: this.caseSensitive,
@@ -21022,7 +21022,7 @@ var require_router = __commonJS({
       return route2;
     };
     methods.concat("all").forEach(function(method) {
-      Router16.prototype[method] = function(path2) {
+      Router17.prototype[method] = function(path2) {
         const route = this.route(path2);
         route[method].apply(route, slice.call(arguments, 1));
         return this;
@@ -21205,13 +21205,13 @@ var require_application = __commonJS({
     var compileTrust = require_utils3().compileTrust;
     var resolve2 = __require("node:path").resolve;
     var once = require_once();
-    var Router16 = require_router();
+    var Router17 = require_router();
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var app2 = exports = module.exports = {};
     var trustProxyDefaultSymbol = "@@symbol:trust_proxy_default";
     app2.init = function init() {
-      var router15 = null;
+      var router16 = null;
       this.cache = /* @__PURE__ */ Object.create(null);
       this.engines = /* @__PURE__ */ Object.create(null);
       this.settings = /* @__PURE__ */ Object.create(null);
@@ -21220,13 +21220,13 @@ var require_application = __commonJS({
         configurable: true,
         enumerable: true,
         get: function getrouter() {
-          if (router15 === null) {
-            router15 = new Router16({
+          if (router16 === null) {
+            router16 = new Router17({
               caseSensitive: this.enabled("case sensitive routing"),
               strict: this.enabled("strict routing")
             });
           }
-          return router15;
+          return router16;
         }
       });
     };
@@ -21297,15 +21297,15 @@ var require_application = __commonJS({
       if (fns.length === 0) {
         throw new TypeError("app.use() requires a middleware function");
       }
-      var router15 = this.router;
+      var router16 = this.router;
       fns.forEach(function(fn2) {
         if (!fn2 || !fn2.handle || !fn2.set) {
-          return router15.use(path2, fn2);
+          return router16.use(path2, fn2);
         }
         debug(".use app under %s", path2);
         fn2.mountpath = path2;
         fn2.parent = this;
-        router15.use(path2, function mounted_app(req, res, next) {
+        router16.use(path2, function mounted_app(req, res, next) {
           var orig = req.app;
           fn2.handle(req, res, function(err) {
             Object.setPrototypeOf(req, orig.request);
@@ -23832,7 +23832,7 @@ var require_express = __commonJS({
     var EventEmitter = __require("node:events").EventEmitter;
     var mixin = require_merge_descriptors();
     var proto = require_application();
-    var Router16 = require_router();
+    var Router17 = require_router();
     var req = require_request();
     var res = require_response();
     exports = module.exports = createApplication;
@@ -23854,8 +23854,8 @@ var require_express = __commonJS({
     exports.application = proto;
     exports.request = req;
     exports.response = res;
-    exports.Route = Router16.Route;
-    exports.Router = Router16;
+    exports.Route = Router17.Route;
+    exports.Router = Router17;
     exports.json = bodyParser.json;
     exports.raw = bodyParser.raw;
     exports.static = require_serve_static();
@@ -72584,13 +72584,13 @@ var __dirname2 = dirname(__filename);
 (0, import_dotenv.config)({ path: resolve(__dirname2, "../../../.env") });
 
 // src/app.ts
-var import_express16 = __toESM(require_express2(), 1);
+var import_express17 = __toESM(require_express2(), 1);
 var import_cors = __toESM(require_lib3(), 1);
 var import_pino_http = __toESM(require_logger(), 1);
 var import_express_session = __toESM(require_express_session(), 1);
 
 // src/routes/index.ts
-var import_express15 = __toESM(require_express2(), 1);
+var import_express16 = __toESM(require_express2(), 1);
 
 // src/routes/health.ts
 var import_express = __toESM(require_express2(), 1);
@@ -77985,29 +77985,21 @@ async function buildDrinkDetail(drinkId) {
       const typeOptions = await db.select().from(drinkSlotTypeOptionsTable).where(eq(drinkSlotTypeOptionsTable.slotId, slot.id)).orderBy(drinkSlotTypeOptionsTable.sortOrder);
       let effectiveTypeOptions = typeOptions;
       if (slot.predefinedSlotId && templateTypeOptions.length > 0) {
-        const overrideMap = new Map(typeOptions.map((to) => [to.ingredientTypeId, to]));
-        const merged = [];
-        for (const tto of templateTypeOptions) {
-          const override = overrideMap.get(tto.ingredientTypeId);
-          if (override) {
-            merged.push(override);
-            overrideMap.delete(tto.ingredientTypeId);
-          } else {
-            merged.push({
-              id: 0,
-              slotId: slot.id,
-              ingredientTypeId: tto.ingredientTypeId,
-              isDefault: tto.isDefault,
-              sortOrder: tto.sortOrder,
-              processedQty: tto.processedQty,
-              producedQty: tto.producedQty,
-              unit: tto.unit,
-              extraCost: tto.extraCost
-            });
-          }
+        if (typeOptions.length > 0) {
+          effectiveTypeOptions = typeOptions;
+        } else {
+          effectiveTypeOptions = templateTypeOptions.map((tto) => ({
+            id: 0,
+            slotId: slot.id,
+            ingredientTypeId: tto.ingredientTypeId,
+            isDefault: tto.isDefault,
+            sortOrder: tto.sortOrder,
+            processedQty: tto.processedQty,
+            producedQty: tto.producedQty,
+            unit: tto.unit,
+            extraCost: tto.extraCost
+          }));
         }
-        merged.push(...overrideMap.values());
-        effectiveTypeOptions = merged.sort((a, b) => a.sortOrder - b.sortOrder);
       }
       if (effectiveTypeOptions.length === 0 && !slot.predefinedSlotId && slot.ingredientTypeId) {
         effectiveTypeOptions = [{
@@ -78069,7 +78061,7 @@ async function buildDrinkDetail(drinkId) {
               volumes
             };
           })
-        );
+        ).then((options2) => options2.filter((o) => o.typeName !== ""));
         return {
           ...effectiveSlot,
           slotStyle: "typed",
@@ -78321,10 +78313,64 @@ router3.put("/drinks/:id/slots", async (req, res) => {
   if (cupSizeMl !== void 0) {
     await db.update(drinksTable).set({ cupSizeMl }).where(eq(drinksTable.id, drinkId));
   }
-  await db.delete(drinkIngredientSlotsTable).where(eq(drinkIngredientSlotsTable.drinkId, drinkId));
-  if (rawSlots.length > 0) {
+  const typeIds = /* @__PURE__ */ new Set();
+  const volIds = /* @__PURE__ */ new Set();
+  rawSlots.forEach((s) => {
+    if (s.ingredientTypeId) typeIds.add(s.ingredientTypeId);
+    if (Array.isArray(s.slotTypeOptions)) {
+      s.slotTypeOptions.forEach((to) => {
+        if (to.ingredientTypeId) typeIds.add(to.ingredientTypeId);
+        if (Array.isArray(to.slotVolumes)) {
+          to.slotVolumes.forEach((sv) => {
+            if (sv.typeVolumeId) volIds.add(sv.typeVolumeId);
+          });
+        }
+      });
+    }
+    if (Array.isArray(s.slotVolumes)) {
+      s.slotVolumes.forEach((sv) => {
+        if (sv.typeVolumeId) volIds.add(sv.typeVolumeId);
+      });
+    }
+  });
+  const [validTypes, validVolumes] = await Promise.all([
+    typeIds.size > 0 ? db.select({ id: ingredientTypesTable.id }).from(ingredientTypesTable).where(and(inArray(ingredientTypesTable.id, Array.from(typeIds)), eq(ingredientTypesTable.isActive, true))) : Promise.resolve([]),
+    volIds.size > 0 ? db.select({ id: ingredientTypeVolumesTable.id, typeId: ingredientTypeVolumesTable.ingredientTypeId }).from(ingredientTypeVolumesTable).where(and(inArray(ingredientTypeVolumesTable.id, Array.from(volIds)), eq(ingredientTypeVolumesTable.isActive, true))) : Promise.resolve([])
+  ]);
+  const validTypeSet = new Set(validTypes.map((t) => t.id));
+  const validVolMap = new Map(validVolumes.map((v) => [v.id, v.typeId]));
+  const cleanedSlots = rawSlots.map((s) => {
+    const cleaned = { ...s };
+    if (cleaned.ingredientTypeId && !validTypeSet.has(cleaned.ingredientTypeId)) cleaned.ingredientTypeId = null;
+    if (Array.isArray(cleaned.slotTypeOptions)) {
+      cleaned.slotTypeOptions = cleaned.slotTypeOptions.filter((to) => validTypeSet.has(to.ingredientTypeId));
+      cleaned.slotTypeOptions.forEach((to) => {
+        if (Array.isArray(to.slotVolumes)) {
+          to.slotVolumes = to.slotVolumes.filter((sv) => {
+            const parentTypeId = validVolMap.get(sv.typeVolumeId);
+            return parentTypeId === to.ingredientTypeId;
+          });
+        }
+      });
+    }
+    if (Array.isArray(cleaned.slotVolumes)) {
+      cleaned.slotVolumes = cleaned.slotVolumes.filter((sv) => {
+        const parentTypeId = validVolMap.get(sv.typeVolumeId);
+        return !cleaned.ingredientTypeId || parentTypeId === cleaned.ingredientTypeId;
+      });
+    }
+    return cleaned;
+  });
+  const existingSlots = await db.select({ id: drinkIngredientSlotsTable.id }).from(drinkIngredientSlotsTable).where(eq(drinkIngredientSlotsTable.drinkId, drinkId));
+  if (existingSlots.length > 0) {
+    const slotIds = existingSlots.map((s) => s.id);
+    await db.delete(drinkSlotVolumesTable).where(inArray(drinkSlotVolumesTable.slotId, slotIds));
+    await db.delete(drinkSlotTypeOptionsTable).where(inArray(drinkSlotTypeOptionsTable.slotId, slotIds));
+    await db.delete(drinkIngredientSlotsTable).where(eq(drinkIngredientSlotsTable.drinkId, drinkId));
+  }
+  if (cleanedSlots.length > 0) {
     const insertedSlots = await db.insert(drinkIngredientSlotsTable).values(
-      rawSlots.map((s, i) => ({
+      cleanedSlots.map((s, i) => ({
         drinkId,
         ingredientId: s.ingredientId ?? null,
         ingredientTypeId: s.ingredientTypeId ?? null,
@@ -78341,8 +78387,8 @@ router3.put("/drinks/:id/slots", async (req, res) => {
     ).returning();
     const slotTypeOptionRows = [];
     const slotVolumeRows = [];
-    for (let i = 0; i < rawSlots.length; i++) {
-      const s = rawSlots[i];
+    for (let i = 0; i < cleanedSlots.length; i++) {
+      const s = cleanedSlots[i];
       const slot = insertedSlots[i];
       if (Array.isArray(s.slotTypeOptions) && s.slotTypeOptions.length > 0) {
         for (let j = 0; j < s.slotTypeOptions.length; j++) {
@@ -80131,23 +80177,222 @@ router13.get("/discounts/validate/:code", async (req, res) => {
 });
 var discounts_default = router13;
 
-// src/routes/index.ts
+// src/routes/customers.ts
+var import_express15 = __toESM(require_express2(), 1);
+init_src();
+init_drizzle_orm();
+import { createHash } from "crypto";
 var router14 = (0, import_express15.Router)();
-router14.use(health_default);
-router14.use(auth_default);
-router14.use(drinks_default);
-router14.use(ingredients_default);
-router14.use(orders_default);
-router14.use(stock_default);
-router14.use(dashboard_default);
-router14.use(catalog_default);
-router14.use(drink_categories_default);
-router14.use(kitchen_stations_default);
-router14.use(settings_default);
-router14.use(predefined_slots_default);
-router14.use(users_default);
-router14.use(discounts_default);
-router14.get("/events", (req, res) => {
+async function ensureCustomersTable() {
+  try {
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS customers (
+        id            SERIAL PRIMARY KEY,
+        name          TEXT NOT NULL,
+        phone         TEXT NOT NULL UNIQUE,
+        email         TEXT,
+        password_hash TEXT NOT NULL,
+        points        INTEGER NOT NULL DEFAULT 0,
+        total_spent   NUMERIC(10,2) NOT NULL DEFAULT 0,
+        visit_count   INTEGER NOT NULL DEFAULT 0,
+        notes         TEXT,
+        is_active     BOOLEAN NOT NULL DEFAULT TRUE,
+        created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+    console.log("[customers] Table ready");
+  } catch (e) {
+    console.error("[customers] Table init error:", e);
+  }
+}
+ensureCustomersTable();
+function hashPassword(password) {
+  return createHash("sha256").update(`spacca_salt_${password}_2024`).digest("hex");
+}
+function getCustomerId(req) {
+  return req.session?.customerId ?? null;
+}
+router14.post("/customers/register", async (req, res) => {
+  const { name, phone, email: email3, password } = req.body ?? {};
+  if (!name || typeof name !== "string" || name.trim().length < 2) {
+    res.status(400).json({ error: "Name must be at least 2 characters" });
+    return;
+  }
+  if (!phone || typeof phone !== "string" || phone.trim().length < 4) {
+    res.status(400).json({ error: "Phone number is required" });
+    return;
+  }
+  if (!password || typeof password !== "string" || password.length < 4) {
+    res.status(400).json({ error: "Password must be at least 4 characters" });
+    return;
+  }
+  const cleanPhone = phone.trim();
+  const cleanName = name.trim();
+  const cleanEmail = typeof email3 === "string" && email3.trim() ? email3.trim() : null;
+  try {
+    const existing = await db.execute(
+      sql`SELECT id FROM customers WHERE phone = ${cleanPhone} LIMIT 1`
+    );
+    if (existing.rows.length > 0) {
+      res.status(409).json({ error: "Phone number already registered" });
+      return;
+    }
+    const passwordHash = hashPassword(password);
+    const result = await db.execute(sql`
+      INSERT INTO customers (name, phone, email, password_hash)
+      VALUES (${cleanName}, ${cleanPhone}, ${cleanEmail}, ${passwordHash})
+      RETURNING id, name, phone, email, points, total_spent, visit_count, created_at
+    `);
+    const customer = result.rows[0];
+    req.session.customerId = customer.id;
+    req.session.save(() => res.status(201).json({ customer }));
+  } catch (e) {
+    console.error("[customers/register] error:", e?.message);
+    res.status(500).json({ error: "Registration failed: " + (e?.message ?? "unknown") });
+  }
+});
+router14.post("/customers/login", async (req, res) => {
+  const { phone, password } = req.body ?? {};
+  if (!phone || !password) {
+    res.status(400).json({ error: "Phone and password are required" });
+    return;
+  }
+  const passwordHash = hashPassword(String(password));
+  try {
+    const result = await db.execute(sql`
+      SELECT id, name, phone, email, points, total_spent, visit_count, created_at
+      FROM customers
+      WHERE phone = ${String(phone).trim()} AND password_hash = ${passwordHash} AND is_active = TRUE
+      LIMIT 1
+    `);
+    const customer = result.rows[0];
+    if (!customer) {
+      res.status(401).json({ error: "Invalid phone or password" });
+      return;
+    }
+    req.session.customerId = customer.id;
+    req.session.save(() => res.json({ customer }));
+  } catch (e) {
+    console.error("[customers/login] error:", e?.message);
+    res.status(500).json({ error: "Login failed" });
+  }
+});
+router14.post("/customers/logout", async (req, res) => {
+  delete req.session.customerId;
+  req.session.save(() => res.sendStatus(204));
+});
+router14.get("/customers/me", async (req, res) => {
+  const customerId = getCustomerId(req);
+  if (!customerId) {
+    res.status(401).json({ error: "Not logged in" });
+    return;
+  }
+  try {
+    const result = await db.execute(sql`
+      SELECT id, name, phone, email, points, total_spent, visit_count, notes, created_at
+      FROM customers WHERE id = ${customerId} AND is_active = TRUE LIMIT 1
+    `);
+    const customer = result.rows[0];
+    if (!customer) {
+      res.status(401).json({ error: "Customer not found" });
+      return;
+    }
+    res.json({ customer });
+  } catch (e) {
+    console.error("[customers/me] error:", e?.message);
+    res.status(500).json({ error: "Failed to get profile" });
+  }
+});
+router14.patch("/customers/me", async (req, res) => {
+  const customerId = getCustomerId(req);
+  if (!customerId) {
+    res.status(401).json({ error: "Not logged in" });
+    return;
+  }
+  const { name, email: email3 } = req.body ?? {};
+  try {
+    const cleanName = typeof name === "string" && name.trim() ? name.trim() : null;
+    const cleanEmail = typeof email3 === "string" && email3.trim() ? email3.trim() : null;
+    const result = await db.execute(sql`
+      UPDATE customers
+      SET
+        name       = COALESCE(${cleanName}, name),
+        email      = CASE WHEN ${cleanEmail !== void 0} THEN ${cleanEmail} ELSE email END,
+        updated_at = NOW()
+      WHERE id = ${customerId}
+      RETURNING id, name, phone, email, points, total_spent, visit_count, notes, created_at
+    `);
+    const customer = result.rows[0];
+    res.json({ customer });
+  } catch (e) {
+    console.error("[customers/me PATCH] error:", e?.message);
+    res.status(500).json({ error: "Failed to update profile" });
+  }
+});
+router14.get("/customers/me/orders", async (req, res) => {
+  const customerId = getCustomerId(req);
+  if (!customerId) {
+    res.status(401).json({ error: "Not logged in" });
+    return;
+  }
+  try {
+    const custResult = await db.execute(sql`
+      SELECT name FROM customers WHERE id = ${customerId} LIMIT 1
+    `);
+    const cust = custResult.rows[0];
+    if (!cust) {
+      res.json({ orders: [] });
+      return;
+    }
+    const result = await db.execute(sql`
+      SELECT o.id, o.order_number, o.status, o.total, o.payment_method, o.created_at,
+             COUNT(oi.id)::int AS item_count
+      FROM orders o
+      LEFT JOIN order_items oi ON oi.order_id = o.id
+      WHERE o.customer_name ILIKE ${cust.name}
+      GROUP BY o.id
+      ORDER BY o.created_at DESC
+      LIMIT 20
+    `);
+    res.json({ orders: result.rows });
+  } catch (e) {
+    console.error("[customers/me/orders] error:", e?.message);
+    res.status(500).json({ error: "Failed to get order history" });
+  }
+});
+router14.get("/admin/customers", async (req, res) => {
+  try {
+    const result = await db.execute(sql`
+      SELECT id, name, phone, email, points, total_spent, visit_count, is_active, created_at
+      FROM customers ORDER BY created_at DESC
+    `);
+    res.json({ customers: result.rows });
+  } catch (e) {
+    console.error("[admin/customers] error:", e?.message);
+    res.status(500).json({ error: "Failed to list customers" });
+  }
+});
+var customers_default = router14;
+
+// src/routes/index.ts
+var router15 = (0, import_express16.Router)();
+router15.use(health_default);
+router15.use(auth_default);
+router15.use(drinks_default);
+router15.use(ingredients_default);
+router15.use(orders_default);
+router15.use(stock_default);
+router15.use(dashboard_default);
+router15.use(catalog_default);
+router15.use(drink_categories_default);
+router15.use(kitchen_stations_default);
+router15.use(settings_default);
+router15.use(predefined_slots_default);
+router15.use(users_default);
+router15.use(discounts_default);
+router15.use(customers_default);
+router15.get("/events", (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache, no-transform");
   res.setHeader("X-Accel-Buffering", "no");
@@ -80156,7 +80401,7 @@ router14.get("/events", (req, res) => {
   res.write("event: connected\ndata: {}\n\n");
   addSseClient(res);
 });
-var routes_default = router14;
+var routes_default = router15;
 
 // src/lib/logger.ts
 var import_pino = __toESM(require_pino(), 1);
@@ -80177,7 +80422,7 @@ var logger = (0, import_pino.default)({
 });
 
 // src/app.ts
-var app = (0, import_express16.default)();
+var app = (0, import_express17.default)();
 app.set("json replacer", (_key, value) => {
   if (value instanceof Date) return value.toISOString();
   return value;
@@ -80203,8 +80448,8 @@ app.use(
 );
 app.set("trust proxy", 1);
 app.use((0, import_cors.default)({ credentials: true, origin: true }));
-app.use(import_express16.default.json());
-app.use(import_express16.default.urlencoded({ extended: true }));
+app.use(import_express17.default.json());
+app.use(import_express17.default.urlencoded({ extended: true }));
 app.use(
   (0, import_express_session.default)({
     secret: process.env.SESSION_SECRET ?? "spacca-dev-secret",
@@ -80218,7 +80463,7 @@ app.use(
     }
   })
 );
-app.use("/uploads", import_express16.default.static("uploads"));
+app.use("/uploads", import_express17.default.static("uploads"));
 app.use("/api", routes_default);
 var app_default = app;
 

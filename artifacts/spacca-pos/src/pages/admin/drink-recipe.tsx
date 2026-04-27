@@ -116,7 +116,7 @@ export default function DrinkRecipe() {
   const drinkId = parseInt(params.id ?? "0");
   const { toast } = useToast();
 
-  const { data: drink, isLoading: isLoadingDrink, mutate } = useGetDrink(drinkId);
+  const { data: drink, isLoading: isLoadingDrink, refetch: refetchDrink } = useGetDrink(drinkId);
   const { data: ingredients } = useListIngredients({ active: true });
 
   const [slots, setSlots] = useState<SlotDraft[]>([]);
@@ -545,7 +545,7 @@ export default function DrinkRecipe() {
       if (!resp.ok) throw new Error(await resp.text());
       toast({ title: "Recipe saved" });
       setIsDirty(false);
-      mutate?.();
+      refetchDrink?.();
     } catch (e: any) {
       toast({ variant: "destructive", title: "Failed to save", description: e.message });
     } finally {

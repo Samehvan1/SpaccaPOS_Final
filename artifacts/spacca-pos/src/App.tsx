@@ -25,6 +25,9 @@ import KitchenStationsAdmin from "@/pages/admin/kitchen-stations";
 import AdminUsers from "@/pages/admin/users";
 import DiscountsAdmin from "@/pages/admin/discounts";
 import NotFound from "@/pages/not-found";
+import CustomerAuth from "@/pages/customer-auth";
+import CustomerProfile from "@/pages/customer-profile";
+import { CustomerAuthProvider } from "@/hooks/use-customer-auth";
 
 // PWA Helper to update title for "Add to Home Screen"
 function PWAContextHandler() {
@@ -239,6 +242,14 @@ function AppRoutes() {
         </MainLayout>
       </Route>
 
+      <Route path="/customer/auth">
+        <CustomerAuth />
+      </Route>
+
+      <Route path="/customer/profile">
+        <CustomerProfile />
+      </Route>
+
       <Route>
         <MainLayout>
           <NotFound />
@@ -254,13 +265,15 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
           <AuthProvider>
-            <SettingsProvider>
-              <TooltipProvider>
-                <PWAContextHandler />
-                <AppRoutes />
-                <Toaster />
-              </TooltipProvider>
-            </SettingsProvider>
+            <CustomerAuthProvider>
+              <SettingsProvider>
+                <TooltipProvider>
+                  <PWAContextHandler />
+                  <AppRoutes />
+                  <Toaster />
+                </TooltipProvider>
+              </SettingsProvider>
+            </CustomerAuthProvider>
           </AuthProvider>
         </WouterRouter>
       </QueryClientProvider>
