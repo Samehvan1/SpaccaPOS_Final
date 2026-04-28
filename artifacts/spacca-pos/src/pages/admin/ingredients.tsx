@@ -23,6 +23,7 @@ type IngredientType = typeof INGREDIENT_TYPES[number];
 type Ingredient = {
   id: number; name: string; ingredientType: IngredientType; unit: string;
   costPerUnit: number; stockQuantity: number; lowStockThreshold: number; isActive: boolean;
+  linkedTypeCount?: number; linkedProductCount?: number;
 };
 type IngredientOption = {
   id: number; ingredientId: number; label: string; extraCost: number; processedQty: number;
@@ -1122,6 +1123,8 @@ function InventoryTab() {
                   <TableHead>Stock</TableHead>
                   <TableHead>Low Alert</TableHead>
                   <TableHead>Cost/Unit</TableHead>
+                  <TableHead className="text-center">Types</TableHead>
+                  <TableHead className="text-center">Products</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -1143,6 +1146,12 @@ function InventoryTab() {
                       </TableCell>
                       <TableCell className="text-muted-foreground">{ing.lowStockThreshold} {ing.unit}</TableCell>
                       <TableCell>{fmt(ing.costPerUnit, 4)}</TableCell>
+                      <TableCell className="text-center">
+                        <Badge variant="outline" className="font-mono">{ing.linkedTypeCount ?? 0}</Badge>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Badge variant="outline" className="font-mono">{ing.linkedProductCount ?? 0}</Badge>
+                      </TableCell>
                       <TableCell>
                         <Badge variant={ing.isActive ? "default" : "secondary"}>{ing.isActive ? "Active" : "Inactive"}</Badge>
                       </TableCell>

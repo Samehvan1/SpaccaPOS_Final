@@ -265,6 +265,8 @@ export const ListIngredientsResponseItem = zod.object({
   stockQuantity: zod.number(),
   lowStockThreshold: zod.number(),
   isActive: zod.boolean(),
+  linkedTypeCount: zod.number().optional(),
+  linkedProductCount: zod.number().optional(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
@@ -321,6 +323,8 @@ export const GetIngredientResponse = zod
     stockQuantity: zod.number(),
     lowStockThreshold: zod.number(),
     isActive: zod.boolean(),
+    linkedTypeCount: zod.number().optional(),
+    linkedProductCount: zod.number().optional(),
     createdAt: zod.string(),
     updatedAt: zod.string(),
   })
@@ -392,6 +396,8 @@ export const UpdateIngredientResponse = zod.object({
   stockQuantity: zod.number(),
   lowStockThreshold: zod.number(),
   isActive: zod.boolean(),
+  linkedTypeCount: zod.number().optional(),
+  linkedProductCount: zod.number().optional(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
@@ -486,6 +492,8 @@ export const RestockIngredientResponse = zod.object({
   stockQuantity: zod.number(),
   lowStockThreshold: zod.number(),
   isActive: zod.boolean(),
+  linkedTypeCount: zod.number().optional(),
+  linkedProductCount: zod.number().optional(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
@@ -912,6 +920,8 @@ export const GetLowStockIngredientsResponseItem = zod.object({
   stockQuantity: zod.number(),
   lowStockThreshold: zod.number(),
   isActive: zod.boolean(),
+  linkedTypeCount: zod.number().optional(),
+  linkedProductCount: zod.number().optional(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });

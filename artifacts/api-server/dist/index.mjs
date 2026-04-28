@@ -76871,6 +76871,8 @@ var ListIngredientsResponseItem = objectType({
   stockQuantity: numberType(),
   lowStockThreshold: numberType(),
   isActive: booleanType(),
+  linkedTypeCount: numberType().optional(),
+  linkedProductCount: numberType().optional(),
   createdAt: stringType(),
   updatedAt: stringType()
 });
@@ -76917,6 +76919,8 @@ var GetIngredientResponse = objectType({
   stockQuantity: numberType(),
   lowStockThreshold: numberType(),
   isActive: booleanType(),
+  linkedTypeCount: numberType().optional(),
+  linkedProductCount: numberType().optional(),
   createdAt: stringType(),
   updatedAt: stringType()
 }).and(
@@ -76979,6 +76983,8 @@ var UpdateIngredientResponse = objectType({
   stockQuantity: numberType(),
   lowStockThreshold: numberType(),
   isActive: booleanType(),
+  linkedTypeCount: numberType().optional(),
+  linkedProductCount: numberType().optional(),
   createdAt: stringType(),
   updatedAt: stringType()
 });
@@ -77052,6 +77058,8 @@ var RestockIngredientResponse = objectType({
   stockQuantity: numberType(),
   lowStockThreshold: numberType(),
   isActive: booleanType(),
+  linkedTypeCount: numberType().optional(),
+  linkedProductCount: numberType().optional(),
   createdAt: stringType(),
   updatedAt: stringType()
 });
@@ -77425,6 +77433,8 @@ var GetLowStockIngredientsResponseItem = objectType({
   stockQuantity: numberType(),
   lowStockThreshold: numberType(),
   isActive: booleanType(),
+  linkedTypeCount: numberType().optional(),
+  linkedProductCount: numberType().optional(),
   createdAt: stringType(),
   updatedAt: stringType()
 });
@@ -78692,14 +78702,27 @@ router4.get("/ingredients", async (req, res) => {
   if (params.success && params.data.type) {
     filtered = ingredients.filter((i) => i.ingredientType === params.data.type);
   }
+  const [allTypes, allSlots, allDrinks] = await Promise.all([
+    db.select({ id: ingredientTypesTable.id, inventoryIngredientId: ingredientTypesTable.inventoryIngredientId }).from(ingredientTypesTable),
+    db.select({ id: drinkIngredientSlotsTable.id, ingredientId: drinkIngredientSlotsTable.ingredientId, drinkId: drinkIngredientSlotsTable.drinkId }).from(drinkIngredientSlotsTable),
+    db.select({ id: drinksTable.id, cupIngredientId: drinksTable.cupIngredientId }).from(drinksTable)
+  ]);
   res.json(
     ListIngredientsResponse2.parse(
-      serializeDates(filtered.map((i) => ({
-        ...i,
-        costPerUnit: parseFloat(i.costPerUnit),
-        stockQuantity: parseFloat(i.stockQuantity),
-        lowStockThreshold: parseFloat(i.lowStockThreshold)
-      })))
+      serializeDates(filtered.map((i) => {
+        const typeCount = allTypes.filter((t) => t.inventoryIngredientId === i.id).length;
+        const drinksFromSlots = allSlots.filter((s) => s.ingredientId === i.id).map((s) => s.drinkId);
+        const drinksFromCups = allDrinks.filter((d) => d.cupIngredientId === i.id).map((d) => d.id);
+        const uniqueDrinkIds = /* @__PURE__ */ new Set([...drinksFromSlots, ...drinksFromCups]);
+        return {
+          ...i,
+          costPerUnit: parseFloat(i.costPerUnit),
+          stockQuantity: parseFloat(i.stockQuantity),
+          lowStockThreshold: parseFloat(i.lowStockThreshold),
+          linkedTypeCount: typeCount,
+          linkedProductCount: uniqueDrinkIds.size
+        };
+      }))
     )
   );
 });

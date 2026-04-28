@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq, and } from "drizzle-orm";
-import { db, ingredientsTable, ingredientOptionsTable, stockMovementsTable } from "@workspace/db";
+import { db, ingredientsTable, ingredientOptionsTable, stockMovementsTable, ingredientTypesTable, drinkIngredientSlotsTable, drinksTable } from "@workspace/db";
 import { serializeDates } from "../lib/serialize";
 import {
   ListIngredientsQueryParams,
@@ -70,14 +70,31 @@ router.get("/ingredients", async (req, res): Promise<void> => {
     filtered = ingredients.filter((i) => i.ingredientType === params.data.type);
   }
 
+  const [allTypes, allSlots, allDrinks] = await Promise.all([
+    db.select({ id: ingredientTypesTable.id, inventoryIngredientId: ingredientTypesTable.inventoryIngredientId }).from(ingredientTypesTable),
+    db.select({ id: drinkIngredientSlotsTable.id, ingredientId: drinkIngredientSlotsTable.ingredientId, drinkId: drinkIngredientSlotsTable.drinkId }).from(drinkIngredientSlotsTable),
+    db.select({ id: drinksTable.id, cupIngredientId: drinksTable.cupIngredientId }).from(drinksTable),
+  ]);
+
   res.json(
     ListIngredientsResponse.parse(
-      serializeDates(filtered.map((i) => ({
-        ...i,
-        costPerUnit: parseFloat(i.costPerUnit),
-        stockQuantity: parseFloat(i.stockQuantity),
-        lowStockThreshold: parseFloat(i.lowStockThreshold),
-      })))
+      serializeDates(filtered.map((i) => {
+        const typeCount = allTypes.filter(t => t.inventoryIngredientId === i.id).length;
+        
+        // Product count: unique drinks that use this ingredient either as a slot or as a cup
+        const drinksFromSlots = allSlots.filter(s => s.ingredientId === i.id).map(s => s.drinkId);
+        const drinksFromCups = allDrinks.filter(d => d.cupIngredientId === i.id).map(d => d.id);
+        const uniqueDrinkIds = new Set([...drinksFromSlots, ...drinksFromCups]);
+        
+        return {
+          ...i,
+          costPerUnit: parseFloat(i.costPerUnit),
+          stockQuantity: parseFloat(i.stockQuantity),
+          lowStockThreshold: parseFloat(i.lowStockThreshold),
+          linkedTypeCount: typeCount,
+          linkedProductCount: uniqueDrinkIds.size,
+        };
+      }))
     )
   );
 });

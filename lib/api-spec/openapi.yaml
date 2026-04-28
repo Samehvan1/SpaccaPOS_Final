@@ -988,6 +988,10 @@ components:
           type: number
         isActive:
           type: boolean
+        linkedTypeCount:
+          type: integer
+        linkedProductCount:
+          type: integer
         createdAt:
           type: string
         updatedAt:
