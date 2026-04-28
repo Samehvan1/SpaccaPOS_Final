@@ -13,7 +13,9 @@ import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft, Plus, Search, Edit, Trash2, Link2, Star, StarOff, ChevronRight, Package, Tag, Layers, FlaskConical, Check, X, Droplet, Droplets, RefreshCw, CheckCircle2 } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { ArrowLeft, Plus, Search, Edit, Trash2, Link2, Star, StarOff, ChevronRight, Package, Tag, Layers, FlaskConical, Check, X, Droplet, Droplets, RefreshCw, CheckCircle2, ChevronsUpDown } from "lucide-react";
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 
@@ -188,6 +190,7 @@ function TypesTab({ inventoryItems }: { inventoryItems: Ingredient[] }) {
   const [extraCost, setExtraCost] = useState("0");
   const [color, setColor] = useState("#000000");
   const [saving, setSaving] = useState(false);
+  const [openInventorySearch, setOpenInventorySearch] = useState(false);
 
   // Volume config dialog
   const [volTypeId, setVolTypeId] = useState<number | null>(null);
@@ -556,17 +559,63 @@ function TypesTab({ inventoryItems }: { inventoryItems: Ingredient[] }) {
             </div>
             <div className="grid gap-1.5">
               <Label>Inventory Item (for stock deduction)</Label>
-              <Select value={inventoryIngId} onValueChange={setInventoryIngId}>
-                <SelectTrigger><SelectValue placeholder="Link to inventory item…" /></SelectTrigger>
-                <SelectContent className="max-h-[250px]">
-                  <SelectItem value="none">No link</SelectItem>
-                  {inventoryItems.map(i => (
-                    <SelectItem key={i.id} value={String(i.id)}>
-                      {i.name} <span className="text-muted-foreground">({i.unit})</span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover open={openInventorySearch} onOpenChange={setOpenInventorySearch}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={openInventorySearch}
+                    className="w-full justify-between font-normal h-10"
+                  >
+                    {inventoryIngId !== "none"
+                      ? inventoryItems.find((i) => String(i.id) === inventoryIngId)?.name
+                      : "No link"}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[300px] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search inventory item..." />
+                    <CommandList>
+                      <CommandEmpty>No item found.</CommandEmpty>
+                      <CommandGroup>
+                        <CommandItem
+                          value="none"
+                          onSelect={() => {
+                            setInventoryIngId("none");
+                            setOpenInventorySearch(false);
+                          }}
+                        >
+                          <Check
+                            className={`mr-2 h-4 w-4 ${inventoryIngId === "none" ? "opacity-100" : "opacity-0"}`}
+                          />
+                          No link
+                        </CommandItem>
+                        {inventoryItems
+                          .sort((a, b) => a.name.localeCompare(b.name))
+                          .map((i) => (
+                          <CommandItem
+                            key={i.id}
+                            value={i.name}
+                            onSelect={() => {
+                              setInventoryIngId(String(i.id));
+                              setOpenInventorySearch(false);
+                            }}
+                          >
+                            <Check
+                              className={`mr-2 h-4 w-4 ${inventoryIngId === String(i.id) ? "opacity-100" : "opacity-0"}`}
+                            />
+                            <div className="flex flex-col">
+                              <span>{i.name}</span>
+                              <span className="text-[10px] text-muted-foreground capitalize">{i.ingredientType} · {i.unit}</span>
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
             <div className="grid grid-cols-4 gap-3">
               <div className="grid gap-1.5">
@@ -980,8 +1029,9 @@ function VolumesTab() {
 // ── Inventory Tab (existing, preserved) ──────────────────────────────────
 
 function InventoryTab() {
+  const [showInactive, setShowInactive] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const { data: ingredients, isLoading, refetch } = useListIngredients();
+  const { data: ingredients, isLoading, refetch } = useListIngredients(showInactive ? {} : { active: true });
   const { toast } = useToast();
 
   const [mode, setMode] = useState<"add" | "edit" | null>(null);
@@ -1108,9 +1158,21 @@ function InventoryTab() {
 
       <Card>
         <CardHeader className="pb-4">
-          <div className="relative max-w-sm">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Search ingredients..." className="pl-9" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+          <div className="flex items-center justify-between gap-4">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input placeholder="Search ingredients..." className="pl-9" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+            </div>
+            <div className="flex items-center gap-2 px-3 py-2 rounded-md border bg-muted/20 h-10">
+              <Switch 
+                id="show-inactive-inventory" 
+                checked={showInactive} 
+                onCheckedChange={setShowInactive} 
+              />
+              <Label htmlFor="show-inactive-inventory" className="text-xs font-medium cursor-pointer">
+                Show Inactive
+              </Label>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
