@@ -20,6 +20,9 @@ export interface Drink {
   prepTimeSeconds: number;
   /** @nullable */
   cupSizeMl?: number | null;
+  /** @nullable */
+  cupIngredientId?: number | null;
+  isCustomizable?: boolean;
   kitchenStation?: string;
   categoryId?: number;
   sortOrder?: number;

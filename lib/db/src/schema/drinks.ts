@@ -31,6 +31,8 @@ export const drinksTable = pgTable("drinks", {
   isActive: boolean("is_active").notNull().default(true),
   prepTimeSeconds: integer("prep_time_seconds").notNull().default(180),
   cupSizeMl: integer("cup_size_ml"),
+  cupIngredientId: integer("cup_ingredient_id").references(() => ingredientsTable.id, { onDelete: "set null" }),
+  isCustomizable: boolean("is_customizable").notNull().default(true),
   kitchenStation: text("kitchen_station").notNull().default("main"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),

@@ -103,7 +103,7 @@ export default function ReportsPage() {
   const { data: recentOrders, isLoading: loadingRecentOrders } = useListOrders({ 
     status: "completed", 
     limit: 10,
-    startDate: format(subDays(new Date(), period.days), "yyyy-MM-dd")
+    startDate: format(subDays(new Date(), period.days - 1), "yyyy-MM-dd")
   });
 
   const dashTotalRevenue = dashboardCategorySales?.reduce((s, c) => s + c.totalRevenue, 0) ?? 0;

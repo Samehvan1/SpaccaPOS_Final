@@ -129,6 +129,8 @@ export default function DrinkRecipe() {
   const [allTypes, setAllTypes] = useState<IngType[]>([]);
   const [typeVolumeCache, setTypeVolumeCache] = useState<Record<number, TypeVolume[]>>({});
   const [optionsCache, setOptionsCache] = useState<Record<number, any[]>>({});
+  const [isCustomizable, setIsCustomizable] = useState<boolean>(true);
+  const [cupIngredientId, setCupIngredientId] = useState<string>("none");
 
   useEffect(() => {
     api("/api/catalog/predefined-slots").then(setPredefinedSlots).catch(() => {});
@@ -157,6 +159,8 @@ export default function DrinkRecipe() {
   useEffect(() => {
     if (!drink) return;
     setCupSizeMl(drink.cupSizeMl != null ? String(drink.cupSizeMl) : "");
+    setIsCustomizable(drink.isCustomizable ?? true);
+    setCupIngredientId(drink.cupIngredientId != null ? String(drink.cupIngredientId) : "none");
 
     const slotDrafts: SlotDraft[] = (drink.slots ?? []).map((s: any) => {
       if (s.slotStyle === "typed") {
@@ -535,8 +539,12 @@ export default function DrinkRecipe() {
         };
       });
 
-      const qs = cupSizeMl ? `?cupSizeMl=${parseInt(cupSizeMl)}` : "";
-      const resp = await fetch(`/api/drinks/${drinkId}/slots${qs}`, {
+      const qsParams = new URLSearchParams();
+      if (cupSizeMl) qsParams.append("cupSizeMl", String(parseInt(cupSizeMl)));
+      if (cupIngredientId !== "none") qsParams.append("cupIngredientId", cupIngredientId);
+      qsParams.append("isCustomizable", String(isCustomizable));
+
+      const resp = await fetch(`/api/drinks/${drinkId}/slots?${qsParams.toString()}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -587,7 +595,9 @@ export default function DrinkRecipe() {
                 {isDirty && <Badge variant="outline" className="text-amber-600 border-amber-400">Unsaved</Badge>}
               </div>
               <p className="text-sm text-muted-foreground mt-0.5">
-                Define ingredient slots. Use <strong>Catalog</strong> slots for the new type+volume system, or <strong>Legacy</strong> for old-style inventory slots.
+                {isCustomizable 
+                  ? "Define ingredient slots. Use Catalog slots for the new type+volume system, or Legacy for old-style inventory slots."
+                  : "Define the fixed recipe for this Finished Good. These items will be automatically deducted from stock on sale."}
               </p>
             </div>
           </div>
@@ -605,12 +615,45 @@ export default function DrinkRecipe() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-end gap-4 max-w-xs">
-              <div className="flex-1 grid gap-1.5">
-                <Label htmlFor="cup-size">Cup Size (ml)</Label>
-                <Input id="cup-size" type="number" step="10" placeholder="e.g. 250" value={cupSizeMl} onChange={e => { setCupSizeMl(e.target.value); mark(); }} />
+            <div className="flex flex-col gap-6">
+              <div className="flex items-center gap-8 border-b pb-4">
+                <div className="flex items-center gap-3">
+                  <Switch id="is-customizable" checked={isCustomizable} onCheckedChange={v => { setIsCustomizable(v); mark(); }} />
+                  <div className="grid gap-0.5">
+                    <Label htmlFor="is-customizable" className="font-bold cursor-pointer">Customizable Drink</Label>
+                    <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">
+                      {isCustomizable ? "Customizable in POS" : "Finished Good (Sold as is)"}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex-1 h-px bg-muted" />
               </div>
-              <p className="text-xs text-muted-foreground pb-2.5 leading-snug">Required for dynamic fill slots.</p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid gap-2">
+                  <Label htmlFor="cup-size" className="text-xs font-bold uppercase text-muted-foreground tracking-wider">Cup Size (ml)</Label>
+                  <div className="flex items-center gap-3">
+                    <Input id="cup-size" type="number" step="10" placeholder="e.g. 250" value={cupSizeMl} onChange={e => { setCupSizeMl(e.target.value); mark(); }} className="w-32 h-10 font-bold" />
+                    <p className="text-[11px] text-muted-foreground leading-tight italic">Required for dynamic fill slots.</p>
+                  </div>
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="cup-ingredient" className="text-xs font-bold uppercase text-muted-foreground tracking-wider">Default Cup (Inventory)</Label>
+                  <Select value={cupIngredientId} onValueChange={(v) => { setCupIngredientId(v); mark(); }}>
+                    <SelectTrigger id="cup-ingredient" className="h-10">
+                      <SelectValue placeholder="Select a cup..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No Cup (No stock deduction)</SelectItem>
+                      {(ingredients ?? []).filter(i => (i.ingredientType as string) === "cup").map(i => (
+                        <SelectItem key={i.id} value={String(i.id)}>{i.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-[11px] text-muted-foreground leading-tight">Selecting a cup will deduct 1 unit from inventory per sale.</p>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -618,7 +661,9 @@ export default function DrinkRecipe() {
         {/* Slots */}
         <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
-            <h2 className="font-semibold text-lg">Ingredient Slots ({slots.length})</h2>
+            <h2 className="font-semibold text-lg">
+              {isCustomizable ? "Ingredient Slots" : "Fixed Recipe Ingredients"} ({slots.length})
+            </h2>
             <div className="flex gap-2 items-center">
               <div className="flex gap-1.5 items-center mr-2 pr-2 border-r">
                 <Select onValueChange={(v) => v !== "none" && addFromTemplate(parseInt(v))}>

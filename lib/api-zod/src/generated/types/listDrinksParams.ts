@@ -9,4 +9,5 @@
 export type ListDrinksParams = {
   category?: string;
   active?: boolean;
+  includeSlots?: boolean;
 };

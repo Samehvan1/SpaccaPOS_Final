@@ -439,6 +439,27 @@ export async function calculateDrinkData(drinkId: number, selections: any[]) {
       }
     }
   }
+  
+  // --- Cup Deduction ---
+  if (drink.cupIngredientId) {
+    const [cupIng] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, drink.cupIngredientId));
+    if (cupIng) {
+       customizations.push({
+         ingredientId: cupIng.id,
+         optionId: null,
+         typeVolumeId: null,
+         ingredientTypeId: null,
+         consumedQty: 1, // Always 1 cup
+         producedQty: 0,
+         color: null,
+         addedCost: 0,
+         slotLabel: "Packaging",
+         optionLabel: cupIng.name,
+         baristaSortOrder: 100, // Show at the bottom
+         customerSortOrder: 100,
+       });
+    }
+  }
 
   const basePrice = parseFloat(drink.basePrice);
   return {

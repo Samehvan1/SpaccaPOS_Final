@@ -17,5 +17,6 @@ export const CreateIngredientBodyIngredientType = {
   sweetener: "sweetener",
   topping: "topping",
   base: "base",
+  cup: "cup",
   other: "other",
 } as const;

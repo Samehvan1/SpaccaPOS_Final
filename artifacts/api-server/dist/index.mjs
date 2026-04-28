@@ -55517,7 +55517,7 @@ var init_ingredients = __esm({
       name: text("name").notNull(),
       slug: text("slug").notNull().unique(),
       ingredientType: text("ingredient_type", {
-        enum: ["coffee", "milk", "syrup", "sauce", "sweetener", "topping", "base", "other"]
+        enum: ["coffee", "milk", "syrup", "sauce", "sweetener", "topping", "base", "cup", "other"]
       }).notNull(),
       unit: text("unit").notNull(),
       costPerUnit: numeric("cost_per_unit", { precision: 10, scale: 4 }).notNull(),
@@ -55628,6 +55628,8 @@ var init_drinks = __esm({
       isActive: boolean("is_active").notNull().default(true),
       prepTimeSeconds: integer("prep_time_seconds").notNull().default(180),
       cupSizeMl: integer("cup_size_ml"),
+      cupIngredientId: integer("cup_ingredient_id").references(() => ingredientsTable.id, { onDelete: "set null" }),
+      isCustomizable: boolean("is_customizable").notNull().default(true),
       kitchenStation: text("kitchen_station").notNull().default("main"),
       createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
       updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => /* @__PURE__ */ new Date())
@@ -76684,7 +76686,8 @@ var GetMeResponse = objectType({
 });
 var ListDrinksQueryParams = objectType({
   category: coerce.string().optional(),
-  active: coerce.boolean().optional()
+  active: coerce.boolean().optional(),
+  includeSlots: coerce.boolean().optional()
 });
 var ListDrinksResponseItem = objectType({
   id: numberType(),
@@ -76697,6 +76700,8 @@ var ListDrinksResponseItem = objectType({
   isActive: booleanType(),
   prepTimeSeconds: numberType(),
   cupSizeMl: numberType().nullish(),
+  cupIngredientId: numberType().nullish(),
+  isCustomizable: booleanType().optional(),
   kitchenStation: stringType().optional(),
   categoryId: numberType().optional(),
   sortOrder: numberType().optional(),
@@ -76715,6 +76720,8 @@ var CreateDrinkBody = objectType({
   kitchenStation: stringType().optional(),
   categoryId: numberType().optional(),
   sortOrder: numberType().optional(),
+  cupIngredientId: numberType().optional(),
+  isCustomizable: booleanType().optional(),
   slots: arrayType(
     objectType({
       ingredientId: numberType(),
@@ -76743,6 +76750,8 @@ var GetDrinkResponse = objectType({
   isActive: booleanType(),
   prepTimeSeconds: numberType(),
   cupSizeMl: numberType().nullish(),
+  cupIngredientId: numberType().nullish(),
+  isCustomizable: booleanType().optional(),
   kitchenStation: stringType().optional(),
   categoryId: numberType().optional(),
   sortOrder: numberType().optional(),
@@ -76780,7 +76789,9 @@ var UpdateDrinkBody = objectType({
   prepTimeSeconds: numberType().optional(),
   kitchenStation: stringType().optional(),
   categoryId: numberType().optional(),
-  sortOrder: numberType().optional()
+  sortOrder: numberType().optional(),
+  cupIngredientId: numberType().optional(),
+  isCustomizable: booleanType().optional()
 });
 var UpdateDrinkResponse = objectType({
   id: numberType(),
@@ -76793,6 +76804,8 @@ var UpdateDrinkResponse = objectType({
   isActive: booleanType(),
   prepTimeSeconds: numberType(),
   cupSizeMl: numberType().nullish(),
+  cupIngredientId: numberType().nullish(),
+  isCustomizable: booleanType().optional(),
   kitchenStation: stringType().optional(),
   categoryId: numberType().optional(),
   sortOrder: numberType().optional(),
@@ -76850,6 +76863,7 @@ var ListIngredientsResponseItem = objectType({
     "sweetener",
     "topping",
     "base",
+    "cup",
     "other"
   ]),
   unit: stringType(),
@@ -76871,6 +76885,7 @@ var CreateIngredientBody = objectType({
     "sweetener",
     "topping",
     "base",
+    "cup",
     "other"
   ]),
   unit: stringType(),
@@ -76894,6 +76909,7 @@ var GetIngredientResponse = objectType({
     "sweetener",
     "topping",
     "base",
+    "cup",
     "other"
   ]),
   unit: stringType(),
@@ -76934,6 +76950,7 @@ var UpdateIngredientBody = objectType({
     "sweetener",
     "topping",
     "base",
+    "cup",
     "other"
   ]).optional(),
   unit: stringType().optional(),
@@ -76954,6 +76971,7 @@ var UpdateIngredientResponse = objectType({
     "sweetener",
     "topping",
     "base",
+    "cup",
     "other"
   ]),
   unit: stringType(),
@@ -77026,6 +77044,7 @@ var RestockIngredientResponse = objectType({
     "sweetener",
     "topping",
     "base",
+    "cup",
     "other"
   ]),
   unit: stringType(),
@@ -77038,8 +77057,8 @@ var RestockIngredientResponse = objectType({
 });
 var ListOrdersQueryParams = objectType({
   status: coerce.string().optional(),
-  startDate: dateType().optional(),
-  endDate: dateType().optional(),
+  startDate: coerce.date().optional(),
+  endDate: coerce.date().optional(),
   limit: coerce.number().optional(),
   offset: coerce.number().optional()
 });
@@ -77398,6 +77417,7 @@ var GetLowStockIngredientsResponseItem = objectType({
     "sweetener",
     "topping",
     "base",
+    "cup",
     "other"
   ]),
   unit: stringType(),
@@ -77446,8 +77466,8 @@ var DeleteUserParams = objectType({
 });
 var GetSalesByCategoryQueryParams = objectType({
   days: coerce.number().optional(),
-  startDate: dateType().optional(),
-  endDate: dateType().optional()
+  startDate: coerce.date().optional(),
+  endDate: coerce.date().optional()
 });
 var GetSalesByCategoryResponseItem = objectType({
   category: stringType(),
@@ -77461,8 +77481,8 @@ var GetSalesByCategoryResponse = arrayType(
 var GetTopDrinksQueryParams = objectType({
   limit: coerce.number().optional(),
   days: coerce.number().optional(),
-  startDate: coerce.string().optional(),
-  endDate: coerce.string().optional()
+  startDate: coerce.date().optional(),
+  endDate: coerce.date().optional()
 });
 var GetTopDrinksResponseItem = objectType({
   drinkId: numberType(),
@@ -78001,6 +78021,27 @@ async function calculateDrinkData(drinkId, selections) {
       }
     }
   }
+  if (drink.cupIngredientId) {
+    const [cupIng] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, drink.cupIngredientId));
+    if (cupIng) {
+      customizations.push({
+        ingredientId: cupIng.id,
+        optionId: null,
+        typeVolumeId: null,
+        ingredientTypeId: null,
+        consumedQty: 1,
+        // Always 1 cup
+        producedQty: 0,
+        color: null,
+        addedCost: 0,
+        slotLabel: "Packaging",
+        optionLabel: cupIng.name,
+        baristaSortOrder: 100,
+        // Show at the bottom
+        customerSortOrder: 100
+      });
+    }
+  }
   const basePrice = parseFloat(drink.basePrice);
   return {
     drink,
@@ -78402,8 +78443,14 @@ router3.put("/drinks/:id/slots", async (req, res) => {
     }
   }
   const cupSizeMl = req.query.cupSizeMl ? parseInt(req.query.cupSizeMl) : void 0;
-  if (cupSizeMl !== void 0) {
-    await db.update(drinksTable).set({ cupSizeMl }).where(eq(drinksTable.id, drinkId));
+  const cupIngredientId = req.query.cupIngredientId ? parseInt(req.query.cupIngredientId) : void 0;
+  const isCustomizable = req.query.isCustomizable !== void 0 ? req.query.isCustomizable === "true" : void 0;
+  if (cupSizeMl !== void 0 || cupIngredientId !== void 0 || isCustomizable !== void 0) {
+    await db.update(drinksTable).set({
+      ...cupSizeMl !== void 0 && { cupSizeMl },
+      ...cupIngredientId !== void 0 && { cupIngredientId },
+      ...isCustomizable !== void 0 && { isCustomizable }
+    }).where(eq(drinksTable.id, drinkId));
   }
   const typeIds = /* @__PURE__ */ new Set();
   const volIds = /* @__PURE__ */ new Set();
@@ -79496,7 +79543,7 @@ router7.get("/dashboard/sales-by-category", async (req, res) => {
   if (!params.success || !params.data.startDate && !params.data.endDate) {
     const days = params.success && params.data.days ? params.data.days : 30;
     const since = /* @__PURE__ */ new Date();
-    since.setDate(since.getDate() - days);
+    since.setDate(since.getDate() - (days - 1));
     since.setHours(0, 0, 0, 0);
     conditions.push(gte(ordersTable.createdAt, since));
   }
@@ -79543,7 +79590,7 @@ router7.get("/dashboard/top-drinks", async (req, res) => {
   if (!params.success || !params.data.startDate && !params.data.endDate) {
     const days = params.success && params.data.days ? params.data.days : 30;
     const since = /* @__PURE__ */ new Date();
-    since.setDate(since.getDate() - days);
+    since.setDate(since.getDate() - (days - 1));
     since.setHours(0, 0, 0, 0);
     conditions.push(gte(ordersTable.createdAt, since));
   }

@@ -177,7 +177,7 @@ router.get("/dashboard/sales-by-category", async (req, res): Promise<void> => {
   if (!params.success || (!params.data.startDate && !params.data.endDate)) {
     const days = (params.success && params.data.days) ? params.data.days : 30;
     const since = new Date();
-    since.setDate(since.getDate() - days);
+    since.setDate(since.getDate() - (days - 1));
     since.setHours(0, 0, 0, 0);
     conditions.push(gte(ordersTable.createdAt, since));
   }
@@ -245,7 +245,7 @@ router.get("/dashboard/top-drinks", async (req, res): Promise<void> => {
   if (!params.success || (!params.data.startDate && !params.data.endDate)) {
     const days = (params.success && params.data.days) ? params.data.days : 30;
     const since = new Date();
-    since.setDate(since.getDate() - days);
+    since.setDate(since.getDate() - (days - 1));
     since.setHours(0, 0, 0, 0);
     conditions.push(gte(ordersTable.createdAt, since));
   }

@@ -17,7 +17,7 @@ import { ArrowLeft, Plus, Search, Edit, Trash2, Link2, Star, StarOff, ChevronRig
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 
-const INGREDIENT_TYPES = ["coffee", "milk", "syrup", "sauce", "sweetener", "topping", "base", "other"] as const;
+const INGREDIENT_TYPES = ["coffee", "milk", "syrup", "sauce", "sweetener", "topping", "base", "cup", "other"] as const;
 type IngredientType = typeof INGREDIENT_TYPES[number];
 
 type Ingredient = {

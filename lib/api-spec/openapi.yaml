@@ -99,6 +99,10 @@ paths:
           name: active
           schema:
             type: boolean
+        - in: query
+          name: includeSlots
+          schema:
+            type: boolean
       responses:
         "200":
           description: List of drinks
@@ -727,10 +731,12 @@ paths:
           name: startDate
           schema:
             type: string
+            format: date
         - in: query
           name: endDate
           schema:
             type: string
+            format: date
       responses:
         "200":
           description: Top drinks
@@ -971,7 +977,7 @@ components:
           type: string
         ingredientType:
           type: string
-          enum: [coffee, milk, syrup, sauce, sweetener, topping, base, other]
+          enum: [coffee, milk, syrup, sauce, sweetener, topping, base, cup, other]
         unit:
           type: string
         costPerUnit:
@@ -1052,7 +1058,7 @@ components:
           type: string
         ingredientType:
           type: string
-          enum: [coffee, milk, syrup, sauce, sweetener, topping, base, other]
+          enum: [coffee, milk, syrup, sauce, sweetener, topping, base, cup, other]
         unit:
           type: string
         costPerUnit:
@@ -1076,7 +1082,7 @@ components:
           type: string
         ingredientType:
           type: string
-          enum: [coffee, milk, syrup, sauce, sweetener, topping, base, other]
+          enum: [coffee, milk, syrup, sauce, sweetener, topping, base, cup, other]
         unit:
           type: string
         costPerUnit:
@@ -1193,6 +1199,10 @@ components:
           type: integer
         cupSizeMl:
           type: ["integer", "null"]
+        cupIngredientId:
+          type: ["integer", "null"]
+        isCustomizable:
+          type: boolean
         kitchenStation:
           type: string
         categoryId:
@@ -1250,6 +1260,10 @@ components:
           type: integer
         sortOrder:
           type: integer
+        cupIngredientId:
+          type: integer
+        isCustomizable:
+          type: boolean
         slots:
           type: array
           items:
@@ -1304,6 +1318,10 @@ components:
           type: integer
         sortOrder:
           type: integer
+        cupIngredientId:
+          type: integer
+        isCustomizable:
+          type: boolean
 
     PriceCalculationBody:
       type: object

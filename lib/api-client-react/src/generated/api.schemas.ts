@@ -98,6 +98,7 @@ export const IngredientIngredientType = {
   sweetener: "sweetener",
   topping: "topping",
   base: "base",
+  cup: "cup",
   other: "other",
 } as const;
 
@@ -144,6 +145,7 @@ export const CreateIngredientBodyIngredientType = {
   sweetener: "sweetener",
   topping: "topping",
   base: "base",
+  cup: "cup",
   other: "other",
 } as const;
 
@@ -168,6 +170,7 @@ export const UpdateIngredientBodyIngredientType = {
   sweetener: "sweetener",
   topping: "topping",
   base: "base",
+  cup: "cup",
   other: "other",
 } as const;
 
@@ -235,6 +238,9 @@ export interface Drink {
   prepTimeSeconds: number;
   /** @nullable */
   cupSizeMl?: number | null;
+  /** @nullable */
+  cupIngredientId?: number | null;
+  isCustomizable?: boolean;
   kitchenStation?: string;
   categoryId?: number;
   sortOrder?: number;
@@ -271,6 +277,8 @@ export interface CreateDrinkBody {
   kitchenStation?: string;
   categoryId?: number;
   sortOrder?: number;
+  cupIngredientId?: number;
+  isCustomizable?: boolean;
   slots?: CreateDrinkBodySlotsItem[];
 }
 
@@ -285,6 +293,8 @@ export interface UpdateDrinkBody {
   kitchenStation?: string;
   categoryId?: number;
   sortOrder?: number;
+  cupIngredientId?: number;
+  isCustomizable?: boolean;
 }
 
 export type PriceCalculationBodySelectionsItem = {
@@ -644,6 +654,7 @@ export interface UpdateDiscountBody {
 export type ListDrinksParams = {
   category?: string;
   active?: boolean;
+  includeSlots?: boolean;
 };
 
 export type ListIngredientsParams = {

@@ -8,7 +8,7 @@ export const ingredientsTable = pgTable("ingredients", {
   name: text("name").notNull(),
   slug: text("slug").notNull().unique(),
   ingredientType: text("ingredient_type", {
-    enum: ["coffee", "milk", "syrup", "sauce", "sweetener", "topping", "base", "other"],
+    enum: ["coffee", "milk", "syrup", "sauce", "sweetener", "topping", "base", "cup", "other"],
   }).notNull(),
   unit: text("unit").notNull(),
   costPerUnit: numeric("cost_per_unit", { precision: 10, scale: 4 }).notNull(),

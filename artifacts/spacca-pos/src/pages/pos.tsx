@@ -278,8 +278,25 @@ export default function PosTerminal() {
   }, [activeDrink, currentSelectionsArray]);
 
   const handleSelectDrink = (drink: Drink) => {
-    setActiveDrink(drink);
-    setIsCustomizing(true);
+    if (drink.isCustomizable === false) {
+      // Finished Good: add directly to cart with default options
+      // We can use the defaultPrice that was pre-computed by the server
+      setCart(prev => [...prev, {
+        id: Math.random().toString(36).substring(7),
+        drinkId: drink.id,
+        drinkName: drink.name,
+        quantity: 1,
+        basePrice: drink.basePrice,
+        totalPrice: (drink as any).defaultPrice ?? drink.basePrice,
+        selections: [], // Empty selections = use defaults on server
+        specialNotes: undefined,
+      }]);
+      setIsCartOpen(true);
+      toast({ title: "Added to cart", description: `${drink.name} added.` });
+    } else {
+      setActiveDrink(drink);
+      setIsCustomizing(true);
+    }
   };
 
   const handleCloseCustomization = () => {

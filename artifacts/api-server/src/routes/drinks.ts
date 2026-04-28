@@ -339,7 +339,7 @@ router.get("/drinks", async (req, res): Promise<void> => {
 
   const drinksWithDetails = await Promise.all(
     filtered.map(async (d) => {
-      if (params.success && params.data.includeSlots) {
+      if (params.success && (params.data as any).includeSlots) {
         return await buildDrinkDetail(d.id);
       }
       const base = Number(d.basePrice);
@@ -518,8 +518,15 @@ router.put("/drinks/:id/slots", async (req, res): Promise<void> => {
   }
 
   const cupSizeMl = req.query.cupSizeMl ? parseInt(req.query.cupSizeMl as string) : undefined;
-  if (cupSizeMl !== undefined) {
-    await db.update(drinksTable).set({ cupSizeMl }).where(eq(drinksTable.id, drinkId));
+  const cupIngredientId = req.query.cupIngredientId ? parseInt(req.query.cupIngredientId as string) : undefined;
+  const isCustomizable = req.query.isCustomizable !== undefined ? req.query.isCustomizable === "true" : undefined;
+
+  if (cupSizeMl !== undefined || cupIngredientId !== undefined || isCustomizable !== undefined) {
+    await db.update(drinksTable).set({ 
+      ...(cupSizeMl !== undefined && { cupSizeMl }),
+      ...(cupIngredientId !== undefined && { cupIngredientId }),
+      ...(isCustomizable !== undefined && { isCustomizable }),
+    }).where(eq(drinksTable.id, drinkId));
   }
 
   // --- Validate and Clean stale catalog references ---
