@@ -20,6 +20,8 @@ export interface Drink {
     /** @nullable */
     cupSizeMl?: number | null;
     kitchenStation?: string;
+    categoryId?: number;
+    sortOrder?: number;
     createdAt: string;
     updatedAt: string;
 }

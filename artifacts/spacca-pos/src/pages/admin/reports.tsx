@@ -17,7 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { 
   ArrowLeft, BarChart2, TrendingUp, Coffee, Receipt, 
   Banknote, Medal, Calendar, ChevronLeft, ChevronRight,
-  Download, Tag, CheckCircle2, XCircle, FileText, Layers
+  Download, Tag, CheckCircle2, XCircle, FileText, Layers, Clock
 } from "lucide-react";
 import { Link } from "wouter";
 import { fmt, pure, CURRENCY } from "@/lib/currency";
@@ -25,7 +25,15 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend,
 } from "recharts";
-import { format, subDays, startOfDay, endOfDay } from "date-fns";
+import { format, subDays, startOfDay, endOfDay, differenceInSeconds } from "date-fns";
+
+function formatDuration(seconds: number | null | undefined): string {
+  if (seconds == null || isNaN(seconds)) return "-";
+  if (seconds < 60) return `${seconds}s`;
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return s > 0 ? `${m}m ${s}s` : `${m}m`;
+}
 
 const PERIODS = [
   { label: "Today", days: 1 },
@@ -294,10 +302,11 @@ export default function ReportsPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 mb-8 h-12">
+        <TabsList className="grid w-full grid-cols-4 mb-8 h-12">
           <TabsTrigger value="dashboard" className="text-base font-semibold">Dashboard</TabsTrigger>
           <TabsTrigger value="sales" className="text-base font-semibold">Sales Report</TabsTrigger>
           <TabsTrigger value="drinks" className="text-base font-semibold">Drinks Report</TabsTrigger>
+          <TabsTrigger value="performance" className="text-base font-semibold">Performance</TabsTrigger>
         </TabsList>
 
         {activeTab !== "dashboard" && (
@@ -927,6 +936,147 @@ export default function ReportsPage() {
                     )}
                   </TableBody>
                 </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="performance" className="flex flex-col gap-6 animate-in fade-in duration-500">
+          <Card className="border-none shadow-xl bg-card/50 backdrop-blur-sm overflow-hidden">
+            <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b">
+              <div className="flex justify-between items-center">
+                <CardTitle className="text-xl font-bold flex items-center gap-2">
+                  <Clock className="h-5 w-5 text-primary" />
+                  Barista & Kitchen Performance
+                </CardTitle>
+                <div className="flex bg-muted/50 p-1 rounded-lg border">
+                  <Button 
+                    variant={drinksView === "grouped" ? "default" : "ghost"} 
+                    size="sm" 
+                    className="h-7 text-xs px-3"
+                    onClick={() => setDrinksView("grouped")}
+                  >
+                    By Order
+                  </Button>
+                  <Button 
+                    variant={drinksView === "individual" ? "default" : "ghost"} 
+                    size="sm" 
+                    className="h-7 text-xs px-3"
+                    onClick={() => setDrinksView("individual")}
+                  >
+                    By Drink
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/30">
+                      <TableHead className="font-bold">Order # / Status</TableHead>
+                      <TableHead className="font-bold">Date & Time</TableHead>
+                      <TableHead className="font-bold text-center">Creation to Paid<br/><span className="text-[10px] text-muted-foreground font-normal">(Cashier Time)</span></TableHead>
+                      <TableHead className="font-bold text-center">Paid to Ready<br/><span className="text-[10px] text-muted-foreground font-normal">(Barista Time)</span></TableHead>
+                      {drinksView === "grouped" && (
+                        <TableHead className="font-bold text-center">Ready to Delivered<br/><span className="text-[10px] text-muted-foreground font-normal">(Pickup Time)</span></TableHead>
+                      )}
+                      {drinksView === "grouped" && (
+                        <TableHead className="font-bold text-right">Total Duration</TableHead>
+                      )}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {loadingReportOrders ? (
+                      <TableRow>
+                         <TableCell colSpan={6} className="h-32 text-center">
+                            <div className="flex flex-col items-center justify-center gap-2">
+                              <div className="h-6 w-6 border-2 border-primary border-t-transparent animate-spin rounded-full" />
+                              <span className="text-sm text-muted-foreground">Loading performance data...</span>
+                            </div>
+                         </TableCell>
+                      </TableRow>
+                    ) : !reportOrders || reportOrders.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
+                          No data available for the selected range.
+                        </TableCell>
+                      </TableRow>
+                    ) : drinksView === "grouped" ? (
+                      reportOrders.map(order => {
+                        const created = order.createdAt ? new Date(order.createdAt) : null;
+                        const paid = order.paidAt ? new Date(order.paidAt) : null;
+                        const ready = order.readyAt ? new Date(order.readyAt) : null;
+                        const completed = order.completedAt ? new Date(order.completedAt) : null;
+                        
+                        const cashierSecs = created && paid ? differenceInSeconds(paid, created) : null;
+                        const baristaSecs = paid && ready ? differenceInSeconds(ready, paid) : null;
+                        const pickupSecs = ready && completed ? differenceInSeconds(completed, ready) : null;
+                        const totalSecs = created && completed ? differenceInSeconds(completed, created) : null;
+
+                        return (
+                          <TableRow key={order.id} className="hover:bg-muted/30 transition-colors">
+                            <TableCell className="font-mono">
+                              <div className="font-bold">#{order.orderNumber}</div>
+                              <div className="text-[10px] uppercase opacity-50">{order.status}</div>
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
+                              {format(created || new Date(), "MMM d, HH:mm")}
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <Badge variant="outline" className="font-mono">{formatDuration(cashierSecs)}</Badge>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <Badge variant="outline" className="font-mono bg-blue-50 text-blue-700 border-blue-200">
+                                {formatDuration(baristaSecs)}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <Badge variant="outline" className="font-mono">{formatDuration(pickupSecs)}</Badge>
+                            </TableCell>
+                            <TableCell className="text-right font-medium">
+                              {formatDuration(totalSecs)}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    ) : (
+                      drinkItems.map((item: any, idx: number) => {
+                        const created = item.createdAt ? new Date(item.createdAt) : null;
+                        // For drinks, we use the order's paid time to start barista duration
+                        const orderRaw = reportOrders.find(o => o.id === item.orderId);
+                        const paid = orderRaw && (orderRaw as any).paidAt ? new Date((orderRaw as any).paidAt) : null;
+                        const ready = item.readyAt ? new Date(item.readyAt) : null;
+
+                        const cashierSecs = created && paid ? differenceInSeconds(paid, created) : null;
+                        const baristaSecs = paid && ready ? differenceInSeconds(ready, paid) : null;
+
+                        return (
+                          <TableRow key={`${item.id}-${idx}`} className="hover:bg-muted/30 transition-colors">
+                            <TableCell className="font-semibold">
+                              {item.drinkName}
+                              <div className="text-[10px] text-muted-foreground font-mono">Order #{item.orderNumber}</div>
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
+                              {format(created || new Date(), "MMM d, HH:mm")}
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <Badge variant="outline" className="font-mono text-xs">{formatDuration(cashierSecs)}</Badge>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <Badge variant="outline" className="font-mono text-xs bg-blue-50 text-blue-700 border-blue-200">
+                                {formatDuration(baristaSecs)}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+              <div className="p-4 border-t bg-muted/20 flex justify-between items-center text-xs text-muted-foreground">
+                <p>Calculations: Cashier Time = Paid - Created. Barista Time = Ready - Paid. Pickup Time = Completed - Ready.</p>
               </div>
             </CardContent>
           </Card>

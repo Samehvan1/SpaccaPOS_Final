@@ -18,6 +18,8 @@ export interface OrderItem {
     /** @nullable */
     specialNotes: string | null;
     status: OrderItemStatus;
+    /** @nullable */
+    readyAt: string | null;
     customizations: OrderItemCustomization[];
 }
 //# sourceMappingURL=orderItem.d.ts.map

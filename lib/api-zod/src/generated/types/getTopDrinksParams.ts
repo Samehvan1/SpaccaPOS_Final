@@ -8,4 +8,7 @@
 
 export type GetTopDrinksParams = {
   limit?: number;
+  days?: number;
+  startDate?: string;
+  endDate?: string;
 };

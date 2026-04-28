@@ -13,6 +13,7 @@ export interface CreateOrderBody {
     amountTendered?: number;
     notes?: string;
     discount?: number;
+    discountCode?: string;
     items: CreateOrderBodyItemsItem[];
 }
 //# sourceMappingURL=createOrderBody.d.ts.map

@@ -427,7 +427,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/Order"
+                  $ref: "#/components/schemas/OrderDetail"
     post:
       operationId: createOrder
       tags: [orders]
@@ -740,6 +740,46 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/TopDrink"
+
+  /settings:
+    get:
+      operationId: getSettings
+      tags: [settings]
+      summary: Get application settings
+      parameters:
+        - in: query
+          name: scope
+          schema:
+            type: string
+            enum: [global, user]
+      responses:
+        "200":
+          description: List of settings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Setting"
+    patch:
+      operationId: updateSettings
+      tags: [settings]
+      summary: Update multiple settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSettingsBody"
+      responses:
+        "200":
+          description: Updated settings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Setting"
 
   /discounts:
     get:
@@ -1155,6 +1195,10 @@ components:
           type: ["integer", "null"]
         kitchenStation:
           type: string
+        categoryId:
+          type: integer
+        sortOrder:
+          type: integer
         createdAt:
           type: string
         updatedAt:
@@ -1202,6 +1246,10 @@ components:
           type: integer
         kitchenStation:
           type: string
+        categoryId:
+          type: integer
+        sortOrder:
+          type: integer
         slots:
           type: array
           items:
@@ -1252,6 +1300,10 @@ components:
           type: integer
         kitchenStation:
           type: string
+        categoryId:
+          type: integer
+        sortOrder:
+          type: integer
 
     PriceCalculationBody:
       type: object
@@ -1342,6 +1394,8 @@ components:
           type: ["integer", "null"]
         consumedQty:
           type: number
+        producedQty:
+          type: number
         addedCost:
           type: number
         slotLabel:
@@ -1380,6 +1434,8 @@ components:
         status:
           type: string
           enum: [pending, ready]
+        readyAt:
+          type: ["string", "null"]
         customizations:
           type: array
           items:
@@ -1394,6 +1450,7 @@ components:
         - lineTotal
         - specialNotes
         - status
+        - readyAt
         - customizations
 
     Order:
@@ -1409,7 +1466,7 @@ components:
           type: string
         status:
           type: string
-          enum: [pending, paid, in_progress, ready, completed, cancelled]
+          enum: [pending, paid, in_progress, ready, completed, cancelled, refunded]
         customerName:
           type: ["string", "null"]
         subtotal:
@@ -1438,6 +1495,14 @@ components:
           type: string
         updatedAt:
           type: string
+        paidAt:
+          type: ["string", "null"]
+        readyAt:
+          type: ["string", "null"]
+        completedAt:
+          type: ["string", "null"]
+        cancelledAt:
+          type: ["string", "null"]
       required:
         - id
         - orderNumber
@@ -1454,6 +1519,10 @@ components:
         - notes
         - createdAt
         - updatedAt
+        - paidAt
+        - readyAt
+        - completedAt
+        - cancelledAt
 
     OrderDetail:
       allOf:
@@ -1525,7 +1594,7 @@ components:
       properties:
         status:
           type: string
-          enum: [pending, paid, in_progress, ready, completed, cancelled]
+          enum: [pending, paid, in_progress, ready, completed, cancelled, refunded]
       required:
         - status
 

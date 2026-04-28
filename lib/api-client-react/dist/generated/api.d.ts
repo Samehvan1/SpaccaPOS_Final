@@ -1,5 +1,5 @@
 import type { QueryKey, UseMutationOptions, UseMutationResult, UseQueryOptions, UseQueryResult } from "@tanstack/react-query";
-import type { CategorySales, CreateDrinkBody, CreateIngredientBody, CreateIngredientOptionBody, CreateOrderBody, CreateUserBody, DashboardSummary, Drink, DrinkDetail, GetActiveOrdersParams, GetSalesByCategoryParams, GetSettingsParams, GetTopDrinksParams, HealthStatus, Ingredient, IngredientDetail, IngredientOption, ListDrinksParams, ListIngredientsParams, ListOrdersParams, ListStockMovementsParams, LoginBody, LoginResponse, Order, OrderDetail, PriceBreakdown, PriceCalculationBody, RestockBody, Setting, StockAdjustmentBody, StockMovement, TopDrink, UpdateDrinkBody, UpdateIngredientBody, UpdateIngredientOptionBody, UpdateOrderStatusBody, UpdateSettingsBody, UpdateUserBody, User, UserDetail } from "./api.schemas";
+import type { CategorySales, CreateDiscountBody, CreateDrinkBody, CreateIngredientBody, CreateIngredientOptionBody, CreateOrderBody, CreateUserBody, DashboardSummary, Discount, Drink, DrinkDetail, GetActiveOrdersParams, GetSalesByCategoryParams, GetSettingsParams, GetTopDrinksParams, HealthStatus, Ingredient, IngredientDetail, IngredientOption, ListDrinksParams, ListIngredientsParams, ListOrdersParams, ListStockMovementsParams, LoginBody, LoginResponse, Order, OrderDetail, PriceBreakdown, PriceCalculationBody, RestockBody, Setting, StockAdjustmentBody, StockMovement, TopDrink, UpdateDiscountBody, UpdateDrinkBody, UpdateIngredientBody, UpdateIngredientOptionBody, UpdateOrderStatusBody, UpdateSettingsBody, UpdateUserBody, User, UserDetail } from "./api.schemas";
 import { customFetch } from "../custom-fetch";
 import type { ErrorType, BodyType } from "../custom-fetch";
 type AwaitedInput<T> = PromiseLike<T> | T;
@@ -492,7 +492,7 @@ export declare const useRestockIngredient: <TError = ErrorType<unknown>, TContex
  * @summary List orders
  */
 export declare const getListOrdersUrl: (params?: ListOrdersParams) => string;
-export declare const listOrders: (params?: ListOrdersParams, options?: RequestInit) => Promise<Order[]>;
+export declare const listOrders: (params?: ListOrdersParams, options?: RequestInit) => Promise<OrderDetail[]>;
 export declare const getListOrdersQueryKey: (params?: ListOrdersParams) => readonly ["/api/orders", ...ListOrdersParams[]];
 export declare const getListOrdersQueryOptions: <TData = Awaited<ReturnType<typeof listOrders>>, TError = ErrorType<unknown>>(params?: ListOrdersParams, options?: {
     query?: UseQueryOptions<Awaited<ReturnType<typeof listOrders>>, TError, TData>;
@@ -914,7 +914,7 @@ export declare function useGetSettings<TData = Awaited<ReturnType<typeof getSett
     queryKey: QueryKey;
 };
 /**
- * @summary Update application settings
+ * @summary Update multiple settings
  */
 export declare const getUpdateSettingsUrl: () => string;
 export declare const updateSettings: (updateSettingsBody: UpdateSettingsBody, options?: RequestInit) => Promise<Setting[]>;
@@ -930,7 +930,7 @@ export type UpdateSettingsMutationResult = NonNullable<Awaited<ReturnType<typeof
 export type UpdateSettingsMutationBody = BodyType<UpdateSettingsBody>;
 export type UpdateSettingsMutationError = ErrorType<unknown>;
 /**
- * @summary Update application settings
+ * @summary Update multiple settings
  */
 export declare const useUpdateSettings: <TError = ErrorType<unknown>, TContext = unknown>(options?: {
     mutation?: UseMutationOptions<Awaited<ReturnType<typeof updateSettings>>, TError, {
@@ -940,5 +940,135 @@ export declare const useUpdateSettings: <TError = ErrorType<unknown>, TContext =
 }) => UseMutationResult<Awaited<ReturnType<typeof updateSettings>>, TError, {
     data: BodyType<UpdateSettingsBody>;
 }, TContext>;
+/**
+ * @summary List all discounts
+ */
+export declare const getListDiscountsUrl: () => string;
+export declare const listDiscounts: (options?: RequestInit) => Promise<Discount[]>;
+export declare const getListDiscountsQueryKey: () => readonly ["/api/discounts"];
+export declare const getListDiscountsQueryOptions: <TData = Awaited<ReturnType<typeof listDiscounts>>, TError = ErrorType<unknown>>(options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof listDiscounts>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseQueryOptions<Awaited<ReturnType<typeof listDiscounts>>, TError, TData> & {
+    queryKey: QueryKey;
+};
+export type ListDiscountsQueryResult = NonNullable<Awaited<ReturnType<typeof listDiscounts>>>;
+export type ListDiscountsQueryError = ErrorType<unknown>;
+/**
+ * @summary List all discounts
+ */
+export declare function useListDiscounts<TData = Awaited<ReturnType<typeof listDiscounts>>, TError = ErrorType<unknown>>(options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof listDiscounts>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+};
+/**
+ * @summary Create a discount
+ */
+export declare const getCreateDiscountUrl: () => string;
+export declare const createDiscount: (createDiscountBody: CreateDiscountBody, options?: RequestInit) => Promise<Discount>;
+export declare const getCreateDiscountMutationOptions: <TError = ErrorType<unknown>, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof createDiscount>>, TError, {
+        data: BodyType<CreateDiscountBody>;
+    }, TContext>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseMutationOptions<Awaited<ReturnType<typeof createDiscount>>, TError, {
+    data: BodyType<CreateDiscountBody>;
+}, TContext>;
+export type CreateDiscountMutationResult = NonNullable<Awaited<ReturnType<typeof createDiscount>>>;
+export type CreateDiscountMutationBody = BodyType<CreateDiscountBody>;
+export type CreateDiscountMutationError = ErrorType<unknown>;
+/**
+ * @summary Create a discount
+ */
+export declare const useCreateDiscount: <TError = ErrorType<unknown>, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof createDiscount>>, TError, {
+        data: BodyType<CreateDiscountBody>;
+    }, TContext>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseMutationResult<Awaited<ReturnType<typeof createDiscount>>, TError, {
+    data: BodyType<CreateDiscountBody>;
+}, TContext>;
+/**
+ * @summary Update a discount
+ */
+export declare const getUpdateDiscountUrl: (id: number) => string;
+export declare const updateDiscount: (id: number, updateDiscountBody: UpdateDiscountBody, options?: RequestInit) => Promise<Discount>;
+export declare const getUpdateDiscountMutationOptions: <TError = ErrorType<unknown>, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof updateDiscount>>, TError, {
+        id: number;
+        data: BodyType<UpdateDiscountBody>;
+    }, TContext>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseMutationOptions<Awaited<ReturnType<typeof updateDiscount>>, TError, {
+    id: number;
+    data: BodyType<UpdateDiscountBody>;
+}, TContext>;
+export type UpdateDiscountMutationResult = NonNullable<Awaited<ReturnType<typeof updateDiscount>>>;
+export type UpdateDiscountMutationBody = BodyType<UpdateDiscountBody>;
+export type UpdateDiscountMutationError = ErrorType<unknown>;
+/**
+ * @summary Update a discount
+ */
+export declare const useUpdateDiscount: <TError = ErrorType<unknown>, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof updateDiscount>>, TError, {
+        id: number;
+        data: BodyType<UpdateDiscountBody>;
+    }, TContext>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseMutationResult<Awaited<ReturnType<typeof updateDiscount>>, TError, {
+    id: number;
+    data: BodyType<UpdateDiscountBody>;
+}, TContext>;
+/**
+ * @summary Delete a discount
+ */
+export declare const getDeleteDiscountUrl: (id: number) => string;
+export declare const deleteDiscount: (id: number, options?: RequestInit) => Promise<void>;
+export declare const getDeleteDiscountMutationOptions: <TError = ErrorType<unknown>, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof deleteDiscount>>, TError, {
+        id: number;
+    }, TContext>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseMutationOptions<Awaited<ReturnType<typeof deleteDiscount>>, TError, {
+    id: number;
+}, TContext>;
+export type DeleteDiscountMutationResult = NonNullable<Awaited<ReturnType<typeof deleteDiscount>>>;
+export type DeleteDiscountMutationError = ErrorType<unknown>;
+/**
+ * @summary Delete a discount
+ */
+export declare const useDeleteDiscount: <TError = ErrorType<unknown>, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof deleteDiscount>>, TError, {
+        id: number;
+    }, TContext>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseMutationResult<Awaited<ReturnType<typeof deleteDiscount>>, TError, {
+    id: number;
+}, TContext>;
+/**
+ * @summary Validate a discount code
+ */
+export declare const getValidateDiscountUrl: (code: string) => string;
+export declare const validateDiscount: (code: string, options?: RequestInit) => Promise<Discount>;
+export declare const getValidateDiscountQueryKey: (code: string) => readonly [`/api/discounts/validate/${string}`];
+export declare const getValidateDiscountQueryOptions: <TData = Awaited<ReturnType<typeof validateDiscount>>, TError = ErrorType<void>>(code: string, options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof validateDiscount>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseQueryOptions<Awaited<ReturnType<typeof validateDiscount>>, TError, TData> & {
+    queryKey: QueryKey;
+};
+export type ValidateDiscountQueryResult = NonNullable<Awaited<ReturnType<typeof validateDiscount>>>;
+export type ValidateDiscountQueryError = ErrorType<void>;
+/**
+ * @summary Validate a discount code
+ */
+export declare function useValidateDiscount<TData = Awaited<ReturnType<typeof validateDiscount>>, TError = ErrorType<void>>(code: string, options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof validateDiscount>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+};
 export {};
 //# sourceMappingURL=api.d.ts.map

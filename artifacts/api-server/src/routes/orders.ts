@@ -95,6 +95,7 @@ async function buildOrderDetail(orderId: number) {
       customizations: (custByItem.get(item.id) ?? []).map((c) => ({
         ...c,
         consumedQty: parseFloat(c.consumedQty),
+        producedQty: parseFloat(c.producedQty),
         addedCost: parseFloat(c.addedCost),
       })),
     })),
@@ -144,7 +145,7 @@ router.get("/orders", async (req, res): Promise<void> => {
   const custByItem = new Map<number, any[]>();
   for (const c of customizations) {
     const list = custByItem.get(c.orderItemId) ?? [];
-    list.push({ ...c, consumedQty: parseFloat(c.consumedQty), addedCost: parseFloat(c.addedCost) });
+    list.push({ ...c, consumedQty: parseFloat(c.consumedQty), producedQty: parseFloat(c.producedQty), addedCost: parseFloat(c.addedCost) });
     custByItem.set(c.orderItemId, list);
   }
 
@@ -209,6 +210,7 @@ router.post("/orders", async (req, res): Promise<void> => {
     optionId: number | null;
     typeVolumeId: number | null;
     consumedQty: number;
+    producedQty: number;
     addedCost: number;
     slotLabel: string;
     optionLabel: string;
@@ -233,6 +235,7 @@ router.post("/orders", async (req, res): Promise<void> => {
         optionId: c.optionId,
         typeVolumeId: c.typeVolumeId,
         consumedQty: c.consumedQty * item.quantity,
+        producedQty: c.producedQty * item.quantity,
         addedCost: c.addedCost,
         slotLabel: c.slotLabel,
         optionLabel: c.optionLabel,
@@ -346,6 +349,7 @@ router.post("/orders", async (req, res): Promise<void> => {
             optionId: c.optionId ? Number(c.optionId) : null,
             typeVolumeId: c.typeVolumeId ? Number(c.typeVolumeId) : null,
             consumedQty: String(c.consumedQty || 0),
+            producedQty: String(c.producedQty || 0),
             addedCost: String(c.addedCost || 0),
             slotLabel: c.slotLabel,
             optionLabel: c.optionLabel,
@@ -421,6 +425,7 @@ router.post("/orders", async (req, res): Promise<void> => {
             optionId: c.optionId,
             typeVolumeId: c.typeVolumeId,
             consumedQty: c.consumedQty,
+            producedQty: c.producedQty,
             addedCost: c.addedCost,
             slotLabel: c.slotLabel,
             optionLabel: c.optionLabel,
@@ -466,9 +471,17 @@ router.patch("/orders/:id/status", async (req, res): Promise<void> => {
 
   // Attach cashierId when approving — comes from the frontend cashier session
   const updateData: Record<string, unknown> = { status: parsed.data.status };
+  const now = new Date();
   if (parsed.data.status === "paid") {
     const cashierId = (req.body as any).cashierId ?? (req.session as any).cashierId ?? null;
     if (cashierId) updateData.cashierId = cashierId;
+    updateData.paidAt = now;
+  } else if (parsed.data.status === "ready") {
+    updateData.readyAt = now;
+  } else if (parsed.data.status === "completed") {
+    updateData.completedAt = now;
+  } else if (parsed.data.status === "cancelled" || parsed.data.status === "refunded") {
+    updateData.cancelledAt = now;
   }
 
   const [order] = await db
@@ -501,7 +514,7 @@ router.patch("/order-items/:id/ready", async (req, res): Promise<void> => {
 
   const [item] = await db
     .update(orderItemsTable)
-    .set({ status: "ready" })
+    .set({ status: "ready", readyAt: new Date() })
     .where(eq(orderItemsTable.id, itemId))
     .returning();
 
@@ -533,9 +546,12 @@ router.patch("/order-items/:id/ready", async (req, res): Promise<void> => {
     }
 
     if (nextStatus !== order.status) {
+      const orderUpdateData: Record<string, unknown> = { status: nextStatus };
+      if (nextStatus === "ready") orderUpdateData.readyAt = new Date();
+
       await db
         .update(ordersTable)
-        .set({ status: nextStatus })
+        .set(orderUpdateData)
         .where(eq(ordersTable.id, order.id));
       
       broadcastEvent("order_updated", { orderId: order.id, status: nextStatus });
@@ -569,7 +585,7 @@ router.post("/orders/:id/refund", async (req, res): Promise<void> => {
   // 2. Update order status
   const [order] = await db
     .update(ordersTable)
-    .set({ status: "refunded" })
+    .set({ status: "refunded", cancelledAt: new Date() })
     .where(eq(ordersTable.id, parseInt(id)))
     .returning();
 

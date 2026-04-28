@@ -227,8 +227,6 @@ export interface Drink {
   /** @nullable */
   description: string | null;
   category: string;
-  categoryId?: number;
-  sortOrder?: number;
   basePrice: number;
   defaultPrice?: number;
   /** @nullable */
@@ -238,6 +236,8 @@ export interface Drink {
   /** @nullable */
   cupSizeMl?: number | null;
   kitchenStation?: string;
+  categoryId?: number;
+  sortOrder?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -264,13 +264,13 @@ export interface CreateDrinkBody {
   name: string;
   description?: string;
   category: string;
-  categoryId?: number;
-  sortOrder?: number;
   basePrice: number;
   imageUrl?: string;
   isActive?: boolean;
   prepTimeSeconds?: number;
   kitchenStation?: string;
+  categoryId?: number;
+  sortOrder?: number;
   slots?: CreateDrinkBodySlotsItem[];
 }
 
@@ -278,13 +278,13 @@ export interface UpdateDrinkBody {
   name?: string;
   description?: string;
   category?: string;
-  categoryId?: number;
-  sortOrder?: number;
   basePrice?: number;
   imageUrl?: string;
   isActive?: boolean;
   prepTimeSeconds?: number;
   kitchenStation?: string;
+  categoryId?: number;
+  sortOrder?: number;
 }
 
 export type PriceCalculationBodySelectionsItem = {
@@ -330,13 +330,12 @@ export interface OrderItemCustomization {
   /** @nullable */
   typeVolumeId?: number | null;
   consumedQty: number;
+  producedQty?: number;
   addedCost: number;
   slotLabel: string;
   optionLabel: string;
   /** @nullable */
   baristaSortOrder?: number | null;
-  /** @nullable */
-  customerSortOrder?: number | null;
 }
 
 export type OrderItemStatus =
@@ -358,6 +357,8 @@ export interface OrderItem {
   /** @nullable */
   specialNotes: string | null;
   status: OrderItemStatus;
+  /** @nullable */
+  readyAt: string | null;
   customizations: OrderItemCustomization[];
 }
 
@@ -371,6 +372,18 @@ export const OrderStatus = {
   completed: "completed",
   cancelled: "cancelled",
   refunded: "refunded",
+} as const;
+
+/**
+ * @nullable
+ */
+export type OrderDiscountType =
+  | (typeof OrderDiscountType)[keyof typeof OrderDiscountType]
+  | null;
+
+export const OrderDiscountType = {
+  percentage: "percentage",
+  fixed: "fixed",
 } as const;
 
 export type OrderPaymentMethod =
@@ -392,10 +405,12 @@ export interface Order {
   customerName: string | null;
   subtotal: number;
   discount: number;
+  /** @nullable */
   discountId?: number | null;
-  discountCode?: string | null;
+  /** @nullable */
   discountValue?: number | null;
-  discountType?: "percentage" | "fixed" | null;
+  /** @nullable */
+  discountType?: OrderDiscountType;
   total: number;
   paymentMethod: OrderPaymentMethod;
   /** @nullable */
@@ -406,7 +421,14 @@ export interface Order {
   notes: string | null;
   createdAt: string;
   updatedAt: string;
-  items?: OrderItem[];
+  /** @nullable */
+  paidAt: string | null;
+  /** @nullable */
+  readyAt: string | null;
+  /** @nullable */
+  completedAt: string | null;
+  /** @nullable */
+  cancelledAt: string | null;
 }
 
 export type OrderDetail = Order & {
@@ -570,6 +592,53 @@ export type UpdateSettingsBodySettingsItem = {
 export interface UpdateSettingsBody {
   scope: UpdateSettingsBodyScope;
   settings: UpdateSettingsBodySettingsItem[];
+}
+
+export type DiscountType = (typeof DiscountType)[keyof typeof DiscountType];
+
+export const DiscountType = {
+  percentage: "percentage",
+  fixed: "fixed",
+} as const;
+
+export interface Discount {
+  id: number;
+  code: string;
+  type: DiscountType;
+  value: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type CreateDiscountBodyType =
+  (typeof CreateDiscountBodyType)[keyof typeof CreateDiscountBodyType];
+
+export const CreateDiscountBodyType = {
+  percentage: "percentage",
+  fixed: "fixed",
+} as const;
+
+export interface CreateDiscountBody {
+  code: string;
+  type: CreateDiscountBodyType;
+  value: number;
+  isActive?: boolean;
+}
+
+export type UpdateDiscountBodyType =
+  (typeof UpdateDiscountBodyType)[keyof typeof UpdateDiscountBodyType];
+
+export const UpdateDiscountBodyType = {
+  percentage: "percentage",
+  fixed: "fixed",
+} as const;
+
+export interface UpdateDiscountBody {
+  code?: string;
+  type?: UpdateDiscountBodyType;
+  value?: number;
+  isActive?: boolean;
 }
 
 export type ListDrinksParams = {

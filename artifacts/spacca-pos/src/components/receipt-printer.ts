@@ -92,7 +92,7 @@ export function printCustomerReceipt(order: CompletedOrder) {
 
   const itemRows = order.items.map(item => {
     const customs = (item.customizations ?? [])
-      .filter(c => (c.customerSortOrder ?? 1) > 0)
+      .filter(c => (c.customerSortOrder ?? 1) > 0 && c.optionLabel?.toLowerCase() !== "none")
       .sort((a, b) => (a.customerSortOrder ?? 1) - (b.customerSortOrder ?? 1))
       .map(c =>
         `<div class="indent">· ${c.slotLabel}: ${c.optionLabel}</div>`
@@ -159,7 +159,7 @@ export function printAgentReceipts(order: CompletedOrder) {
     for (let q = 0; q < item.quantity; q++) {
       ticketNum++;
       const filteredCustoms = (item.customizations ?? [])
-        .filter(c => (c.baristaSortOrder ?? 1) > 0)
+        .filter(c => (c.baristaSortOrder ?? 1) > 0 && c.optionLabel?.toLowerCase() !== "none")
         .sort((a, b) => (a.baristaSortOrder ?? 1) - (b.baristaSortOrder ?? 1));
 
       const customs = filteredCustoms.length

@@ -160,9 +160,9 @@ export declare const stockMovementsTable: import("drizzle-orm/pg-core").PgTableW
     dialect: "pg";
 }>;
 export declare const insertStockMovementSchema: z.ZodObject<{
-    ingredientId: z.ZodInt;
     orderId: z.ZodOptional<z.ZodNullable<z.ZodInt>>;
     quantity: z.ZodString;
+    ingredientId: z.ZodInt;
     movementType: z.ZodEnum<{
         sale: "sale";
         restock: "restock";

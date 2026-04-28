@@ -14,5 +14,7 @@ export interface UpdateDrinkBody {
     isActive?: boolean;
     prepTimeSeconds?: number;
     kitchenStation?: string;
+    categoryId?: number;
+    sortOrder?: number;
 }
 //# sourceMappingURL=updateDrinkBody.d.ts.map

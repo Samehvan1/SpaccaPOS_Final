@@ -6,6 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 export * from "./categorySales";
+export * from "./createDiscountBody";
+export * from "./createDiscountBodyType";
 export * from "./createDrinkBody";
 export * from "./createDrinkBodySlotsItem";
 export * from "./createIngredientBody";
@@ -18,6 +20,8 @@ export * from "./createOrderBodyPaymentMethod";
 export * from "./createUserBody";
 export * from "./createUserBodyRole";
 export * from "./dashboardSummary";
+export * from "./discount";
+export * from "./discountType";
 export * from "./drink";
 export * from "./drinkDetail";
 export * from "./drinkIngredientSlot";
@@ -40,6 +44,7 @@ export * from "./loginBody";
 export * from "./loginResponse";
 export * from "./order";
 export * from "./orderDetail";
+export * from "./orderDiscountType";
 export * from "./orderItem";
 export * from "./orderItemCustomization";
 export * from "./orderItemStatus";
@@ -58,6 +63,8 @@ export * from "./stockAdjustmentBodyMovementType";
 export * from "./stockMovement";
 export * from "./stockMovementMovementType";
 export * from "./topDrink";
+export * from "./updateDiscountBody";
+export * from "./updateDiscountBodyType";
 export * from "./updateDrinkBody";
 export * from "./updateIngredientBody";
 export * from "./updateIngredientBodyIngredientType";

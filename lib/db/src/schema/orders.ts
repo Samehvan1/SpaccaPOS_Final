@@ -26,6 +26,10 @@ export const ordersTable = pgTable("orders", {
   changeDue: numeric("change_due", { precision: 8, scale: 2 }),
   notes: text("notes"),
   cashierId: integer("cashier_id").references(() => usersTable.id, { onDelete: "set null" }),
+  paidAt: timestamp("paid_at", { withTimezone: true }),
+  readyAt: timestamp("ready_at", { withTimezone: true }),
+  completedAt: timestamp("completed_at", { withTimezone: true }),
+  cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });
@@ -41,6 +45,7 @@ export const orderItemsTable = pgTable("order_items", {
   specialNotes: text("special_notes"),
   kitchenStation: text("kitchen_station").notNull().default("main"),
   status: text("status", { enum: ["pending", "ready"] }).notNull().default("pending"),
+  readyAt: timestamp("ready_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });
@@ -52,6 +57,7 @@ export const orderItemCustomizationsTable = pgTable("order_item_customizations",
   optionId: integer("option_id").references(() => ingredientOptionsTable.id, { onDelete: "set null" }), // Nullable for Typed slots
   typeVolumeId: integer("type_volume_id"), // Added for Typed slots tracking
   consumedQty: numeric("consumed_qty", { precision: 10, scale: 4 }).notNull(),
+  producedQty: numeric("produced_qty", { precision: 10, scale: 4 }).notNull().default("0"),
   addedCost: numeric("added_cost", { precision: 8, scale: 4 }).notNull(),
   slotLabel: text("slot_label").notNull(),
   optionLabel: text("option_label").notNull(),

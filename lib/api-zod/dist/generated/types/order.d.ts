@@ -5,6 +5,7 @@
  * Spacca POS API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { OrderDiscountType } from "./orderDiscountType";
 import type { OrderPaymentMethod } from "./orderPaymentMethod";
 import type { OrderStatus } from "./orderStatus";
 export interface Order {
@@ -17,6 +18,12 @@ export interface Order {
     customerName: string | null;
     subtotal: number;
     discount: number;
+    /** @nullable */
+    discountId?: number | null;
+    /** @nullable */
+    discountValue?: number | null;
+    /** @nullable */
+    discountType?: OrderDiscountType;
     total: number;
     paymentMethod: OrderPaymentMethod;
     /** @nullable */
@@ -27,5 +34,13 @@ export interface Order {
     notes: string | null;
     createdAt: string;
     updatedAt: string;
+    /** @nullable */
+    paidAt: string | null;
+    /** @nullable */
+    readyAt: string | null;
+    /** @nullable */
+    completedAt: string | null;
+    /** @nullable */
+    cancelledAt: string | null;
 }
 //# sourceMappingURL=order.d.ts.map

@@ -117,6 +117,7 @@ router.get("/dashboard/active-orders", async (req, res): Promise<void> => {
             customizations: customizations.map((c) => ({
               ...c,
               consumedQty: parseFloat(c.consumedQty),
+              producedQty: parseFloat(c.producedQty),
               addedCost: parseFloat(c.addedCost),
               baristaSortOrder: c.baristaSortOrder,
             })),

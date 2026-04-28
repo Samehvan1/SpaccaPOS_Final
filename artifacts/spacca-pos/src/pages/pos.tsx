@@ -654,7 +654,9 @@ export default function PosTerminal() {
                       <span className="font-bold text-sm shrink-0">{fmt(item.totalPrice * item.quantity)}</span>
                     </div>
                     <div className="text-xs text-muted-foreground space-y-0.5 mb-2">
-                      {item.selections.map(s => (
+                      {item.selections
+                        .filter(s => s.optionLabel?.toLowerCase() !== "none")
+                        .map(s => (
                         <div key={s.slotLabel} className="flex justify-between">
                           <span><span className="text-muted-foreground/60">{s.slotLabel}:</span> {s.optionLabel}</span>
                           {s.extraCost > 0 && <span>+{fmt(s.extraCost)}</span>}
@@ -941,7 +943,7 @@ export default function PosTerminal() {
                         {priceBreakdown.dynamicInfo.ingredientName}
                       </span>
                       <span className="text-xs text-blue-500 ml-1.5">
-                        fills {Math.round(priceBreakdown.dynamicInfo.filledMl)} ml
+                        ingredient added
                       </span>
                     </div>
                     <span className="text-sm font-semibold text-blue-600 dark:text-blue-400 shrink-0">

@@ -8,6 +8,8 @@
 
 export interface DashboardSummary {
   todayRevenue: number;
+  todayCashRevenue: number;
+  todayCardRevenue: number;
   todayOrders: number;
   todayDrinks: number;
   averageOrderValue: number;

@@ -276,14 +276,14 @@ export default function KitchenDisplay() {
                       return (
                         <div
                           key={item.id}
-                          className={`p-4 transition-all relative ${
+                          className={`p-1 transition-all relative ${
                             isThisStation && item.status === "pending"
                               ? "bg-transparent"
                               : "bg-black/40 opacity-40 grayscale"
                           }`}
                         >
-                          <div className="flex items-start gap-3">
-                            <div className={`font-bold w-8 h-8 rounded-lg flex items-center justify-center text-xs shrink-0 shadow-lg ${
+                          <div className="flex items-start gap-1.5">
+                            <div className={`font-bold w-7 h-7 rounded-lg flex items-center justify-center text-xs shrink-0 shadow-lg ${
                               isThisStation && item.status === "pending"
                                 ? "bg-neon-cyan/20 text-neon-cyan ring-1 ring-neon-cyan/40"
                                 : "bg-white/5 text-white/20 ring-1 ring-white/10"
@@ -298,34 +298,40 @@ export default function KitchenDisplay() {
                               
                               {isThisStation && item.status === "pending" ? (
                                 <>
-                                  {item.customizations.length > 0 && (
-                                    <ul className="mt-1 space-y-0.5">
+                                    <ul className="mt-0.5 space-y-0 -ml-1">
                                       {item.customizations
-                                        .filter((cust: any) => (cust.baristaSortOrder ?? 1) !== 0)
+                                        .filter((cust: any) => (cust.baristaSortOrder ?? 1) !== 0 && cust.optionLabel?.toLowerCase() !== "none")
                                         .sort((a: any, b: any) => (a.baristaSortOrder ?? 1) - (b.baristaSortOrder ?? 1))
-                                        .map((cust: any) => (
-                                          <li key={cust.id} className="text-[11px] flex items-center gap-1.5">
-                                            <div className="w-1 h-1 rounded-full bg-neon-cyan" />
-                                            <span className="font-bold text-white/40 uppercase tracking-widest">{cust.slotLabel}:</span>
-                                            <span className="font-medium text-foreground">{cust.optionLabel}</span>
-                                          </li>
-                                        ))}
+                                        .map((cust: any) => {
+                                          const displayQty = cust.producedQty > 0 ? cust.producedQty : cust.consumedQty;
+                                          return (
+                                            <li key={cust.id} className="text-[11px] flex items-center gap-1">
+                                              <div className="w-1 h-1 rounded-full bg-neon-cyan shrink-0" />
+                                              <span className="font-bold text-white/40 uppercase tracking-widest">{cust.slotLabel}:</span>
+                                              <span className="font-medium text-foreground">{cust.optionLabel}</span>
+                                              {displayQty > 0 && (
+                                                <span className="text-[10px] text-primary font-black ml-1">({Math.round(displayQty)}ml)</span>
+                                              )}
+                                            </li>
+                                          );
+                                        })}
                                     </ul>
-                                  )}
-                                  {item.specialNotes && (
-                                    <div className="mt-2 p-2 bg-neon-yellow/5 text-neon-yellow border border-neon-yellow/20 rounded-lg text-[10px] font-bold italic flex gap-2">
-                                      <Info className="h-3.5 w-3.5 shrink-0" />
-                                      {item.specialNotes}
-                                    </div>
-                                  )}
-                                  <Button 
-                                    className="mt-3 w-full bg-neon-green hover:opacity-90 text-black font-bold uppercase tracking-widest h-10 rounded-lg shadow-lg shadow-neon-green/10 active:scale-[0.98] transition-all"
-                                    onClick={() => handleMarkItemReady(item.id)}
-                                  >
-                                    Produce Done
-                                  </Button>
-                                </>
-                              ) : (
+
+                                    {item.specialNotes && (
+                                      <div className="mt-2 p-2 bg-neon-yellow/5 text-neon-yellow border border-neon-yellow/20 rounded-lg text-[10px] font-bold italic flex gap-2">
+                                        <Info className="h-3.5 w-3.5 shrink-0" />
+                                        {item.specialNotes}
+                                      </div>
+                                    )}
+                                    
+                                    <Button 
+                                      className="mt-3 w-full bg-neon-green hover:opacity-90 text-black font-bold uppercase tracking-widest h-10 rounded-lg shadow-lg shadow-neon-green/10 active:scale-[0.98] transition-all"
+                                      onClick={() => handleMarkItemReady(item.id)}
+                                    >
+                                      Produce Done
+                                    </Button>
+                                  </>
+                                ) : (
                                   !isThisStation && activeStation !== "all" && (
                                     <div className="text-[10px] font-black text-neon-cyan/40 uppercase tracking-widest mt-2 flex items-center gap-2 italic">
                                       <div className="w-1.5 h-1.5 rounded-full bg-neon-cyan/40 animate-pulse" />

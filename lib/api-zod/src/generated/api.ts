@@ -44,7 +44,6 @@ export const GetMeResponse = zod.object({
 export const ListDrinksQueryParams = zod.object({
   category: zod.coerce.string().optional(),
   active: zod.coerce.boolean().optional(),
-  includeSlots: zod.coerce.boolean().optional(),
 });
 
 export const ListDrinksResponseItem = zod.object({
@@ -52,8 +51,6 @@ export const ListDrinksResponseItem = zod.object({
   name: zod.string(),
   description: zod.string().nullable(),
   category: zod.string(),
-  categoryId: zod.number().nullish(),
-  sortOrder: zod.number().optional(),
   basePrice: zod.number(),
   defaultPrice: zod.number().optional(),
   imageUrl: zod.string().nullable(),
@@ -61,9 +58,10 @@ export const ListDrinksResponseItem = zod.object({
   prepTimeSeconds: zod.number(),
   cupSizeMl: zod.number().nullish(),
   kitchenStation: zod.string().optional(),
+  categoryId: zod.number().optional(),
+  sortOrder: zod.number().optional(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
-  slots: zod.array(zod.any()).optional(),
 });
 export const ListDrinksResponse = zod.array(ListDrinksResponseItem);
 
@@ -74,13 +72,13 @@ export const CreateDrinkBody = zod.object({
   name: zod.string(),
   description: zod.string().optional(),
   category: zod.string(),
-  categoryId: zod.number().optional(),
-  sortOrder: zod.number().optional(),
   basePrice: zod.number(),
   imageUrl: zod.string().optional(),
   isActive: zod.boolean().optional(),
   prepTimeSeconds: zod.number().optional(),
   kitchenStation: zod.string().optional(),
+  categoryId: zod.number().optional(),
+  sortOrder: zod.number().optional(),
   slots: zod
     .array(
       zod.object({
@@ -111,8 +109,6 @@ export const GetDrinkResponse = zod
     name: zod.string(),
     description: zod.string().nullable(),
     category: zod.string(),
-    categoryId: zod.number().nullish(),
-    sortOrder: zod.number().optional(),
     basePrice: zod.number(),
     defaultPrice: zod.number().optional(),
     imageUrl: zod.string().nullable(),
@@ -120,6 +116,8 @@ export const GetDrinkResponse = zod
     prepTimeSeconds: zod.number(),
     cupSizeMl: zod.number().nullish(),
     kitchenStation: zod.string().optional(),
+    categoryId: zod.number().optional(),
+    sortOrder: zod.number().optional(),
     createdAt: zod.string(),
     updatedAt: zod.string(),
   })
@@ -154,13 +152,13 @@ export const UpdateDrinkBody = zod.object({
   name: zod.string().optional(),
   description: zod.string().optional(),
   category: zod.string().optional(),
-  categoryId: zod.number().optional(),
-  sortOrder: zod.number().optional(),
   basePrice: zod.number().optional(),
   imageUrl: zod.string().optional(),
   isActive: zod.boolean().optional(),
   prepTimeSeconds: zod.number().optional(),
   kitchenStation: zod.string().optional(),
+  categoryId: zod.number().optional(),
+  sortOrder: zod.number().optional(),
 });
 
 export const UpdateDrinkResponse = zod.object({
@@ -168,8 +166,6 @@ export const UpdateDrinkResponse = zod.object({
   name: zod.string(),
   description: zod.string().nullable(),
   category: zod.string(),
-  categoryId: zod.number().nullish(),
-  sortOrder: zod.number().optional(),
   basePrice: zod.number(),
   defaultPrice: zod.number().optional(),
   imageUrl: zod.string().nullable(),
@@ -177,6 +173,8 @@ export const UpdateDrinkResponse = zod.object({
   prepTimeSeconds: zod.number(),
   cupSizeMl: zod.number().nullish(),
   kitchenStation: zod.string().optional(),
+  categoryId: zod.number().optional(),
+  sortOrder: zod.number().optional(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
@@ -480,40 +478,78 @@ export const RestockIngredientResponse = zod.object({
  */
 export const ListOrdersQueryParams = zod.object({
   status: zod.coerce.string().optional(),
-  startDate: zod.coerce.string().optional(),
-  endDate: zod.coerce.string().optional(),
+  startDate: zod.date().optional(),
+  endDate: zod.date().optional(),
   limit: zod.coerce.number().optional(),
   offset: zod.coerce.number().optional(),
 });
 
-export const ListOrdersResponseItem = zod.object({
-  id: zod.number(),
-  orderNumber: zod.string(),
-  baristaId: zod.number(),
-  baristaName: zod.string(),
-  status: zod.enum([
-    "pending",
-    "paid",
-    "in_progress",
-    "ready",
-    "completed",
-    "cancelled",
-  ]),
-  customerName: zod.string().nullable(),
-  subtotal: zod.number(),
-  discount: zod.number(),
-  discountId: zod.number().nullish(),
-  discountValue: zod.number().nullish(),
-  discountType: zod.enum(["percentage", "fixed"]).nullish(),
-  total: zod.number(),
-  paymentMethod: zod.enum(["cash", "card", "wallet"]),
-  amountTendered: zod.number().nullable(),
-  changeDue: zod.number().nullable(),
-  notes: zod.string().nullable(),
-  createdAt: zod.string(),
-  updatedAt: zod.string(),
-  items: zod.array(zod.any()).optional(),
-});
+export const ListOrdersResponseItem = zod
+  .object({
+    id: zod.number(),
+    orderNumber: zod.string(),
+    baristaId: zod.number(),
+    baristaName: zod.string(),
+    status: zod.enum([
+      "pending",
+      "paid",
+      "in_progress",
+      "ready",
+      "completed",
+      "cancelled",
+      "refunded",
+    ]),
+    customerName: zod.string().nullable(),
+    subtotal: zod.number(),
+    discount: zod.number(),
+    discountId: zod.number().nullish(),
+    discountValue: zod.number().nullish(),
+    discountType: zod.enum(["percentage", "fixed"]).nullish(),
+    total: zod.number(),
+    paymentMethod: zod.enum(["cash", "card", "wallet"]),
+    amountTendered: zod.number().nullable(),
+    changeDue: zod.number().nullable(),
+    notes: zod.string().nullable(),
+    createdAt: zod.string(),
+    updatedAt: zod.string(),
+    paidAt: zod.string().nullable(),
+    readyAt: zod.string().nullable(),
+    completedAt: zod.string().nullable(),
+    cancelledAt: zod.string().nullable(),
+  })
+  .and(
+    zod.object({
+      items: zod.array(
+        zod.object({
+          id: zod.number(),
+          orderId: zod.number(),
+          drinkId: zod.number(),
+          drinkName: zod.string(),
+          quantity: zod.number(),
+          unitPrice: zod.number(),
+          lineTotal: zod.number(),
+          specialNotes: zod.string().nullable(),
+          status: zod.enum(["pending", "ready"]),
+          readyAt: zod.string().nullable(),
+          customizations: zod.array(
+            zod.object({
+              id: zod.number(),
+              orderItemId: zod.number(),
+              ingredientId: zod.number().nullish(),
+              optionId: zod.number().nullish(),
+              typeVolumeId: zod.number().nullish(),
+              consumedQty: zod.number(),
+              producedQty: zod.number().optional(),
+              addedCost: zod.number(),
+              slotLabel: zod.string(),
+              optionLabel: zod.string(),
+              baristaSortOrder: zod.number().nullish(),
+            }),
+          ),
+        }),
+      ),
+    }),
+  );
 export const ListOrdersResponse = zod.array(ListOrdersResponseItem);
 
 /**
@@ -570,6 +606,9 @@ export const GetOrderResponse = zod
     customerName: zod.string().nullable(),
     subtotal: zod.number(),
     discount: zod.number(),
+    discountId: zod.number().nullish(),
+    discountValue: zod.number().nullish(),
+    discountType: zod.enum(["percentage", "fixed"]).nullish(),
     total: zod.number(),
     paymentMethod: zod.enum(["cash", "card", "wallet"]),
     amountTendered: zod.number().nullable(),
@@ -577,6 +616,10 @@ export const GetOrderResponse = zod
     notes: zod.string().nullable(),
     createdAt: zod.string(),
     updatedAt: zod.string(),
+    paidAt: zod.string().nullable(),
+    readyAt: zod.string().nullable(),
+    completedAt: zod.string().nullable(),
+    cancelledAt: zod.string().nullable(),
   })
   .and(
     zod.object({
@@ -590,8 +633,8 @@ export const GetOrderResponse = zod
           unitPrice: zod.number(),
           lineTotal: zod.number(),
           specialNotes: zod.string().nullable(),
-          kitchenStation: zod.string().optional(),
           status: zod.enum(["pending", "ready"]),
+          readyAt: zod.string().nullable(),
           customizations: zod.array(
             zod.object({
               id: zod.number(),
@@ -600,11 +643,11 @@ export const GetOrderResponse = zod
               optionId: zod.number().nullish(),
               typeVolumeId: zod.number().nullish(),
               consumedQty: zod.number(),
+              producedQty: zod.number().optional(),
               addedCost: zod.number(),
               slotLabel: zod.string(),
               optionLabel: zod.string(),
               baristaSortOrder: zod.number().nullish(),
-              customerSortOrder: zod.number().nullish(),
             }),
           ),
         }),
@@ -631,65 +674,38 @@ export const UpdateOrderStatusBody = zod.object({
   ]),
 });
 
-export const UpdateOrderStatusResponse = zod
-  .object({
-    id: zod.number(),
-    orderNumber: zod.string(),
-    baristaId: zod.number(),
-    baristaName: zod.string(),
-    status: zod.enum([
-      "pending",
-      "paid",
-      "in_progress",
-      "ready",
-      "completed",
-      "cancelled",
-      "refunded",
-    ]),
-    customerName: zod.string().nullable(),
-    subtotal: zod.number(),
-    discount: zod.number(),
-    total: zod.number(),
-    paymentMethod: zod.enum(["cash", "card", "wallet"]),
-    amountTendered: zod.number().nullable(),
-    changeDue: zod.number().nullable(),
-    notes: zod.string().nullable(),
-    createdAt: zod.string(),
-    updatedAt: zod.string(),
-  })
-  .and(
-    zod.object({
-      items: zod.array(
-        zod.object({
-          id: zod.number(),
-          orderId: zod.number(),
-          drinkId: zod.number(),
-          drinkName: zod.string(),
-          quantity: zod.number(),
-          unitPrice: zod.number(),
-          lineTotal: zod.number(),
-          specialNotes: zod.string().nullable(),
-          kitchenStation: zod.string().optional(),
-          status: zod.enum(["pending", "ready"]),
-          customizations: zod.array(
-            zod.object({
-              id: zod.number(),
-              orderItemId: zod.number(),
-              ingredientId: zod.number().nullish(),
-              optionId: zod.number().nullish(),
-              typeVolumeId: zod.number().nullish(),
-              consumedQty: zod.number(),
-              addedCost: zod.number(),
-              slotLabel: zod.string(),
-              optionLabel: zod.string(),
-              baristaSortOrder: zod.number().nullish(),
-              customerSortOrder: zod.number().nullish(),
-            })
-          ),
-        })
-      ),
-    })
-  );
+export const UpdateOrderStatusResponse = zod.object({
+  id: zod.number(),
+  orderNumber: zod.string(),
+  baristaId: zod.number(),
+  baristaName: zod.string(),
+  status: zod.enum([
+    "pending",
+    "paid",
+    "in_progress",
+    "ready",
+    "completed",
+    "cancelled",
+    "refunded",
+  ]),
+  customerName: zod.string().nullable(),
+  subtotal: zod.number(),
+  discount: zod.number(),
+  discountId: zod.number().nullish(),
+  discountValue: zod.number().nullish(),
+  discountType: zod.enum(["percentage", "fixed"]).nullish(),
+  total: zod.number(),
+  paymentMethod: zod.enum(["cash", "card", "wallet"]),
+  amountTendered: zod.number().nullable(),
+  changeDue: zod.number().nullable(),
+  notes: zod.string().nullable(),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+  paidAt: zod.string().nullable(),
+  readyAt: zod.string().nullable(),
+  completedAt: zod.string().nullable(),
+  cancelledAt: zod.string().nullable(),
+});
 
 /**
  * @summary Mark a specific order item as ready
@@ -725,6 +741,10 @@ export const MarkOrderItemReadyResponse = zod.object({
   notes: zod.string().nullable(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
+  paidAt: zod.string().nullable(),
+  readyAt: zod.string().nullable(),
+  completedAt: zod.string().nullable(),
+  cancelledAt: zod.string().nullable(),
 });
 
 /**
@@ -802,6 +822,9 @@ export const GetActiveOrdersResponseItem = zod
     customerName: zod.string().nullable(),
     subtotal: zod.number(),
     discount: zod.number(),
+    discountId: zod.number().nullish(),
+    discountValue: zod.number().nullish(),
+    discountType: zod.enum(["percentage", "fixed"]).nullish(),
     total: zod.number(),
     paymentMethod: zod.enum(["cash", "card", "wallet"]),
     amountTendered: zod.number().nullable(),
@@ -809,6 +832,10 @@ export const GetActiveOrdersResponseItem = zod
     notes: zod.string().nullable(),
     createdAt: zod.string(),
     updatedAt: zod.string(),
+    paidAt: zod.string().nullable(),
+    readyAt: zod.string().nullable(),
+    completedAt: zod.string().nullable(),
+    cancelledAt: zod.string().nullable(),
   })
   .and(
     zod.object({
@@ -822,8 +849,8 @@ export const GetActiveOrdersResponseItem = zod
           unitPrice: zod.number(),
           lineTotal: zod.number(),
           specialNotes: zod.string().nullable(),
-          kitchenStation: zod.string().optional(),
           status: zod.enum(["pending", "ready"]),
+          readyAt: zod.string().nullable(),
           customizations: zod.array(
             zod.object({
               id: zod.number(),
@@ -832,11 +859,11 @@ export const GetActiveOrdersResponseItem = zod
               optionId: zod.number().nullish(),
               typeVolumeId: zod.number().nullish(),
               consumedQty: zod.number(),
+              producedQty: zod.number().optional(),
               addedCost: zod.number(),
               slotLabel: zod.string(),
               optionLabel: zod.string(),
               baristaSortOrder: zod.number().nullish(),
-              customerSortOrder: zod.number().nullish(),
             }),
           ),
         }),
@@ -932,8 +959,8 @@ export const DeleteUserParams = zod.object({
  */
 export const GetSalesByCategoryQueryParams = zod.object({
   days: zod.coerce.number().optional(),
-  startDate: zod.coerce.string().optional(),
-  endDate: zod.coerce.string().optional(),
+  startDate: zod.date().optional(),
+  endDate: zod.date().optional(),
 });
 
 export const GetSalesByCategoryResponseItem = zod.object({
@@ -981,7 +1008,7 @@ export const GetSettingsResponseItem = zod.object({
 export const GetSettingsResponse = zod.array(GetSettingsResponseItem);
 
 /**
- * @summary Update application settings
+ * @summary Update multiple settings
  */
 export const UpdateSettingsBody = zod.object({
   scope: zod.enum(["global", "user"]),
@@ -1000,7 +1027,46 @@ export const UpdateSettingsResponseItem = zod.object({
   userId: zod.number().nullish(),
 });
 export const UpdateSettingsResponse = zod.array(UpdateSettingsResponseItem);
-export const Discount = zod.object({
+
+/**
+ * @summary List all discounts
+ */
+export const ListDiscountsResponseItem = zod.object({
+  id: zod.number(),
+  code: zod.string(),
+  type: zod.enum(["percentage", "fixed"]),
+  value: zod.number(),
+  isActive: zod.boolean(),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+});
+export const ListDiscountsResponse = zod.array(ListDiscountsResponseItem);
+
+/**
+ * @summary Create a discount
+ */
+export const CreateDiscountBody = zod.object({
+  code: zod.string(),
+  type: zod.enum(["percentage", "fixed"]),
+  value: zod.number(),
+  isActive: zod.boolean().optional(),
+});
+
+/**
+ * @summary Update a discount
+ */
+export const UpdateDiscountParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const UpdateDiscountBody = zod.object({
+  code: zod.string().optional(),
+  type: zod.enum(["percentage", "fixed"]).optional(),
+  value: zod.number().optional(),
+  isActive: zod.boolean().optional(),
+});
+
+export const UpdateDiscountResponse = zod.object({
   id: zod.number(),
   code: zod.string(),
   type: zod.enum(["percentage", "fixed"]),
@@ -1010,16 +1076,26 @@ export const Discount = zod.object({
   updatedAt: zod.string(),
 });
 
-export const CreateDiscountBody = zod.object({
+/**
+ * @summary Delete a discount
+ */
+export const DeleteDiscountParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+/**
+ * @summary Validate a discount code
+ */
+export const ValidateDiscountParams = zod.object({
+  code: zod.coerce.string(),
+});
+
+export const ValidateDiscountResponse = zod.object({
+  id: zod.number(),
   code: zod.string(),
   type: zod.enum(["percentage", "fixed"]),
   value: zod.number(),
-  isActive: zod.boolean().optional(),
-});
-
-export const UpdateDiscountBody = zod.object({
-  code: zod.string().optional(),
-  type: zod.enum(["percentage", "fixed"]).optional(),
-  value: zod.number().optional(),
-  isActive: zod.boolean().optional(),
+  isActive: zod.boolean(),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
 });

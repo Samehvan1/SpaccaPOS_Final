@@ -13,5 +13,6 @@ export declare const OrderStatus: {
     readonly ready: "ready";
     readonly completed: "completed";
     readonly cancelled: "cancelled";
+    readonly refunded: "refunded";
 };
 //# sourceMappingURL=orderStatus.d.ts.map

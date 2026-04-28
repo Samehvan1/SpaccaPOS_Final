@@ -87,8 +87,6 @@ export declare const ListDrinksResponseItem: zod.ZodObject<{
     name: zod.ZodString;
     description: zod.ZodNullable<zod.ZodString>;
     category: zod.ZodString;
-    categoryId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
-    sortOrder: zod.ZodOptional<zod.ZodNumber>;
     basePrice: zod.ZodNumber;
     defaultPrice: zod.ZodOptional<zod.ZodNumber>;
     imageUrl: zod.ZodNullable<zod.ZodString>;
@@ -96,6 +94,8 @@ export declare const ListDrinksResponseItem: zod.ZodObject<{
     prepTimeSeconds: zod.ZodNumber;
     cupSizeMl: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
     kitchenStation: zod.ZodOptional<zod.ZodString>;
+    categoryId: zod.ZodOptional<zod.ZodNumber>;
+    sortOrder: zod.ZodOptional<zod.ZodNumber>;
     createdAt: zod.ZodString;
     updatedAt: zod.ZodString;
 }, "strip", zod.ZodTypeAny, {
@@ -109,11 +109,11 @@ export declare const ListDrinksResponseItem: zod.ZodObject<{
     prepTimeSeconds: number;
     createdAt: string;
     updatedAt: string;
-    categoryId?: number | null | undefined;
-    sortOrder?: number | undefined;
     defaultPrice?: number | undefined;
     cupSizeMl?: number | null | undefined;
     kitchenStation?: string | undefined;
+    categoryId?: number | undefined;
+    sortOrder?: number | undefined;
 }, {
     id: number;
     name: string;
@@ -125,19 +125,17 @@ export declare const ListDrinksResponseItem: zod.ZodObject<{
     prepTimeSeconds: number;
     createdAt: string;
     updatedAt: string;
-    categoryId?: number | null | undefined;
-    sortOrder?: number | undefined;
     defaultPrice?: number | undefined;
     cupSizeMl?: number | null | undefined;
     kitchenStation?: string | undefined;
+    categoryId?: number | undefined;
+    sortOrder?: number | undefined;
 }>;
 export declare const ListDrinksResponse: zod.ZodArray<zod.ZodObject<{
     id: zod.ZodNumber;
     name: zod.ZodString;
     description: zod.ZodNullable<zod.ZodString>;
     category: zod.ZodString;
-    categoryId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
-    sortOrder: zod.ZodOptional<zod.ZodNumber>;
     basePrice: zod.ZodNumber;
     defaultPrice: zod.ZodOptional<zod.ZodNumber>;
     imageUrl: zod.ZodNullable<zod.ZodString>;
@@ -145,6 +143,8 @@ export declare const ListDrinksResponse: zod.ZodArray<zod.ZodObject<{
     prepTimeSeconds: zod.ZodNumber;
     cupSizeMl: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
     kitchenStation: zod.ZodOptional<zod.ZodString>;
+    categoryId: zod.ZodOptional<zod.ZodNumber>;
+    sortOrder: zod.ZodOptional<zod.ZodNumber>;
     createdAt: zod.ZodString;
     updatedAt: zod.ZodString;
 }, "strip", zod.ZodTypeAny, {
@@ -158,11 +158,11 @@ export declare const ListDrinksResponse: zod.ZodArray<zod.ZodObject<{
     prepTimeSeconds: number;
     createdAt: string;
     updatedAt: string;
-    categoryId?: number | null | undefined;
-    sortOrder?: number | undefined;
     defaultPrice?: number | undefined;
     cupSizeMl?: number | null | undefined;
     kitchenStation?: string | undefined;
+    categoryId?: number | undefined;
+    sortOrder?: number | undefined;
 }, {
     id: number;
     name: string;
@@ -174,11 +174,11 @@ export declare const ListDrinksResponse: zod.ZodArray<zod.ZodObject<{
     prepTimeSeconds: number;
     createdAt: string;
     updatedAt: string;
-    categoryId?: number | null | undefined;
-    sortOrder?: number | undefined;
     defaultPrice?: number | undefined;
     cupSizeMl?: number | null | undefined;
     kitchenStation?: string | undefined;
+    categoryId?: number | undefined;
+    sortOrder?: number | undefined;
 }>, "many">;
 /**
  * @summary Create a drink
@@ -187,13 +187,13 @@ export declare const CreateDrinkBody: zod.ZodObject<{
     name: zod.ZodString;
     description: zod.ZodOptional<zod.ZodString>;
     category: zod.ZodString;
-    categoryId: zod.ZodOptional<zod.ZodNumber>;
-    sortOrder: zod.ZodOptional<zod.ZodNumber>;
     basePrice: zod.ZodNumber;
     imageUrl: zod.ZodOptional<zod.ZodString>;
     isActive: zod.ZodOptional<zod.ZodBoolean>;
     prepTimeSeconds: zod.ZodOptional<zod.ZodNumber>;
     kitchenStation: zod.ZodOptional<zod.ZodString>;
+    categoryId: zod.ZodOptional<zod.ZodNumber>;
+    sortOrder: zod.ZodOptional<zod.ZodNumber>;
     slots: zod.ZodOptional<zod.ZodArray<zod.ZodObject<{
         ingredientId: zod.ZodNumber;
         slotLabel: zod.ZodString;
@@ -230,12 +230,12 @@ export declare const CreateDrinkBody: zod.ZodObject<{
     category: string;
     basePrice: number;
     description?: string | undefined;
-    categoryId?: number | undefined;
-    sortOrder?: number | undefined;
     imageUrl?: string | undefined;
     isActive?: boolean | undefined;
     prepTimeSeconds?: number | undefined;
     kitchenStation?: string | undefined;
+    categoryId?: number | undefined;
+    sortOrder?: number | undefined;
     slots?: {
         ingredientId: number;
         slotLabel: string;
@@ -252,12 +252,12 @@ export declare const CreateDrinkBody: zod.ZodObject<{
     category: string;
     basePrice: number;
     description?: string | undefined;
-    categoryId?: number | undefined;
-    sortOrder?: number | undefined;
     imageUrl?: string | undefined;
     isActive?: boolean | undefined;
     prepTimeSeconds?: number | undefined;
     kitchenStation?: string | undefined;
+    categoryId?: number | undefined;
+    sortOrder?: number | undefined;
     slots?: {
         ingredientId: number;
         slotLabel: string;
@@ -285,8 +285,6 @@ export declare const GetDrinkResponse: zod.ZodIntersection<zod.ZodObject<{
     name: zod.ZodString;
     description: zod.ZodNullable<zod.ZodString>;
     category: zod.ZodString;
-    categoryId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
-    sortOrder: zod.ZodOptional<zod.ZodNumber>;
     basePrice: zod.ZodNumber;
     defaultPrice: zod.ZodOptional<zod.ZodNumber>;
     imageUrl: zod.ZodNullable<zod.ZodString>;
@@ -294,6 +292,8 @@ export declare const GetDrinkResponse: zod.ZodIntersection<zod.ZodObject<{
     prepTimeSeconds: zod.ZodNumber;
     cupSizeMl: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
     kitchenStation: zod.ZodOptional<zod.ZodString>;
+    categoryId: zod.ZodOptional<zod.ZodNumber>;
+    sortOrder: zod.ZodOptional<zod.ZodNumber>;
     createdAt: zod.ZodString;
     updatedAt: zod.ZodString;
 }, "strip", zod.ZodTypeAny, {
@@ -307,11 +307,11 @@ export declare const GetDrinkResponse: zod.ZodIntersection<zod.ZodObject<{
     prepTimeSeconds: number;
     createdAt: string;
     updatedAt: string;
-    categoryId?: number | null | undefined;
-    sortOrder?: number | undefined;
     defaultPrice?: number | undefined;
     cupSizeMl?: number | null | undefined;
     kitchenStation?: string | undefined;
+    categoryId?: number | undefined;
+    sortOrder?: number | undefined;
 }, {
     id: number;
     name: string;
@@ -323,11 +323,11 @@ export declare const GetDrinkResponse: zod.ZodIntersection<zod.ZodObject<{
     prepTimeSeconds: number;
     createdAt: string;
     updatedAt: string;
-    categoryId?: number | null | undefined;
-    sortOrder?: number | undefined;
     defaultPrice?: number | undefined;
     cupSizeMl?: number | null | undefined;
     kitchenStation?: string | undefined;
+    categoryId?: number | undefined;
+    sortOrder?: number | undefined;
 }>, zod.ZodObject<{
     slots: zod.ZodArray<zod.ZodObject<{
         id: zod.ZodNumber;
@@ -409,43 +409,41 @@ export declare const UpdateDrinkBody: zod.ZodObject<{
     name: zod.ZodOptional<zod.ZodString>;
     description: zod.ZodOptional<zod.ZodString>;
     category: zod.ZodOptional<zod.ZodString>;
-    categoryId: zod.ZodOptional<zod.ZodNumber>;
-    sortOrder: zod.ZodOptional<zod.ZodNumber>;
     basePrice: zod.ZodOptional<zod.ZodNumber>;
     imageUrl: zod.ZodOptional<zod.ZodString>;
     isActive: zod.ZodOptional<zod.ZodBoolean>;
     prepTimeSeconds: zod.ZodOptional<zod.ZodNumber>;
     kitchenStation: zod.ZodOptional<zod.ZodString>;
+    categoryId: zod.ZodOptional<zod.ZodNumber>;
+    sortOrder: zod.ZodOptional<zod.ZodNumber>;
 }, "strip", zod.ZodTypeAny, {
     name?: string | undefined;
     category?: string | undefined;
     description?: string | undefined;
-    categoryId?: number | undefined;
-    sortOrder?: number | undefined;
     basePrice?: number | undefined;
     imageUrl?: string | undefined;
     isActive?: boolean | undefined;
     prepTimeSeconds?: number | undefined;
     kitchenStation?: string | undefined;
+    categoryId?: number | undefined;
+    sortOrder?: number | undefined;
 }, {
     name?: string | undefined;
     category?: string | undefined;
     description?: string | undefined;
-    categoryId?: number | undefined;
-    sortOrder?: number | undefined;
     basePrice?: number | undefined;
     imageUrl?: string | undefined;
     isActive?: boolean | undefined;
     prepTimeSeconds?: number | undefined;
     kitchenStation?: string | undefined;
+    categoryId?: number | undefined;
+    sortOrder?: number | undefined;
 }>;
 export declare const UpdateDrinkResponse: zod.ZodObject<{
     id: zod.ZodNumber;
     name: zod.ZodString;
     description: zod.ZodNullable<zod.ZodString>;
     category: zod.ZodString;
-    categoryId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
-    sortOrder: zod.ZodOptional<zod.ZodNumber>;
     basePrice: zod.ZodNumber;
     defaultPrice: zod.ZodOptional<zod.ZodNumber>;
     imageUrl: zod.ZodNullable<zod.ZodString>;
@@ -453,6 +451,8 @@ export declare const UpdateDrinkResponse: zod.ZodObject<{
     prepTimeSeconds: zod.ZodNumber;
     cupSizeMl: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
     kitchenStation: zod.ZodOptional<zod.ZodString>;
+    categoryId: zod.ZodOptional<zod.ZodNumber>;
+    sortOrder: zod.ZodOptional<zod.ZodNumber>;
     createdAt: zod.ZodString;
     updatedAt: zod.ZodString;
 }, "strip", zod.ZodTypeAny, {
@@ -466,11 +466,11 @@ export declare const UpdateDrinkResponse: zod.ZodObject<{
     prepTimeSeconds: number;
     createdAt: string;
     updatedAt: string;
-    categoryId?: number | null | undefined;
-    sortOrder?: number | undefined;
     defaultPrice?: number | undefined;
     cupSizeMl?: number | null | undefined;
     kitchenStation?: string | undefined;
+    categoryId?: number | undefined;
+    sortOrder?: number | undefined;
 }, {
     id: number;
     name: string;
@@ -482,11 +482,11 @@ export declare const UpdateDrinkResponse: zod.ZodObject<{
     prepTimeSeconds: number;
     createdAt: string;
     updatedAt: string;
-    categoryId?: number | null | undefined;
-    sortOrder?: number | undefined;
     defaultPrice?: number | undefined;
     cupSizeMl?: number | null | undefined;
     kitchenStation?: string | undefined;
+    categoryId?: number | undefined;
+    sortOrder?: number | undefined;
 }>;
 /**
  * @summary Delete a drink
@@ -1111,15 +1111,18 @@ export declare const ListOrdersQueryParams: zod.ZodObject<{
     limit?: number | undefined;
     offset?: number | undefined;
 }>;
-export declare const ListOrdersResponseItem: zod.ZodObject<{
+export declare const ListOrdersResponseItem: zod.ZodIntersection<zod.ZodObject<{
     id: zod.ZodNumber;
     orderNumber: zod.ZodString;
     baristaId: zod.ZodNumber;
     baristaName: zod.ZodString;
-    status: zod.ZodEnum<["pending", "paid", "in_progress", "ready", "completed", "cancelled"]>;
+    status: zod.ZodEnum<["pending", "paid", "in_progress", "ready", "completed", "cancelled", "refunded"]>;
     customerName: zod.ZodNullable<zod.ZodString>;
     subtotal: zod.ZodNumber;
     discount: zod.ZodNumber;
+    discountId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
+    discountValue: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
+    discountType: zod.ZodOptional<zod.ZodNullable<zod.ZodEnum<["percentage", "fixed"]>>>;
     total: zod.ZodNumber;
     paymentMethod: zod.ZodEnum<["cash", "card", "wallet"]>;
     amountTendered: zod.ZodNullable<zod.ZodNumber>;
@@ -1127,8 +1130,12 @@ export declare const ListOrdersResponseItem: zod.ZodObject<{
     notes: zod.ZodNullable<zod.ZodString>;
     createdAt: zod.ZodString;
     updatedAt: zod.ZodString;
+    paidAt: zod.ZodNullable<zod.ZodString>;
+    readyAt: zod.ZodNullable<zod.ZodString>;
+    completedAt: zod.ZodNullable<zod.ZodString>;
+    cancelledAt: zod.ZodNullable<zod.ZodString>;
 }, "strip", zod.ZodTypeAny, {
-    status: "pending" | "paid" | "in_progress" | "ready" | "completed" | "cancelled";
+    status: "pending" | "paid" | "in_progress" | "ready" | "completed" | "cancelled" | "refunded";
     id: number;
     createdAt: string;
     updatedAt: string;
@@ -1143,8 +1150,15 @@ export declare const ListOrdersResponseItem: zod.ZodObject<{
     amountTendered: number | null;
     changeDue: number | null;
     notes: string | null;
+    paidAt: string | null;
+    readyAt: string | null;
+    completedAt: string | null;
+    cancelledAt: string | null;
+    discountId?: number | null | undefined;
+    discountValue?: number | null | undefined;
+    discountType?: "percentage" | "fixed" | null | undefined;
 }, {
-    status: "pending" | "paid" | "in_progress" | "ready" | "completed" | "cancelled";
+    status: "pending" | "paid" | "in_progress" | "ready" | "completed" | "cancelled" | "refunded";
     id: number;
     createdAt: string;
     updatedAt: string;
@@ -1159,16 +1173,169 @@ export declare const ListOrdersResponseItem: zod.ZodObject<{
     amountTendered: number | null;
     changeDue: number | null;
     notes: string | null;
-}>;
-export declare const ListOrdersResponse: zod.ZodArray<zod.ZodObject<{
+    paidAt: string | null;
+    readyAt: string | null;
+    completedAt: string | null;
+    cancelledAt: string | null;
+    discountId?: number | null | undefined;
+    discountValue?: number | null | undefined;
+    discountType?: "percentage" | "fixed" | null | undefined;
+}>, zod.ZodObject<{
+    items: zod.ZodArray<zod.ZodObject<{
+        id: zod.ZodNumber;
+        orderId: zod.ZodNumber;
+        drinkId: zod.ZodNumber;
+        drinkName: zod.ZodString;
+        quantity: zod.ZodNumber;
+        unitPrice: zod.ZodNumber;
+        lineTotal: zod.ZodNumber;
+        specialNotes: zod.ZodNullable<zod.ZodString>;
+        status: zod.ZodEnum<["pending", "ready"]>;
+        readyAt: zod.ZodNullable<zod.ZodString>;
+        customizations: zod.ZodArray<zod.ZodObject<{
+            id: zod.ZodNumber;
+            orderItemId: zod.ZodNumber;
+            ingredientId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
+            optionId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
+            typeVolumeId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
+            consumedQty: zod.ZodNumber;
+            addedCost: zod.ZodNumber;
+            slotLabel: zod.ZodString;
+            optionLabel: zod.ZodString;
+            baristaSortOrder: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
+        }, "strip", zod.ZodTypeAny, {
+            id: number;
+            slotLabel: string;
+            optionLabel: string;
+            orderItemId: number;
+            consumedQty: number;
+            addedCost: number;
+            ingredientId?: number | null | undefined;
+            baristaSortOrder?: number | null | undefined;
+            optionId?: number | null | undefined;
+            typeVolumeId?: number | null | undefined;
+        }, {
+            id: number;
+            slotLabel: string;
+            optionLabel: string;
+            orderItemId: number;
+            consumedQty: number;
+            addedCost: number;
+            ingredientId?: number | null | undefined;
+            baristaSortOrder?: number | null | undefined;
+            optionId?: number | null | undefined;
+            typeVolumeId?: number | null | undefined;
+        }>, "many">;
+    }, "strip", zod.ZodTypeAny, {
+        status: "pending" | "ready";
+        id: number;
+        drinkId: number;
+        quantity: number;
+        readyAt: string | null;
+        orderId: number;
+        drinkName: string;
+        unitPrice: number;
+        lineTotal: number;
+        specialNotes: string | null;
+        customizations: {
+            id: number;
+            slotLabel: string;
+            optionLabel: string;
+            orderItemId: number;
+            consumedQty: number;
+            addedCost: number;
+            ingredientId?: number | null | undefined;
+            baristaSortOrder?: number | null | undefined;
+            optionId?: number | null | undefined;
+            typeVolumeId?: number | null | undefined;
+        }[];
+    }, {
+        status: "pending" | "ready";
+        id: number;
+        drinkId: number;
+        quantity: number;
+        readyAt: string | null;
+        orderId: number;
+        drinkName: string;
+        unitPrice: number;
+        lineTotal: number;
+        specialNotes: string | null;
+        customizations: {
+            id: number;
+            slotLabel: string;
+            optionLabel: string;
+            orderItemId: number;
+            consumedQty: number;
+            addedCost: number;
+            ingredientId?: number | null | undefined;
+            baristaSortOrder?: number | null | undefined;
+            optionId?: number | null | undefined;
+            typeVolumeId?: number | null | undefined;
+        }[];
+    }>, "many">;
+}, "strip", zod.ZodTypeAny, {
+    items: {
+        status: "pending" | "ready";
+        id: number;
+        drinkId: number;
+        quantity: number;
+        readyAt: string | null;
+        orderId: number;
+        drinkName: string;
+        unitPrice: number;
+        lineTotal: number;
+        specialNotes: string | null;
+        customizations: {
+            id: number;
+            slotLabel: string;
+            optionLabel: string;
+            orderItemId: number;
+            consumedQty: number;
+            addedCost: number;
+            ingredientId?: number | null | undefined;
+            baristaSortOrder?: number | null | undefined;
+            optionId?: number | null | undefined;
+            typeVolumeId?: number | null | undefined;
+        }[];
+    }[];
+}, {
+    items: {
+        status: "pending" | "ready";
+        id: number;
+        drinkId: number;
+        quantity: number;
+        readyAt: string | null;
+        orderId: number;
+        drinkName: string;
+        unitPrice: number;
+        lineTotal: number;
+        specialNotes: string | null;
+        customizations: {
+            id: number;
+            slotLabel: string;
+            optionLabel: string;
+            orderItemId: number;
+            consumedQty: number;
+            addedCost: number;
+            ingredientId?: number | null | undefined;
+            baristaSortOrder?: number | null | undefined;
+            optionId?: number | null | undefined;
+            typeVolumeId?: number | null | undefined;
+        }[];
+    }[];
+}>>;
+export declare const ListOrdersResponse: zod.ZodArray<zod.ZodIntersection<zod.ZodObject<{
     id: zod.ZodNumber;
     orderNumber: zod.ZodString;
     baristaId: zod.ZodNumber;
     baristaName: zod.ZodString;
-    status: zod.ZodEnum<["pending", "paid", "in_progress", "ready", "completed", "cancelled"]>;
+    status: zod.ZodEnum<["pending", "paid", "in_progress", "ready", "completed", "cancelled", "refunded"]>;
     customerName: zod.ZodNullable<zod.ZodString>;
     subtotal: zod.ZodNumber;
     discount: zod.ZodNumber;
+    discountId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
+    discountValue: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
+    discountType: zod.ZodOptional<zod.ZodNullable<zod.ZodEnum<["percentage", "fixed"]>>>;
     total: zod.ZodNumber;
     paymentMethod: zod.ZodEnum<["cash", "card", "wallet"]>;
     amountTendered: zod.ZodNullable<zod.ZodNumber>;
@@ -1176,8 +1343,12 @@ export declare const ListOrdersResponse: zod.ZodArray<zod.ZodObject<{
     notes: zod.ZodNullable<zod.ZodString>;
     createdAt: zod.ZodString;
     updatedAt: zod.ZodString;
+    paidAt: zod.ZodNullable<zod.ZodString>;
+    readyAt: zod.ZodNullable<zod.ZodString>;
+    completedAt: zod.ZodNullable<zod.ZodString>;
+    cancelledAt: zod.ZodNullable<zod.ZodString>;
 }, "strip", zod.ZodTypeAny, {
-    status: "pending" | "paid" | "in_progress" | "ready" | "completed" | "cancelled";
+    status: "pending" | "paid" | "in_progress" | "ready" | "completed" | "cancelled" | "refunded";
     id: number;
     createdAt: string;
     updatedAt: string;
@@ -1192,8 +1363,15 @@ export declare const ListOrdersResponse: zod.ZodArray<zod.ZodObject<{
     amountTendered: number | null;
     changeDue: number | null;
     notes: string | null;
+    paidAt: string | null;
+    readyAt: string | null;
+    completedAt: string | null;
+    cancelledAt: string | null;
+    discountId?: number | null | undefined;
+    discountValue?: number | null | undefined;
+    discountType?: "percentage" | "fixed" | null | undefined;
 }, {
-    status: "pending" | "paid" | "in_progress" | "ready" | "completed" | "cancelled";
+    status: "pending" | "paid" | "in_progress" | "ready" | "completed" | "cancelled" | "refunded";
     id: number;
     createdAt: string;
     updatedAt: string;
@@ -1208,7 +1386,157 @@ export declare const ListOrdersResponse: zod.ZodArray<zod.ZodObject<{
     amountTendered: number | null;
     changeDue: number | null;
     notes: string | null;
-}>, "many">;
+    paidAt: string | null;
+    readyAt: string | null;
+    completedAt: string | null;
+    cancelledAt: string | null;
+    discountId?: number | null | undefined;
+    discountValue?: number | null | undefined;
+    discountType?: "percentage" | "fixed" | null | undefined;
+}>, zod.ZodObject<{
+    items: zod.ZodArray<zod.ZodObject<{
+        id: zod.ZodNumber;
+        orderId: zod.ZodNumber;
+        drinkId: zod.ZodNumber;
+        drinkName: zod.ZodString;
+        quantity: zod.ZodNumber;
+        unitPrice: zod.ZodNumber;
+        lineTotal: zod.ZodNumber;
+        specialNotes: zod.ZodNullable<zod.ZodString>;
+        status: zod.ZodEnum<["pending", "ready"]>;
+        readyAt: zod.ZodNullable<zod.ZodString>;
+        customizations: zod.ZodArray<zod.ZodObject<{
+            id: zod.ZodNumber;
+            orderItemId: zod.ZodNumber;
+            ingredientId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
+            optionId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
+            typeVolumeId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
+            consumedQty: zod.ZodNumber;
+            addedCost: zod.ZodNumber;
+            slotLabel: zod.ZodString;
+            optionLabel: zod.ZodString;
+            baristaSortOrder: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
+        }, "strip", zod.ZodTypeAny, {
+            id: number;
+            slotLabel: string;
+            optionLabel: string;
+            orderItemId: number;
+            consumedQty: number;
+            addedCost: number;
+            ingredientId?: number | null | undefined;
+            baristaSortOrder?: number | null | undefined;
+            optionId?: number | null | undefined;
+            typeVolumeId?: number | null | undefined;
+        }, {
+            id: number;
+            slotLabel: string;
+            optionLabel: string;
+            orderItemId: number;
+            consumedQty: number;
+            addedCost: number;
+            ingredientId?: number | null | undefined;
+            baristaSortOrder?: number | null | undefined;
+            optionId?: number | null | undefined;
+            typeVolumeId?: number | null | undefined;
+        }>, "many">;
+    }, "strip", zod.ZodTypeAny, {
+        status: "pending" | "ready";
+        id: number;
+        drinkId: number;
+        quantity: number;
+        readyAt: string | null;
+        orderId: number;
+        drinkName: string;
+        unitPrice: number;
+        lineTotal: number;
+        specialNotes: string | null;
+        customizations: {
+            id: number;
+            slotLabel: string;
+            optionLabel: string;
+            orderItemId: number;
+            consumedQty: number;
+            addedCost: number;
+            ingredientId?: number | null | undefined;
+            baristaSortOrder?: number | null | undefined;
+            optionId?: number | null | undefined;
+            typeVolumeId?: number | null | undefined;
+        }[];
+    }, {
+        status: "pending" | "ready";
+        id: number;
+        drinkId: number;
+        quantity: number;
+        readyAt: string | null;
+        orderId: number;
+        drinkName: string;
+        unitPrice: number;
+        lineTotal: number;
+        specialNotes: string | null;
+        customizations: {
+            id: number;
+            slotLabel: string;
+            optionLabel: string;
+            orderItemId: number;
+            consumedQty: number;
+            addedCost: number;
+            ingredientId?: number | null | undefined;
+            baristaSortOrder?: number | null | undefined;
+            optionId?: number | null | undefined;
+            typeVolumeId?: number | null | undefined;
+        }[];
+    }>, "many">;
+}, "strip", zod.ZodTypeAny, {
+    items: {
+        status: "pending" | "ready";
+        id: number;
+        drinkId: number;
+        quantity: number;
+        readyAt: string | null;
+        orderId: number;
+        drinkName: string;
+        unitPrice: number;
+        lineTotal: number;
+        specialNotes: string | null;
+        customizations: {
+            id: number;
+            slotLabel: string;
+            optionLabel: string;
+            orderItemId: number;
+            consumedQty: number;
+            addedCost: number;
+            ingredientId?: number | null | undefined;
+            baristaSortOrder?: number | null | undefined;
+            optionId?: number | null | undefined;
+            typeVolumeId?: number | null | undefined;
+        }[];
+    }[];
+}, {
+    items: {
+        status: "pending" | "ready";
+        id: number;
+        drinkId: number;
+        quantity: number;
+        readyAt: string | null;
+        orderId: number;
+        drinkName: string;
+        unitPrice: number;
+        lineTotal: number;
+        specialNotes: string | null;
+        customizations: {
+            id: number;
+            slotLabel: string;
+            optionLabel: string;
+            orderItemId: number;
+            consumedQty: number;
+            addedCost: number;
+            ingredientId?: number | null | undefined;
+            baristaSortOrder?: number | null | undefined;
+            optionId?: number | null | undefined;
+            typeVolumeId?: number | null | undefined;
+        }[];
+    }[];
+}>>, "many">;
 /**
  * @summary Place a new order (full transaction)
  */
@@ -1218,6 +1546,7 @@ export declare const CreateOrderBody: zod.ZodObject<{
     amountTendered: zod.ZodOptional<zod.ZodNumber>;
     notes: zod.ZodOptional<zod.ZodString>;
     discount: zod.ZodOptional<zod.ZodNumber>;
+    discountCode: zod.ZodOptional<zod.ZodString>;
     items: zod.ZodArray<zod.ZodObject<{
         drinkId: zod.ZodNumber;
         quantity: zod.ZodNumber;
@@ -1288,6 +1617,7 @@ export declare const CreateOrderBody: zod.ZodObject<{
     discount?: number | undefined;
     amountTendered?: number | undefined;
     notes?: string | undefined;
+    discountCode?: string | undefined;
 }, {
     paymentMethod: "cash" | "card" | "wallet";
     items: {
@@ -1307,6 +1637,7 @@ export declare const CreateOrderBody: zod.ZodObject<{
     discount?: number | undefined;
     amountTendered?: number | undefined;
     notes?: string | undefined;
+    discountCode?: string | undefined;
 }>;
 /**
  * @summary Get order detail
@@ -1323,10 +1654,13 @@ export declare const GetOrderResponse: zod.ZodIntersection<zod.ZodObject<{
     orderNumber: zod.ZodString;
     baristaId: zod.ZodNumber;
     baristaName: zod.ZodString;
-    status: zod.ZodEnum<["pending", "paid", "in_progress", "ready", "completed", "cancelled"]>;
+    status: zod.ZodEnum<["pending", "paid", "in_progress", "ready", "completed", "cancelled", "refunded"]>;
     customerName: zod.ZodNullable<zod.ZodString>;
     subtotal: zod.ZodNumber;
     discount: zod.ZodNumber;
+    discountId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
+    discountValue: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
+    discountType: zod.ZodOptional<zod.ZodNullable<zod.ZodEnum<["percentage", "fixed"]>>>;
     total: zod.ZodNumber;
     paymentMethod: zod.ZodEnum<["cash", "card", "wallet"]>;
     amountTendered: zod.ZodNullable<zod.ZodNumber>;
@@ -1334,8 +1668,12 @@ export declare const GetOrderResponse: zod.ZodIntersection<zod.ZodObject<{
     notes: zod.ZodNullable<zod.ZodString>;
     createdAt: zod.ZodString;
     updatedAt: zod.ZodString;
+    paidAt: zod.ZodNullable<zod.ZodString>;
+    readyAt: zod.ZodNullable<zod.ZodString>;
+    completedAt: zod.ZodNullable<zod.ZodString>;
+    cancelledAt: zod.ZodNullable<zod.ZodString>;
 }, "strip", zod.ZodTypeAny, {
-    status: "pending" | "paid" | "in_progress" | "ready" | "completed" | "cancelled";
+    status: "pending" | "paid" | "in_progress" | "ready" | "completed" | "cancelled" | "refunded";
     id: number;
     createdAt: string;
     updatedAt: string;
@@ -1350,8 +1688,15 @@ export declare const GetOrderResponse: zod.ZodIntersection<zod.ZodObject<{
     amountTendered: number | null;
     changeDue: number | null;
     notes: string | null;
+    paidAt: string | null;
+    readyAt: string | null;
+    completedAt: string | null;
+    cancelledAt: string | null;
+    discountId?: number | null | undefined;
+    discountValue?: number | null | undefined;
+    discountType?: "percentage" | "fixed" | null | undefined;
 }, {
-    status: "pending" | "paid" | "in_progress" | "ready" | "completed" | "cancelled";
+    status: "pending" | "paid" | "in_progress" | "ready" | "completed" | "cancelled" | "refunded";
     id: number;
     createdAt: string;
     updatedAt: string;
@@ -1366,6 +1711,13 @@ export declare const GetOrderResponse: zod.ZodIntersection<zod.ZodObject<{
     amountTendered: number | null;
     changeDue: number | null;
     notes: string | null;
+    paidAt: string | null;
+    readyAt: string | null;
+    completedAt: string | null;
+    cancelledAt: string | null;
+    discountId?: number | null | undefined;
+    discountValue?: number | null | undefined;
+    discountType?: "percentage" | "fixed" | null | undefined;
 }>, zod.ZodObject<{
     items: zod.ZodArray<zod.ZodObject<{
         id: zod.ZodNumber;
@@ -1376,8 +1728,8 @@ export declare const GetOrderResponse: zod.ZodIntersection<zod.ZodObject<{
         unitPrice: zod.ZodNumber;
         lineTotal: zod.ZodNumber;
         specialNotes: zod.ZodNullable<zod.ZodString>;
-        kitchenStation: zod.ZodOptional<zod.ZodString>;
         status: zod.ZodEnum<["pending", "ready"]>;
+        readyAt: zod.ZodNullable<zod.ZodString>;
         customizations: zod.ZodArray<zod.ZodObject<{
             id: zod.ZodNumber;
             orderItemId: zod.ZodNumber;
@@ -1389,7 +1741,6 @@ export declare const GetOrderResponse: zod.ZodIntersection<zod.ZodObject<{
             slotLabel: zod.ZodString;
             optionLabel: zod.ZodString;
             baristaSortOrder: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
-            customerSortOrder: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
         }, "strip", zod.ZodTypeAny, {
             id: number;
             slotLabel: string;
@@ -1399,7 +1750,6 @@ export declare const GetOrderResponse: zod.ZodIntersection<zod.ZodObject<{
             addedCost: number;
             ingredientId?: number | null | undefined;
             baristaSortOrder?: number | null | undefined;
-            customerSortOrder?: number | null | undefined;
             optionId?: number | null | undefined;
             typeVolumeId?: number | null | undefined;
         }, {
@@ -1411,7 +1761,6 @@ export declare const GetOrderResponse: zod.ZodIntersection<zod.ZodObject<{
             addedCost: number;
             ingredientId?: number | null | undefined;
             baristaSortOrder?: number | null | undefined;
-            customerSortOrder?: number | null | undefined;
             optionId?: number | null | undefined;
             typeVolumeId?: number | null | undefined;
         }>, "many">;
@@ -1420,11 +1769,12 @@ export declare const GetOrderResponse: zod.ZodIntersection<zod.ZodObject<{
         id: number;
         drinkId: number;
         quantity: number;
-        specialNotes: string | null;
+        readyAt: string | null;
         orderId: number;
         drinkName: string;
         unitPrice: number;
         lineTotal: number;
+        specialNotes: string | null;
         customizations: {
             id: number;
             slotLabel: string;
@@ -1434,21 +1784,20 @@ export declare const GetOrderResponse: zod.ZodIntersection<zod.ZodObject<{
             addedCost: number;
             ingredientId?: number | null | undefined;
             baristaSortOrder?: number | null | undefined;
-            customerSortOrder?: number | null | undefined;
             optionId?: number | null | undefined;
             typeVolumeId?: number | null | undefined;
         }[];
-        kitchenStation?: string | undefined;
     }, {
         status: "pending" | "ready";
         id: number;
         drinkId: number;
         quantity: number;
-        specialNotes: string | null;
+        readyAt: string | null;
         orderId: number;
         drinkName: string;
         unitPrice: number;
         lineTotal: number;
+        specialNotes: string | null;
         customizations: {
             id: number;
             slotLabel: string;
@@ -1458,11 +1807,9 @@ export declare const GetOrderResponse: zod.ZodIntersection<zod.ZodObject<{
             addedCost: number;
             ingredientId?: number | null | undefined;
             baristaSortOrder?: number | null | undefined;
-            customerSortOrder?: number | null | undefined;
             optionId?: number | null | undefined;
             typeVolumeId?: number | null | undefined;
         }[];
-        kitchenStation?: string | undefined;
     }>, "many">;
 }, "strip", zod.ZodTypeAny, {
     items: {
@@ -1470,11 +1817,12 @@ export declare const GetOrderResponse: zod.ZodIntersection<zod.ZodObject<{
         id: number;
         drinkId: number;
         quantity: number;
-        specialNotes: string | null;
+        readyAt: string | null;
         orderId: number;
         drinkName: string;
         unitPrice: number;
         lineTotal: number;
+        specialNotes: string | null;
         customizations: {
             id: number;
             slotLabel: string;
@@ -1484,11 +1832,9 @@ export declare const GetOrderResponse: zod.ZodIntersection<zod.ZodObject<{
             addedCost: number;
             ingredientId?: number | null | undefined;
             baristaSortOrder?: number | null | undefined;
-            customerSortOrder?: number | null | undefined;
             optionId?: number | null | undefined;
             typeVolumeId?: number | null | undefined;
         }[];
-        kitchenStation?: string | undefined;
     }[];
 }, {
     items: {
@@ -1496,11 +1842,12 @@ export declare const GetOrderResponse: zod.ZodIntersection<zod.ZodObject<{
         id: number;
         drinkId: number;
         quantity: number;
-        specialNotes: string | null;
+        readyAt: string | null;
         orderId: number;
         drinkName: string;
         unitPrice: number;
         lineTotal: number;
+        specialNotes: string | null;
         customizations: {
             id: number;
             slotLabel: string;
@@ -1510,11 +1857,9 @@ export declare const GetOrderResponse: zod.ZodIntersection<zod.ZodObject<{
             addedCost: number;
             ingredientId?: number | null | undefined;
             baristaSortOrder?: number | null | undefined;
-            customerSortOrder?: number | null | undefined;
             optionId?: number | null | undefined;
             typeVolumeId?: number | null | undefined;
         }[];
-        kitchenStation?: string | undefined;
     }[];
 }>>;
 /**
@@ -1528,21 +1873,24 @@ export declare const UpdateOrderStatusParams: zod.ZodObject<{
     id: number;
 }>;
 export declare const UpdateOrderStatusBody: zod.ZodObject<{
-    status: zod.ZodEnum<["pending", "paid", "in_progress", "ready", "completed", "cancelled"]>;
+    status: zod.ZodEnum<["pending", "paid", "in_progress", "ready", "completed", "cancelled", "refunded"]>;
 }, "strip", zod.ZodTypeAny, {
-    status: "pending" | "paid" | "in_progress" | "ready" | "completed" | "cancelled";
+    status: "pending" | "paid" | "in_progress" | "ready" | "completed" | "cancelled" | "refunded";
 }, {
-    status: "pending" | "paid" | "in_progress" | "ready" | "completed" | "cancelled";
+    status: "pending" | "paid" | "in_progress" | "ready" | "completed" | "cancelled" | "refunded";
 }>;
-export declare const UpdateOrderStatusResponse: zod.ZodIntersection<zod.ZodObject<{
+export declare const UpdateOrderStatusResponse: zod.ZodObject<{
     id: zod.ZodNumber;
     orderNumber: zod.ZodString;
     baristaId: zod.ZodNumber;
     baristaName: zod.ZodString;
-    status: zod.ZodEnum<["pending", "paid", "in_progress", "ready", "completed", "cancelled"]>;
+    status: zod.ZodEnum<["pending", "paid", "in_progress", "ready", "completed", "cancelled", "refunded"]>;
     customerName: zod.ZodNullable<zod.ZodString>;
     subtotal: zod.ZodNumber;
     discount: zod.ZodNumber;
+    discountId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
+    discountValue: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
+    discountType: zod.ZodOptional<zod.ZodNullable<zod.ZodEnum<["percentage", "fixed"]>>>;
     total: zod.ZodNumber;
     paymentMethod: zod.ZodEnum<["cash", "card", "wallet"]>;
     amountTendered: zod.ZodNullable<zod.ZodNumber>;
@@ -1550,8 +1898,12 @@ export declare const UpdateOrderStatusResponse: zod.ZodIntersection<zod.ZodObjec
     notes: zod.ZodNullable<zod.ZodString>;
     createdAt: zod.ZodString;
     updatedAt: zod.ZodString;
+    paidAt: zod.ZodNullable<zod.ZodString>;
+    readyAt: zod.ZodNullable<zod.ZodString>;
+    completedAt: zod.ZodNullable<zod.ZodString>;
+    cancelledAt: zod.ZodNullable<zod.ZodString>;
 }, "strip", zod.ZodTypeAny, {
-    status: "pending" | "paid" | "in_progress" | "ready" | "completed" | "cancelled";
+    status: "pending" | "paid" | "in_progress" | "ready" | "completed" | "cancelled" | "refunded";
     id: number;
     createdAt: string;
     updatedAt: string;
@@ -1566,8 +1918,15 @@ export declare const UpdateOrderStatusResponse: zod.ZodIntersection<zod.ZodObjec
     amountTendered: number | null;
     changeDue: number | null;
     notes: string | null;
+    paidAt: string | null;
+    readyAt: string | null;
+    completedAt: string | null;
+    cancelledAt: string | null;
+    discountId?: number | null | undefined;
+    discountValue?: number | null | undefined;
+    discountType?: "percentage" | "fixed" | null | undefined;
 }, {
-    status: "pending" | "paid" | "in_progress" | "ready" | "completed" | "cancelled";
+    status: "pending" | "paid" | "in_progress" | "ready" | "completed" | "cancelled" | "refunded";
     id: number;
     createdAt: string;
     updatedAt: string;
@@ -1582,157 +1941,14 @@ export declare const UpdateOrderStatusResponse: zod.ZodIntersection<zod.ZodObjec
     amountTendered: number | null;
     changeDue: number | null;
     notes: string | null;
-}>, zod.ZodObject<{
-    items: zod.ZodArray<zod.ZodObject<{
-        id: zod.ZodNumber;
-        orderId: zod.ZodNumber;
-        drinkId: zod.ZodNumber;
-        drinkName: zod.ZodString;
-        quantity: zod.ZodNumber;
-        unitPrice: zod.ZodNumber;
-        lineTotal: zod.ZodNumber;
-        specialNotes: zod.ZodNullable<zod.ZodString>;
-        kitchenStation: zod.ZodOptional<zod.ZodString>;
-        status: zod.ZodEnum<["pending", "ready"]>;
-        customizations: zod.ZodArray<zod.ZodObject<{
-            id: zod.ZodNumber;
-            orderItemId: zod.ZodNumber;
-            ingredientId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
-            optionId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
-            typeVolumeId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
-            consumedQty: zod.ZodNumber;
-            addedCost: zod.ZodNumber;
-            slotLabel: zod.ZodString;
-            optionLabel: zod.ZodString;
-            baristaSortOrder: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
-            customerSortOrder: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
-        }, "strip", zod.ZodTypeAny, {
-            id: number;
-            slotLabel: string;
-            optionLabel: string;
-            orderItemId: number;
-            consumedQty: number;
-            addedCost: number;
-            ingredientId?: number | null | undefined;
-            baristaSortOrder?: number | null | undefined;
-            customerSortOrder?: number | null | undefined;
-            optionId?: number | null | undefined;
-            typeVolumeId?: number | null | undefined;
-        }, {
-            id: number;
-            slotLabel: string;
-            optionLabel: string;
-            orderItemId: number;
-            consumedQty: number;
-            addedCost: number;
-            ingredientId?: number | null | undefined;
-            baristaSortOrder?: number | null | undefined;
-            customerSortOrder?: number | null | undefined;
-            optionId?: number | null | undefined;
-            typeVolumeId?: number | null | undefined;
-        }>, "many">;
-    }, "strip", zod.ZodTypeAny, {
-        status: "pending" | "ready";
-        id: number;
-        drinkId: number;
-        quantity: number;
-        specialNotes: string | null;
-        orderId: number;
-        drinkName: string;
-        unitPrice: number;
-        lineTotal: number;
-        customizations: {
-            id: number;
-            slotLabel: string;
-            optionLabel: string;
-            orderItemId: number;
-            consumedQty: number;
-            addedCost: number;
-            ingredientId?: number | null | undefined;
-            baristaSortOrder?: number | null | undefined;
-            customerSortOrder?: number | null | undefined;
-            optionId?: number | null | undefined;
-            typeVolumeId?: number | null | undefined;
-        }[];
-        kitchenStation?: string | undefined;
-    }, {
-        status: "pending" | "ready";
-        id: number;
-        drinkId: number;
-        quantity: number;
-        specialNotes: string | null;
-        orderId: number;
-        drinkName: string;
-        unitPrice: number;
-        lineTotal: number;
-        customizations: {
-            id: number;
-            slotLabel: string;
-            optionLabel: string;
-            orderItemId: number;
-            consumedQty: number;
-            addedCost: number;
-            ingredientId?: number | null | undefined;
-            baristaSortOrder?: number | null | undefined;
-            customerSortOrder?: number | null | undefined;
-            optionId?: number | null | undefined;
-            typeVolumeId?: number | null | undefined;
-        }[];
-        kitchenStation?: string | undefined;
-    }>, "many">;
-}, "strip", zod.ZodTypeAny, {
-    items: {
-        status: "pending" | "ready";
-        id: number;
-        drinkId: number;
-        quantity: number;
-        specialNotes: string | null;
-        orderId: number;
-        drinkName: string;
-        unitPrice: number;
-        lineTotal: number;
-        customizations: {
-            id: number;
-            slotLabel: string;
-            optionLabel: string;
-            orderItemId: number;
-            consumedQty: number;
-            addedCost: number;
-            ingredientId?: number | null | undefined;
-            baristaSortOrder?: number | null | undefined;
-            customerSortOrder?: number | null | undefined;
-            optionId?: number | null | undefined;
-            typeVolumeId?: number | null | undefined;
-        }[];
-        kitchenStation?: string | undefined;
-    }[];
-}, {
-    items: {
-        status: "pending" | "ready";
-        id: number;
-        drinkId: number;
-        quantity: number;
-        specialNotes: string | null;
-        orderId: number;
-        drinkName: string;
-        unitPrice: number;
-        lineTotal: number;
-        customizations: {
-            id: number;
-            slotLabel: string;
-            optionLabel: string;
-            orderItemId: number;
-            consumedQty: number;
-            addedCost: number;
-            ingredientId?: number | null | undefined;
-            baristaSortOrder?: number | null | undefined;
-            customerSortOrder?: number | null | undefined;
-            optionId?: number | null | undefined;
-            typeVolumeId?: number | null | undefined;
-        }[];
-        kitchenStation?: string | undefined;
-    }[];
-}>>;
+    paidAt: string | null;
+    readyAt: string | null;
+    completedAt: string | null;
+    cancelledAt: string | null;
+    discountId?: number | null | undefined;
+    discountValue?: number | null | undefined;
+    discountType?: "percentage" | "fixed" | null | undefined;
+}>;
 /**
  * @summary Mark a specific order item as ready
  */
@@ -1748,10 +1964,13 @@ export declare const MarkOrderItemReadyResponse: zod.ZodObject<{
     orderNumber: zod.ZodString;
     baristaId: zod.ZodNumber;
     baristaName: zod.ZodString;
-    status: zod.ZodEnum<["pending", "paid", "in_progress", "ready", "completed", "cancelled"]>;
+    status: zod.ZodEnum<["pending", "paid", "in_progress", "ready", "completed", "cancelled", "refunded"]>;
     customerName: zod.ZodNullable<zod.ZodString>;
     subtotal: zod.ZodNumber;
     discount: zod.ZodNumber;
+    discountId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
+    discountValue: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
+    discountType: zod.ZodOptional<zod.ZodNullable<zod.ZodEnum<["percentage", "fixed"]>>>;
     total: zod.ZodNumber;
     paymentMethod: zod.ZodEnum<["cash", "card", "wallet"]>;
     amountTendered: zod.ZodNullable<zod.ZodNumber>;
@@ -1759,8 +1978,12 @@ export declare const MarkOrderItemReadyResponse: zod.ZodObject<{
     notes: zod.ZodNullable<zod.ZodString>;
     createdAt: zod.ZodString;
     updatedAt: zod.ZodString;
+    paidAt: zod.ZodNullable<zod.ZodString>;
+    readyAt: zod.ZodNullable<zod.ZodString>;
+    completedAt: zod.ZodNullable<zod.ZodString>;
+    cancelledAt: zod.ZodNullable<zod.ZodString>;
 }, "strip", zod.ZodTypeAny, {
-    status: "pending" | "paid" | "in_progress" | "ready" | "completed" | "cancelled";
+    status: "pending" | "paid" | "in_progress" | "ready" | "completed" | "cancelled" | "refunded";
     id: number;
     createdAt: string;
     updatedAt: string;
@@ -1775,8 +1998,15 @@ export declare const MarkOrderItemReadyResponse: zod.ZodObject<{
     amountTendered: number | null;
     changeDue: number | null;
     notes: string | null;
+    paidAt: string | null;
+    readyAt: string | null;
+    completedAt: string | null;
+    cancelledAt: string | null;
+    discountId?: number | null | undefined;
+    discountValue?: number | null | undefined;
+    discountType?: "percentage" | "fixed" | null | undefined;
 }, {
-    status: "pending" | "paid" | "in_progress" | "ready" | "completed" | "cancelled";
+    status: "pending" | "paid" | "in_progress" | "ready" | "completed" | "cancelled" | "refunded";
     id: number;
     createdAt: string;
     updatedAt: string;
@@ -1791,6 +2021,13 @@ export declare const MarkOrderItemReadyResponse: zod.ZodObject<{
     amountTendered: number | null;
     changeDue: number | null;
     notes: string | null;
+    paidAt: string | null;
+    readyAt: string | null;
+    completedAt: string | null;
+    cancelledAt: string | null;
+    discountId?: number | null | undefined;
+    discountValue?: number | null | undefined;
+    discountType?: "percentage" | "fixed" | null | undefined;
 }>;
 /**
  * @summary List stock movements ledger
@@ -1906,6 +2143,8 @@ export declare const CreateStockAdjustmentBody: zod.ZodObject<{
  */
 export declare const GetDashboardSummaryResponse: zod.ZodObject<{
     todayRevenue: zod.ZodNumber;
+    todayCashRevenue: zod.ZodNumber;
+    todayCardRevenue: zod.ZodNumber;
     todayOrders: zod.ZodNumber;
     todayDrinks: zod.ZodNumber;
     averageOrderValue: zod.ZodNumber;
@@ -1913,6 +2152,8 @@ export declare const GetDashboardSummaryResponse: zod.ZodObject<{
     lowStockCount: zod.ZodNumber;
 }, "strip", zod.ZodTypeAny, {
     todayRevenue: number;
+    todayCashRevenue: number;
+    todayCardRevenue: number;
     todayOrders: number;
     todayDrinks: number;
     averageOrderValue: number;
@@ -1920,6 +2161,8 @@ export declare const GetDashboardSummaryResponse: zod.ZodObject<{
     lowStockCount: number;
 }, {
     todayRevenue: number;
+    todayCashRevenue: number;
+    todayCardRevenue: number;
     todayOrders: number;
     todayDrinks: number;
     averageOrderValue: number;
@@ -1941,10 +2184,13 @@ export declare const GetActiveOrdersResponseItem: zod.ZodIntersection<zod.ZodObj
     orderNumber: zod.ZodString;
     baristaId: zod.ZodNumber;
     baristaName: zod.ZodString;
-    status: zod.ZodEnum<["pending", "paid", "in_progress", "ready", "completed", "cancelled"]>;
+    status: zod.ZodEnum<["pending", "paid", "in_progress", "ready", "completed", "cancelled", "refunded"]>;
     customerName: zod.ZodNullable<zod.ZodString>;
     subtotal: zod.ZodNumber;
     discount: zod.ZodNumber;
+    discountId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
+    discountValue: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
+    discountType: zod.ZodOptional<zod.ZodNullable<zod.ZodEnum<["percentage", "fixed"]>>>;
     total: zod.ZodNumber;
     paymentMethod: zod.ZodEnum<["cash", "card", "wallet"]>;
     amountTendered: zod.ZodNullable<zod.ZodNumber>;
@@ -1952,8 +2198,12 @@ export declare const GetActiveOrdersResponseItem: zod.ZodIntersection<zod.ZodObj
     notes: zod.ZodNullable<zod.ZodString>;
     createdAt: zod.ZodString;
     updatedAt: zod.ZodString;
+    paidAt: zod.ZodNullable<zod.ZodString>;
+    readyAt: zod.ZodNullable<zod.ZodString>;
+    completedAt: zod.ZodNullable<zod.ZodString>;
+    cancelledAt: zod.ZodNullable<zod.ZodString>;
 }, "strip", zod.ZodTypeAny, {
-    status: "pending" | "paid" | "in_progress" | "ready" | "completed" | "cancelled";
+    status: "pending" | "paid" | "in_progress" | "ready" | "completed" | "cancelled" | "refunded";
     id: number;
     createdAt: string;
     updatedAt: string;
@@ -1968,8 +2218,15 @@ export declare const GetActiveOrdersResponseItem: zod.ZodIntersection<zod.ZodObj
     amountTendered: number | null;
     changeDue: number | null;
     notes: string | null;
+    paidAt: string | null;
+    readyAt: string | null;
+    completedAt: string | null;
+    cancelledAt: string | null;
+    discountId?: number | null | undefined;
+    discountValue?: number | null | undefined;
+    discountType?: "percentage" | "fixed" | null | undefined;
 }, {
-    status: "pending" | "paid" | "in_progress" | "ready" | "completed" | "cancelled";
+    status: "pending" | "paid" | "in_progress" | "ready" | "completed" | "cancelled" | "refunded";
     id: number;
     createdAt: string;
     updatedAt: string;
@@ -1984,6 +2241,13 @@ export declare const GetActiveOrdersResponseItem: zod.ZodIntersection<zod.ZodObj
     amountTendered: number | null;
     changeDue: number | null;
     notes: string | null;
+    paidAt: string | null;
+    readyAt: string | null;
+    completedAt: string | null;
+    cancelledAt: string | null;
+    discountId?: number | null | undefined;
+    discountValue?: number | null | undefined;
+    discountType?: "percentage" | "fixed" | null | undefined;
 }>, zod.ZodObject<{
     items: zod.ZodArray<zod.ZodObject<{
         id: zod.ZodNumber;
@@ -1994,8 +2258,8 @@ export declare const GetActiveOrdersResponseItem: zod.ZodIntersection<zod.ZodObj
         unitPrice: zod.ZodNumber;
         lineTotal: zod.ZodNumber;
         specialNotes: zod.ZodNullable<zod.ZodString>;
-        kitchenStation: zod.ZodOptional<zod.ZodString>;
         status: zod.ZodEnum<["pending", "ready"]>;
+        readyAt: zod.ZodNullable<zod.ZodString>;
         customizations: zod.ZodArray<zod.ZodObject<{
             id: zod.ZodNumber;
             orderItemId: zod.ZodNumber;
@@ -2007,7 +2271,6 @@ export declare const GetActiveOrdersResponseItem: zod.ZodIntersection<zod.ZodObj
             slotLabel: zod.ZodString;
             optionLabel: zod.ZodString;
             baristaSortOrder: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
-            customerSortOrder: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
         }, "strip", zod.ZodTypeAny, {
             id: number;
             slotLabel: string;
@@ -2017,7 +2280,6 @@ export declare const GetActiveOrdersResponseItem: zod.ZodIntersection<zod.ZodObj
             addedCost: number;
             ingredientId?: number | null | undefined;
             baristaSortOrder?: number | null | undefined;
-            customerSortOrder?: number | null | undefined;
             optionId?: number | null | undefined;
             typeVolumeId?: number | null | undefined;
         }, {
@@ -2029,7 +2291,6 @@ export declare const GetActiveOrdersResponseItem: zod.ZodIntersection<zod.ZodObj
             addedCost: number;
             ingredientId?: number | null | undefined;
             baristaSortOrder?: number | null | undefined;
-            customerSortOrder?: number | null | undefined;
             optionId?: number | null | undefined;
             typeVolumeId?: number | null | undefined;
         }>, "many">;
@@ -2038,11 +2299,12 @@ export declare const GetActiveOrdersResponseItem: zod.ZodIntersection<zod.ZodObj
         id: number;
         drinkId: number;
         quantity: number;
-        specialNotes: string | null;
+        readyAt: string | null;
         orderId: number;
         drinkName: string;
         unitPrice: number;
         lineTotal: number;
+        specialNotes: string | null;
         customizations: {
             id: number;
             slotLabel: string;
@@ -2052,21 +2314,20 @@ export declare const GetActiveOrdersResponseItem: zod.ZodIntersection<zod.ZodObj
             addedCost: number;
             ingredientId?: number | null | undefined;
             baristaSortOrder?: number | null | undefined;
-            customerSortOrder?: number | null | undefined;
             optionId?: number | null | undefined;
             typeVolumeId?: number | null | undefined;
         }[];
-        kitchenStation?: string | undefined;
     }, {
         status: "pending" | "ready";
         id: number;
         drinkId: number;
         quantity: number;
-        specialNotes: string | null;
+        readyAt: string | null;
         orderId: number;
         drinkName: string;
         unitPrice: number;
         lineTotal: number;
+        specialNotes: string | null;
         customizations: {
             id: number;
             slotLabel: string;
@@ -2076,11 +2337,9 @@ export declare const GetActiveOrdersResponseItem: zod.ZodIntersection<zod.ZodObj
             addedCost: number;
             ingredientId?: number | null | undefined;
             baristaSortOrder?: number | null | undefined;
-            customerSortOrder?: number | null | undefined;
             optionId?: number | null | undefined;
             typeVolumeId?: number | null | undefined;
         }[];
-        kitchenStation?: string | undefined;
     }>, "many">;
 }, "strip", zod.ZodTypeAny, {
     items: {
@@ -2088,11 +2347,12 @@ export declare const GetActiveOrdersResponseItem: zod.ZodIntersection<zod.ZodObj
         id: number;
         drinkId: number;
         quantity: number;
-        specialNotes: string | null;
+        readyAt: string | null;
         orderId: number;
         drinkName: string;
         unitPrice: number;
         lineTotal: number;
+        specialNotes: string | null;
         customizations: {
             id: number;
             slotLabel: string;
@@ -2102,11 +2362,9 @@ export declare const GetActiveOrdersResponseItem: zod.ZodIntersection<zod.ZodObj
             addedCost: number;
             ingredientId?: number | null | undefined;
             baristaSortOrder?: number | null | undefined;
-            customerSortOrder?: number | null | undefined;
             optionId?: number | null | undefined;
             typeVolumeId?: number | null | undefined;
         }[];
-        kitchenStation?: string | undefined;
     }[];
 }, {
     items: {
@@ -2114,11 +2372,12 @@ export declare const GetActiveOrdersResponseItem: zod.ZodIntersection<zod.ZodObj
         id: number;
         drinkId: number;
         quantity: number;
-        specialNotes: string | null;
+        readyAt: string | null;
         orderId: number;
         drinkName: string;
         unitPrice: number;
         lineTotal: number;
+        specialNotes: string | null;
         customizations: {
             id: number;
             slotLabel: string;
@@ -2128,11 +2387,9 @@ export declare const GetActiveOrdersResponseItem: zod.ZodIntersection<zod.ZodObj
             addedCost: number;
             ingredientId?: number | null | undefined;
             baristaSortOrder?: number | null | undefined;
-            customerSortOrder?: number | null | undefined;
             optionId?: number | null | undefined;
             typeVolumeId?: number | null | undefined;
         }[];
-        kitchenStation?: string | undefined;
     }[];
 }>>;
 export declare const GetActiveOrdersResponse: zod.ZodArray<zod.ZodIntersection<zod.ZodObject<{
@@ -2140,10 +2397,13 @@ export declare const GetActiveOrdersResponse: zod.ZodArray<zod.ZodIntersection<z
     orderNumber: zod.ZodString;
     baristaId: zod.ZodNumber;
     baristaName: zod.ZodString;
-    status: zod.ZodEnum<["pending", "paid", "in_progress", "ready", "completed", "cancelled"]>;
+    status: zod.ZodEnum<["pending", "paid", "in_progress", "ready", "completed", "cancelled", "refunded"]>;
     customerName: zod.ZodNullable<zod.ZodString>;
     subtotal: zod.ZodNumber;
     discount: zod.ZodNumber;
+    discountId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
+    discountValue: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
+    discountType: zod.ZodOptional<zod.ZodNullable<zod.ZodEnum<["percentage", "fixed"]>>>;
     total: zod.ZodNumber;
     paymentMethod: zod.ZodEnum<["cash", "card", "wallet"]>;
     amountTendered: zod.ZodNullable<zod.ZodNumber>;
@@ -2151,8 +2411,12 @@ export declare const GetActiveOrdersResponse: zod.ZodArray<zod.ZodIntersection<z
     notes: zod.ZodNullable<zod.ZodString>;
     createdAt: zod.ZodString;
     updatedAt: zod.ZodString;
+    paidAt: zod.ZodNullable<zod.ZodString>;
+    readyAt: zod.ZodNullable<zod.ZodString>;
+    completedAt: zod.ZodNullable<zod.ZodString>;
+    cancelledAt: zod.ZodNullable<zod.ZodString>;
 }, "strip", zod.ZodTypeAny, {
-    status: "pending" | "paid" | "in_progress" | "ready" | "completed" | "cancelled";
+    status: "pending" | "paid" | "in_progress" | "ready" | "completed" | "cancelled" | "refunded";
     id: number;
     createdAt: string;
     updatedAt: string;
@@ -2167,8 +2431,15 @@ export declare const GetActiveOrdersResponse: zod.ZodArray<zod.ZodIntersection<z
     amountTendered: number | null;
     changeDue: number | null;
     notes: string | null;
+    paidAt: string | null;
+    readyAt: string | null;
+    completedAt: string | null;
+    cancelledAt: string | null;
+    discountId?: number | null | undefined;
+    discountValue?: number | null | undefined;
+    discountType?: "percentage" | "fixed" | null | undefined;
 }, {
-    status: "pending" | "paid" | "in_progress" | "ready" | "completed" | "cancelled";
+    status: "pending" | "paid" | "in_progress" | "ready" | "completed" | "cancelled" | "refunded";
     id: number;
     createdAt: string;
     updatedAt: string;
@@ -2183,6 +2454,13 @@ export declare const GetActiveOrdersResponse: zod.ZodArray<zod.ZodIntersection<z
     amountTendered: number | null;
     changeDue: number | null;
     notes: string | null;
+    paidAt: string | null;
+    readyAt: string | null;
+    completedAt: string | null;
+    cancelledAt: string | null;
+    discountId?: number | null | undefined;
+    discountValue?: number | null | undefined;
+    discountType?: "percentage" | "fixed" | null | undefined;
 }>, zod.ZodObject<{
     items: zod.ZodArray<zod.ZodObject<{
         id: zod.ZodNumber;
@@ -2193,8 +2471,8 @@ export declare const GetActiveOrdersResponse: zod.ZodArray<zod.ZodIntersection<z
         unitPrice: zod.ZodNumber;
         lineTotal: zod.ZodNumber;
         specialNotes: zod.ZodNullable<zod.ZodString>;
-        kitchenStation: zod.ZodOptional<zod.ZodString>;
         status: zod.ZodEnum<["pending", "ready"]>;
+        readyAt: zod.ZodNullable<zod.ZodString>;
         customizations: zod.ZodArray<zod.ZodObject<{
             id: zod.ZodNumber;
             orderItemId: zod.ZodNumber;
@@ -2206,7 +2484,6 @@ export declare const GetActiveOrdersResponse: zod.ZodArray<zod.ZodIntersection<z
             slotLabel: zod.ZodString;
             optionLabel: zod.ZodString;
             baristaSortOrder: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
-            customerSortOrder: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
         }, "strip", zod.ZodTypeAny, {
             id: number;
             slotLabel: string;
@@ -2216,7 +2493,6 @@ export declare const GetActiveOrdersResponse: zod.ZodArray<zod.ZodIntersection<z
             addedCost: number;
             ingredientId?: number | null | undefined;
             baristaSortOrder?: number | null | undefined;
-            customerSortOrder?: number | null | undefined;
             optionId?: number | null | undefined;
             typeVolumeId?: number | null | undefined;
         }, {
@@ -2228,7 +2504,6 @@ export declare const GetActiveOrdersResponse: zod.ZodArray<zod.ZodIntersection<z
             addedCost: number;
             ingredientId?: number | null | undefined;
             baristaSortOrder?: number | null | undefined;
-            customerSortOrder?: number | null | undefined;
             optionId?: number | null | undefined;
             typeVolumeId?: number | null | undefined;
         }>, "many">;
@@ -2237,11 +2512,12 @@ export declare const GetActiveOrdersResponse: zod.ZodArray<zod.ZodIntersection<z
         id: number;
         drinkId: number;
         quantity: number;
-        specialNotes: string | null;
+        readyAt: string | null;
         orderId: number;
         drinkName: string;
         unitPrice: number;
         lineTotal: number;
+        specialNotes: string | null;
         customizations: {
             id: number;
             slotLabel: string;
@@ -2251,21 +2527,20 @@ export declare const GetActiveOrdersResponse: zod.ZodArray<zod.ZodIntersection<z
             addedCost: number;
             ingredientId?: number | null | undefined;
             baristaSortOrder?: number | null | undefined;
-            customerSortOrder?: number | null | undefined;
             optionId?: number | null | undefined;
             typeVolumeId?: number | null | undefined;
         }[];
-        kitchenStation?: string | undefined;
     }, {
         status: "pending" | "ready";
         id: number;
         drinkId: number;
         quantity: number;
-        specialNotes: string | null;
+        readyAt: string | null;
         orderId: number;
         drinkName: string;
         unitPrice: number;
         lineTotal: number;
+        specialNotes: string | null;
         customizations: {
             id: number;
             slotLabel: string;
@@ -2275,11 +2550,9 @@ export declare const GetActiveOrdersResponse: zod.ZodArray<zod.ZodIntersection<z
             addedCost: number;
             ingredientId?: number | null | undefined;
             baristaSortOrder?: number | null | undefined;
-            customerSortOrder?: number | null | undefined;
             optionId?: number | null | undefined;
             typeVolumeId?: number | null | undefined;
         }[];
-        kitchenStation?: string | undefined;
     }>, "many">;
 }, "strip", zod.ZodTypeAny, {
     items: {
@@ -2287,11 +2560,12 @@ export declare const GetActiveOrdersResponse: zod.ZodArray<zod.ZodIntersection<z
         id: number;
         drinkId: number;
         quantity: number;
-        specialNotes: string | null;
+        readyAt: string | null;
         orderId: number;
         drinkName: string;
         unitPrice: number;
         lineTotal: number;
+        specialNotes: string | null;
         customizations: {
             id: number;
             slotLabel: string;
@@ -2301,11 +2575,9 @@ export declare const GetActiveOrdersResponse: zod.ZodArray<zod.ZodIntersection<z
             addedCost: number;
             ingredientId?: number | null | undefined;
             baristaSortOrder?: number | null | undefined;
-            customerSortOrder?: number | null | undefined;
             optionId?: number | null | undefined;
             typeVolumeId?: number | null | undefined;
         }[];
-        kitchenStation?: string | undefined;
     }[];
 }, {
     items: {
@@ -2313,11 +2585,12 @@ export declare const GetActiveOrdersResponse: zod.ZodArray<zod.ZodIntersection<z
         id: number;
         drinkId: number;
         quantity: number;
-        specialNotes: string | null;
+        readyAt: string | null;
         orderId: number;
         drinkName: string;
         unitPrice: number;
         lineTotal: number;
+        specialNotes: string | null;
         customizations: {
             id: number;
             slotLabel: string;
@@ -2327,11 +2600,9 @@ export declare const GetActiveOrdersResponse: zod.ZodArray<zod.ZodIntersection<z
             addedCost: number;
             ingredientId?: number | null | undefined;
             baristaSortOrder?: number | null | undefined;
-            customerSortOrder?: number | null | undefined;
             optionId?: number | null | undefined;
             typeVolumeId?: number | null | undefined;
         }[];
-        kitchenStation?: string | undefined;
     }[];
 }>>, "many">;
 /**
@@ -2582,10 +2853,19 @@ export declare const GetSalesByCategoryResponse: zod.ZodArray<zod.ZodObject<{
  */
 export declare const GetTopDrinksQueryParams: zod.ZodObject<{
     limit: zod.ZodOptional<zod.ZodNumber>;
+    days: zod.ZodOptional<zod.ZodNumber>;
+    startDate: zod.ZodOptional<zod.ZodString>;
+    endDate: zod.ZodOptional<zod.ZodString>;
 }, "strip", zod.ZodTypeAny, {
+    startDate?: string | undefined;
+    endDate?: string | undefined;
     limit?: number | undefined;
+    days?: number | undefined;
 }, {
+    startDate?: string | undefined;
+    endDate?: string | undefined;
     limit?: number | undefined;
+    days?: number | undefined;
 }>;
 export declare const GetTopDrinksResponseItem: zod.ZodObject<{
     drinkId: zod.ZodNumber;
@@ -2668,7 +2948,7 @@ export declare const GetSettingsResponse: zod.ZodArray<zod.ZodObject<{
     userId?: number | null | undefined;
 }>, "many">;
 /**
- * @summary Update application settings
+ * @summary Update multiple settings
  */
 export declare const UpdateSettingsBody: zod.ZodObject<{
     scope: zod.ZodEnum<["global", "user"]>;
@@ -2727,4 +3007,172 @@ export declare const UpdateSettingsResponse: zod.ZodArray<zod.ZodObject<{
     key: string;
     userId?: number | null | undefined;
 }>, "many">;
+/**
+ * @summary List all discounts
+ */
+export declare const ListDiscountsResponseItem: zod.ZodObject<{
+    id: zod.ZodNumber;
+    code: zod.ZodString;
+    type: zod.ZodEnum<["percentage", "fixed"]>;
+    value: zod.ZodNumber;
+    isActive: zod.ZodBoolean;
+    createdAt: zod.ZodString;
+    updatedAt: zod.ZodString;
+}, "strip", zod.ZodTypeAny, {
+    value: number;
+    code: string;
+    type: "percentage" | "fixed";
+    id: number;
+    isActive: boolean;
+    createdAt: string;
+    updatedAt: string;
+}, {
+    value: number;
+    code: string;
+    type: "percentage" | "fixed";
+    id: number;
+    isActive: boolean;
+    createdAt: string;
+    updatedAt: string;
+}>;
+export declare const ListDiscountsResponse: zod.ZodArray<zod.ZodObject<{
+    id: zod.ZodNumber;
+    code: zod.ZodString;
+    type: zod.ZodEnum<["percentage", "fixed"]>;
+    value: zod.ZodNumber;
+    isActive: zod.ZodBoolean;
+    createdAt: zod.ZodString;
+    updatedAt: zod.ZodString;
+}, "strip", zod.ZodTypeAny, {
+    value: number;
+    code: string;
+    type: "percentage" | "fixed";
+    id: number;
+    isActive: boolean;
+    createdAt: string;
+    updatedAt: string;
+}, {
+    value: number;
+    code: string;
+    type: "percentage" | "fixed";
+    id: number;
+    isActive: boolean;
+    createdAt: string;
+    updatedAt: string;
+}>, "many">;
+/**
+ * @summary Create a discount
+ */
+export declare const CreateDiscountBody: zod.ZodObject<{
+    code: zod.ZodString;
+    type: zod.ZodEnum<["percentage", "fixed"]>;
+    value: zod.ZodNumber;
+    isActive: zod.ZodOptional<zod.ZodBoolean>;
+}, "strip", zod.ZodTypeAny, {
+    value: number;
+    code: string;
+    type: "percentage" | "fixed";
+    isActive?: boolean | undefined;
+}, {
+    value: number;
+    code: string;
+    type: "percentage" | "fixed";
+    isActive?: boolean | undefined;
+}>;
+/**
+ * @summary Update a discount
+ */
+export declare const UpdateDiscountParams: zod.ZodObject<{
+    id: zod.ZodNumber;
+}, "strip", zod.ZodTypeAny, {
+    id: number;
+}, {
+    id: number;
+}>;
+export declare const UpdateDiscountBody: zod.ZodObject<{
+    code: zod.ZodOptional<zod.ZodString>;
+    type: zod.ZodOptional<zod.ZodEnum<["percentage", "fixed"]>>;
+    value: zod.ZodOptional<zod.ZodNumber>;
+    isActive: zod.ZodOptional<zod.ZodBoolean>;
+}, "strip", zod.ZodTypeAny, {
+    value?: number | undefined;
+    code?: string | undefined;
+    type?: "percentage" | "fixed" | undefined;
+    isActive?: boolean | undefined;
+}, {
+    value?: number | undefined;
+    code?: string | undefined;
+    type?: "percentage" | "fixed" | undefined;
+    isActive?: boolean | undefined;
+}>;
+export declare const UpdateDiscountResponse: zod.ZodObject<{
+    id: zod.ZodNumber;
+    code: zod.ZodString;
+    type: zod.ZodEnum<["percentage", "fixed"]>;
+    value: zod.ZodNumber;
+    isActive: zod.ZodBoolean;
+    createdAt: zod.ZodString;
+    updatedAt: zod.ZodString;
+}, "strip", zod.ZodTypeAny, {
+    value: number;
+    code: string;
+    type: "percentage" | "fixed";
+    id: number;
+    isActive: boolean;
+    createdAt: string;
+    updatedAt: string;
+}, {
+    value: number;
+    code: string;
+    type: "percentage" | "fixed";
+    id: number;
+    isActive: boolean;
+    createdAt: string;
+    updatedAt: string;
+}>;
+/**
+ * @summary Delete a discount
+ */
+export declare const DeleteDiscountParams: zod.ZodObject<{
+    id: zod.ZodNumber;
+}, "strip", zod.ZodTypeAny, {
+    id: number;
+}, {
+    id: number;
+}>;
+/**
+ * @summary Validate a discount code
+ */
+export declare const ValidateDiscountParams: zod.ZodObject<{
+    code: zod.ZodString;
+}, "strip", zod.ZodTypeAny, {
+    code: string;
+}, {
+    code: string;
+}>;
+export declare const ValidateDiscountResponse: zod.ZodObject<{
+    id: zod.ZodNumber;
+    code: zod.ZodString;
+    type: zod.ZodEnum<["percentage", "fixed"]>;
+    value: zod.ZodNumber;
+    isActive: zod.ZodBoolean;
+    createdAt: zod.ZodString;
+    updatedAt: zod.ZodString;
+}, "strip", zod.ZodTypeAny, {
+    value: number;
+    code: string;
+    type: "percentage" | "fixed";
+    id: number;
+    isActive: boolean;
+    createdAt: string;
+    updatedAt: string;
+}, {
+    value: number;
+    code: string;
+    type: "percentage" | "fixed";
+    id: number;
+    isActive: boolean;
+    createdAt: string;
+    updatedAt: string;
+}>;
 //# sourceMappingURL=api.d.ts.map

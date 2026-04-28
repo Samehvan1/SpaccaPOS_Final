@@ -16,4 +16,5 @@ export const UpdateOrderStatusBodyStatus = {
   ready: "ready",
   completed: "completed",
   cancelled: "cancelled",
+  refunded: "refunded",
 } as const;

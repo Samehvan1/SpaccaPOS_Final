@@ -15,4 +15,5 @@ export const OrderStatus = {
   ready: "ready",
   completed: "completed",
   cancelled: "cancelled",
+  refunded: "refunded",
 } as const;

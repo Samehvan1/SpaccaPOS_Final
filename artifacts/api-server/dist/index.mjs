@@ -55775,6 +55775,10 @@ var init_orders = __esm({
       changeDue: numeric("change_due", { precision: 8, scale: 2 }),
       notes: text("notes"),
       cashierId: integer("cashier_id").references(() => usersTable.id, { onDelete: "set null" }),
+      paidAt: timestamp("paid_at", { withTimezone: true }),
+      readyAt: timestamp("ready_at", { withTimezone: true }),
+      completedAt: timestamp("completed_at", { withTimezone: true }),
+      cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
       createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
       updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => /* @__PURE__ */ new Date())
     });
@@ -55789,6 +55793,7 @@ var init_orders = __esm({
       specialNotes: text("special_notes"),
       kitchenStation: text("kitchen_station").notNull().default("main"),
       status: text("status", { enum: ["pending", "ready"] }).notNull().default("pending"),
+      readyAt: timestamp("ready_at", { withTimezone: true }),
       createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
       updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => /* @__PURE__ */ new Date())
     });
@@ -55802,6 +55807,7 @@ var init_orders = __esm({
       typeVolumeId: integer("type_volume_id"),
       // Added for Typed slots tracking
       consumedQty: numeric("consumed_qty", { precision: 10, scale: 4 }).notNull(),
+      producedQty: numeric("produced_qty", { precision: 10, scale: 4 }).notNull().default("0"),
       addedCost: numeric("added_cost", { precision: 8, scale: 4 }).notNull(),
       slotLabel: text("slot_label").notNull(),
       optionLabel: text("option_label").notNull(),
@@ -76678,16 +76684,13 @@ var GetMeResponse = objectType({
 });
 var ListDrinksQueryParams = objectType({
   category: coerce.string().optional(),
-  active: coerce.boolean().optional(),
-  includeSlots: coerce.boolean().optional()
+  active: coerce.boolean().optional()
 });
 var ListDrinksResponseItem = objectType({
   id: numberType(),
   name: stringType(),
   description: stringType().nullable(),
   category: stringType(),
-  categoryId: numberType().nullish(),
-  sortOrder: numberType().optional(),
   basePrice: numberType(),
   defaultPrice: numberType().optional(),
   imageUrl: stringType().nullable(),
@@ -76695,22 +76698,23 @@ var ListDrinksResponseItem = objectType({
   prepTimeSeconds: numberType(),
   cupSizeMl: numberType().nullish(),
   kitchenStation: stringType().optional(),
+  categoryId: numberType().optional(),
+  sortOrder: numberType().optional(),
   createdAt: stringType(),
-  updatedAt: stringType(),
-  slots: arrayType(anyType()).optional()
+  updatedAt: stringType()
 });
 var ListDrinksResponse = arrayType(ListDrinksResponseItem);
 var CreateDrinkBody = objectType({
   name: stringType(),
   description: stringType().optional(),
   category: stringType(),
-  categoryId: numberType().optional(),
-  sortOrder: numberType().optional(),
   basePrice: numberType(),
   imageUrl: stringType().optional(),
   isActive: booleanType().optional(),
   prepTimeSeconds: numberType().optional(),
   kitchenStation: stringType().optional(),
+  categoryId: numberType().optional(),
+  sortOrder: numberType().optional(),
   slots: arrayType(
     objectType({
       ingredientId: numberType(),
@@ -76733,8 +76737,6 @@ var GetDrinkResponse = objectType({
   name: stringType(),
   description: stringType().nullable(),
   category: stringType(),
-  categoryId: numberType().nullish(),
-  sortOrder: numberType().optional(),
   basePrice: numberType(),
   defaultPrice: numberType().optional(),
   imageUrl: stringType().nullable(),
@@ -76742,6 +76744,8 @@ var GetDrinkResponse = objectType({
   prepTimeSeconds: numberType(),
   cupSizeMl: numberType().nullish(),
   kitchenStation: stringType().optional(),
+  categoryId: numberType().optional(),
+  sortOrder: numberType().optional(),
   createdAt: stringType(),
   updatedAt: stringType()
 }).and(
@@ -76770,21 +76774,19 @@ var UpdateDrinkBody = objectType({
   name: stringType().optional(),
   description: stringType().optional(),
   category: stringType().optional(),
-  categoryId: numberType().optional(),
-  sortOrder: numberType().optional(),
   basePrice: numberType().optional(),
   imageUrl: stringType().optional(),
   isActive: booleanType().optional(),
   prepTimeSeconds: numberType().optional(),
-  kitchenStation: stringType().optional()
+  kitchenStation: stringType().optional(),
+  categoryId: numberType().optional(),
+  sortOrder: numberType().optional()
 });
 var UpdateDrinkResponse = objectType({
   id: numberType(),
   name: stringType(),
   description: stringType().nullable(),
   category: stringType(),
-  categoryId: numberType().nullish(),
-  sortOrder: numberType().optional(),
   basePrice: numberType(),
   defaultPrice: numberType().optional(),
   imageUrl: stringType().nullable(),
@@ -76792,6 +76794,8 @@ var UpdateDrinkResponse = objectType({
   prepTimeSeconds: numberType(),
   cupSizeMl: numberType().nullish(),
   kitchenStation: stringType().optional(),
+  categoryId: numberType().optional(),
+  sortOrder: numberType().optional(),
   createdAt: stringType(),
   updatedAt: stringType()
 });
@@ -77034,8 +77038,8 @@ var RestockIngredientResponse = objectType({
 });
 var ListOrdersQueryParams = objectType({
   status: coerce.string().optional(),
-  startDate: coerce.string().optional(),
-  endDate: coerce.string().optional(),
+  startDate: dateType().optional(),
+  endDate: dateType().optional(),
   limit: coerce.number().optional(),
   offset: coerce.number().optional()
 });
@@ -77050,7 +77054,8 @@ var ListOrdersResponseItem = objectType({
     "in_progress",
     "ready",
     "completed",
-    "cancelled"
+    "cancelled",
+    "refunded"
   ]),
   customerName: stringType().nullable(),
   subtotal: numberType(),
@@ -77065,8 +77070,43 @@ var ListOrdersResponseItem = objectType({
   notes: stringType().nullable(),
   createdAt: stringType(),
   updatedAt: stringType(),
-  items: arrayType(anyType()).optional()
-});
+  paidAt: stringType().nullable(),
+  readyAt: stringType().nullable(),
+  completedAt: stringType().nullable(),
+  cancelledAt: stringType().nullable()
+}).and(
+  objectType({
+    items: arrayType(
+      objectType({
+        id: numberType(),
+        orderId: numberType(),
+        drinkId: numberType(),
+        drinkName: stringType(),
+        quantity: numberType(),
+        unitPrice: numberType(),
+        lineTotal: numberType(),
+        specialNotes: stringType().nullable(),
+        status: enumType(["pending", "ready"]),
+        readyAt: stringType().nullable(),
+        customizations: arrayType(
+          objectType({
+            id: numberType(),
+            orderItemId: numberType(),
+            ingredientId: numberType().nullish(),
+            optionId: numberType().nullish(),
+            typeVolumeId: numberType().nullish(),
+            consumedQty: numberType(),
+            producedQty: numberType().optional(),
+            addedCost: numberType(),
+            slotLabel: stringType(),
+            optionLabel: stringType(),
+            baristaSortOrder: numberType().nullish()
+          })
+        )
+      })
+    )
+  })
+);
 var ListOrdersResponse = arrayType(ListOrdersResponseItem);
 var CreateOrderBody = objectType({
   customerName: stringType().optional(),
@@ -77113,13 +77153,20 @@ var GetOrderResponse = objectType({
   customerName: stringType().nullable(),
   subtotal: numberType(),
   discount: numberType(),
+  discountId: numberType().nullish(),
+  discountValue: numberType().nullish(),
+  discountType: enumType(["percentage", "fixed"]).nullish(),
   total: numberType(),
   paymentMethod: enumType(["cash", "card", "wallet"]),
   amountTendered: numberType().nullable(),
   changeDue: numberType().nullable(),
   notes: stringType().nullable(),
   createdAt: stringType(),
-  updatedAt: stringType()
+  updatedAt: stringType(),
+  paidAt: stringType().nullable(),
+  readyAt: stringType().nullable(),
+  completedAt: stringType().nullable(),
+  cancelledAt: stringType().nullable()
 }).and(
   objectType({
     items: arrayType(
@@ -77132,8 +77179,8 @@ var GetOrderResponse = objectType({
         unitPrice: numberType(),
         lineTotal: numberType(),
         specialNotes: stringType().nullable(),
-        kitchenStation: stringType().optional(),
         status: enumType(["pending", "ready"]),
+        readyAt: stringType().nullable(),
         customizations: arrayType(
           objectType({
             id: numberType(),
@@ -77142,11 +77189,11 @@ var GetOrderResponse = objectType({
             optionId: numberType().nullish(),
             typeVolumeId: numberType().nullish(),
             consumedQty: numberType(),
+            producedQty: numberType().optional(),
             addedCost: numberType(),
             slotLabel: stringType(),
             optionLabel: stringType(),
-            baristaSortOrder: numberType().nullish(),
-            customerSortOrder: numberType().nullish()
+            baristaSortOrder: numberType().nullish()
           })
         )
       })
@@ -77184,46 +77231,21 @@ var UpdateOrderStatusResponse = objectType({
   customerName: stringType().nullable(),
   subtotal: numberType(),
   discount: numberType(),
+  discountId: numberType().nullish(),
+  discountValue: numberType().nullish(),
+  discountType: enumType(["percentage", "fixed"]).nullish(),
   total: numberType(),
   paymentMethod: enumType(["cash", "card", "wallet"]),
   amountTendered: numberType().nullable(),
   changeDue: numberType().nullable(),
   notes: stringType().nullable(),
   createdAt: stringType(),
-  updatedAt: stringType()
-}).and(
-  objectType({
-    items: arrayType(
-      objectType({
-        id: numberType(),
-        orderId: numberType(),
-        drinkId: numberType(),
-        drinkName: stringType(),
-        quantity: numberType(),
-        unitPrice: numberType(),
-        lineTotal: numberType(),
-        specialNotes: stringType().nullable(),
-        kitchenStation: stringType().optional(),
-        status: enumType(["pending", "ready"]),
-        customizations: arrayType(
-          objectType({
-            id: numberType(),
-            orderItemId: numberType(),
-            ingredientId: numberType().nullish(),
-            optionId: numberType().nullish(),
-            typeVolumeId: numberType().nullish(),
-            consumedQty: numberType(),
-            addedCost: numberType(),
-            slotLabel: stringType(),
-            optionLabel: stringType(),
-            baristaSortOrder: numberType().nullish(),
-            customerSortOrder: numberType().nullish()
-          })
-        )
-      })
-    )
-  })
-);
+  updatedAt: stringType(),
+  paidAt: stringType().nullable(),
+  readyAt: stringType().nullable(),
+  completedAt: stringType().nullable(),
+  cancelledAt: stringType().nullable()
+});
 var MarkOrderItemReadyParams = objectType({
   id: coerce.number()
 });
@@ -77253,7 +77275,11 @@ var MarkOrderItemReadyResponse = objectType({
   changeDue: numberType().nullable(),
   notes: stringType().nullable(),
   createdAt: stringType(),
-  updatedAt: stringType()
+  updatedAt: stringType(),
+  paidAt: stringType().nullable(),
+  readyAt: stringType().nullable(),
+  completedAt: stringType().nullable(),
+  cancelledAt: stringType().nullable()
 });
 var ListStockMovementsQueryParams = objectType({
   ingredientId: coerce.number().optional(),
@@ -77312,13 +77338,20 @@ var GetActiveOrdersResponseItem = objectType({
   customerName: stringType().nullable(),
   subtotal: numberType(),
   discount: numberType(),
+  discountId: numberType().nullish(),
+  discountValue: numberType().nullish(),
+  discountType: enumType(["percentage", "fixed"]).nullish(),
   total: numberType(),
   paymentMethod: enumType(["cash", "card", "wallet"]),
   amountTendered: numberType().nullable(),
   changeDue: numberType().nullable(),
   notes: stringType().nullable(),
   createdAt: stringType(),
-  updatedAt: stringType()
+  updatedAt: stringType(),
+  paidAt: stringType().nullable(),
+  readyAt: stringType().nullable(),
+  completedAt: stringType().nullable(),
+  cancelledAt: stringType().nullable()
 }).and(
   objectType({
     items: arrayType(
@@ -77331,8 +77364,8 @@ var GetActiveOrdersResponseItem = objectType({
         unitPrice: numberType(),
         lineTotal: numberType(),
         specialNotes: stringType().nullable(),
-        kitchenStation: stringType().optional(),
         status: enumType(["pending", "ready"]),
+        readyAt: stringType().nullable(),
         customizations: arrayType(
           objectType({
             id: numberType(),
@@ -77341,11 +77374,11 @@ var GetActiveOrdersResponseItem = objectType({
             optionId: numberType().nullish(),
             typeVolumeId: numberType().nullish(),
             consumedQty: numberType(),
+            producedQty: numberType().optional(),
             addedCost: numberType(),
             slotLabel: stringType(),
             optionLabel: stringType(),
-            baristaSortOrder: numberType().nullish(),
-            customerSortOrder: numberType().nullish()
+            baristaSortOrder: numberType().nullish()
           })
         )
       })
@@ -77413,8 +77446,8 @@ var DeleteUserParams = objectType({
 });
 var GetSalesByCategoryQueryParams = objectType({
   days: coerce.number().optional(),
-  startDate: coerce.string().optional(),
-  endDate: coerce.string().optional()
+  startDate: dateType().optional(),
+  endDate: dateType().optional()
 });
 var GetSalesByCategoryResponseItem = objectType({
   category: stringType(),
@@ -77465,7 +77498,7 @@ var UpdateSettingsResponseItem = objectType({
   userId: numberType().nullish()
 });
 var UpdateSettingsResponse = arrayType(UpdateSettingsResponseItem);
-var Discount = objectType({
+var ListDiscountsResponseItem = objectType({
   id: numberType(),
   code: stringType(),
   type: enumType(["percentage", "fixed"]),
@@ -77474,17 +77507,45 @@ var Discount = objectType({
   createdAt: stringType(),
   updatedAt: stringType()
 });
+var ListDiscountsResponse = arrayType(ListDiscountsResponseItem);
 var CreateDiscountBody = objectType({
   code: stringType(),
   type: enumType(["percentage", "fixed"]),
   value: numberType(),
   isActive: booleanType().optional()
 });
+var UpdateDiscountParams = objectType({
+  id: coerce.number()
+});
 var UpdateDiscountBody = objectType({
   code: stringType().optional(),
   type: enumType(["percentage", "fixed"]).optional(),
   value: numberType().optional(),
   isActive: booleanType().optional()
+});
+var UpdateDiscountResponse = objectType({
+  id: numberType(),
+  code: stringType(),
+  type: enumType(["percentage", "fixed"]),
+  value: numberType(),
+  isActive: booleanType(),
+  createdAt: stringType(),
+  updatedAt: stringType()
+});
+var DeleteDiscountParams = objectType({
+  id: coerce.number()
+});
+var ValidateDiscountParams = objectType({
+  code: coerce.string()
+});
+var ValidateDiscountResponse = objectType({
+  id: numberType(),
+  code: stringType(),
+  type: enumType(["percentage", "fixed"]),
+  value: numberType(),
+  isActive: booleanType(),
+  createdAt: stringType(),
+  updatedAt: stringType()
 });
 
 // ../../lib/api-zod/src/index.ts
@@ -78866,6 +78927,7 @@ async function buildOrderDetail(orderId) {
       customizations: (custByItem.get(item.id) ?? []).map((c) => ({
         ...c,
         consumedQty: parseFloat(c.consumedQty),
+        producedQty: parseFloat(c.producedQty),
         addedCost: parseFloat(c.addedCost)
       }))
     }))
@@ -78902,7 +78964,7 @@ router5.get("/orders", async (req, res) => {
   const custByItem = /* @__PURE__ */ new Map();
   for (const c of customizations) {
     const list = custByItem.get(c.orderItemId) ?? [];
-    list.push({ ...c, consumedQty: parseFloat(c.consumedQty), addedCost: parseFloat(c.addedCost) });
+    list.push({ ...c, consumedQty: parseFloat(c.consumedQty), producedQty: parseFloat(c.producedQty), addedCost: parseFloat(c.addedCost) });
     custByItem.set(c.orderItemId, list);
   }
   const itemsByOrder = /* @__PURE__ */ new Map();
@@ -78964,6 +79026,7 @@ router5.post("/orders", async (req, res) => {
         optionId: c.optionId,
         typeVolumeId: c.typeVolumeId,
         consumedQty: c.consumedQty * item.quantity,
+        producedQty: c.producedQty * item.quantity,
         addedCost: c.addedCost,
         slotLabel: c.slotLabel,
         optionLabel: c.optionLabel,
@@ -79058,6 +79121,7 @@ router5.post("/orders", async (req, res) => {
             optionId: c.optionId ? Number(c.optionId) : null,
             typeVolumeId: c.typeVolumeId ? Number(c.typeVolumeId) : null,
             consumedQty: String(c.consumedQty || 0),
+            producedQty: String(c.producedQty || 0),
             addedCost: String(c.addedCost || 0),
             slotLabel: c.slotLabel,
             optionLabel: c.optionLabel,
@@ -79122,6 +79186,7 @@ router5.post("/orders", async (req, res) => {
             optionId: c.optionId,
             typeVolumeId: c.typeVolumeId,
             consumedQty: c.consumedQty,
+            producedQty: c.producedQty,
             addedCost: c.addedCost,
             slotLabel: c.slotLabel,
             optionLabel: c.optionLabel,
@@ -79160,9 +79225,17 @@ router5.patch("/orders/:id/status", async (req, res) => {
     return;
   }
   const updateData = { status: parsed.data.status };
+  const now = /* @__PURE__ */ new Date();
   if (parsed.data.status === "paid") {
     const cashierId = req.body.cashierId ?? req.session.cashierId ?? null;
     if (cashierId) updateData.cashierId = cashierId;
+    updateData.paidAt = now;
+  } else if (parsed.data.status === "ready") {
+    updateData.readyAt = now;
+  } else if (parsed.data.status === "completed") {
+    updateData.completedAt = now;
+  } else if (parsed.data.status === "cancelled" || parsed.data.status === "refunded") {
+    updateData.cancelledAt = now;
   }
   const [order] = await db.update(ordersTable).set(updateData).where(eq(ordersTable.id, params.data.id)).returning();
   if (!order) {
@@ -79183,7 +79256,7 @@ router5.patch("/order-items/:id/ready", async (req, res) => {
     res.status(400).json({ error: "Invalid item ID" });
     return;
   }
-  const [item] = await db.update(orderItemsTable).set({ status: "ready" }).where(eq(orderItemsTable.id, itemId)).returning();
+  const [item] = await db.update(orderItemsTable).set({ status: "ready", readyAt: /* @__PURE__ */ new Date() }).where(eq(orderItemsTable.id, itemId)).returning();
   if (!item) {
     res.status(404).json({ error: "Item not found" });
     return;
@@ -79199,7 +79272,9 @@ router5.patch("/order-items/:id/ready", async (req, res) => {
       nextStatus = "in_progress";
     }
     if (nextStatus !== order.status) {
-      await db.update(ordersTable).set({ status: nextStatus }).where(eq(ordersTable.id, order.id));
+      const orderUpdateData = { status: nextStatus };
+      if (nextStatus === "ready") orderUpdateData.readyAt = /* @__PURE__ */ new Date();
+      await db.update(ordersTable).set(orderUpdateData).where(eq(ordersTable.id, order.id));
       broadcastEvent("order_updated", { orderId: order.id, status: nextStatus });
     }
   }
@@ -79218,7 +79293,7 @@ router5.post("/orders/:id/refund", async (req, res) => {
     res.status(401).json({ error: "Invalid Admin PIN" });
     return;
   }
-  const [order] = await db.update(ordersTable).set({ status: "refunded" }).where(eq(ordersTable.id, parseInt(id))).returning();
+  const [order] = await db.update(ordersTable).set({ status: "refunded", cancelledAt: /* @__PURE__ */ new Date() }).where(eq(ordersTable.id, parseInt(id))).returning();
   if (!order) {
     res.status(404).json({ error: "Order not found" });
     return;
@@ -79370,6 +79445,7 @@ router7.get("/dashboard/active-orders", async (req, res) => {
             customizations: customizations.map((c) => ({
               ...c,
               consumedQty: parseFloat(c.consumedQty),
+              producedQty: parseFloat(c.producedQty),
               addedCost: parseFloat(c.addedCost),
               baristaSortOrder: c.baristaSortOrder
             }))
