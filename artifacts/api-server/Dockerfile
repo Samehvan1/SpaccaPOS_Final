@@ -32,7 +32,7 @@ FROM node:20-alpine
 WORKDIR /app
 
 # Copy the bundled output from the builder
-COPY --from=builder /app/artifacts/api-server/dist ./dist
+COPY --from=builder /app/artifacts/api-server/dist ./artifacts/api-server/dist
 COPY --from=builder /app/artifacts/api-server/package.json ./package.json
 COPY --from=builder /app/Inventory2026.csv ./Inventory2026.csv
 
@@ -43,4 +43,4 @@ COPY --from=builder /app/Inventory2026.csv ./Inventory2026.csv
 
 EXPOSE 8080
 
-CMD ["node", "./dist/index.mjs"]
+CMD ["node", "./artifacts/api-server/dist/index.mjs"]
