@@ -209,3 +209,17 @@ export const CreateDiscountBody = api.CreateDiscountBody;
 export type CreateDiscountBody = Infer<typeof api.CreateDiscountBody>;
 export const UpdateDiscountBody = api.UpdateDiscountBody;
 export type UpdateDiscountBody = Infer<typeof api.UpdateDiscountBody>;
+
+// Users
+export const CreateUserBody = api.CreateUserBody;
+export type CreateUserBody = Infer<typeof api.CreateUserBody>;
+export const UpdateUserBody = api.UpdateUserBody;
+export type UpdateUserBody = Infer<typeof api.UpdateUserBody>;
+export const UserDetail = api.UpdateUserResponse; // This has all fields
+export type UserDetail = Infer<typeof api.UpdateUserResponse>;
+
+// Admin
+export const ActivityLog = api.ListActivityLogsResponseItem;
+export type ActivityLog = Infer<typeof api.ListActivityLogsResponseItem>;
+export const Permission = api.ListPermissionsResponseItem;
+export type Permission = Infer<typeof api.ListPermissionsResponseItem>;

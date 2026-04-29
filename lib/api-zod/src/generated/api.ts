@@ -18,7 +18,8 @@ export const HealthCheckResponse = zod.object({
  * @summary Login with PIN
  */
 export const BaristaLoginBody = zod.object({
-  pin: zod.string(),
+  username: zod.string(),
+  password: zod.string(),
 });
 
 export const BaristaLoginResponse = zod.object({
@@ -956,8 +957,10 @@ export const GetLowStockIngredientsResponse = zod.array(
 export const ListUsersResponseItem = zod.object({
   id: zod.number(),
   name: zod.string(),
+  username: zod.string(),
   role: zod.enum(["admin", "barista", "frontdesk", "cashier", "pickup"]),
   pin: zod.string().optional(),
+  isActive: zod.boolean(),
   createdAt: zod.string().optional(),
   updatedAt: zod.string().optional(),
 });
@@ -968,8 +971,10 @@ export const ListUsersResponse = zod.array(ListUsersResponseItem);
  */
 export const CreateUserBody = zod.object({
   name: zod.string(),
+  username: zod.string(),
+  password: zod.string(),
   role: zod.enum(["admin", "barista", "frontdesk", "cashier", "pickup"]),
-  pin: zod.string(),
+  pin: zod.string().optional(),
 });
 
 /**
@@ -981,17 +986,22 @@ export const UpdateUserParams = zod.object({
 
 export const UpdateUserBody = zod.object({
   name: zod.string().optional(),
+  username: zod.string().optional(),
+  password: zod.string().optional(),
   role: zod
     .enum(["admin", "barista", "frontdesk", "cashier", "pickup"])
     .optional(),
   pin: zod.string().optional(),
+  isActive: zod.boolean().optional(),
 });
 
 export const UpdateUserResponse = zod.object({
   id: zod.number(),
   name: zod.string(),
+  username: zod.string(),
   role: zod.enum(["admin", "barista", "frontdesk", "cashier", "pickup"]),
   pin: zod.string().optional(),
+  isActive: zod.boolean(),
   createdAt: zod.string().optional(),
   updatedAt: zod.string().optional(),
 });
@@ -1002,6 +1012,37 @@ export const UpdateUserResponse = zod.object({
 export const DeleteUserParams = zod.object({
   id: zod.coerce.number(),
 });
+
+/**
+ * @summary List activity logs
+ */
+export const ListActivityLogsQueryParams = zod.object({
+  userId: zod.coerce.number().optional(),
+  action: zod.coerce.string().optional(),
+  limit: zod.coerce.number().optional(),
+  offset: zod.coerce.number().optional(),
+});
+
+export const ListActivityLogsResponseItem = zod.object({
+  id: zod.number(),
+  userId: zod.number(),
+  action: zod.string(),
+  entityType: zod.string().nullish(),
+  entityId: zod.number().nullish(),
+  details: zod.object({}).passthrough().nullish(),
+  createdAt: zod.string(),
+});
+export const ListActivityLogsResponse = zod.array(ListActivityLogsResponseItem);
+
+/**
+ * @summary List all available permissions
+ */
+export const ListPermissionsResponseItem = zod.object({
+  id: zod.number(),
+  key: zod.string(),
+  description: zod.string().nullish(),
+});
+export const ListPermissionsResponse = zod.array(ListPermissionsResponseItem);
 
 /**
  * @summary Get sales grouped by drink category

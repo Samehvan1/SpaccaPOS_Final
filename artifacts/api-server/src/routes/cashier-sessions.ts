@@ -5,9 +5,11 @@ import { z } from "zod";
 
 const router: IRouter = Router();
 
+import bcrypt from "bcryptjs";
+
 const CashierLoginBody = z.object({
-  cashierId: z.number().int().positive(),
-  pin: z.string().min(4).max(6),
+  username: z.string().min(1),
+  password: z.string().min(1),
 });
 
 // POST /cashier/login — verify PIN and start a session
@@ -18,14 +20,22 @@ router.post("/cashier/login", async (req, res): Promise<void> => {
     return;
   }
 
+  const { username, password } = parsed.data;
+
   const [user] = await db
     .select()
     .from(usersTable)
-    .where(and(eq(usersTable.id, parsed.data.cashierId), eq(usersTable.pin, parsed.data.pin)))
+    .where(eq(usersTable.username, username))
     .limit(1);
 
-  if (!user) {
-    res.status(401).json({ error: "Invalid PIN" });
+  if (!user || !user.passwordHash) {
+    res.status(401).json({ error: "Invalid username or password" });
+    return;
+  }
+
+  const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
+  if (!isPasswordValid) {
+    res.status(401).json({ error: "Invalid username or password" });
     return;
   }
 

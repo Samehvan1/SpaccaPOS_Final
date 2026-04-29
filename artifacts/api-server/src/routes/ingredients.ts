@@ -1,8 +1,8 @@
 import { Router, type IRouter } from "express";
 import fs from "fs";
 import path from "path";
-import { eq, and } from "drizzle-orm";
-import { db, ingredientsTable, ingredientOptionsTable, stockMovementsTable, ingredientTypesTable, drinkIngredientSlotsTable, drinksTable, orderItemCustomizationsTable, orderItemsTable, ordersTable } from "@workspace/db";
+import { eq, and, sql } from "drizzle-orm";
+import { db, ingredientsTable, ingredientOptionsTable, stockMovementsTable, ingredientTypesTable, drinkIngredientSlotsTable, drinksTable, orderItemCustomizationsTable, orderItemsTable, ordersTable, usersTable } from "@workspace/db";
 import { serializeDates } from "../lib/serialize";
 import {
   ListIngredientsQueryParams,
@@ -58,6 +58,19 @@ async function buildIngredientDetail(ingredientId: number) {
 
 router.post("/ingredients/import-csv", async (req, res): Promise<void> => {
   try {
+    const { pin } = req.body;
+    if (!pin) {
+      res.status(400).json({ error: "Admin PIN is required for this action." });
+      return;
+    }
+
+    // Verify PIN
+    const [admin] = await db.select().from(usersTable).where(and(eq(usersTable.pin, pin), eq(usersTable.role, "admin"))).limit(1);
+    if (!admin) {
+      res.status(401).json({ error: "Invalid Admin PIN. Critical actions require authorization." });
+      return;
+    }
+
     const csvPath = path.join(process.cwd(), "Inventory2026.csv");
     if (!fs.existsSync(csvPath)) {
       res.status(404).json({ error: "Inventory2026.csv not found in app root." });
@@ -91,17 +104,15 @@ router.post("/ingredients/import-csv", async (req, res): Promise<void> => {
     };
 
     await db.transaction(async (tx) => {
-      // Clear links
+      // 1. Clear links in operational tables (keep data, just unlink)
       await tx.update(ingredientTypesTable).set({ inventoryIngredientId: null });
       await tx.update(drinksTable).set({ cupIngredientId: null });
       await tx.update(ingredientOptionsTable).set({ linkedIngredientId: null });
       await tx.update(drinkIngredientSlotsTable).set({ ingredientId: null });
 
-      // Wipe data
-      await tx.delete(orderItemCustomizationsTable);
-      await tx.delete(orderItemsTable);
-      await tx.delete(ordersTable);
-      await tx.delete(stockMovementsTable);
+      // 2. Wipe ONLY the master inventory definitions
+      // Note: We don't wipe ordersTable or orderItemsTable anymore to preserve history.
+      
       await tx.delete(ingredientOptionsTable);
       await tx.delete(ingredientsTable);
 
@@ -149,9 +160,18 @@ router.get("/ingredients", async (req, res): Promise<void> => {
     conditions.push(eq(ingredientsTable.isActive, params.data.active));
   }
 
-  const ingredients = conditions.length
-    ? await db.select().from(ingredientsTable).where(and(...conditions))
-    : await db.select().from(ingredientsTable);
+  const ingredients = await db.select().from(ingredientsTable).where(conditions.length ? and(...conditions) : undefined);
+
+  // Get counts of links
+  const [typeLinks, optionLinks, drinkLinks] = await Promise.all([
+    db.select({ id: ingredientTypesTable.inventoryIngredientId, count: sql<number>`count(*)` }).from(ingredientTypesTable).groupBy(ingredientTypesTable.inventoryIngredientId),
+    db.select({ id: ingredientOptionsTable.linkedIngredientId, count: sql<number>`count(*)` }).from(ingredientOptionsTable).groupBy(ingredientOptionsTable.linkedIngredientId),
+    db.select({ id: drinksTable.cupIngredientId, count: sql<number>`count(*)` }).from(drinksTable).groupBy(drinksTable.cupIngredientId),
+  ]);
+
+  const typeCountMap = new Map(typeLinks.map(l => [l.id, Number(l.count)]));
+  const optionCountMap = new Map(optionLinks.map(l => [l.id, Number(l.count)]));
+  const drinkCountMap = new Map(drinkLinks.map(l => [l.id, Number(l.count)]));
 
   let filtered = ingredients;
   if (params.success && params.data.type) {
@@ -165,8 +185,8 @@ router.get("/ingredients", async (req, res): Promise<void> => {
         costPerUnit: parseFloat(i.costPerUnit),
         stockQuantity: parseFloat(i.stockQuantity),
         lowStockThreshold: parseFloat(i.lowStockThreshold),
-        linkedTypeCount: 0,
-        linkedProductCount: 0,
+        linkedTypeCount: (typeCountMap.get(i.id) || 0) + (optionCountMap.get(i.id) || 0),
+        linkedProductCount: drinkCountMap.get(i.id) || 0,
       };
     }))
   );

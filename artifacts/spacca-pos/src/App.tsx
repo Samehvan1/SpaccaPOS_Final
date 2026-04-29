@@ -24,6 +24,8 @@ import CategoriesAdmin from "@/pages/admin/categories";
 import KitchenStationsAdmin from "@/pages/admin/kitchen-stations";
 import AdminUsers from "@/pages/admin/users";
 import DiscountsAdmin from "@/pages/admin/discounts";
+import ActivityLogs from "@/pages/admin/activity-logs";
+import PermissionsAdmin from "@/pages/admin/permissions";
 import NotFound from "@/pages/not-found";
 import CustomerAuth from "@/pages/customer-auth";
 import CustomerProfile from "@/pages/customer-profile";
@@ -241,6 +243,18 @@ function AppRoutes() {
       <Route path="/admin/cashier-performance">
         <MainLayout>
           <ProtectedRoute component={CashierPerformancePage} adminOnly={true} />
+        </MainLayout>
+      </Route>
+
+      <Route path="/admin/activity-logs">
+        <MainLayout>
+          <ProtectedRoute component={ActivityLogs} adminOnly={true} />
+        </MainLayout>
+      </Route>
+
+      <Route path="/admin/permissions">
+        <MainLayout>
+          <ProtectedRoute component={PermissionsAdmin} adminOnly={true} />
         </MainLayout>
       </Route>
 

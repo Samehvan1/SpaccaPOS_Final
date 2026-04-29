@@ -17,6 +17,7 @@ import type {
 } from "@tanstack/react-query";
 
 import type {
+  ActivityLog,
   CategorySales,
   CreateDiscountBody,
   CreateDrinkBody,
@@ -36,6 +37,7 @@ import type {
   Ingredient,
   IngredientDetail,
   IngredientOption,
+  ListActivityLogsParams,
   ListDrinksParams,
   ListIngredientsParams,
   ListOrdersParams,
@@ -44,6 +46,7 @@ import type {
   LoginResponse,
   Order,
   OrderDetail,
+  Permission,
   PriceBreakdown,
   PriceCalculationBody,
   RestockBody,
@@ -2963,6 +2966,178 @@ export const useDeleteUser = <
 > => {
   return useMutation(getDeleteUserMutationOptions(options));
 };
+
+/**
+ * @summary List activity logs
+ */
+export const getListActivityLogsUrl = (params?: ListActivityLogsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/admin/activity-logs?${stringifiedParams}`
+    : `/api/admin/activity-logs`;
+};
+
+export const listActivityLogs = async (
+  params?: ListActivityLogsParams,
+  options?: RequestInit,
+): Promise<ActivityLog[]> => {
+  return customFetch<ActivityLog[]>(getListActivityLogsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListActivityLogsQueryKey = (
+  params?: ListActivityLogsParams,
+) => {
+  return [`/api/admin/activity-logs`, ...(params ? [params] : [])] as const;
+};
+
+export const getListActivityLogsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listActivityLogs>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ListActivityLogsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listActivityLogs>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListActivityLogsQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listActivityLogs>>
+  > = ({ signal }) => listActivityLogs(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listActivityLogs>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListActivityLogsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listActivityLogs>>
+>;
+export type ListActivityLogsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List activity logs
+ */
+
+export function useListActivityLogs<
+  TData = Awaited<ReturnType<typeof listActivityLogs>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ListActivityLogsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listActivityLogs>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListActivityLogsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary List all available permissions
+ */
+export const getListPermissionsUrl = () => {
+  return `/api/admin/permissions`;
+};
+
+export const listPermissions = async (
+  options?: RequestInit,
+): Promise<Permission[]> => {
+  return customFetch<Permission[]>(getListPermissionsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListPermissionsQueryKey = () => {
+  return [`/api/admin/permissions`] as const;
+};
+
+export const getListPermissionsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listPermissions>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listPermissions>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListPermissionsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listPermissions>>> = ({
+    signal,
+  }) => listPermissions({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listPermissions>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListPermissionsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listPermissions>>
+>;
+export type ListPermissionsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List all available permissions
+ */
+
+export function useListPermissions<
+  TData = Awaited<ReturnType<typeof listPermissions>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listPermissions>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListPermissionsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
 
 /**
  * @summary Get sales grouped by drink category

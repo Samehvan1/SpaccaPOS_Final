@@ -167,7 +167,8 @@ export default function KitchenDisplay() {
 
   return (
     <div className="flex flex-col h-full bg-[#080808] overflow-hidden text-foreground">
-      {/* Header Area */}
+      <div className="flex-1 overflow-y-auto">
+        {/* Header Area */}
       <div className="shrink-0 bg-background/40 backdrop-blur-md border-b border-white/5 z-10">
         <div className="px-8 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -361,6 +362,7 @@ export default function KitchenDisplay() {
           </div>
         )}
       </ScrollArea>
+      </div>
     </div>
   );
 }

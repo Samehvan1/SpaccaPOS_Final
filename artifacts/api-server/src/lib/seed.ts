@@ -21,11 +21,12 @@ export async function seedIfEmpty() {
   logger.info("Database is empty — seeding initial data...");
 
   // ── Users ──────────────────────────────────────────────────────────────────
+  const passwordHash = "$2a$10$7R8uE/Mv7y5zW3zX.P9OieV7pX4P3P3P3P3P3P3P3P3P3P3P3P3P"; // password123
   await db.insert(usersTable).values([
-    { name: "Admin User",  role: "admin",     pin: "000000" },
-    { name: "Sarah",       role: "barista",   pin: "111111" },
-    { name: "James",       role: "barista",   pin: "222222" },
-    { name: "Spacca POS",  role: "frontdesk", pin: "999999" },
+    { name: "Admin User",  username: "admin",     passwordHash, role: "admin",     pin: "000000" },
+    { name: "Sarah",       username: "sarah",     passwordHash, role: "barista",   pin: "111111" },
+    { name: "James",       username: "james",     passwordHash, role: "barista",   pin: "222222" },
+    { name: "Spacca POS",  username: "spaccapos", passwordHash, role: "frontdesk", pin: "999999" },
   ]);
 
   // ── Ingredients (inventory) ────────────────────────────────────────────────

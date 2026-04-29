@@ -9,6 +9,9 @@ import type { UpdateUserBodyRole } from "./updateUserBodyRole";
 
 export interface UpdateUserBody {
   name?: string;
+  username?: string;
+  password?: string;
   role?: UpdateUserBodyRole;
   pin?: string;
+  isActive?: boolean;
 }

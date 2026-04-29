@@ -10,8 +10,10 @@ import type { UserDetailRole } from "./userDetailRole";
 export interface UserDetail {
   id: number;
   name: string;
+  username: string;
   role: UserDetailRole;
   pin?: string;
+  isActive: boolean;
   createdAt?: string;
   updatedAt?: string;
 }

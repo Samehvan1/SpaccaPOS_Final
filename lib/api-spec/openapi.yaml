@@ -710,6 +710,54 @@ paths:
         "204":
           description: Deleted
 
+  /admin/activity-logs:
+    get:
+      operationId: listActivityLogs
+      tags: [admin]
+      summary: List activity logs
+      parameters:
+        - in: query
+          name: userId
+          schema:
+            type: integer
+        - in: query
+          name: action
+          schema:
+            type: string
+        - in: query
+          name: limit
+          schema:
+            type: integer
+        - in: query
+          name: offset
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of activity logs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ActivityLog"
+
+  /admin/permissions:
+    get:
+      operationId: listPermissions
+      tags: [admin]
+      summary: List all available permissions
+      responses:
+        "200":
+          description: List of permissions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Permission"
+
+
   /dashboard/sales-by-category:
     get:
       operationId: getSalesByCategory
@@ -933,10 +981,13 @@ components:
     LoginBody:
       type: object
       properties:
-        pin:
+        username:
+          type: string
+        password:
           type: string
       required:
-        - pin
+        - username
+        - password
 
     LoginResponse:
       type: object
@@ -953,11 +1004,15 @@ components:
           type: integer
         name:
           type: string
+        username:
+          type: string
         role:
           type: string
           enum: [admin, barista, frontdesk, cashier, pickup]
         pin:
           type: string
+        isActive:
+          type: boolean
         createdAt:
           type: string
         updatedAt:
@@ -965,12 +1020,18 @@ components:
       required:
         - id
         - name
+        - username
         - role
+        - isActive
 
     CreateUserBody:
       type: object
       properties:
         name:
+          type: string
+        username:
+          type: string
+        password:
           type: string
         role:
           type: string
@@ -979,19 +1040,26 @@ components:
           type: string
       required:
         - name
+        - username
+        - password
         - role
-        - pin
 
     UpdateUserBody:
       type: object
       properties:
         name:
           type: string
+        username:
+          type: string
+        password:
+          type: string
         role:
           type: string
           enum: [admin, barista, frontdesk, cashier, pickup]
         pin:
           type: string
+        isActive:
+          type: boolean
 
     Ingredient:
       type: object
@@ -1778,6 +1846,42 @@ components:
         - category
         - totalSold
         - totalRevenue
+
+    Permission:
+      type: object
+      properties:
+        id:
+          type: integer
+        key:
+          type: string
+        description:
+          type: ["string", "null"]
+      required:
+        - id
+        - key
+
+    ActivityLog:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        action:
+          type: string
+        entityType:
+          type: ["string", "null"]
+        entityId:
+          type: ["integer", "null"]
+        details:
+          type: ["object", "null"]
+        createdAt:
+          type: string
+      required:
+        - id
+        - userId
+        - action
+        - createdAt
 
     Setting:
       type: object

@@ -9,6 +9,8 @@ import type { CreateUserBodyRole } from "./createUserBodyRole";
 
 export interface CreateUserBody {
   name: string;
+  username: string;
+  password: string;
   role: CreateUserBodyRole;
-  pin: string;
+  pin?: string;
 }

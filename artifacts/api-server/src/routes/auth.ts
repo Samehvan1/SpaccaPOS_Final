@@ -1,7 +1,8 @@
 import { Router, type IRouter } from "express";
-import { eq } from "drizzle-orm";
-import { db, usersTable } from "@workspace/db";
+import { eq, and } from "drizzle-orm";
+import { db, usersTable, activityLogsTable } from "@workspace/db";
 import { BaristaLoginBody, BaristaLoginResponse, GetMeResponse } from "@workspace/api-zod";
+import bcrypt from "bcryptjs";
 
 const router: IRouter = Router();
 
@@ -12,24 +13,46 @@ router.post("/auth/login", async (req, res): Promise<void> => {
     return;
   }
 
-  const user = await db
+  const { username, password } = parsed.data;
+
+  const [user] = await db
     .select()
     .from(usersTable)
-    .where(eq(usersTable.pin, parsed.data.pin))
+    .where(eq(usersTable.username, username))
     .limit(1);
 
-  if (!user[0]) {
-    res.status(401).json({ error: "Invalid PIN" });
+  if (!user || !user.passwordHash) {
+    res.status(401).json({ error: "Invalid username or password" });
     return;
   }
 
-  (req.session as unknown as Record<string, unknown>).userId = user[0].id;
+  const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
+  if (!isPasswordValid) {
+    res.status(401).json({ error: "Invalid username or password" });
+    return;
+  }
+
+  if (!user.isActive) {
+    res.status(403).json({ error: "Account is inactive" });
+    return;
+  }
+
+  (req.session as unknown as Record<string, unknown>).userId = user.id;
+
+  // Log activity
+  await db.insert(activityLogsTable).values({
+    userId: user.id,
+    action: "LOGIN",
+    entityType: "user",
+    entityId: user.id,
+    details: { ip: req.ip, userAgent: req.get("user-agent") },
+  });
 
   const payload = BaristaLoginResponse.parse({
     user: {
-      id: user[0].id,
-      name: user[0].name,
-      role: user[0].role,
+      id: user.id,
+      name: user.name,
+      role: user.role,
     },
   });
 
@@ -74,6 +97,27 @@ router.get("/auth/me", async (req, res): Promise<void> => {
       role: user.role,
     })
   );
+});
+
+router.post("/auth/verify-pin", async (req, res): Promise<void> => {
+  const { pin } = req.body;
+  if (!pin) {
+    res.status(400).json({ error: "PIN is required" });
+    return;
+  }
+
+  const [user] = await db
+    .select()
+    .from(usersTable)
+    .where(and(eq(usersTable.pin, pin), eq(usersTable.role, "admin")))
+    .limit(1);
+
+  if (!user) {
+    res.status(401).json({ error: "Invalid Admin PIN" });
+    return;
+  }
+
+  res.json({ success: true, message: "PIN verified" });
 });
 
 export default router;

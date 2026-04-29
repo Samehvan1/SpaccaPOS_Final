@@ -7,5 +7,6 @@
  */
 
 export interface LoginBody {
-  pin: string;
+  username: string;
+  password: string;
 }

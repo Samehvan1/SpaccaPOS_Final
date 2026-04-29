@@ -1157,11 +1157,15 @@ function InventoryTab() {
   };
 
   const handleImportCsv = async () => {
-    if (!confirm("CRITICAL WARNING: This will WIPE all inventory, stock movements, and historical orders before importing from Inventory2026.csv. This action CANNOT be undone. Proceed?")) return;
+    const pin = prompt("CRITICAL ACTION: This will WIPE ALL inventory and order data. Enter Admin PIN to proceed:");
+    if (!pin) return;
     
     setImporting(true);
     try {
-      await api("/api/ingredients/import-csv", { method: "POST" });
+      await api("/api/ingredients/import-csv", { 
+        method: "POST",
+        body: JSON.stringify({ pin })
+      });
       toast({ title: "Import Successful", description: "Inventory has been wiped and re-imported." });
       refetch();
     } catch (err: any) {

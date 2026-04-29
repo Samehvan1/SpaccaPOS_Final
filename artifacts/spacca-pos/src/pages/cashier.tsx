@@ -37,11 +37,11 @@ function useCashierSession() {
 
   useEffect(() => { fetchActive(); }, []);
 
-  const login = async (cashierId: number, pin: string) => {
+  const login = async (username: string, password: string) => {
     const res = await fetch(`${API_BASE}/cashier/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ cashierId, pin }),
+      body: JSON.stringify({ username, password }),
       credentials: "include",
     });
     if (!res.ok) throw new Error((await res.json()).error ?? "Login failed");
@@ -65,33 +65,25 @@ function formatDuration(startedAt: string) {
   return h > 0 ? `${h}h ${m}m` : `${m}m`;
 }
 
+import { Label } from "@/components/ui/label";
+
 function CashierPinLogin({ onSuccess }: { onSuccess: () => void }) {
   const { toast } = useToast();
   const { login } = useCashierSession();
-  const [cashiers, setCashiers] = useState<CashierUser[]>([]);
-  const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [pin, setPin] = useState("");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    fetch(`${API_BASE}/cashier/list`, { credentials: "include" })
-      .then(r => r.json())
-      .then(setCashiers)
-      .catch((err) => console.error("Cashier list fetch error:", err));
-  }, []);
-
-  const handleDigit = (d: string) => { if (pin.length < 6) setPin(p => p + d); };
-  const handleBackspace = () => setPin(p => p.slice(0, -1));
-
-  const handleLogin = async () => {
-    if (!selectedId || pin.length < 4) return;
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!username || !password) return;
     setLoading(true);
     try {
-      await login(selectedId, pin);
+      await login(username, password);
       onSuccess();
     } catch (e: any) {
       toast({ variant: "destructive", title: "Login Failed", description: e.message });
-      setPin("");
+      setPassword("");
     } finally { setLoading(false); }
   };
 
@@ -107,69 +99,46 @@ function CashierPinLogin({ onSuccess }: { onSuccess: () => void }) {
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-neon-cyan/10 border border-neon-cyan/30 mb-2">
             <Lock className="h-8 w-8 text-neon-cyan" />
           </div>
-          <h1 className="text-3xl font-black tracking-tighter uppercase">Cashier <span className="text-neon-cyan">Login</span></h1>
-          <p className="text-muted-foreground text-sm font-medium">Select your name and enter your PIN</p>
+          <h1 className="text-3xl font-black tracking-tighter uppercase">Cashier <span className="text-neon-cyan">Shift Login</span></h1>
+          <p className="text-muted-foreground text-sm font-medium">Enter your credentials to start your shift</p>
         </div>
 
-        {/* Cashier Selection */}
-        <div className="grid grid-cols-2 gap-3">
-          {cashiers.map(c => (
-            <button
-              key={c.id}
-              onClick={() => { setSelectedId(c.id); setPin(""); }}
-              className={`p-4 rounded-2xl border text-left transition-all font-bold text-sm ${
-                selectedId === c.id
-                  ? "border-neon-cyan bg-neon-cyan/10 text-neon-cyan"
-                  : "border-white/10 bg-white/5 text-foreground hover:border-white/20 hover:bg-white/10"
-              }`}
-            >
-              <User className="h-4 w-4 mb-2 opacity-60" />
-              {c.name}
-            </button>
-          ))}
-        </div>
+        <form onSubmit={handleLogin} className="space-y-6">
+          <div className="space-y-2">
+            <Label htmlFor="username" className="text-xs font-black uppercase tracking-widest text-muted-foreground">Username</Label>
+            <Input
+              id="username"
+              placeholder="Enter your username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className="h-12 bg-white/5 border-white/10 focus:border-neon-cyan/50 rounded-xl"
+              required
+              disabled={loading}
+            />
+          </div>
 
-        {/* PIN Display */}
-        <div className="flex justify-center gap-3">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div
-              key={i}
-              className={`w-10 h-10 rounded-xl border-2 flex items-center justify-center transition-all ${
-                i < pin.length
-                  ? "border-neon-cyan bg-neon-cyan/20"
-                  : "border-white/20 bg-white/5"
-              }`}
-            >
-              {i < pin.length && <div className="w-3 h-3 rounded-full bg-neon-cyan" />}
-            </div>
-          ))}
-        </div>
+          <div className="space-y-2">
+            <Label htmlFor="password" className="text-xs font-black uppercase tracking-widest text-muted-foreground">Password</Label>
+            <Input
+              id="password"
+              type="password"
+              placeholder="Enter your password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="h-12 bg-white/5 border-white/10 focus:border-neon-cyan/50 rounded-xl"
+              required
+              disabled={loading}
+            />
+          </div>
 
-        {/* Numpad */}
-        <div className="grid grid-cols-3 gap-3">
-          {["1","2","3","4","5","6","7","8","9","","0","⌫"].map((d, i) => (
-            <button
-              key={i}
-              disabled={!selectedId || d === ""}
-              onClick={() => d === "⌫" ? handleBackspace() : d && handleDigit(d)}
-              className={`h-14 rounded-2xl text-xl font-black transition-all ${
-                d === "" ? "pointer-events-none" :
-                d === "⌫" ? "bg-white/5 border border-white/10 hover:bg-red-500/20 hover:border-red-500/30 hover:text-red-400" :
-                "bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 active:scale-95"
-              } disabled:opacity-30`}
-            >
-              {d}
-            </button>
-          ))}
-        </div>
-
-        <Button
-          className="w-full h-14 text-base font-black uppercase tracking-widest rounded-2xl bg-neon-green/20 hover:bg-neon-green text-neon-green hover:text-background border border-neon-green/40 transition-all duration-300 glow-green"
-          disabled={!selectedId || pin.length < 4 || loading}
-          onClick={handleLogin}
-        >
-          {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <><Check className="h-5 w-5 mr-2" /> Start Shift</>}
-        </Button>
+          <Button
+            type="submit"
+            className="w-full h-14 text-base font-black uppercase tracking-widest rounded-2xl bg-neon-green/20 hover:bg-neon-green text-neon-green hover:text-background border border-neon-green/40 transition-all duration-300 glow-green"
+            disabled={!username || !password || loading}
+          >
+            {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <><Check className="h-5 w-5 mr-2" /> Start Shift</>}
+          </Button>
+        </form>
       </div>
     </div>
   );
@@ -299,6 +268,7 @@ export default function CashierPage() {
 
   return (
     <div className="flex flex-col h-full bg-background overflow-hidden relative">
+      <div className="flex-1 overflow-y-auto">
       <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-neon-cyan/5 blur-[120px] pointer-events-none rounded-full" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-neon-green/5 blur-[120px] pointer-events-none rounded-full" />
 
@@ -720,6 +690,7 @@ export default function CashierPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      </div>
     </div>
   );
 }

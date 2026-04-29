@@ -103,9 +103,17 @@ export function MainLayout({ children }: MainLayoutProps) {
                 {user.role}
               </Badge>
            </div>
-           
-            
+
            <div className="flex items-center gap-4">
+             <Button 
+               variant="ghost" 
+               size="sm" 
+               onClick={() => { logout(); setLocation("/login"); }}
+               className="flex items-center gap-2 text-red-500 hover:text-red-600 hover:bg-red-500/10 font-bold"
+             >
+               <LogOut className="h-4 w-4" />
+               <span className="hidden sm:inline">LOGOUT</span>
+             </Button>
              {!isOnline && (
                <Badge variant="destructive" className="gap-1 animate-pulse px-2 py-0.5 text-[10px] uppercase font-black">
                  <WifiOff className="h-3 w-3" /> Offline

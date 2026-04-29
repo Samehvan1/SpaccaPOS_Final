@@ -4,15 +4,17 @@ import { useBaristaLogin } from "@workspace/api-client-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export default function Login() {
-  const [pin, setPin] = useState("");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [, setLocation] = useLocation();
   const { user, refetchUser } = useAuth();
   const { toast } = useToast();
 
   const params = new URLSearchParams(window.location.search);
-  const from = params.get("from") || "/pos";
 
   useEffect(() => {
     if (user) {
@@ -44,111 +46,84 @@ export default function Login() {
     mutation: {
       onSuccess: () => {
         refetchUser();
-        // The useEffect will handle redirect once user is set to avoid bounce
       },
-      onError: () => {
+      onError: (error: any) => {
+        const message = error?.response?.data?.error || "Invalid username or password.";
         toast({
           variant: "destructive",
           title: "Login failed",
-          description: "Invalid PIN code.",
+          description: message,
         });
-        setPin("");
       },
     },
   });
 
-  const handleDigitClick = (digit: string) => {
-    if (pin.length < 6) {
-      setPin((prev) => prev + digit);
-    }
-  };
-
-  const handleClear = () => {
-    setPin("");
-  };
-
-  const handleDelete = () => {
-    setPin((prev) => prev.slice(0, -1));
-  };
-
-  const handleSubmit = () => {
-    if (pin.length > 0) {
-      loginMutation.mutate({ data: { pin } });
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (username && password) {
+      loginMutation.mutate({ data: { username, password } });
     }
   };
 
   return (
-    <div className="h-full w-full overflow-y-auto flex items-center justify-center bg-muted/30 p-4">
+    <div className="h-full w-full overflow-y-auto flex items-center justify-center bg-muted/30 p-4 min-h-screen">
       <div className="w-full max-w-md p-8 bg-card border rounded-xl shadow-xl">
         <div className="text-center mb-10">
           <h1 className="text-4xl font-bold tracking-tighter text-primary mb-2">SPACCA</h1>
-          <p className="text-muted-foreground">Barista POS Login</p>
+          <p className="text-muted-foreground">Secure POS Login</p>
         </div>
 
-        <div className="flex justify-center mb-8">
-          <div className="flex gap-3">
-            {[0, 1, 2, 3, 4, 5].map((i) => (
-              <div
-                key={i}
-                className={`w-4 h-4 rounded-full ${
-                  i < pin.length ? "bg-primary" : "bg-muted border"
-                }`}
-              />
-            ))}
-          </div>
-        </div>
-
-        <div className="grid grid-cols-3 gap-4 max-w-[280px] mx-auto">
-          {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((digit) => (
-            <Button
-              key={digit}
-              variant="outline"
-              size="lg"
-              className="h-16 text-2xl font-medium shadow-sm hover-elevate"
-              onClick={() => handleDigitClick(digit.toString())}
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="space-y-2">
+            <Label htmlFor="username text-muted-foreground">Username</Label>
+            <Input
+              id="username"
+              placeholder="Enter your username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className="h-12"
+              autoComplete="username"
+              required
               disabled={loginMutation.isPending}
-            >
-              {digit}
-            </Button>
-          ))}
-          <Button
-            variant="ghost"
-            size="lg"
-            className="h-16 text-lg text-muted-foreground"
-            onClick={handleClear}
-            disabled={loginMutation.isPending || pin.length === 0}
-          >
-            Clear
-          </Button>
-          <Button
-            variant="outline"
-            size="lg"
-            className="h-16 text-2xl font-medium shadow-sm hover-elevate"
-            onClick={() => handleDigitClick("0")}
-            disabled={loginMutation.isPending}
-          >
-            0
-          </Button>
-          <Button
-            variant="ghost"
-            size="lg"
-            className="h-16 text-lg text-muted-foreground"
-            onClick={handleDelete}
-            disabled={loginMutation.isPending || pin.length === 0}
-          >
-            Del
-          </Button>
-        </div>
+            />
+          </div>
 
-        <div className="mt-8">
-          <Button
-            size="lg"
-            className="w-full h-14 text-lg font-medium"
-            onClick={handleSubmit}
-            disabled={loginMutation.isPending || pin.length === 0}
-          >
-            {loginMutation.isPending ? "Authenticating..." : "Login"}
-          </Button>
+          <div className="space-y-2">
+            <Label htmlFor="password text-muted-foreground">Password</Label>
+            <Input
+              id="password"
+              type="password"
+              placeholder="Enter your password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="h-12"
+              autoComplete="current-password"
+              required
+              disabled={loginMutation.isPending}
+            />
+          </div>
+
+          <div className="pt-2">
+            <Button
+              type="submit"
+              size="lg"
+              className="w-full h-14 text-lg font-medium shadow-lg hover-elevate transition-all"
+              disabled={loginMutation.isPending || !username || !password}
+            >
+              {loginMutation.isPending ? (
+                <div className="flex items-center gap-2">
+                  <span className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Authenticating...
+                </div>
+              ) : (
+                "Login"
+              )}
+            </Button>
+          </div>
+        </form>
+
+        <div className="mt-8 pt-6 border-t text-center text-xs text-muted-foreground">
+          <p>© 2026 Spacca POS. All rights reserved.</p>
         </div>
       </div>
     </div>

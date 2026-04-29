@@ -9,12 +9,17 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
+    "@types/bcrypt": "^5.0.2",
+    "@types/bcryptjs": "^3.0.0",
     "@types/node": "catalog:",
     "tsx": "catalog:"
   },
   "dependencies": {
-    "pg": "^8.20.0",
+    "@workspace/db": "workspace:*",
+    "bcrypt": "^5.1.1",
+    "bcryptjs": "^3.0.3",
+    "dotenv": "^16.4.7",
     "drizzle-orm": "catalog:",
-    "dotenv": "^16.4.7"
+    "pg": "^8.20.0"
   }
 }

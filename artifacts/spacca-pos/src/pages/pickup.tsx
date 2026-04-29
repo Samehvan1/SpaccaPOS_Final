@@ -57,7 +57,8 @@ export default function PickupPage() {
 
   return (
     <div className="flex h-full bg-[#0a0a0a] overflow-hidden text-foreground selection:bg-neon-green/30">
-      {/* Main Queue Section */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
+        {/* Main Queue Section */}
       <div className="flex-1 flex flex-col min-w-0 relative">
         {/* Background Glow */}
         <div className="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-neon-green/5 to-transparent pointer-events-none" />
@@ -195,6 +196,7 @@ export default function PickupPage() {
             <p className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground opacity-50">Spacca System v2.0</p>
          </footer>
       </aside>
+      </div>
     </div>
   );
 }

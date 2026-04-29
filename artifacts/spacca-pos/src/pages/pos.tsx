@@ -214,21 +214,13 @@ export default function PosTerminal() {
   const calcRef = useRef(calculatePrice);
   calcRef.current = calculatePrice;
 
-  // displayPrice holds the last confirmed price and never flickers back to basePrice
-  // while a recalculation is in flight. It only resets when a new drink is opened.
-  const [displayPrice, setDisplayPrice] = useState<number>(0);
-
-  useEffect(() => {
-    if (activeDrink) {
-      setDisplayPrice((activeDrink as any).defaultPrice ?? activeDrink.basePrice ?? 0);
-    }
-  }, [activeDrink?.id]);
-
-  useEffect(() => {
-    if (priceBreakdown?.total !== undefined) {
-      setDisplayPrice(priceBreakdown.total);
-    }
-  }, [priceBreakdown]);
+  // displayPrice instantly reflects the pre-calculated default price from the server,
+  // then updates once the actual breakdown comes in.
+  const displayPrice = useMemo(() => {
+    if (priceBreakdown?.total !== undefined) return priceBreakdown.total;
+    if (activeDrink) return (activeDrink as any).defaultPrice ?? activeDrink.basePrice ?? 0;
+    return 0;
+  }, [priceBreakdown?.total, activeDrink]);
 
   const [simulatorLayers, setSimulatorLayers] = useState<CupLayer[]>([]);
 

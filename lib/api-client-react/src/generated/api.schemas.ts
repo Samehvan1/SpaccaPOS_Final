@@ -26,7 +26,8 @@ export interface User {
 }
 
 export interface LoginBody {
-  pin: string;
+  username: string;
+  password: string;
 }
 
 export interface LoginResponse {
@@ -47,8 +48,10 @@ export const UserDetailRole = {
 export interface UserDetail {
   id: number;
   name: string;
+  username: string;
   role: UserDetailRole;
   pin?: string;
+  isActive: boolean;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -66,8 +69,10 @@ export const CreateUserBodyRole = {
 
 export interface CreateUserBody {
   name: string;
+  username: string;
+  password: string;
   role: CreateUserBodyRole;
-  pin: string;
+  pin?: string;
 }
 
 export type UpdateUserBodyRole =
@@ -83,8 +88,11 @@ export const UpdateUserBodyRole = {
 
 export interface UpdateUserBody {
   name?: string;
+  username?: string;
+  password?: string;
   role?: UpdateUserBodyRole;
   pin?: string;
+  isActive?: boolean;
 }
 
 export type IngredientIngredientType =
@@ -579,6 +587,31 @@ export interface TopDrink {
   totalRevenue: number;
 }
 
+export interface Permission {
+  id: number;
+  key: string;
+  /** @nullable */
+  description?: string | null;
+}
+
+/**
+ * @nullable
+ */
+export type ActivityLogDetails = { [key: string]: unknown } | null;
+
+export interface ActivityLog {
+  id: number;
+  userId: number;
+  action: string;
+  /** @nullable */
+  entityType?: string | null;
+  /** @nullable */
+  entityId?: number | null;
+  /** @nullable */
+  details?: ActivityLogDetails;
+  createdAt: string;
+}
+
 export type SettingScope = (typeof SettingScope)[keyof typeof SettingScope];
 
 export const SettingScope = {
@@ -697,6 +730,13 @@ export const GetActiveOrdersStatus = {
   in_progress: "in_progress",
   ready: "ready",
 } as const;
+
+export type ListActivityLogsParams = {
+  userId?: number;
+  action?: string;
+  limit?: number;
+  offset?: number;
+};
 
 export type GetSalesByCategoryParams = {
   days?: number;

@@ -6,3 +6,5 @@ export * from "./stock";
 export * from "./settings";
 export * from "./discounts";
 export * from "./cashier-sessions";
+export * from "./permissions";
+export * from "./activity-logs";

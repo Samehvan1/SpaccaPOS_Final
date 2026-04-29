@@ -33,6 +33,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Users, 
@@ -44,9 +45,11 @@ import {
   Monitor, 
   Calculator, 
   Package,
-  Plus,
   Search,
-  Key
+  Key,
+  User as UserIcon,
+  CheckCircle2,
+  XCircle
 } from "lucide-react";
 
 type UserRole = "admin" | "barista" | "frontdesk" | "cashier" | "pickup";
@@ -68,8 +71,10 @@ export default function AdminUsers() {
 
   // Form states
   const [name, setName] = useState("");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [role, setRole] = useState<UserRole>("barista");
-  const [pin, setPin] = useState("");
+  const [isActive, setIsActive] = useState(true);
 
   const { data: users = [], isLoading, error } = useListUsers();
   
@@ -81,31 +86,37 @@ export default function AdminUsers() {
     if (user) {
       setEditingUser(user);
       setName(user.name);
+      setUsername(user.username || "");
+      setPassword(""); // Don't show existing hash
       setRole(user.role as UserRole);
-      setPin(user.pin || "");
+      setIsActive(user.isActive !== false);
     } else {
       setEditingUser(null);
       setName("");
+      setUsername("");
+      setPassword("");
       setRole("barista");
-      setPin("");
+      setIsActive(true);
     }
     setIsDialogOpen(true);
   };
 
   const handleSave = () => {
-    if (!name.trim() || !pin.trim()) {
-      toast({ variant: "destructive", title: "Error", description: "Name and PIN are required" });
+    if (!name.trim() || !username.trim()) {
+      toast({ variant: "destructive", title: "Error", description: "Name and Username are required" });
       return;
     }
 
-    if (!/^\d{4,6}$/.test(pin)) {
-        toast({ variant: "destructive", title: "Error", description: "PIN must be 4-6 digits" });
-        return;
+    if (!editingUser && !password) {
+      toast({ variant: "destructive", title: "Error", description: "Password is required for new users" });
+      return;
     }
 
-    const payload = { name, role, pin };
+    const payload: any = { name, username, role };
+    if (password) payload.password = password;
 
     if (editingUser) {
+      payload.isActive = isActive;
       updateUser(
         { id: editingUser.id, data: payload },
         {
@@ -155,6 +166,7 @@ export default function AdminUsers() {
 
   const filteredUsers = users.filter((u: any) => 
     u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    u.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     u.role.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -166,7 +178,7 @@ export default function AdminUsers() {
             <Users className="h-8 w-8 text-primary" />
             User Management
           </h1>
-          <p className="text-muted-foreground mt-1">Manage staff access, roles, and security PINs.</p>
+          <p className="text-muted-foreground mt-1">Manage staff accounts, roles, and access status.</p>
         </div>
         <Button onClick={() => handleOpenDialog()} className="gap-2 font-bold h-11">
           <UserPlus className="h-4 w-4" /> Add New User
@@ -202,9 +214,9 @@ export default function AdminUsers() {
           <TableHeader>
             <TableRow>
               <TableHead>User</TableHead>
+              <TableHead>Username</TableHead>
               <TableHead>Role</TableHead>
-              <TableHead>Security PIN</TableHead>
-              <TableHead>Created</TableHead>
+              <TableHead>Status</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -228,6 +240,13 @@ export default function AdminUsers() {
                 <TableRow key={user.id} className="hover:bg-muted/30 transition-colors">
                   <TableCell>
                     <div className="font-bold text-lg">{user.name}</div>
+                    <div className="text-xs text-muted-foreground">ID: {user.id}</div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2 font-mono bg-muted/50 px-2 py-1 rounded w-fit text-sm">
+                      <UserIcon className="h-3 w-3 text-muted-foreground" />
+                      {user.username}
+                    </div>
                   </TableCell>
                   <TableCell>
                     <Badge variant="outline" className={`gap-1.5 px-3 py-1 font-semibold ${config.color}`}>
@@ -235,13 +254,15 @@ export default function AdminUsers() {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-2 font-mono bg-muted px-2 py-1 rounded w-fit">
-                      <Key className="h-3 w-3 text-muted-foreground" />
-                      {user.pin}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground text-sm">
-                    {new Date(user.createdAt!).toLocaleDateString()}
+                    {user.isActive !== false ? (
+                      <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 gap-1">
+                        <CheckCircle2 className="h-3 w-3" /> Active
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="bg-slate-500/10 text-slate-600 border-slate-500/20 gap-1">
+                        <XCircle className="h-3 w-3" /> Inactive
+                      </Badge>
+                    )}
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
@@ -268,13 +289,21 @@ export default function AdminUsers() {
               {editingUser ? "Edit User" : "Add New User"}
             </DialogTitle>
             <DialogDescription>
-              Set the name, role, and terminal PIN for this user.
+              {editingUser ? "Update account details. Leave password blank to keep current." : "Set the name, username, and password for the new staff member."}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-6 py-4">
             <div className="grid gap-2">
               <Label htmlFor="name">Full Name</Label>
               <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. John Doe" />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="username">Username</Label>
+              <Input id="username" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="john_d" />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="password">{editingUser ? "New Password (Optional)" : "Password"}</Label>
+              <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="role">Assigned Role</Label>
@@ -289,15 +318,12 @@ export default function AdminUsers() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="pin">Terminal PIN (4-6 digits)</Label>
-              <Input 
-                id="pin" 
-                maxLength={6} 
-                value={pin} 
-                onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))} 
-                placeholder="****"
-              />
+            <div className="flex items-center justify-between p-4 bg-muted/20 rounded-lg">
+              <div className="space-y-0.5">
+                <Label htmlFor="active-status">Active Account</Label>
+                <p className="text-[10px] text-muted-foreground">Inactive users cannot log in.</p>
+              </div>
+              <Switch id="active-status" checked={isActive} onCheckedChange={setIsActive} />
             </div>
           </div>
           <DialogFooter>
