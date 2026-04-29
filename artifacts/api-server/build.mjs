@@ -3,7 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { build as esbuild } from "esbuild";
 import esbuildPluginPino from "esbuild-plugin-pino";
-import { rm } from "node:fs/promises";
+import { rm, readdir, readFile, writeFile } from "node:fs/promises";
 
 // Plugins (e.g. 'esbuild-plugin-pino') may use `require` to resolve dependencies
 globalThis.require = createRequire(import.meta.url);
@@ -120,17 +120,16 @@ globalThis.__dirname = __bannerPath.dirname(globalThis.__filename);
   });
 
   // Post-build fix: esbuild-plugin-pino hardcodes the absolute build path for its workers.
-  // We rewrite the generated files to use `__dirname` instead so the bundle is portable.
-  const fs = require("node:fs/promises");
-  const files = await fs.readdir(distDir);
+  // We rewrite the generated files to use `globalThis.__dirname` instead so the bundle is portable.
+  const files = await readdir(distDir);
   for (const file of files) {
     if (file.endsWith(".mjs") || file.endsWith(".js")) {
       const filePath = path.join(distDir, file);
-      let content = await fs.readFile(filePath, "utf-8");
-      // This regex matches `const outputDir = "/absolute/build/path";` and replaces it with `const outputDir = __dirname;`
-      const newContent = content.replace(/const outputDir = "[^"]+";/g, 'const outputDir = __dirname;');
+      let content = await readFile(filePath, "utf-8");
+      // This regex matches `const outputDir = "/absolute/build/path";` and replaces it with `const outputDir = globalThis.__dirname;`
+      const newContent = content.replace(/const outputDir = "[^"]+";/g, 'const outputDir = globalThis.__dirname;');
       if (content !== newContent) {
-        await fs.writeFile(filePath, newContent, "utf-8");
+        await writeFile(filePath, newContent, "utf-8");
       }
     }
   }
