@@ -118,6 +118,22 @@ globalThis.__dirname = __bannerPath.dirname(globalThis.__filename);
     `,
     },
   });
+
+  // Post-build fix: esbuild-plugin-pino hardcodes the absolute build path for its workers.
+  // We rewrite the generated files to use `__dirname` instead so the bundle is portable.
+  const fs = require("node:fs/promises");
+  const files = await fs.readdir(distDir);
+  for (const file of files) {
+    if (file.endsWith(".mjs") || file.endsWith(".js")) {
+      const filePath = path.join(distDir, file);
+      let content = await fs.readFile(filePath, "utf-8");
+      // This regex matches `const outputDir = "/absolute/build/path";` and replaces it with `const outputDir = __dirname;`
+      const newContent = content.replace(/const outputDir = "[^"]+";/g, 'const outputDir = __dirname;');
+      if (content !== newContent) {
+        await fs.writeFile(filePath, newContent, "utf-8");
+      }
+    }
+  }
 }
 
 buildAll().catch((err) => {

@@ -28251,7 +28251,7 @@ var require_pino = __commonJS({
     function pinoBundlerAbsolutePath(p) {
       try {
         const path3 = __require("path");
-        const outputDir = "D:\\MyWorks\\SpaccaTests\\SpaccaPos20260416_0\\SpaccaPos\\artifacts\\api-server\\dist";
+        const outputDir = __dirname;
         return path3.resolve(outputDir, p.replace(/^\.\//, ""));
       } catch (e) {
         const f = new Function("p", "return new URL(p, import.meta.url).pathname");
