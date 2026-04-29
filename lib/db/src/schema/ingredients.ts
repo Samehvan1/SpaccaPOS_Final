@@ -62,6 +62,7 @@ export const ingredientTypesTable = pgTable("ingredient_types", {
   sortOrder: integer("sort_order").notNull().default(0),
   color: text("color"),
   extraCost: numeric("extra_cost", { precision: 8, scale: 4 }).notNull().default("0"),
+  pricingMode: text("pricing_mode", { enum: ["volume", "unit"] }).notNull().default("volume"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

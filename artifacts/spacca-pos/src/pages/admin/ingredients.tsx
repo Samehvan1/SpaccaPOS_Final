@@ -36,7 +36,7 @@ type IngType = {
   id: number; categoryId: number; name: string; inventoryIngredientId: number | null;
   processedQty: string; producedQty: string; unit: string; extraCost: string;
   isActive: boolean; affectsCupSize: boolean; sortOrder: number; 
-  color: string | null;
+  color: string | null; pricingMode: "volume" | "unit";
   category?: Category | null; inventoryIngredient?: { id: number; name: string; unit: string } | null;
   drinkCount?: number;
 };
@@ -188,6 +188,7 @@ function TypesTab({ inventoryItems }: { inventoryItems: Ingredient[] }) {
   const [processedQty, setProcessedQty] = useState("0");
   const [producedQty, setProducedQty] = useState("0");
   const [extraCost, setExtraCost] = useState("0");
+  const [pricingMode, setPricingMode] = useState<"volume" | "unit">("volume");
   const [color, setColor] = useState("#000000");
   const [saving, setSaving] = useState(false);
   const [openInventorySearch, setOpenInventorySearch] = useState(false);
@@ -231,7 +232,7 @@ function TypesTab({ inventoryItems }: { inventoryItems: Ingredient[] }) {
 
   const openAdd = () => { 
     setEditId(null); setName(""); setCategoryId(""); setInventoryIngId("none"); 
-    setProcessedQty("0"); setProducedQty("0"); setUnit("ml"); setExtraCost("0");
+    setProcessedQty("0"); setProducedQty("0"); setUnit("ml"); setExtraCost("0"); setPricingMode("volume");
     setIsActive(true); setAffectsCupSize(true); setColor("#000000"); setShowForm(true); 
   };
   const openEdit = (t: IngType) => {
@@ -241,6 +242,7 @@ function TypesTab({ inventoryItems }: { inventoryItems: Ingredient[] }) {
     setProducedQty(t.producedQty ?? "0");
     setUnit(t.unit ?? "ml");
     setExtraCost(t.extraCost ?? "0");
+    setPricingMode(t.pricingMode ?? "volume");
     setIsActive(t.isActive); setAffectsCupSize(t.affectsCupSize ?? true);
     setColor(t.color ?? "#000000");
     setShowForm(true);
@@ -254,7 +256,7 @@ function TypesTab({ inventoryItems }: { inventoryItems: Ingredient[] }) {
         name: name.trim(), categoryId: parseInt(categoryId),
         inventoryIngredientId: inventoryIngId !== "none" ? parseInt(inventoryIngId) : null,
         processedQty, producedQty, unit: unit || "ml", extraCost,
-        isActive, affectsCupSize, color
+        isActive, affectsCupSize, color, pricingMode
       };
       if (editId) {
         await api(`/api/catalog/types/${editId}`, { method: "PATCH", body: JSON.stringify(payload) });
@@ -637,7 +639,22 @@ function TypesTab({ inventoryItems }: { inventoryItems: Ingredient[] }) {
             </div>
             <p className="text-xs text-muted-foreground">Base quantities to use if no volume is selected in the recipe.</p>
             <div className="flex flex-col gap-3 pt-1">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center justify-between p-2 rounded-md bg-muted/30 border border-dashed">
+                <div className="grid gap-0.5">
+                  <Label className="text-xs font-bold uppercase tracking-wider">Pricing Logic</Label>
+                  <p className="text-[10px] text-muted-foreground">{pricingMode === "volume" ? "Calculated: Extra Cost × Quantity (ml/g)" : "Fixed: Extra Cost added once per drink"}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className={`text-[10px] font-bold ${pricingMode === "volume" ? "text-primary" : "text-muted-foreground"}`}>BY ML</span>
+                  <Switch 
+                    checked={pricingMode === "unit"} 
+                    onCheckedChange={c => setPricingMode(c ? "unit" : "volume")} 
+                  />
+                  <span className={`text-[10px] font-bold ${pricingMode === "unit" ? "text-primary" : "text-muted-foreground"}`}>FIXED</span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 mt-2">
                 <Switch id="type-active" checked={isActive} onCheckedChange={setIsActive} />
                 <Label htmlFor="type-active" className="cursor-pointer">{isActive ? "Active" : "Inactive"}</Label>
               </div>

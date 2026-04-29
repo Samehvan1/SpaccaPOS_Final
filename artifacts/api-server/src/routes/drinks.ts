@@ -143,7 +143,8 @@ async function buildDrinkDetail(drinkId: number) {
             id: 0, slotId: slot.id, ingredientTypeId: tto.ingredientTypeId,
             isDefault: tto.isDefault, sortOrder: tto.sortOrder,
             processedQty: tto.processedQty, producedQty: tto.producedQty,
-            unit: tto.unit, extraCost: tto.extraCost
+            unit: tto.unit, extraCost: tto.extraCost,
+            pricingMode: tto.pricingMode
           }));
         }
       }
@@ -152,7 +153,8 @@ async function buildDrinkDetail(drinkId: number) {
         effectiveTypeOptions = [{ 
           id: 0, slotId: slot.id, ingredientTypeId: slot.ingredientTypeId, 
           isDefault: true, sortOrder: 0,
-          processedQty: null, producedQty: null, unit: null, extraCost: null
+          processedQty: null, producedQty: null, unit: null, extraCost: null,
+          pricingMode: null
         }];
       }
 
@@ -215,6 +217,7 @@ async function buildDrinkDetail(drinkId: number) {
               producedQty: Number(to.producedQty ?? ingType?.producedQty ?? 0),
               unit: to.unit ?? ingType?.unit ?? "ml",
               extraCost: Number(to.extraCost ?? ingType?.extraCost ?? 0),
+              pricingMode: to.pricingMode ?? ingType?.pricingMode ?? "volume",
               volumes,
             };
           })
@@ -640,6 +643,7 @@ router.put("/drinks/:id/slots", async (req, res): Promise<void> => {
             producedQty: to.producedQty ?? null,
             unit: to.unit ?? null,
             extraCost: to.extraCost ?? null,
+            pricingMode: to.pricingMode ?? null,
           });
           // Volume overrides per type option (all keyed by slotId + typeVolumeId)
           if (Array.isArray(to.slotVolumes)) {

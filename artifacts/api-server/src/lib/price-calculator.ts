@@ -213,6 +213,8 @@ export async function calculateDrinkData(drinkId: number, selections: any[]) {
 
         const consumedQty = parseFloat(slotTypeOpt?.processedQty ?? templateTypeOpt?.processedQty ?? ingType.processedQty ?? "0") || 0;
         const producedQty = parseFloat(slotTypeOpt?.producedQty ?? templateTypeOpt?.producedQty ?? ingType.producedQty ?? "0") || 0;
+        
+        const pricingMode = slotTypeOpt?.pricingMode ?? templateTypeOpt?.pricingMode ?? ingType.pricingMode ?? "volume";
         const extraCost = parseFloat(slotTypeOpt?.extraCost ?? templateTypeOpt?.extraCost ?? ingType.extraCost ?? "0") || 0;
         
         totalExtras += extraCost;
@@ -366,8 +368,14 @@ export async function calculateDrinkData(drinkId: number, selections: any[]) {
         let inventoryId = null;
         
         const slotTypeOpt = typeOptions.find(to => to.ingredientTypeId === effectiveTypeId);
-        const pricePerMl = parseFloat(slotTypeOpt?.extraCost ?? ingredientType?.extraCost ?? "0") || 0;
-        cost = filledMl * pricePerMl;
+        const pricingMode = slotTypeOpt?.pricingMode ?? ingredientType?.pricingMode ?? "volume";
+        const extraCostBase = parseFloat(slotTypeOpt?.extraCost ?? ingredientType?.extraCost ?? "0") || 0;
+        
+        if (pricingMode === "unit") {
+          cost = extraCostBase;
+        } else {
+          cost = filledMl * extraCostBase;
+        }
 
         if (ingredientType?.inventoryIngredientId) {
           inventoryId = ingredientType.inventoryIngredientId;

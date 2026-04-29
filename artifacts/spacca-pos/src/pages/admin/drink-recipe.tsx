@@ -40,6 +40,7 @@ type SlotTypeOptionDraft = {
   producedQty: string;
   unit: string;
   extraCost: string;
+  pricingMode: "volume" | "unit" | null;
 };
 
 type SlotDraft = {
@@ -187,6 +188,7 @@ export default function DrinkRecipe() {
           producedQty: String(to.producedQty ?? 0),
           unit: to.unit ?? "ml",
           extraCost: String(to.extraCost ?? 0),
+          pricingMode: to.pricingMode ?? null,
         }));
         return {
           key: newKey(), style: "typed" as SlotStyle,
@@ -354,6 +356,7 @@ export default function DrinkRecipe() {
           producedQty: String(to.producedQty ?? ingredientType?.producedQty ?? 0),
           unit: to.unit ?? ingredientType?.unit ?? "ml",
           extraCost: String(to.extraCost ?? ingredientType?.extraCost ?? 0),
+          pricingMode: to.pricingMode ?? null,
         });
       } else {
         // Add new option from template
@@ -370,6 +373,7 @@ export default function DrinkRecipe() {
           producedQty: String(to.producedQty ?? ingredientType?.producedQty ?? 0),
           unit: to.unit ?? ingredientType?.unit ?? "ml",
           extraCost: String(to.extraCost ?? ingredientType?.extraCost ?? 0),
+          pricingMode: to.pricingMode ?? null,
         });
       }
     }
@@ -441,6 +445,7 @@ export default function DrinkRecipe() {
         producedQty: String(type?.producedQty ?? 0),
         unit: type?.unit ?? "ml",
         extraCost: String(type?.extraCost ?? 0),
+        pricingMode: null, // Inherit from type by default
       };
       return { ...s, typeOptions: [...s.typeOptions, newOpt] };
     }));
@@ -529,6 +534,7 @@ export default function DrinkRecipe() {
               producedQty: to.producedQty !== "" ? to.producedQty : null,
               unit: to.unit !== "" ? to.unit : null,
               extraCost: to.extraCost !== "" ? to.extraCost : null,
+              pricingMode: to.pricingMode,
             })),
           };
         }
@@ -921,6 +927,48 @@ export default function DrinkRecipe() {
                                     <Trash2 className="h-3.5 w-3.5" />
                                   </Button>
                                 </div>
+                              </div>
+
+                              <div className="px-3 py-1.5 border-b bg-muted/30 flex items-center gap-4">
+                                <Label className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Pricing Override</Label>
+                                <div className="flex bg-background border rounded-md p-0.5">
+                                  <button
+                                    onClick={() => {
+                                      setSlots(prev => prev.map(s => s.key === slot.key ? {
+                                        ...s, typeOptions: s.typeOptions.map(o => o.key === to.key ? { ...o, pricingMode: null } : o)
+                                      } : s));
+                                      mark();
+                                    }}
+                                    className={`px-2 py-0.5 text-[9px] font-bold rounded-sm transition-all ${to.pricingMode === null ? "bg-primary text-primary-foreground shadow-sm" : "hover:bg-muted"}`}
+                                  >
+                                    INHERIT
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      setSlots(prev => prev.map(s => s.key === slot.key ? {
+                                        ...s, typeOptions: s.typeOptions.map(o => o.key === to.key ? { ...o, pricingMode: "volume" } : o)
+                                      } : s));
+                                      mark();
+                                    }}
+                                    className={`px-2 py-0.5 text-[9px] font-bold rounded-sm transition-all ${to.pricingMode === "volume" ? "bg-primary text-primary-foreground shadow-sm" : "hover:bg-muted"}`}
+                                  >
+                                    BY ML
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      setSlots(prev => prev.map(s => s.key === slot.key ? {
+                                        ...s, typeOptions: s.typeOptions.map(o => o.key === to.key ? { ...o, pricingMode: "unit" } : o)
+                                      } : s));
+                                      mark();
+                                    }}
+                                    className={`px-2 py-0.5 text-[9px] font-bold rounded-sm transition-all ${to.pricingMode === "unit" ? "bg-primary text-primary-foreground shadow-sm" : "hover:bg-muted"}`}
+                                  >
+                                    FIXED
+                                  </button>
+                                </div>
+                                <p className="text-[9px] text-muted-foreground italic">
+                                  {to.pricingMode === null ? "(Uses Ingredient Type setting)" : to.pricingMode === "unit" ? "Always flat fee" : "Always calculated by volume"}
+                                </p>
                               </div>
 
                               {/* Base Type Overrides */}

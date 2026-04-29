@@ -115,7 +115,7 @@ router.get("/catalog/types/:id", async (req, res): Promise<void> => {
 });
 
 router.post("/catalog/types", async (req, res): Promise<void> => {
-  const { categoryId, name, inventoryIngredientId, processedQty, producedQty, unit, isActive, affectsCupSize, sortOrder, color, extraCost } = req.body;
+  const { categoryId, name, inventoryIngredientId, processedQty, producedQty, unit, isActive, affectsCupSize, sortOrder, color, extraCost, pricingMode } = req.body;
   if (!categoryId || !name) { res.status(400).json({ error: "categoryId and name required" }); return; }
   const [row] = await db.insert(ingredientTypesTable).values({ 
     categoryId, 
@@ -128,14 +128,15 @@ router.post("/catalog/types", async (req, res): Promise<void> => {
     affectsCupSize: affectsCupSize ?? true,
     sortOrder: sortOrder ?? 0,
     color: color ?? null,
-    extraCost: extraCost ?? "0"
+    extraCost: extraCost ?? "0",
+    pricingMode: pricingMode ?? "volume"
   }).returning();
   res.status(201).json(row);
 });
 
 router.patch("/catalog/types/:id", async (req, res): Promise<void> => {
   const id = parseInt(req.params.id);
-  const { categoryId, name, inventoryIngredientId, processedQty, producedQty, unit, isActive, affectsCupSize, sortOrder, color, extraCost } = req.body;
+  const { categoryId, name, inventoryIngredientId, processedQty, producedQty, unit, isActive, affectsCupSize, sortOrder, color, extraCost, pricingMode } = req.body;
   
   const patch: Record<string, unknown> = {};
   if (categoryId !== undefined) patch.categoryId = categoryId;
@@ -149,6 +150,7 @@ router.patch("/catalog/types/:id", async (req, res): Promise<void> => {
   if (sortOrder !== undefined) patch.sortOrder = sortOrder;
   if (color !== undefined) patch.color = color;
   if (extraCost !== undefined) patch.extraCost = String(extraCost);
+  if (pricingMode !== undefined) patch.pricingMode = pricingMode;
 
   if (Object.keys(patch).length === 0) {
     res.status(400).json({ error: "No valid fields provided for update" });

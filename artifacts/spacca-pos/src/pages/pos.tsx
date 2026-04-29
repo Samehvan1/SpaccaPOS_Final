@@ -11,6 +11,7 @@ import { useSettings } from "@/hooks/use-settings";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -778,6 +779,11 @@ export default function PosTerminal() {
                         <div className="flex items-center gap-2">
                           <Label className="text-[11px] font-black uppercase tracking-[0.15em] text-primary/70 flex items-center gap-2">
                             <span>{slot.slotLabel}</span>
+                            {activeTypeOpt?.pricingMode === "unit" && (
+                              <Badge variant="outline" className="h-4 px-1 text-[8px] border-primary/20 bg-primary/5 text-primary font-black tracking-widest uppercase">
+                                Fixed Price
+                              </Badge>
+                            )}
                             {(() => {
                               const typeOptions: any[] = slot.typeOptions ?? [];
                               const defTypeOpt = typeOptions.find((to: any) => to.isDefault) ?? typeOptions[0];

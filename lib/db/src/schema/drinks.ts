@@ -75,6 +75,7 @@ export const drinkSlotTypeOptionsTable = pgTable("drink_slot_type_options", {
   producedQty: numeric("produced_qty", { precision: 10, scale: 4 }),
   unit: text("unit"),
   extraCost: numeric("extra_cost", { precision: 8, scale: 4 }),
+  pricingMode: text("pricing_mode", { enum: ["volume", "unit"] }),
 });
 
 /**
@@ -117,6 +118,7 @@ export const predefinedSlotTypeOptionsTable = pgTable("predefined_slot_type_opti
   producedQty: numeric("produced_qty", { precision: 10, scale: 4 }),
   unit: text("unit"),
   extraCost: numeric("extra_cost", { precision: 8, scale: 4 }),
+  pricingMode: text("pricing_mode", { enum: ["volume", "unit"] }),
 });
 
 export const predefinedSlotVolumesTable = pgTable("predefined_slot_volumes", {
