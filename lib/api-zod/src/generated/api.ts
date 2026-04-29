@@ -258,6 +258,8 @@ export const ListIngredientsResponseItem = zod.object({
     "topping",
     "base",
     "cup",
+    "tea",
+    "packing",
     "other",
   ]),
   unit: zod.string(),
@@ -273,7 +275,7 @@ export const ListIngredientsResponseItem = zod.object({
 export const ListIngredientsResponse = zod.array(ListIngredientsResponseItem);
 
 /**
- * @summary Create an ingredient
+ * @summary Create a new ingredient
  */
 export const CreateIngredientBody = zod.object({
   name: zod.string(),
@@ -286,6 +288,8 @@ export const CreateIngredientBody = zod.object({
     "topping",
     "base",
     "cup",
+    "tea",
+    "packing",
     "other",
   ]),
   unit: zod.string(),
@@ -316,6 +320,8 @@ export const GetIngredientResponse = zod
       "topping",
       "base",
       "cup",
+      "tea",
+      "packing",
       "other",
     ]),
     unit: zod.string(),
@@ -366,6 +372,8 @@ export const UpdateIngredientBody = zod.object({
       "topping",
       "base",
       "cup",
+      "tea",
+      "packing",
       "other",
     ])
     .optional(),
@@ -389,6 +397,8 @@ export const UpdateIngredientResponse = zod.object({
     "topping",
     "base",
     "cup",
+    "tea",
+    "packing",
     "other",
   ]),
   unit: zod.string(),
@@ -400,6 +410,13 @@ export const UpdateIngredientResponse = zod.object({
   linkedProductCount: zod.number().optional(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
+});
+
+/**
+ * @summary Delete an ingredient
+ */
+export const DeleteIngredientParams = zod.object({
+  id: zod.coerce.number(),
 });
 
 /**
@@ -485,6 +502,8 @@ export const RestockIngredientResponse = zod.object({
     "topping",
     "base",
     "cup",
+    "tea",
+    "packing",
     "other",
   ]),
   unit: zod.string(),
@@ -913,6 +932,8 @@ export const GetLowStockIngredientsResponseItem = zod.object({
     "topping",
     "base",
     "cup",
+    "tea",
+    "packing",
     "other",
   ]),
   unit: zod.string(),

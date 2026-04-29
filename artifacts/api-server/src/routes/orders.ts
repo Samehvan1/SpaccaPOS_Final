@@ -145,7 +145,7 @@ router.get("/orders", async (req, res): Promise<void> => {
   const custByItem = new Map<number, any[]>();
   for (const c of customizations) {
     const list = custByItem.get(c.orderItemId) ?? [];
-    list.push({ ...c, consumedQty: parseFloat(c.consumedQty), producedQty: parseFloat(c.producedQty), addedCost: parseFloat(c.addedCost) });
+    list.push({ ...c, consumedQty: parseFloat(c.consumedQty), producedQty: parseFloat((c as any).producedQty), addedCost: parseFloat(c.addedCost) });
     custByItem.set(c.orderItemId, list);
   }
 

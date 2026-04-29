@@ -238,7 +238,7 @@ paths:
     post:
       operationId: createIngredient
       tags: [ingredients]
-      summary: Create an ingredient
+      summary: Create a new ingredient
       requestBody:
         required: true
         content:
@@ -252,6 +252,17 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Ingredient"
+
+  /ingredients/import-csv:
+    post:
+      operationId: importInventoryCsv
+      tags: [admin]
+      summary: Wipe current inventory and import from Inventory2026.csv
+      responses:
+        "200":
+          description: Import successful
+        "500":
+          description: Import failed
 
   /ingredients/{id}:
     get:
@@ -296,7 +307,23 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Ingredient"
-
+    delete:
+      operationId: deleteIngredient
+      tags: [ingredients]
+      summary: Delete an ingredient
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+        "400":
+          description: In use
   /ingredients/{id}/options:
     post:
       operationId: createIngredientOption
@@ -977,7 +1004,7 @@ components:
           type: string
         ingredientType:
           type: string
-          enum: [coffee, milk, syrup, sauce, sweetener, topping, base, cup, other]
+          enum: [coffee, milk, syrup, sauce, sweetener, topping, base, cup, tea, packing, other]
         unit:
           type: string
         costPerUnit:
@@ -1062,7 +1089,7 @@ components:
           type: string
         ingredientType:
           type: string
-          enum: [coffee, milk, syrup, sauce, sweetener, topping, base, cup, other]
+          enum: [coffee, milk, syrup, sauce, sweetener, topping, base, cup, tea, packing, other]
         unit:
           type: string
         costPerUnit:
@@ -1086,7 +1113,7 @@ components:
           type: string
         ingredientType:
           type: string
-          enum: [coffee, milk, syrup, sauce, sweetener, topping, base, cup, other]
+          enum: [coffee, milk, syrup, sauce, sweetener, topping, base, cup, tea, packing, other]
         unit:
           type: string
         costPerUnit:

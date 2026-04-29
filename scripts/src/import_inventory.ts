@@ -1,112 +1,115 @@
+import "dotenv/config";
 import fs from "fs";
 import path from "path";
-import { fileURLToPath } from 'url';
-import dotenv from "dotenv";
+import { fileURLToPath } from "url";
+import { db, ingredientsTable, ingredientTypesTable, drinksTable, stockMovementsTable, ingredientOptionsTable, orderItemCustomizationsTable, orderItemsTable, ordersTable, drinkIngredientSlotsTable } from "../../lib/db/src/index.js";
+import { eq, sql } from "drizzle-orm";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Load .env from root
-dotenv.config({ path: path.join(__dirname, "..", "..", ".env") });
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 async function main() {
-  // Dynamic imports to ensure env vars are loaded first
-  const { db } = await import("../../lib/db/src/index.ts");
-  const { ingredientsTable } = await import("../../lib/db/src/schema/ingredients.ts");
-  const { eq } = await import("drizzle-orm");
-
-  const csvPath = path.join(__dirname, "..", "..", "Inventory2026.csv");
+  const csvPath = path.join(process.cwd(), "..", "Inventory2026.csv");
   
   if (!fs.existsSync(csvPath)) {
-    console.error(`CSV file not found at ${csvPath}`);
+    console.error("CSV file not found at:", csvPath);
     process.exit(1);
   }
 
   const content = fs.readFileSync(csvPath, "utf-8");
-  const lines = content.split(/\r?\n/);
-  
-  // Skip header (line 0)
-  const dataLines = lines.slice(1);
-  
-  console.log(`Processing ${dataLines.length} potential items...`);
+  const lines = content.split("\n");
 
-  let addedCount = 0;
-  let skippedCount = 0;
+  console.log(`Read ${lines.length} lines from CSV.`);
 
-  for (const line of dataLines) {
-    if (!line.trim()) continue;
+  // Skip header and empty lines
+  const dataLines = lines.slice(1).filter(line => line.trim() && !line.startsWith("#"));
+
+  console.log(`Processing ${dataLines.length} items...`);
+
+  const slugify = (text: string) => text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+
+  const getIngredientType = (name: string): any => {
+    const n = name.toLowerCase();
+    if (n.includes("tea")) return "tea";
+    if (n.includes("cup") || n.includes("lid") || n.includes("sleeve") || n.includes("holder")) return "cup";
+    if (n.includes("bag") || n.includes("paper") || n.includes("label") || n.includes("roll") || n.includes("napkin") || n.includes("stirrer") || n.includes("straw") || n.includes("glaves")) return "packing";
+    if (n.includes("coffee")) return "coffee";
+    if (n.includes("milk") || n.includes("cream")) return "milk";
+    if (n.includes("syrup")) return "syrup";
+    if (n.includes("sauce") || n.includes("puree") || n.includes("butter")) return "sauce";
+    if (n.includes("suger") || n.includes("sugar")) return "sweetener";
+    if (n.includes("powder") || n.includes("pawder")) return "base";
+    return "other";
+  };
+
+  const mapUnit = (u: string) => {
+    const unit = u.trim().toUpperCase();
+    if (unit === "G") return "g";
+    if (unit === "L" || unit === "S") return "ml";
+    if (unit === "EACH") return "pcs";
+    return unit.toLowerCase() || "pcs";
+  };
+
+  try {
+    console.log("Cleaning up existing data...");
     
-    // Simple CSV split (not handling quotes, but the file doesn't seem to have them)
-    const columns = line.split(",");
-    
-    // Columns: 0:#, 1:Name, 2:Shelf Life, 3:unit, ...
-    const name = columns[1]?.trim();
-    const unit = columns[3]?.trim() || "unit";
-    
-    if (!name || name.includes("Morning Manager") || name.includes("waste Checked By")) {
-      continue;
-    }
+    // We can't easily truncate due to FKs, so we do it in order or clear links
+    await db.transaction(async (tx) => {
+      // 1. Clear links
+      await tx.update(ingredientTypesTable).set({ inventoryIngredientId: null });
+      await tx.update(drinksTable).set({ cupIngredientId: null });
+      await tx.update(ingredientOptionsTable).set({ linkedIngredientId: null });
+      await tx.update(drinkIngredientSlotsTable).set({ ingredientId: null });
+      
+      // 2. Delete dependent data
+      await tx.delete(orderItemCustomizationsTable);
+      await tx.delete(orderItemsTable);
+      await tx.delete(ordersTable);
+      await tx.delete(stockMovementsTable);
+      await tx.delete(ingredientOptionsTable);
+      await tx.delete(ingredientsTable);
+      
+      console.log("Existing ingredients wiped.");
 
-    const slug = slugify(name);
-    
-    // Check if exists
-    const existing = await db.select()
-      .from(ingredientsTable)
-      .where(eq(ingredientsTable.slug, slug))
-      .limit(1);
+      // 3. Insert new items
+      const usedSlugs = new Set<string>();
+      for (const line of dataLines) {
+        const parts = line.split(",");
+        if (parts.length < 4) continue;
 
-    if (existing.length > 0) {
-      console.log(`Skipping existing item: ${name} (${slug})`);
-      skippedCount++;
-      continue;
-    }
+        const name = parts[1]?.trim();
+        const unitRaw = parts[3]?.trim();
+        
+        if (!name) continue;
 
-    // Guess type
-    const ingredientType = guessType(name);
+        const type = getIngredientType(name);
+        const unit = mapUnit(unitRaw);
+        let slug = slugify(name);
 
-    try {
-      await db.insert(ingredientsTable).values({
-        name,
-        slug,
-        ingredientType,
-        unit,
-        costPerUnit: "0",
-        stockQuantity: "100",
-        lowStockThreshold: "50"
-      });
-      console.log(`Added new item: ${name} (${slug}) as ${ingredientType}`);
-      addedCount++;
-    } catch (error) {
-      console.error(`Error adding item ${name}:`, error);
-    }
+        if (usedSlugs.has(slug)) {
+          slug = `${slug}-${unit}`;
+          if (usedSlugs.has(slug)) {
+            slug = `${slug}-${Math.floor(Math.random() * 1000)}`;
+          }
+        }
+        usedSlugs.add(slug);
+
+        await tx.insert(ingredientsTable).values({
+          name,
+          slug,
+          ingredientType: type,
+          unit,
+          costPerUnit: "0",
+          stockQuantity: "0",
+          lowStockThreshold: "100",
+          isActive: true
+        });
+      }
+    });
+
+    console.log("Import completed successfully.");
+  } catch (err) {
+    console.error("Import failed:", err);
   }
-
-  console.log(`\nImport complete!`);
-  console.log(`Added: ${addedCount}`);
-  console.log(`Skipped: ${skippedCount}`);
-  process.exit(0);
 }
 
-function slugify(text: string) {
-  return text
-    .toString()
-    .toLowerCase()
-    .trim()
-    .replace(/\s+/g, '-')
-    .replace(/[^\w-]+/g, '')
-    .replace(/--+/g, '-');
-}
-
-function guessType(name: string): "coffee" | "milk" | "syrup" | "sauce" | "sweetener" | "topping" | "base" | "other" {
-  const n = name.toLowerCase();
-  if (n.includes("coffee") || n.includes("espresso")) return "coffee";
-  if (n.includes("milk")) return "milk";
-  if (n.includes("syrup")) return "syrup";
-  if (n.includes("sauce")) return "sauce";
-  if (n.includes("suger") || n.includes("sugar") || n.includes("honey")) return "sweetener";
-  if (n.includes("puree")) return "topping";
-  if (n.includes("chocoate") || n.includes("chocolate")) return "sauce";
-  return "other";
-}
-
-main();
+main().catch(console.error);

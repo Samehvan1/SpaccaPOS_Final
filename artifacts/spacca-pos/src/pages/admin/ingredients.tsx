@@ -19,7 +19,7 @@ import { ArrowLeft, Plus, Search, Edit, Trash2, Link2, Star, StarOff, ChevronRig
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 
-const INGREDIENT_TYPES = ["coffee", "milk", "syrup", "sauce", "sweetener", "topping", "base", "cup", "other"] as const;
+const INGREDIENT_TYPES = ["coffee", "milk", "syrup", "sauce", "sweetener", "topping", "base", "cup", "tea", "packing", "other"] as const;
 type IngredientType = typeof INGREDIENT_TYPES[number];
 
 type Ingredient = {
@@ -1032,6 +1032,7 @@ function InventoryTab() {
   const [showInactive, setShowInactive] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const { data: ingredients, isLoading, refetch } = useListIngredients(showInactive ? {} : { active: true });
+  const [importing, setImporting] = useState(false);
   const { toast } = useToast();
 
   const [mode, setMode] = useState<"add" | "edit" | null>(null);
@@ -1144,6 +1145,32 @@ function InventoryTab() {
     } catch { toast({ variant: "destructive", title: "Failed to update link" }); }
   };
 
+  const handleDelete = async (id: number) => {
+    if (!confirm("Delete this inventory item? Any links in drinks or catalog types will be cleared.")) return;
+    try {
+      await api(`/api/ingredients/${id}`, { method: "DELETE" });
+      refetch();
+      toast({ title: "Ingredient deleted" });
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Deletion Failed", description: err.message });
+    }
+  };
+
+  const handleImportCsv = async () => {
+    if (!confirm("CRITICAL WARNING: This will WIPE all inventory, stock movements, and historical orders before importing from Inventory2026.csv. This action CANNOT be undone. Proceed?")) return;
+    
+    setImporting(true);
+    try {
+      await api("/api/ingredients/import-csv", { method: "POST" });
+      toast({ title: "Import Successful", description: "Inventory has been wiped and re-imported." });
+      refetch();
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Import Failed", description: err.message });
+    } finally {
+      setImporting(false);
+    }
+  };
+
   const filteredIngredients = ingredients?.filter(i =>
     i.name.toLowerCase().includes(searchTerm.toLowerCase()) || i.ingredientType.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -1153,7 +1180,19 @@ function InventoryTab() {
     <>
       <div className="flex items-center justify-between mb-4">
         <p className="text-sm text-muted-foreground">Raw inventory items used for stock tracking and cost calculation.</p>
-        <Button size="sm" className="gap-2" onClick={openAdd}><Plus className="h-3.5 w-3.5" /> New Ingredient</Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="gap-2 border-amber-500 text-amber-600 hover:bg-amber-50" 
+            onClick={handleImportCsv}
+            disabled={importing}
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${importing ? "animate-spin" : ""}`} />
+            {importing ? "Importing..." : "Import CSV"}
+          </Button>
+          <Button size="sm" className="gap-2" onClick={openAdd}><Plus className="h-3.5 w-3.5" /> New Ingredient</Button>
+        </div>
       </div>
 
       <Card>
@@ -1219,6 +1258,7 @@ function InventoryTab() {
                       </TableCell>
                       <TableCell className="text-right">
                         <Button variant="ghost" size="icon" onClick={() => openEdit(ing as Ingredient)}><Edit className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDelete(ing.id)}><Trash2 className="h-4 w-4" /></Button>
                       </TableCell>
                     </TableRow>
                   ))

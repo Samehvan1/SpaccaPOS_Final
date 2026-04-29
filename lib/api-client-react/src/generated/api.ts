@@ -992,7 +992,7 @@ export function useListIngredients<
 }
 
 /**
- * @summary Create an ingredient
+ * @summary Create a new ingredient
  */
 export const getCreateIngredientUrl = () => {
   return `/api/ingredients`;
@@ -1055,7 +1055,7 @@ export type CreateIngredientMutationBody = BodyType<CreateIngredientBody>;
 export type CreateIngredientMutationError = ErrorType<unknown>;
 
 /**
- * @summary Create an ingredient
+ * @summary Create a new ingredient
  */
 export const useCreateIngredient = <
   TError = ErrorType<unknown>,
@@ -1075,6 +1075,87 @@ export const useCreateIngredient = <
   TContext
 > => {
   return useMutation(getCreateIngredientMutationOptions(options));
+};
+
+/**
+ * @summary Wipe current inventory and import from Inventory2026.csv
+ */
+export const getImportInventoryCsvUrl = () => {
+  return `/api/ingredients/import-csv`;
+};
+
+export const importInventoryCsv = async (
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getImportInventoryCsvUrl(), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getImportInventoryCsvMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof importInventoryCsv>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof importInventoryCsv>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationKey = ["importInventoryCsv"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof importInventoryCsv>>,
+    void
+  > = () => {
+    return importInventoryCsv(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ImportInventoryCsvMutationResult = NonNullable<
+  Awaited<ReturnType<typeof importInventoryCsv>>
+>;
+
+export type ImportInventoryCsvMutationError = ErrorType<void>;
+
+/**
+ * @summary Wipe current inventory and import from Inventory2026.csv
+ */
+export const useImportInventoryCsv = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof importInventoryCsv>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof importInventoryCsv>>,
+  TError,
+  void,
+  TContext
+> => {
+  return useMutation(getImportInventoryCsvMutationOptions(options));
 };
 
 /**
@@ -1249,6 +1330,90 @@ export const useUpdateIngredient = <
   TContext
 > => {
   return useMutation(getUpdateIngredientMutationOptions(options));
+};
+
+/**
+ * @summary Delete an ingredient
+ */
+export const getDeleteIngredientUrl = (id: number) => {
+  return `/api/ingredients/${id}`;
+};
+
+export const deleteIngredient = async (
+  id: number,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getDeleteIngredientUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteIngredientMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteIngredient>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteIngredient>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["deleteIngredient"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteIngredient>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deleteIngredient(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteIngredientMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteIngredient>>
+>;
+
+export type DeleteIngredientMutationError = ErrorType<void>;
+
+/**
+ * @summary Delete an ingredient
+ */
+export const useDeleteIngredient = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteIngredient>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteIngredient>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getDeleteIngredientMutationOptions(options));
 };
 
 /**

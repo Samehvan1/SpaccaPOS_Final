@@ -17,6 +17,7 @@ COPY artifacts/api-server/package.json ./artifacts/api-server/
 COPY artifacts/api-server/tsconfig.json ./artifacts/api-server/
 COPY artifacts/api-server/build.mjs ./artifacts/api-server/
 COPY artifacts/api-server/src/ ./artifacts/api-server/src/
+COPY Inventory2026.csv ./Inventory2026.csv
 
 # Install dependencies
 RUN pnpm install --no-frozen-lockfile
@@ -33,6 +34,7 @@ WORKDIR /app
 # Copy the bundled output from the builder
 COPY --from=builder /app/artifacts/api-server/dist ./dist
 COPY --from=builder /app/artifacts/api-server/package.json ./package.json
+COPY --from=builder /app/Inventory2026.csv ./Inventory2026.csv
 
 # Some dependencies might be externalized in build.mjs (like sharp or pg-native)
 # But looking at build.mjs, most are standard. 

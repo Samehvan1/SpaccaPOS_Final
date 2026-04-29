@@ -1,6 +1,8 @@
 import { Router, type IRouter } from "express";
+import fs from "fs";
+import path from "path";
 import { eq, and } from "drizzle-orm";
-import { db, ingredientsTable, ingredientOptionsTable, stockMovementsTable, ingredientTypesTable, drinkIngredientSlotsTable, drinksTable } from "@workspace/db";
+import { db, ingredientsTable, ingredientOptionsTable, stockMovementsTable, ingredientTypesTable, drinkIngredientSlotsTable, drinksTable, orderItemCustomizationsTable, orderItemsTable, ordersTable } from "@workspace/db";
 import { serializeDates } from "../lib/serialize";
 import {
   ListIngredientsQueryParams,
@@ -54,6 +56,92 @@ async function buildIngredientDetail(ingredientId: number) {
   };
 }
 
+router.post("/ingredients/import-csv", async (req, res): Promise<void> => {
+  try {
+    const csvPath = path.join(process.cwd(), "Inventory2026.csv");
+    if (!fs.existsSync(csvPath)) {
+      res.status(404).json({ error: "Inventory2026.csv not found in app root." });
+      return;
+    }
+
+    const content = fs.readFileSync(csvPath, "utf-8");
+    const lines = content.split("\n");
+    const dataLines = lines.slice(1).filter(line => line.trim() && !line.startsWith("#"));
+
+    const slugify = (text: string) => text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+    const getIngredientType = (name: string): any => {
+      const n = name.toLowerCase();
+      if (n.includes("tea")) return "tea";
+      if (n.includes("cup") || n.includes("lid") || n.includes("sleeve") || n.includes("holder")) return "cup";
+      if (n.includes("bag") || n.includes("paper") || n.includes("label") || n.includes("roll") || n.includes("napkin") || n.includes("stirrer") || n.includes("straw") || n.includes("glaves")) return "packing";
+      if (n.includes("coffee")) return "coffee";
+      if (n.includes("milk") || n.includes("cream")) return "milk";
+      if (n.includes("syrup")) return "syrup";
+      if (n.includes("sauce") || n.includes("puree") || n.includes("butter")) return "sauce";
+      if (n.includes("suger") || n.includes("sugar")) return "sweetener";
+      if (n.includes("powder") || n.includes("pawder")) return "base";
+      return "other";
+    };
+    const mapUnit = (u: string) => {
+      const unit = u.trim().toUpperCase();
+      if (unit === "G") return "g";
+      if (unit === "L" || unit === "S") return "ml";
+      if (unit === "EACH") return "pcs";
+      return unit.toLowerCase() || "pcs";
+    };
+
+    await db.transaction(async (tx) => {
+      // Clear links
+      await tx.update(ingredientTypesTable).set({ inventoryIngredientId: null });
+      await tx.update(drinksTable).set({ cupIngredientId: null });
+      await tx.update(ingredientOptionsTable).set({ linkedIngredientId: null });
+      await tx.update(drinkIngredientSlotsTable).set({ ingredientId: null });
+
+      // Wipe data
+      await tx.delete(orderItemCustomizationsTable);
+      await tx.delete(orderItemsTable);
+      await tx.delete(ordersTable);
+      await tx.delete(stockMovementsTable);
+      await tx.delete(ingredientOptionsTable);
+      await tx.delete(ingredientsTable);
+
+      const usedSlugs = new Set<string>();
+      for (const line of dataLines) {
+        const parts = line.split(",");
+        if (parts.length < 4) continue;
+        const name = parts[1]?.trim();
+        const unitRaw = parts[3]?.trim();
+        if (!name) continue;
+
+        const type = getIngredientType(name);
+        const unit = mapUnit(unitRaw);
+        let slug = slugify(name);
+        if (usedSlugs.has(slug)) {
+          slug = `${slug}-${unit}`;
+          if (usedSlugs.has(slug)) slug = `${slug}-${Math.floor(Math.random() * 1000)}`;
+        }
+        usedSlugs.add(slug);
+
+        await tx.insert(ingredientsTable).values({
+          name,
+          slug,
+          ingredientType: type,
+          unit,
+          costPerUnit: "0",
+          stockQuantity: "0",
+          lowStockThreshold: "100",
+          isActive: true
+        });
+      }
+    });
+
+    res.json({ message: "Import completed successfully" });
+  } catch (err: any) {
+    console.error("Import failed:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.get("/ingredients", async (req, res): Promise<void> => {
   const params = ListIngredientsQueryParams.safeParse(req.query);
   const conditions = [];
@@ -70,32 +158,17 @@ router.get("/ingredients", async (req, res): Promise<void> => {
     filtered = ingredients.filter((i) => i.ingredientType === params.data.type);
   }
 
-  const [allTypes, allSlots, allDrinks] = await Promise.all([
-    db.select({ id: ingredientTypesTable.id, inventoryIngredientId: ingredientTypesTable.inventoryIngredientId }).from(ingredientTypesTable),
-    db.select({ id: drinkIngredientSlotsTable.id, ingredientId: drinkIngredientSlotsTable.ingredientId, drinkId: drinkIngredientSlotsTable.drinkId }).from(drinkIngredientSlotsTable),
-    db.select({ id: drinksTable.id, cupIngredientId: drinksTable.cupIngredientId }).from(drinksTable),
-  ]);
-
   res.json(
-    ListIngredientsResponse.parse(
-      serializeDates(filtered.map((i) => {
-        const typeCount = allTypes.filter(t => t.inventoryIngredientId === i.id).length;
-        
-        // Product count: unique drinks that use this ingredient either as a slot or as a cup
-        const drinksFromSlots = allSlots.filter(s => s.ingredientId === i.id).map(s => s.drinkId);
-        const drinksFromCups = allDrinks.filter(d => d.cupIngredientId === i.id).map(d => d.id);
-        const uniqueDrinkIds = new Set([...drinksFromSlots, ...drinksFromCups]);
-        
-        return {
-          ...i,
-          costPerUnit: parseFloat(i.costPerUnit),
-          stockQuantity: parseFloat(i.stockQuantity),
-          lowStockThreshold: parseFloat(i.lowStockThreshold),
-          linkedTypeCount: typeCount,
-          linkedProductCount: uniqueDrinkIds.size,
-        };
-      }))
-    )
+    serializeDates(filtered.map((i) => {
+      return {
+        ...i,
+        costPerUnit: parseFloat(i.costPerUnit),
+        stockQuantity: parseFloat(i.stockQuantity),
+        lowStockThreshold: parseFloat(i.lowStockThreshold),
+        linkedTypeCount: 0,
+        linkedProductCount: 0,
+      };
+    }))
   );
 });
 
@@ -192,6 +265,45 @@ router.patch("/ingredients/:id", async (req, res): Promise<void> => {
       lowStockThreshold: parseFloat(ingredient.lowStockThreshold),
     }))
   );
+});
+
+router.delete("/ingredients/:id", async (req, res): Promise<void> => {
+  const params = GetIngredientParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  const id = params.data.id;
+
+  // 1. Clear links in catalog_ingredient_types
+  await db.update(ingredientTypesTable)
+    .set({ inventoryIngredientId: null })
+    .where(eq(ingredientTypesTable.inventoryIngredientId, id));
+
+  // 2. Clear links in drinks (cupIngredientId)
+  await db.update(drinksTable)
+    .set({ cupIngredientId: null })
+    .where(eq(drinksTable.cupIngredientId, id));
+
+  // 3. Delete the ingredient
+  // Note: if there are orders using this, it might fail due to FKs in stockMovements or customizations.
+  // But usually we allow deletion if we want to "clear all".
+  try {
+    const [deleted] = await db
+      .delete(ingredientsTable)
+      .where(eq(ingredientsTable.id, id))
+      .returning();
+
+    if (!deleted) {
+      res.status(404).json({ error: "Ingredient not found" });
+      return;
+    }
+
+    res.sendStatus(204);
+  } catch (err: any) {
+    res.status(400).json({ error: "Cannot delete ingredient because it is in use by historical orders." });
+  }
 });
 
 router.post("/ingredients/:id/options", async (req, res): Promise<void> => {

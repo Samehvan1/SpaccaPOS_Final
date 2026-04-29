@@ -99,6 +99,8 @@ export const IngredientIngredientType = {
   topping: "topping",
   base: "base",
   cup: "cup",
+  tea: "tea",
+  packing: "packing",
   other: "other",
 } as const;
 
@@ -148,6 +150,8 @@ export const CreateIngredientBodyIngredientType = {
   topping: "topping",
   base: "base",
   cup: "cup",
+  tea: "tea",
+  packing: "packing",
   other: "other",
 } as const;
 
@@ -173,6 +177,8 @@ export const UpdateIngredientBodyIngredientType = {
   topping: "topping",
   base: "base",
   cup: "cup",
+  tea: "tea",
+  packing: "packing",
   other: "other",
 } as const;
 
