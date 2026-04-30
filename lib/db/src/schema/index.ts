@@ -8,3 +8,5 @@ export * from "./discounts";
 export * from "./cashier-sessions";
 export * from "./permissions";
 export * from "./activity-logs";
+export * from "./sessions";
+

@@ -50,7 +50,6 @@ app.use(
     store: new PostgresStore({
       pool,
       tableName: "session",
-      createTableIfMissing: true,
     }),
     secret: process.env.SESSION_SECRET ?? "spacca-dev-secret",
     resave: false,
