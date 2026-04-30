@@ -5,8 +5,10 @@ import { useQueryClient } from "@tanstack/react-query";
 interface SettingsContextValue {
   autoPrintCustomer: boolean;
   autoPrintAgent: boolean;
+  allowNoStockSell: boolean;
   setAutoPrintCustomer: (val: boolean) => void;
   setAutoPrintAgent: (val: boolean) => void;
+  setAllowNoStockSell: (val: boolean) => void;
   isLoading: boolean;
 }
 
@@ -27,9 +29,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   });
 
   // Helper to find setting value by key, default to 'true' (enabled)
-  const getSettingValue = (key: string): boolean => {
+  const getSettingValue = (key: string, defaultValue: boolean = true): boolean => {
     const setting = settings?.find(s => s.key === key);
-    return setting ? setting.value === "true" : true;
+    return setting ? setting.value === "true" : defaultValue;
   };
 
   const setSettingValue = (key: string, val: boolean) => {
@@ -43,14 +45,17 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   const autoPrintCustomer = getSettingValue("autoPrintCustomer");
   const autoPrintAgent = getSettingValue("autoPrintAgent");
+  const allowNoStockSell = getSettingValue("allowNoStockSell", false);
 
   return (
     <SettingsContext.Provider 
       value={{ 
         autoPrintCustomer, 
         autoPrintAgent, 
+        allowNoStockSell,
         setAutoPrintCustomer: (val) => setSettingValue("autoPrintCustomer", val),
         setAutoPrintAgent: (val) => setSettingValue("autoPrintAgent", val),
+        setAllowNoStockSell: (val) => setSettingValue("allowNoStockSell", val),
         isLoading
       }}
     >

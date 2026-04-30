@@ -163,6 +163,8 @@ async function buildDrinkDetail(drinkId: number) {
         }];
       }
 
+      let slotResult: any;
+
       if (effectiveTypeOptions.length > 0) {
         // Resolve Type Options
         const typeOptionsWithVolumes = await Promise.all(
@@ -173,6 +175,18 @@ async function buildDrinkDetail(drinkId: number) {
               ? await db.select().from(ingredientCategoriesTable)
                   .where(eq(ingredientCategoriesTable.id, ingType.categoryId))
               : [null];
+
+            // Fetch current stock from linked inventory item
+            let stockQuantity = 999999;
+            if (ingType?.inventoryIngredientId) {
+              const [inv] = await db.select({ stock: ingredientsTable.stockQuantity })
+                .from(ingredientsTable)
+                .where(eq(ingredientsTable.id, ingType.inventoryIngredientId));
+              if (inv) stockQuantity = Number(inv.stock);
+            } else if (!ingType) {
+              // If no type defined, assume out of stock unless it's a very simple drink
+              stockQuantity = 0;
+            }
               
             // Volumes: merge slot-level overrides with template-level defaults or global type defaults
             const globalTypeVolumes = await db.select().from(ingredientTypeVolumesTable)
@@ -203,12 +217,18 @@ async function buildDrinkDetail(drinkId: number) {
                 extraCost: Number(override?.extraCost ?? templateDef?.extraCost ?? tv.extraCost),
                 isDefault: override?.isDefault ?? templateDef?.isDefault ?? tv.isDefault,
                 isEnabled: override?.isEnabled ?? templateDef?.isEnabled ?? true,
+                isAvailable: stockQuantity >= Number(override?.processedQty ?? templateDef?.processedQty ?? tv.processedQty ?? vol?.processedQty ?? 0),
                 sortOrder: override?.sortOrder ?? templateDef?.sortOrder ?? tv.sortOrder,
                 affectsCupSize: typeDef?.affectsCupSize ?? true,
                 hasSlotOverride: !!override,
               };
             }).filter((v) => v.isEnabled)
               .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0) || a.id - b.id);
+
+            const baseQty = Number(to.processedQty ?? ingType?.processedQty ?? 0);
+            const isAvailable = volumes.length > 0 
+              ? volumes.some(v => stockQuantity >= v.processedQty)
+              : stockQuantity >= baseQty;
 
             return {
               typeOptionId: to.id,
@@ -217,6 +237,8 @@ async function buildDrinkDetail(drinkId: number) {
               categoryName: category?.name ?? "",
               isDefault: to.isDefault,
               sortOrder: to.sortOrder,
+              stockQuantity,
+              isAvailable,
               // Base type overrides
               processedQty: Number(to.processedQty ?? ingType?.processedQty ?? 0),
               producedQty: Number(to.producedQty ?? ingType?.producedQty ?? 0),
@@ -228,7 +250,7 @@ async function buildDrinkDetail(drinkId: number) {
           })
         ).then(options => options.filter(o => o.typeName !== ""));
 
-        return {
+        slotResult = {
           ...effectiveSlot,
           slotStyle: "typed" as const,
           typeOptions: typeOptionsWithVolumes,
@@ -237,72 +259,104 @@ async function buildDrinkDetail(drinkId: number) {
           volumes: typeOptionsWithVolumes[0]?.volumes ?? [],
           ingredientType: null,
         };
+      } else if (slot.ingredientId) {
+        // ── Old-style slot: ingredientId set ─────────────────────────────────
+        const [ingredient] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, slot.ingredientId));
+        const options = await db
+          .select()
+          .from(ingredientOptionsTable)
+          .where(eq(ingredientOptionsTable.ingredientId, slot.ingredientId))
+          .orderBy(ingredientOptionsTable.sortOrder);
+
+        const stock = Number(ingredient?.stockQuantity ?? 0);
+
+        const enrichedOptions = await Promise.all(
+          options.map(async (o) => {
+            let linkedIngredient: { id: number; name: string; options: any[] } | null = null;
+            if (o.linkedIngredientId) {
+              const [linked] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, o.linkedIngredientId));
+              if (linked) {
+                const linkedOpts = await db
+                  .select()
+                  .from(ingredientOptionsTable)
+                  .where(eq(ingredientOptionsTable.ingredientId, o.linkedIngredientId))
+                  .orderBy(ingredientOptionsTable.sortOrder);
+                linkedIngredient = {
+                  id: linked.id,
+                  name: linked.name,
+                  options: linkedOpts.map((lo) => ({
+                    ...lo,
+                    processedQty: Number(lo.processedQty),
+                    producedQty: Number(lo.producedQty),
+                    extraCost: Number(lo.extraCost),
+                  })),
+                };
+              }
+            }
+            const isAvailable = stock >= Number(o.processedQty);
+            return {
+              ...o,
+              isAvailable,
+              processedQty: Number(o.processedQty),
+              producedQty: Number(o.producedQty),
+              extraCost: Number(o.extraCost),
+              linkedIngredientId: o.linkedIngredientId ?? null,
+              linkedIngredient,
+            };
+          })
+        );
+
+        slotResult = {
+          ...effectiveSlot,
+          slotStyle: "legacy" as any,
+          typeOptions: null,
+          ingredient: ingredient ? {
+            ...ingredient,
+            costPerUnit: Number(ingredient.costPerUnit),
+            stockQuantity: Number(ingredient.stockQuantity),
+            lowStockThreshold: Number(ingredient.lowStockThreshold),
+            options: enrichedOptions,
+          } : null,
+          volumes: [],
+          ingredientType: null,
+        };
+      } else {
+        slotResult = { ...effectiveSlot, slotStyle: "legacy" as const, ingredient: null, volumes: [] };
       }
 
-      // ── Old-style slot: ingredientId set ─────────────────────────────────
-      if (!slot.ingredientId) return { ...effectiveSlot, slotStyle: "legacy" as const, ingredient: null, volumes: [] };
-
-      const [ingredient] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, slot.ingredientId));
-      const options = await db
-        .select()
-        .from(ingredientOptionsTable)
-        .where(eq(ingredientOptionsTable.ingredientId, slot.ingredientId))
-        .orderBy(ingredientOptionsTable.sortOrder);
-
-      const enrichedOptions = await Promise.all(
-        options.map(async (o) => {
-          let linkedIngredient: { id: number; name: string; options: any[] } | null = null;
-          if (o.linkedIngredientId) {
-            const [linked] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, o.linkedIngredientId));
-            if (linked) {
-              const linkedOpts = await db
-                .select()
-                .from(ingredientOptionsTable)
-                .where(eq(ingredientOptionsTable.ingredientId, o.linkedIngredientId))
-                .orderBy(ingredientOptionsTable.sortOrder);
-              linkedIngredient = {
-                id: linked.id,
-                name: linked.name,
-                options: linkedOpts.map((lo) => ({
-                  ...lo,
-                  processedQty: Number(lo.processedQty),
-                  producedQty: Number(lo.producedQty),
-                  extraCost: Number(lo.extraCost),
-                })),
-              };
-            }
-          }
-          return {
-            ...o,
-            processedQty: Number(o.processedQty),
-            producedQty: Number(o.producedQty),
-            extraCost: Number(o.extraCost),
-            linkedIngredientId: o.linkedIngredientId ?? null,
-            linkedIngredient,
-          };
-        })
-      );
-
-      return {
-        ...effectiveSlot,
-        slotStyle: "legacy" as const,
-        ingredient: ingredient ? {
-          ...ingredient,
-          costPerUnit: Number(ingredient.costPerUnit),
-          stockQuantity: Number(ingredient.stockQuantity),
-          lowStockThreshold: Number(ingredient.lowStockThreshold),
-          options: enrichedOptions,
-        } : null,
-        volumes: [],
-        ingredientType: null,
-      };
+      // Availability check
+      let isAvailable = true;
+      if (effectiveSlot.isRequired) {
+        if (slotResult.slotStyle === "typed" && slotResult.typeOptions) {
+          isAvailable = slotResult.typeOptions.some((to: any) => to.isAvailable);
+        } else if (slotResult.ingredient?.options) {
+          isAvailable = slotResult.ingredient.options.some((o: any) => o.isAvailable);
+        } else if (slotResult.ingredient) {
+          isAvailable = (slotResult.ingredient.stockQuantity ?? 0) > 0;
+        }
+      }
+      
+      return { ...slotResult, isAvailable };
     })
   );
+
+  let isCupAvailable = true;
+  if (drink.cupIngredientId) {
+    const [cupInv] = await db.select({ stock: ingredientsTable.stockQuantity })
+      .from(ingredientsTable)
+      .where(eq(ingredientsTable.id, drink.cupIngredientId));
+    if (cupInv) {
+      isCupAvailable = Number(cupInv.stock) >= 1; // Assuming 1 cup per drink
+    }
+  }
+
+  const isDrinkAvailable = isCupAvailable && slotsWithDetails.every(s => s.isAvailable);
 
   const result = {
     ...drink,
     basePrice: Number(drink.basePrice),
     slots: slotsWithDetails,
+    isAvailable: isDrinkAvailable,
   };
   
   globalCache.set(cacheKey, result);
@@ -355,12 +409,16 @@ router.get("/drinks", async (req, res): Promise<void> => {
 
   const drinksWithDetails = await Promise.all(
     filtered.map(async (d) => {
-      if (params.success && (params.data as any).includeSlots) {
-        return await buildDrinkDetail(d.id);
-      }
-      const base = Number(d.basePrice);
+      const detail = await buildDrinkDetail(d.id);
+      if (!detail) return { ...d, basePrice: Number(d.basePrice), defaultPrice: 0, isAvailable: false };
+      
       const defaultPrice = await computeDefaultPrice(d.id);
-      return { ...d, basePrice: base, defaultPrice };
+      return { 
+        ...d, 
+        basePrice: Number(d.basePrice), 
+        defaultPrice,
+        isAvailable: detail.isAvailable 
+      };
     })
   );
 

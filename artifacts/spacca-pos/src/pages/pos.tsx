@@ -8,6 +8,7 @@ import {
   Drink,
 } from "@workspace/api-client-react";
 import { useSettings } from "@/hooks/use-settings";
+import { DrinkCard } from "@/components/drink-card";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -16,7 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
-import { Coffee, Minus, Plus, ShoppingCart, Trash2, X, ChevronRight, Droplets, Search, Menu, RotateCcw, Ticket, Check, Loader2, Tag, User } from "lucide-react";
+import { Minus, Plus, ShoppingCart, Trash2, X, ChevronRight, Droplets, Search, Menu, RotateCcw, Ticket, Check, Loader2, Tag, User } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { fmt } from "@/lib/currency";
 import { CupSimulator, type CupLayer } from "@/components/cup-simulator";
@@ -77,6 +78,7 @@ function detectSubcategory(name: string): string {
 export default function PosTerminal() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { allowNoStockSell } = useSettings();
 
   const { data: drinks, isLoading: isLoadingDrinks } = useListDrinks({ active: true });
   const { data: allCategories = [] } = useDrinkCategories();
@@ -156,27 +158,61 @@ export default function PosTerminal() {
         // Typed (catalog) slot — pick default type option + default volume
         if (slot.slotStyle === "typed") {
           const typeOptions: any[] = slot.typeOptions ?? [];
-          const defTypeOpt = typeOptions.find((to: any) => to.isDefault) ?? typeOptions[0];
+          
+          // Find available types (if not allowing no-stock sell)
+          const availableTypes = allowNoStockSell 
+            ? typeOptions 
+            : typeOptions.filter(to => {
+                const stock = to.stockQuantity ?? 0;
+                if (stock <= 0) return false;
+                // At least one volume must be affordable in terms of stock
+                return (to.volumes ?? []).some((v: any) => stock >= (v.processedQty || 0));
+              });
+
+          const activeTypeOptions = availableTypes.length > 0 ? availableTypes : typeOptions;
+          const defTypeOpt = activeTypeOptions.find((to: any) => to.isDefault) ?? activeTypeOptions[0];
+          
           if (defTypeOpt) {
             initial[slot.id] = defTypeOpt.ingredientTypeId; // selections = which type
-            const defVol = (defTypeOpt.volumes ?? []).find((v: any) => v.isDefault) ?? defTypeOpt.volumes?.[0];
+            const stock = defTypeOpt.stockQuantity ?? 0;
+            
+            // Filter volumes by stock
+            const availableVols = (defTypeOpt.volumes ?? []).filter((v: any) => allowNoStockSell || stock >= (v.processedQty || 0));
+            
+            let defVol = availableVols.find((v: any) => v.isDefault);
+            if (!defVol && availableVols.length > 0) {
+              // Selection auto downgrade: pick the largest available volume if default is not available
+              defVol = availableVols[availableVols.length - 1]; 
+            }
+            
             if (defVol) initialSub[slot.id] = defVol.id; // subSelections = typeVolumeId
+            else if (defTypeOpt.volumes?.length > 0) initialSub[slot.id] = defTypeOpt.volumes[0].id;
           }
           return;
         }
         // Legacy slot
         let selectedOptionId: number | undefined;
-        if (slot.defaultOptionId) {
+        const options: any[] = slot.ingredient?.options ?? [];
+        const stock = slot.ingredient?.stockQuantity ?? 0;
+        
+        const availableOptions = allowNoStockSell 
+          ? options 
+          : options.filter(o => stock > 0);
+
+        if (slot.defaultOptionId && (allowNoStockSell || stock > 0)) {
           selectedOptionId = slot.defaultOptionId;
-        } else if (slot.ingredient?.options?.length > 0) {
-          const def = slot.ingredient.options.find((o: any) => o.isDefault) || slot.ingredient.options[0];
-          selectedOptionId = def.id;
+        } else if (availableOptions.length > 0) {
+          selectedOptionId = (availableOptions.find((o: any) => o.isDefault) || availableOptions[0]).id;
         }
+
         if (selectedOptionId !== undefined) {
           initial[slot.id] = selectedOptionId;
-          const selOpt = slot.ingredient?.options?.find((o: any) => o.id === selectedOptionId);
+          const selOpt = options.find((o: any) => o.id === selectedOptionId);
           if (selOpt?.linkedIngredient?.options?.length) {
-            const defSub = selOpt.linkedIngredient.options.find((o: any) => o.isDefault) || selOpt.linkedIngredient.options[0];
+            const subOpts = selOpt.linkedIngredient.options;
+            const subStock = selOpt.linkedIngredient.stockQuantity ?? 0;
+            const availableSub = allowNoStockSell ? subOpts : subOpts.filter((so: any) => subStock >= (so.processedQty || 0));
+            const defSub = availableSub.find((o: any) => o.isDefault) || availableSub[0] || subOpts[0];
             if (defSub) initialSub[slot.id] = defSub.id;
           }
         }
@@ -605,7 +641,7 @@ export default function PosTerminal() {
                 )}
                 <div className={gridClass}>
                   {group.drinks.map(drink => (
-                    <DrinkCard key={drink.id} drink={drink} onClick={() => handleSelectDrink(drink)} />
+                    <DrinkCard key={drink.id} drink={drink} variant="pos" onClick={() => handleSelectDrink(drink)} />
                   ))}
                 </div>
               </div>
@@ -802,27 +838,34 @@ export default function PosTerminal() {
                         {/* Level 1: Type option buttons (only shown if more than one type) */}
                         {multiType && (
                           <div className="grid grid-cols-3 gap-1">
-                            {typeOptions.map((typeOpt: any) => (
-                              <button
-                                key={typeOpt.ingredientTypeId}
-                                onClick={() => {
-                                  setSelections(prev => ({ ...prev, [slot.id]: typeOpt.ingredientTypeId }));
-                                  const defVol = (typeOpt.volumes ?? []).find((v: any) => v.isDefault) ?? typeOpt.volumes?.[0];
-                                  setSubSelections(prev => {
-                                    const next = { ...prev };
-                                    if (defVol) next[slot.id] = defVol.id;
-                                    else delete next[slot.id];
-                                    return next;
-                                  });
-                                }}
-                                className={`px-2 py-1.5 rounded-md border text-left transition-all text-[11px] ${selectedTypeId === typeOpt.ingredientTypeId
-                                    ? "bg-primary text-primary-foreground border-primary shadow-sm"
-                                    : "bg-background border-border hover:border-primary/50"
-                                  }`}
-                              >
-                                <div className="font-semibold truncate">{typeOpt.typeName}</div>
-                              </button>
-                            ))}
+                            {typeOptions.map((typeOpt: any) => {
+                              const isOutOfStock = !allowNoStockSell && !typeOpt.isAvailable;
+                              return (
+                                <button
+                                  key={typeOpt.ingredientTypeId}
+                                  disabled={isOutOfStock}
+                                  onClick={() => {
+                                    setSelections(prev => ({ ...prev, [slot.id]: typeOpt.ingredientTypeId }));
+                                    const stock = typeOpt.stockQuantity ?? 0;
+                                    const availableVols = (typeOpt.volumes ?? []).filter((v: any) => allowNoStockSell || stock >= (v.processedQty || 0));
+                                    const defVol = availableVols.find((v: any) => v.isDefault) ?? availableVols[availableVols.length - 1] ?? typeOpt.volumes?.[0];
+                                    setSubSelections(prev => {
+                                      const next = { ...prev };
+                                      if (defVol) next[slot.id] = defVol.id;
+                                      else delete next[slot.id];
+                                      return next;
+                                    });
+                                  }}
+                                  className={`px-2 py-1.5 rounded-md border text-left transition-all text-[11px] ${selectedTypeId === typeOpt.ingredientTypeId
+                                      ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                                      : "bg-background border-border hover:border-primary/50"
+                                    } ${isOutOfStock ? "opacity-40 grayscale pointer-events-none" : ""}`}
+                                >
+                                  <div className="font-semibold truncate">{typeOpt.typeName}</div>
+                                  {isOutOfStock && <div className="text-[9px] font-bold text-destructive uppercase">Out of Stock</div>}
+                                </button>
+                              );
+                            })}
                           </div>
                         )}
 
@@ -839,23 +882,29 @@ export default function PosTerminal() {
                             <div className="text-xs text-muted-foreground mb-1.5 font-medium">Volume</div>
                           )}
                           <div className="grid grid-cols-3 gap-1">
-                            {activeVolumes.map((vol: any) => (
-                              <button
-                                key={vol.id}
-                                onClick={() => setSubSelections(prev => ({ ...prev, [slot.id]: vol.id }))}
-                                className={`px-2 py-1.5 rounded-md border text-left transition-all text-[11px] ${subSelections[slot.id] === vol.id
-                                    ? "bg-primary text-primary-foreground border-primary shadow-sm"
-                                    : "bg-background border-border hover:border-primary/50"
-                                  }`}
-                              >
-                                <div className="font-semibold truncate">{vol.volumeName}</div>
-                                {vol.extraCost > 0 && (
-                                  <div className={`text-[10px] mt-0.5 ${subSelections[slot.id] === vol.id ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
-                                    +{fmt(vol.extraCost)}
-                                  </div>
-                                )}
-                              </button>
-                            ))}
+                            {activeVolumes.map((vol: any) => {
+                              const isVolOutOfStock = !allowNoStockSell && !vol.isAvailable;
+                              return (
+                                <button
+                                  key={vol.id}
+                                  disabled={isVolOutOfStock}
+                                  onClick={() => setSubSelections(prev => ({ ...prev, [slot.id]: vol.id }))}
+                                  className={`px-2 py-1.5 rounded-md border text-left transition-all text-[11px] ${subSelections[slot.id] === vol.id
+                                      ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                                      : "bg-background border-border hover:border-primary/50"
+                                    } ${isVolOutOfStock ? "opacity-40 grayscale pointer-events-none" : ""}`}
+                                >
+                                  <div className="font-semibold truncate">{vol.volumeName}</div>
+                                  {isVolOutOfStock ? (
+                                    <div className="text-[9px] font-bold text-destructive uppercase">No Stock</div>
+                                  ) : vol.extraCost > 0 && (
+                                    <div className={`text-[10px] mt-0.5 ${subSelections[slot.id] === vol.id ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
+                                      +{fmt(vol.extraCost)}
+                                    </div>
+                                  )}
+                                </button>
+                              );
+                            })}
                           </div>
                         </div>
                       </div>
@@ -888,36 +937,45 @@ export default function PosTerminal() {
 
                       {/* Type picker (or regular option picker) */}
                       <div className="grid grid-cols-3 gap-1">
-                        {options.map(option => (
-                          <button
-                            key={option.id}
-                            onClick={() => {
-                              setSelections(prev => ({ ...prev, [slot.id]: option.id }));
-                              // Auto-select first sub-option of newly selected type
-                              if (option.linkedIngredient?.options?.length) {
-                                const defSub = option.linkedIngredient.options.find((o: any) => o.isDefault) || option.linkedIngredient.options[0];
-                                setSubSelections(prev => ({ ...prev, [slot.id]: defSub.id }));
-                              } else {
-                                setSubSelections(prev => {
-                                  const next = { ...prev };
-                                  delete next[slot.id];
-                                  return next;
-                                });
-                              }
-                            }}
-                            className={`px-2 py-1.5 rounded-md border text-left transition-all text-[11px] ${selections[slot.id] === option.id
-                                ? "bg-primary text-primary-foreground border-primary shadow-sm"
-                                : "bg-background border-border hover:border-primary/50"
-                              }`}
-                          >
-                            <div className="font-semibold truncate">{option.label}</div>
-                            {!isLinked && option.extraCost > 0 && (
-                              <div className={`text-[10px] mt-0.5 ${selections[slot.id] === option.id ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
-                                +{fmt(option.extraCost)}
-                              </div>
-                            )}
-                          </button>
-                        ))}
+                        {options.map(option => {
+                          const isOutOfStock = !allowNoStockSell && !option.isAvailable;
+                          return (
+                            <button
+                              key={option.id}
+                              disabled={isOutOfStock}
+                              onClick={() => {
+                                setSelections(prev => ({ ...prev, [slot.id]: option.id }));
+                                // Auto-select first sub-option of newly selected type
+                                if (option.linkedIngredient?.options?.length) {
+                                  const subOpts = option.linkedIngredient.options;
+                                  const subStock = option.linkedIngredient.stockQuantity ?? 0;
+                                  const availableSub = allowNoStockSell ? subOpts : subOpts.filter((so: any) => subStock >= (so.processedQty || 0));
+                                  const defSub = availableSub.find((o: any) => o.isDefault) || availableSub[0] || subOpts[0];
+                                  setSubSelections(prev => ({ ...prev, [slot.id]: defSub.id }));
+                                } else {
+                                  setSubSelections(prev => {
+                                    const next = { ...prev };
+                                    delete next[slot.id];
+                                    return next;
+                                  });
+                                }
+                              }}
+                              className={`px-2 py-1.5 rounded-md border text-left transition-all text-[11px] ${selections[slot.id] === option.id
+                                  ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                                  : "bg-background border-border hover:border-primary/50"
+                                } ${isOutOfStock ? "opacity-40 grayscale pointer-events-none" : ""}`}
+                            >
+                              <div className="font-semibold truncate">{option.label}</div>
+                              {isOutOfStock ? (
+                                <div className="text-[9px] font-bold text-destructive uppercase">No Stock</div>
+                              ) : !isLinked && option.extraCost > 0 && (
+                                <div className={`text-[10px] mt-0.5 ${selections[slot.id] === option.id ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
+                                  +{fmt(option.extraCost)}
+                                </div>
+                              )}
+                            </button>
+                          );
+                        })}
                       </div>
 
                       {/* Sub-option picker — volume / size (shown when type has linked ingredient) */}
@@ -925,23 +983,29 @@ export default function PosTerminal() {
                         <div className="mt-2.5 pl-3 border-l-2 border-primary/30">
                           <div className="text-xs text-muted-foreground mb-1.5 font-medium">Volume</div>
                           <div className="grid grid-cols-3 gap-1.5">
-                            {subOptions.map(subOpt => (
-                              <button
-                                key={subOpt.id}
-                                onClick={() => setSubSelections(prev => ({ ...prev, [slot.id]: subOpt.id }))}
-                                className={`px-2 py-2 rounded-lg border text-center transition-all text-xs ${subSelections[slot.id] === subOpt.id
-                                    ? "bg-primary text-primary-foreground border-primary shadow-sm"
-                                    : "bg-background border-border hover:border-primary/50"
-                                  }`}
-                              >
-                                <div className="font-medium leading-tight">{subOpt.label}</div>
-                                {subOpt.extraCost > 0 && (
-                                  <div className={`text-xs mt-0.5 ${subSelections[slot.id] === subOpt.id ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
-                                    +{fmt(subOpt.extraCost)}
-                                  </div>
-                                )}
-                              </button>
-                            ))}
+                            {subOptions.map(subOpt => {
+                              const isSubOutOfStock = !allowNoStockSell && !subOpt.isAvailable;
+                              return (
+                                <button
+                                  key={subOpt.id}
+                                  disabled={isSubOutOfStock}
+                                  onClick={() => setSubSelections(prev => ({ ...prev, [slot.id]: subOpt.id }))}
+                                  className={`px-2 py-2 rounded-lg border text-center transition-all text-xs ${subSelections[slot.id] === subOpt.id
+                                      ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                                      : "bg-background border-border hover:border-primary/50"
+                                    } ${isSubOutOfStock ? "opacity-40 grayscale pointer-events-none" : ""}`}
+                                >
+                                  <div className="font-medium leading-tight">{subOpt.label}</div>
+                                  {isSubOutOfStock ? (
+                                    <div className="text-[9px] font-bold text-destructive uppercase">No Stock</div>
+                                  ) : subOpt.extraCost > 0 && (
+                                    <div className={`text-xs mt-0.5 ${subSelections[slot.id] === subOpt.id ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
+                                      +{fmt(subOpt.extraCost)}
+                                    </div>
+                                  )}
+                                </button>
+                              );
+                            })}
                           </div>
                         </div>
                       )}
@@ -1114,31 +1178,4 @@ export default function PosTerminal() {
   );
 }
 
-function DrinkCard({ drink, onClick }: { drink: Drink; onClick: () => void }) {
-  const imageUrl = (drink as any).imageUrl as string | null | undefined;
-  return (
-    <button
-      onClick={onClick}
-      className="flex flex-col rounded-lg border bg-card text-card-foreground transition-all hover:border-primary/50 hover:shadow-md active:scale-95 h-40 overflow-hidden group w-full"
-    >
-      {/* Image area — grows to fill available space */}
-      <div className="flex-1 flex items-center justify-center overflow-hidden min-h-0">
-        {imageUrl ? (
-          <img
-            src={imageUrl}
-            alt={drink.name}
-            className="max-w-full max-h-full object-contain group-hover:scale-105 transition-transform duration-300"
-            onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
-          />
-        ) : (
-          <Coffee className="h-7 w-7 text-primary/80 shrink-0" />
-        )}
-      </div>
-      {/* Two-line label */}
-      <div className="flex flex-col items-center px-2 py-1.5 border-t bg-slate-100/5 shrink-0">
-        <span className="font-semibold text-[10px] sm:text-xs leading-tight line-clamp-2 w-full text-center capitalize">{drink.name}</span>
-        <span className="text-[10px] sm:text-xs text-primary font-bold leading-tight">{fmt((drink as any).defaultPrice ?? drink.basePrice)}</span>
-      </div>
-    </button>
-  );
-}
+

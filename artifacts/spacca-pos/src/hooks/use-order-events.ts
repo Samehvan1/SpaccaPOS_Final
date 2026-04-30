@@ -26,6 +26,10 @@ export function useOrderEvents(enabled = true) {
 
       es.addEventListener("order_created", invalidateOrders);
       es.addEventListener("order_updated", invalidateOrders);
+      es.addEventListener("inventory_updated", () => {
+        queryClient.invalidateQueries({ queryKey: ["/api/drinks"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/ingredients"] });
+      });
 
       es.addEventListener("error", () => {
         es.close();

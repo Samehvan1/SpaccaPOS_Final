@@ -400,6 +400,9 @@ router.post("/orders", async (req, res): Promise<void> => {
   const [barista] = await db.select().from(usersTable).where(eq(usersTable.id, order.baristaId));
 
   broadcastEvent("order_created", { orderId: order.id, orderNumber: order.orderNumber });
+  const { globalCache } = await import("../lib/cache");
+  globalCache.clear();
+  broadcastEvent("inventory_updated", { orderId: order.id });
 
   res.status(201).json(
     GetOrderResponse.parse(

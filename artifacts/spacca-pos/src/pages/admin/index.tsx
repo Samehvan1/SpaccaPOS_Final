@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Coffee, Droplet, LayoutDashboard, LineChart, PackageSearch, BarChart2, Tag, ChefHat, Users, Ticket, UserCheck, History, Shield } from "lucide-react";
+import { Coffee, Droplet, LayoutDashboard, LineChart, PackageSearch, BarChart2, Tag, ChefHat, Users, Ticket, UserCheck, History, Shield, Settings } from "lucide-react";
 
 export default function AdminHub() {
   const { user } = useAuth();
@@ -108,6 +108,14 @@ export default function AdminHub() {
       href: "/admin/permissions",
       color: "text-cyan-500",
       bg: "bg-cyan-500/10"
+    },
+    {
+      title: "System Settings",
+      description: "Manage global POS behavior and business rules",
+      icon: Settings,
+      href: "/admin/settings",
+      color: "text-primary",
+      bg: "bg-primary/10"
     }
   ];
 

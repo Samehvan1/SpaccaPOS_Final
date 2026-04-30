@@ -149,6 +149,8 @@ router.post("/ingredients/import-csv", async (req, res): Promise<void> => {
 
     res.json({ message: "Import completed successfully" });
     globalCache.clear();
+    const { broadcastEvent } = await import("../lib/sse");
+    broadcastEvent("inventory_updated", { type: "import" });
   } catch (err: any) {
     console.error("Import failed:", err);
     res.status(500).json({ error: err.message });
@@ -487,6 +489,9 @@ router.post("/ingredients/:id/restock", async (req, res): Promise<void> => {
       lowStockThreshold: parseFloat(updated.lowStockThreshold),
     }))
   );
+  globalCache.clear();
+  const { broadcastEvent } = await import("../lib/sse");
+  broadcastEvent("inventory_updated", { ingredientId: params.data.id });
 });
 
 export default router;

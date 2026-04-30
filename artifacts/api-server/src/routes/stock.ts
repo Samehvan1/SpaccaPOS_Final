@@ -128,6 +128,10 @@ router.post("/stock/adjustments", async (req, res): Promise<void> => {
     quantityAfter: parseFloat(movement.quantityAfter),
     orderId: movement.orderId ?? null,
   });
+  const { globalCache } = await import("../lib/cache");
+  globalCache.clear();
+  const { broadcastEvent } = await import("../lib/sse");
+  broadcastEvent("inventory_updated", { ingredientId: parsed.data.ingredientId });
 });
 
 export default router;

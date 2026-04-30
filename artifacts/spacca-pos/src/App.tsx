@@ -31,7 +31,8 @@ import CustomerAuth from "@/pages/customer-auth";
 import CustomerProfile from "@/pages/customer-profile";
 import { CustomerAuthProvider } from "@/hooks/use-customer-auth";
 import CashierPerformancePage from "@/pages/admin/cashier-performance";
-import KioskPage from "@/pages/kiosk";
+import KioskPage from "./pages/kiosk";
+import SystemSettingsAdmin from "@/pages/admin/settings";
 
 // PWA Helper to update title for "Add to Home Screen"
 function PWAContextHandler() {
@@ -256,6 +257,11 @@ function AppRoutes() {
       <Route path="/admin/permissions">
         <MainLayout>
           <ProtectedRoute component={PermissionsAdmin} adminOnly={true} />
+        </MainLayout>
+      </Route>
+      <Route path="/admin/settings">
+        <MainLayout>
+          <ProtectedRoute component={SystemSettingsAdmin} adminOnly={true} />
         </MainLayout>
       </Route>
 

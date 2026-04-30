@@ -17,6 +17,7 @@ export function addSseClient(res: Response): SseClient {
 export type SseEventName =
   | "order_created"
   | "order_updated"
+  | "inventory_updated"
   | "heartbeat";
 
 export function broadcastEvent(event: SseEventName, data: unknown = {}) {

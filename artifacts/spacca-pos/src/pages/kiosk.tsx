@@ -7,7 +7,7 @@ import {
   Drink,
 } from "@workspace/api-client-react";
 import { useQuery } from "@tanstack/react-query";
-import { Coffee, ChevronRight, ShoppingCart, X, Plus, Minus, ArrowLeft, RotateCcw, Loader2 } from "lucide-react";
+import { ChevronRight, ShoppingCart, X, Plus, Minus, ArrowLeft, RotateCcw, Loader2, Coffee } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { fmt } from "@/lib/currency";
@@ -16,6 +16,11 @@ import { CupSimulator, type CupLayer } from "@/components/cup-simulator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
+
+import { useSettings } from "@/hooks/use-settings";
+import { useOrderEvents } from "@/hooks/use-order-events";
+
+import { DrinkCard } from "@/components/drink-card";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "/api";
 
@@ -38,6 +43,8 @@ function useDrinkCategories() {
 }
 
 export default function KioskPage() {
+  const { allowNoStockSell } = useSettings();
+  useOrderEvents();
   const [step, setStep] = useState<"start" | "menu" | "checkout" | "success">("start");
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
   const [cart, setCart] = useState<any[]>([]);
@@ -74,26 +81,51 @@ export default function KioskPage() {
       (drinkDetail.slots as any[]).forEach(slot => {
         if (slot.slotStyle === "typed") {
           const typeOptions: any[] = slot.typeOptions ?? [];
-          const defTypeOpt = typeOptions.find((to: any) => to.isDefault) ?? typeOptions[0];
+          
+          const availableTypes = allowNoStockSell 
+            ? typeOptions 
+            : typeOptions.filter(to => to.isAvailable);
+
+          const activeTypeOptions = availableTypes.length > 0 ? availableTypes : typeOptions;
+          const defTypeOpt = activeTypeOptions.find((to: any) => to.isDefault) ?? activeTypeOptions[0];
+          
           if (defTypeOpt) {
             initial[slot.id] = defTypeOpt.ingredientTypeId;
-            const defVol = (defTypeOpt.volumes ?? []).find((v: any) => v.isDefault) ?? defTypeOpt.volumes?.[0];
+            const availableVols = (defTypeOpt.volumes ?? []).filter((v: any) => allowNoStockSell || v.isAvailable);
+            
+            let defVol = availableVols.find((v: any) => v.isDefault);
+            if (!defVol && availableVols.length > 0) {
+              defVol = availableVols[availableVols.length - 1]; 
+            }
+            
             if (defVol) initialSub[slot.id] = defVol.id;
+            else if (defTypeOpt.volumes?.length > 0) initialSub[slot.id] = defTypeOpt.volumes[0].id;
           }
           return;
         }
+
         let selectedOptionId: number | undefined;
-        if (slot.defaultOptionId) {
+        const options: any[] = slot.ingredient?.options ?? [];
+        const stock = slot.ingredient?.stockQuantity ?? 0;
+        
+        const availableOptions = allowNoStockSell 
+          ? options 
+          : options.filter(o => stock > 0);
+
+        if (slot.defaultOptionId && (allowNoStockSell || stock > 0)) {
           selectedOptionId = slot.defaultOptionId;
-        } else if (slot.ingredient?.options?.length > 0) {
-          const def = slot.ingredient.options.find((o: any) => o.isDefault) || slot.ingredient.options[0];
-          selectedOptionId = def.id;
+        } else if (availableOptions.length > 0) {
+          selectedOptionId = (availableOptions.find((o: any) => o.isDefault) || availableOptions[0]).id;
         }
+
         if (selectedOptionId !== undefined) {
           initial[slot.id] = selectedOptionId;
-          const selOpt = slot.ingredient?.options?.find((o: any) => o.id === selectedOptionId);
+          const selOpt = options.find((o: any) => o.id === selectedOptionId);
           if (selOpt?.linkedIngredient?.options?.length) {
-            const defSub = selOpt.linkedIngredient.options.find((o: any) => o.isDefault) || selOpt.linkedIngredient.options[0];
+            const subOpts = selOpt.linkedIngredient.options;
+            const subStock = selOpt.linkedIngredient.stockQuantity ?? 0;
+            const availableSub = allowNoStockSell ? subOpts : subOpts.filter((so: any) => subStock >= (so.processedQty || 0));
+            const defSub = availableSub.find((o: any) => o.isDefault) || availableSub[0] || subOpts[0];
             if (defSub) initialSub[slot.id] = defSub.id;
           }
         }
@@ -323,35 +355,17 @@ export default function KioskPage() {
         {/* Drink Grid */}
         <main className="flex-1 overflow-hidden relative">
           <ScrollArea className="h-full p-6">
-            <div className="grid grid-cols-2 gap-6 pb-24">
+            <div className="grid grid-cols-3 gap-6 p-10 pb-40">
               {filteredDrinks.map(drink => (
-                <motion.button
-                  whileTap={{ scale: 0.95 }}
+                <DrinkCard 
                   key={drink.id}
+                  drink={drink}
+                  variant="kiosk"
                   onClick={() => {
                     setActiveDrink(drink);
                     setIsCustomizing(true);
                   }}
-                  className="flex flex-col bg-card rounded-[2.5rem] overflow-hidden border shadow-sm group active:shadow-inner"
-                >
-                  <div className="aspect-[4/5] relative overflow-hidden bg-muted">
-                    {(drink as any).imageUrl ? (
-                      <img src={(drink as any).imageUrl} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt={drink.name} />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center opacity-20">
-                        <Coffee className="h-16 w-16" />
-                      </div>
-                    )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                    <div className="absolute bottom-6 left-6 text-left">
-                       <p className="text-white/60 font-black text-[10px] uppercase tracking-[0.2em]">{(drink as any).category}</p>
-                       <h3 className="text-white font-black text-xl capitalize italic leading-none">{drink.name}</h3>
-                    </div>
-                    <div className="absolute top-4 right-4 bg-primary text-white font-black px-3 py-1 rounded-full text-sm shadow-xl italic">
-                       {fmt((drink as any).defaultPrice || drink.basePrice)}
-                    </div>
-                  </div>
-                </motion.button>
+                />
               ))}
             </div>
           </ScrollArea>
@@ -431,26 +445,84 @@ export default function KioskPage() {
                         {options.map((opt: any) => {
                           const id = slot.slotStyle === "typed" ? opt.ingredientTypeId : opt.id;
                           const isSelected = selections[slot.id] === id;
+                          
+                          // Check stock
+                          const isOutOfStock = !allowNoStockSell && !opt.isAvailable;
+
                           return (
                             <button
                               key={id}
+                              disabled={isOutOfStock}
                               onClick={() => {
                                 setSelections(prev => ({ ...prev, [slot.id]: id }));
                                 if (slot.slotStyle === "typed") {
-                                  const defVol = (opt.volumes ?? []).find((v: any) => v.isDefault) ?? opt.volumes?.[0];
+                                  const availableVols = (opt.volumes ?? []).filter((v: any) => allowNoStockSell || v.isAvailable);
+                                  const defVol = availableVols.find((v: any) => v.isDefault) ?? availableVols[availableVols.length - 1] ?? opt.volumes?.[0];
                                   if (defVol) setSubSelections(prev => ({ ...prev, [slot.id]: defVol.id }));
+                                } else if (opt.linkedIngredient?.options?.length) {
+                                  const subOpts = opt.linkedIngredient.options;
+                                  const availableSub = allowNoStockSell ? subOpts : subOpts.filter((so: any) => so.isAvailable);
+                                  const defSub = availableSub.find((o: any) => o.isDefault) || availableSub[0] || subOpts[0];
+                                  if (defSub) setSubSelections(prev => ({ ...prev, [slot.id]: defSub.id }));
                                 }
                               }}
-                              className={`p-4 rounded-3xl border-2 text-left transition-all ${
+                              className={`p-4 rounded-3xl border-2 text-left transition-all relative ${
                                 isSelected ? "border-primary bg-primary/5 shadow-inner" : "border-muted bg-card"
-                              }`}
+                              } ${isOutOfStock ? "opacity-40 grayscale pointer-events-none" : ""}`}
                             >
                               <div className="font-black uppercase text-xs tracking-wide">{opt.typeName || opt.label}</div>
-                              {opt.extraCost > 0 && <div className="text-[10px] text-primary font-bold">+{fmt(opt.extraCost)}</div>}
+                              {isOutOfStock ? (
+                                <div className="text-[10px] text-destructive font-bold uppercase mt-1">Sold Out</div>
+                              ) : opt.extraCost > 0 && (
+                                <div className="text-[10px] text-primary font-bold">+{fmt(opt.extraCost)}</div>
+                              )}
                             </button>
                           );
                         })}
                       </div>
+                      
+                      {/* Sub-options / Volumes */}
+                      {(() => {
+                        const selectedId = selections[slot.id];
+                        if (!selectedId) return null;
+                        
+                        let subOptions: any[] = [];
+                        if (slot.slotStyle === "typed") {
+                          const typeOpt = (slot.typeOptions as any[]).find(to => to.ingredientTypeId === selectedId);
+                          subOptions = typeOpt?.volumes ?? [];
+                        } else {
+                          const opt = (slot.ingredient?.options as any[]).find(o => o.id === selectedId);
+                          subOptions = opt?.linkedIngredient?.options ?? [];
+                        }
+                        
+                        if (subOptions.length <= 1) return null; // No need to pick if only one option
+                        
+                        return (
+                          <div className="mt-4 pl-6 border-l-4 border-primary/20 space-y-3">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Choose Variant</p>
+                            <div className="grid grid-cols-2 gap-2">
+                              {subOptions.map((sub: any) => {
+                                const isSubSelected = subSelections[slot.id] === sub.id;
+                                const isSubOut = !allowNoStockSell && (sub.isAvailable === false || (sub.processedQty && (slot.typeOptions?.find((to:any)=>to.ingredientTypeId === selectedId)?.stockQuantity ?? 0) < sub.processedQty));
+                                
+                                return (
+                                  <button
+                                    key={sub.id}
+                                    disabled={isSubOut}
+                                    onClick={() => setSubSelections(prev => ({ ...prev, [slot.id]: sub.id }))}
+                                    className={`p-3 rounded-2xl border-2 text-center transition-all ${
+                                      isSubSelected ? "border-primary bg-primary text-white shadow-lg" : "border-muted bg-muted/30 text-muted-foreground"
+                                    } ${isSubOut ? "opacity-30 grayscale pointer-events-none" : ""}`}
+                                  >
+                                    <div className="font-bold text-[10px] uppercase truncate">{sub.volumeName || sub.label}</div>
+                                    {!isSubOut && sub.extraCost > 0 && <div className={`text-[9px] ${isSubSelected ? "text-white/70" : "text-primary"}`}>+{fmt(sub.extraCost)}</div>}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </div>
                   );
                 })}

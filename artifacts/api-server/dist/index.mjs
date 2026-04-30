@@ -72705,6 +72705,93 @@ var require_multer = __commonJS({
   }
 });
 
+// src/lib/cache.ts
+var cache_exports = {};
+__export(cache_exports, {
+  SimpleCache: () => SimpleCache,
+  globalCache: () => globalCache
+});
+var SimpleCache, globalCache;
+var init_cache2 = __esm({
+  "src/lib/cache.ts"() {
+    "use strict";
+    SimpleCache = class {
+      cache = /* @__PURE__ */ new Map();
+      defaultTTL;
+      constructor(defaultTTLSeconds = 300) {
+        this.defaultTTL = defaultTTLSeconds * 1e3;
+      }
+      set(key, data, ttlSeconds) {
+        const ttl = (ttlSeconds ?? 0) * 1e3 || this.defaultTTL;
+        this.cache.set(key, {
+          data,
+          expiry: Date.now() + ttl
+        });
+      }
+      get(key) {
+        const entry = this.cache.get(key);
+        if (!entry) return null;
+        if (Date.now() > entry.expiry) {
+          this.cache.delete(key);
+          return null;
+        }
+        return entry.data;
+      }
+      delete(key) {
+        this.cache.delete(key);
+      }
+      clear() {
+        this.cache.clear();
+      }
+      /**
+       * Clears keys starting with a prefix
+       */
+      clearPrefix(prefix) {
+        for (const key of this.cache.keys()) {
+          if (key.startsWith(prefix)) {
+            this.cache.delete(key);
+          }
+        }
+      }
+    };
+    globalCache = new SimpleCache(600);
+  }
+});
+
+// src/lib/sse.ts
+var sse_exports = {};
+__export(sse_exports, {
+  addSseClient: () => addSseClient,
+  broadcastEvent: () => broadcastEvent
+});
+function addSseClient(res) {
+  const client = { id: Math.random().toString(36).slice(2), res };
+  clients.add(client);
+  res.on("close", () => clients.delete(client));
+  return client;
+}
+function broadcastEvent(event, data = {}) {
+  const payload = `event: ${event}
+data: ${JSON.stringify(data)}
+
+`;
+  for (const client of clients) {
+    try {
+      client.res.write(payload);
+    } catch {
+      clients.delete(client);
+    }
+  }
+}
+var clients;
+var init_sse = __esm({
+  "src/lib/sse.ts"() {
+    "use strict";
+    clients = /* @__PURE__ */ new Set();
+    setInterval(() => broadcastEvent("heartbeat", { ts: Date.now() }), 2e4);
+  }
+});
+
 // src/env.ts
 var import_dotenv = __toESM(require_main(), 1);
 import { dirname, resolve } from "path";
@@ -79639,47 +79726,8 @@ function serializeDates(obj) {
   return obj;
 }
 
-// src/lib/cache.ts
-var SimpleCache = class {
-  cache = /* @__PURE__ */ new Map();
-  defaultTTL;
-  constructor(defaultTTLSeconds = 300) {
-    this.defaultTTL = defaultTTLSeconds * 1e3;
-  }
-  set(key, data, ttlSeconds) {
-    const ttl = (ttlSeconds ?? 0) * 1e3 || this.defaultTTL;
-    this.cache.set(key, {
-      data,
-      expiry: Date.now() + ttl
-    });
-  }
-  get(key) {
-    const entry = this.cache.get(key);
-    if (!entry) return null;
-    if (Date.now() > entry.expiry) {
-      this.cache.delete(key);
-      return null;
-    }
-    return entry.data;
-  }
-  delete(key) {
-    this.cache.delete(key);
-  }
-  clear() {
-    this.cache.clear();
-  }
-  /**
-   * Clears keys starting with a prefix
-   */
-  clearPrefix(prefix) {
-    for (const key of this.cache.keys()) {
-      if (key.startsWith(prefix)) {
-        this.cache.delete(key);
-      }
-    }
-  }
-};
-var globalCache = new SimpleCache(600);
+// src/routes/drinks.ts
+init_cache2();
 
 // src/lib/price-calculator.ts
 init_drizzle_orm();
@@ -80132,11 +80180,19 @@ async function buildDrinkDetail(drinkId) {
           pricingMode: null
         }];
       }
+      let slotResult;
       if (effectiveTypeOptions.length > 0) {
         const typeOptionsWithVolumes = await Promise.all(
           effectiveTypeOptions.map(async (to) => {
             const [ingType] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, to.ingredientTypeId));
             const [category] = ingType ? await db.select().from(ingredientCategoriesTable).where(eq(ingredientCategoriesTable.id, ingType.categoryId)) : [null];
+            let stockQuantity = 999999;
+            if (ingType?.inventoryIngredientId) {
+              const [inv] = await db.select({ stock: ingredientsTable.stockQuantity }).from(ingredientsTable).where(eq(ingredientsTable.id, ingType.inventoryIngredientId));
+              if (inv) stockQuantity = Number(inv.stock);
+            } else if (!ingType) {
+              stockQuantity = 0;
+            }
             const globalTypeVolumes = await db.select().from(ingredientTypeVolumesTable).where(and(eq(ingredientTypeVolumesTable.ingredientTypeId, to.ingredientTypeId), eq(ingredientTypeVolumesTable.isActive, true))).orderBy(asc(ingredientTypeVolumesTable.sortOrder), asc(ingredientTypeVolumesTable.id));
             const [typeDef] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, to.ingredientTypeId));
             const allSlotVols = await db.select().from(drinkSlotVolumesTable).where(eq(drinkSlotVolumesTable.slotId, slot.id));
@@ -80159,11 +80215,14 @@ async function buildDrinkDetail(drinkId) {
                 extraCost: Number(override?.extraCost ?? templateDef?.extraCost ?? tv.extraCost),
                 isDefault: override?.isDefault ?? templateDef?.isDefault ?? tv.isDefault,
                 isEnabled: override?.isEnabled ?? templateDef?.isEnabled ?? true,
+                isAvailable: stockQuantity >= Number(override?.processedQty ?? templateDef?.processedQty ?? tv.processedQty ?? vol?.processedQty ?? 0),
                 sortOrder: override?.sortOrder ?? templateDef?.sortOrder ?? tv.sortOrder,
                 affectsCupSize: typeDef?.affectsCupSize ?? true,
                 hasSlotOverride: !!override
               };
             }).filter((v) => v.isEnabled).sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0) || a.id - b.id);
+            const baseQty = Number(to.processedQty ?? ingType?.processedQty ?? 0);
+            const isAvailable2 = volumes.length > 0 ? volumes.some((v) => stockQuantity >= v.processedQty) : stockQuantity >= baseQty;
             return {
               typeOptionId: to.id,
               ingredientTypeId: to.ingredientTypeId,
@@ -80171,6 +80230,8 @@ async function buildDrinkDetail(drinkId) {
               categoryName: category?.name ?? "",
               isDefault: to.isDefault,
               sortOrder: to.sortOrder,
+              stockQuantity,
+              isAvailable: isAvailable2,
               // Base type overrides
               processedQty: Number(to.processedQty ?? ingType?.processedQty ?? 0),
               producedQty: Number(to.producedQty ?? ingType?.producedQty ?? 0),
@@ -80180,8 +80241,8 @@ async function buildDrinkDetail(drinkId) {
               volumes
             };
           })
-        ).then((options2) => options2.filter((o) => o.typeName !== ""));
-        return {
+        ).then((options) => options.filter((o) => o.typeName !== ""));
+        slotResult = {
           ...effectiveSlot,
           slotStyle: "typed",
           typeOptions: typeOptionsWithVolumes,
@@ -80190,58 +80251,84 @@ async function buildDrinkDetail(drinkId) {
           volumes: typeOptionsWithVolumes[0]?.volumes ?? [],
           ingredientType: null
         };
-      }
-      if (!slot.ingredientId) return { ...effectiveSlot, slotStyle: "legacy", ingredient: null, volumes: [] };
-      const [ingredient] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, slot.ingredientId));
-      const options = await db.select().from(ingredientOptionsTable).where(eq(ingredientOptionsTable.ingredientId, slot.ingredientId)).orderBy(ingredientOptionsTable.sortOrder);
-      const enrichedOptions = await Promise.all(
-        options.map(async (o) => {
-          let linkedIngredient = null;
-          if (o.linkedIngredientId) {
-            const [linked] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, o.linkedIngredientId));
-            if (linked) {
-              const linkedOpts = await db.select().from(ingredientOptionsTable).where(eq(ingredientOptionsTable.ingredientId, o.linkedIngredientId)).orderBy(ingredientOptionsTable.sortOrder);
-              linkedIngredient = {
-                id: linked.id,
-                name: linked.name,
-                options: linkedOpts.map((lo) => ({
-                  ...lo,
-                  processedQty: Number(lo.processedQty),
-                  producedQty: Number(lo.producedQty),
-                  extraCost: Number(lo.extraCost)
-                }))
-              };
+      } else if (slot.ingredientId) {
+        const [ingredient] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, slot.ingredientId));
+        const options = await db.select().from(ingredientOptionsTable).where(eq(ingredientOptionsTable.ingredientId, slot.ingredientId)).orderBy(ingredientOptionsTable.sortOrder);
+        const stock = Number(ingredient?.stockQuantity ?? 0);
+        const enrichedOptions = await Promise.all(
+          options.map(async (o) => {
+            let linkedIngredient = null;
+            if (o.linkedIngredientId) {
+              const [linked] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, o.linkedIngredientId));
+              if (linked) {
+                const linkedOpts = await db.select().from(ingredientOptionsTable).where(eq(ingredientOptionsTable.ingredientId, o.linkedIngredientId)).orderBy(ingredientOptionsTable.sortOrder);
+                linkedIngredient = {
+                  id: linked.id,
+                  name: linked.name,
+                  options: linkedOpts.map((lo) => ({
+                    ...lo,
+                    processedQty: Number(lo.processedQty),
+                    producedQty: Number(lo.producedQty),
+                    extraCost: Number(lo.extraCost)
+                  }))
+                };
+              }
             }
-          }
-          return {
-            ...o,
-            processedQty: Number(o.processedQty),
-            producedQty: Number(o.producedQty),
-            extraCost: Number(o.extraCost),
-            linkedIngredientId: o.linkedIngredientId ?? null,
-            linkedIngredient
-          };
-        })
-      );
-      return {
-        ...effectiveSlot,
-        slotStyle: "legacy",
-        ingredient: ingredient ? {
-          ...ingredient,
-          costPerUnit: Number(ingredient.costPerUnit),
-          stockQuantity: Number(ingredient.stockQuantity),
-          lowStockThreshold: Number(ingredient.lowStockThreshold),
-          options: enrichedOptions
-        } : null,
-        volumes: [],
-        ingredientType: null
-      };
+            const isAvailable2 = stock >= Number(o.processedQty);
+            return {
+              ...o,
+              isAvailable: isAvailable2,
+              processedQty: Number(o.processedQty),
+              producedQty: Number(o.producedQty),
+              extraCost: Number(o.extraCost),
+              linkedIngredientId: o.linkedIngredientId ?? null,
+              linkedIngredient
+            };
+          })
+        );
+        slotResult = {
+          ...effectiveSlot,
+          slotStyle: "legacy",
+          typeOptions: null,
+          ingredient: ingredient ? {
+            ...ingredient,
+            costPerUnit: Number(ingredient.costPerUnit),
+            stockQuantity: Number(ingredient.stockQuantity),
+            lowStockThreshold: Number(ingredient.lowStockThreshold),
+            options: enrichedOptions
+          } : null,
+          volumes: [],
+          ingredientType: null
+        };
+      } else {
+        slotResult = { ...effectiveSlot, slotStyle: "legacy", ingredient: null, volumes: [] };
+      }
+      let isAvailable = true;
+      if (effectiveSlot.isRequired) {
+        if (slotResult.slotStyle === "typed" && slotResult.typeOptions) {
+          isAvailable = slotResult.typeOptions.some((to) => to.isAvailable);
+        } else if (slotResult.ingredient?.options) {
+          isAvailable = slotResult.ingredient.options.some((o) => o.isAvailable);
+        } else if (slotResult.ingredient) {
+          isAvailable = (slotResult.ingredient.stockQuantity ?? 0) > 0;
+        }
+      }
+      return { ...slotResult, isAvailable };
     })
   );
+  let isCupAvailable = true;
+  if (drink.cupIngredientId) {
+    const [cupInv] = await db.select({ stock: ingredientsTable.stockQuantity }).from(ingredientsTable).where(eq(ingredientsTable.id, drink.cupIngredientId));
+    if (cupInv) {
+      isCupAvailable = Number(cupInv.stock) >= 1;
+    }
+  }
+  const isDrinkAvailable = isCupAvailable && slotsWithDetails.every((s) => s.isAvailable);
   const result = {
     ...drink,
     basePrice: Number(drink.basePrice),
-    slots: slotsWithDetails
+    slots: slotsWithDetails,
+    isAvailable: isDrinkAvailable
   };
   globalCache.set(cacheKey, result);
   return result;
@@ -80282,12 +80369,15 @@ router3.get("/drinks", async (req, res) => {
   });
   const drinksWithDetails = await Promise.all(
     filtered.map(async (d) => {
-      if (params.success && params.data.includeSlots) {
-        return await buildDrinkDetail(d.id);
-      }
-      const base = Number(d.basePrice);
+      const detail = await buildDrinkDetail(d.id);
+      if (!detail) return { ...d, basePrice: Number(d.basePrice), defaultPrice: 0, isAvailable: false };
       const defaultPrice = await computeDefaultPrice(d.id);
-      return { ...d, basePrice: base, defaultPrice };
+      return {
+        ...d,
+        basePrice: Number(d.basePrice),
+        defaultPrice,
+        isAvailable: detail.isAvailable
+      };
     })
   );
   res.json(serializeDates(drinksWithDetails));
@@ -80659,6 +80749,7 @@ init_drizzle_orm();
 init_src();
 import fs2 from "fs";
 import path2 from "path";
+init_cache2();
 var router4 = (0, import_express4.Router)();
 function slugify(text2) {
   return text2.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
@@ -80757,6 +80848,8 @@ router4.post("/ingredients/import-csv", async (req, res) => {
     });
     res.json({ message: "Import completed successfully" });
     globalCache.clear();
+    const { broadcastEvent: broadcastEvent2 } = await Promise.resolve().then(() => (init_sse(), sse_exports));
+    broadcastEvent2("inventory_updated", { type: "import" });
   } catch (err) {
     console.error("Import failed:", err);
     res.status(500).json({ error: err.message });
@@ -81013,37 +81106,16 @@ router4.post("/ingredients/:id/restock", async (req, res) => {
       lowStockThreshold: parseFloat(updated.lowStockThreshold)
     }))
   );
+  globalCache.clear();
+  const { broadcastEvent: broadcastEvent2 } = await Promise.resolve().then(() => (init_sse(), sse_exports));
+  broadcastEvent2("inventory_updated", { ingredientId: params.data.id });
 });
 var ingredients_default = router4;
 
 // src/routes/orders.ts
 var import_express5 = __toESM(require_express2(), 1);
 init_drizzle_orm();
-
-// src/lib/sse.ts
-var clients = /* @__PURE__ */ new Set();
-function addSseClient(res) {
-  const client = { id: Math.random().toString(36).slice(2), res };
-  clients.add(client);
-  res.on("close", () => clients.delete(client));
-  return client;
-}
-function broadcastEvent(event, data = {}) {
-  const payload = `event: ${event}
-data: ${JSON.stringify(data)}
-
-`;
-  for (const client of clients) {
-    try {
-      client.res.write(payload);
-    } catch {
-      clients.delete(client);
-    }
-  }
-}
-setInterval(() => broadcastEvent("heartbeat", { ts: Date.now() }), 2e4);
-
-// src/routes/orders.ts
+init_sse();
 init_src();
 var router5 = (0, import_express5.Router)();
 async function generateOrderNumber() {
@@ -81326,6 +81398,9 @@ router5.post("/orders", async (req, res) => {
   });
   const [barista] = await db.select().from(usersTable).where(eq(usersTable.id, order.baristaId));
   broadcastEvent("order_created", { orderId: order.id, orderNumber: order.orderNumber });
+  const { globalCache: globalCache2 } = await Promise.resolve().then(() => (init_cache2(), cache_exports));
+  globalCache2.clear();
+  broadcastEvent("inventory_updated", { orderId: order.id });
   res.status(201).json(
     GetOrderResponse2.parse(
       serializeDates({
@@ -81540,6 +81615,10 @@ router6.post("/stock/adjustments", async (req, res) => {
     quantityAfter: parseFloat(movement.quantityAfter),
     orderId: movement.orderId ?? null
   });
+  const { globalCache: globalCache2 } = await Promise.resolve().then(() => (init_cache2(), cache_exports));
+  globalCache2.clear();
+  const { broadcastEvent: broadcastEvent2 } = await Promise.resolve().then(() => (init_sse(), sse_exports));
+  broadcastEvent2("inventory_updated", { ingredientId: parsed.data.ingredientId });
 });
 var stock_default = router6;
 
@@ -81752,6 +81831,7 @@ var dashboard_default = router7;
 var import_express8 = __toESM(require_express2(), 1);
 init_drizzle_orm();
 init_src();
+init_cache2();
 var router8 = (0, import_express8.Router)();
 router8.get("/catalog/categories", async (_req, res) => {
   const rows = await db.select().from(ingredientCategoriesTable).orderBy(asc(ingredientCategoriesTable.sortOrder), asc(ingredientCategoriesTable.name));
@@ -83078,6 +83158,7 @@ adminRouter.post("/admin/backup", requirePermission("admin:manage_permissions"),
 var admin_default = adminRouter;
 
 // src/routes/index.ts
+init_sse();
 var router16 = (0, import_express18.Router)();
 router16.use(health_default);
 router16.use(auth_default);
