@@ -15,6 +15,7 @@ import {
   drinkSlotVolumesTable,
   drinksTable,
 } from "@workspace/db";
+import { globalCache } from "../lib/cache";
 
 const router: IRouter = Router();
 
@@ -29,6 +30,7 @@ router.post("/catalog/categories", async (req, res): Promise<void> => {
   const { name, sortOrder } = req.body;
   if (!name) { res.status(400).json({ error: "name required" }); return; }
   const [row] = await db.insert(ingredientCategoriesTable).values({ name, sortOrder: sortOrder ?? 0 }).returning();
+  globalCache.clear();
   res.status(201).json(row);
 });
 
@@ -37,6 +39,7 @@ router.patch("/catalog/categories/:id", async (req, res): Promise<void> => {
   const { name, sortOrder } = req.body;
   const [row] = await db.update(ingredientCategoriesTable).set({ ...(name && { name }), ...(sortOrder !== undefined && { sortOrder }) }).where(eq(ingredientCategoriesTable.id, id)).returning();
   if (!row) { res.status(404).json({ error: "Not found" }); return; }
+  globalCache.clear();
   res.json(row);
 });
 
@@ -44,6 +47,7 @@ router.delete("/catalog/categories/:id", async (req, res): Promise<void> => {
   const id = parseInt(req.params.id);
   try {
     await db.delete(ingredientCategoriesTable).where(eq(ingredientCategoriesTable.id, id));
+    globalCache.clear();
     res.sendStatus(204);
   } catch (error: any) {
     const isForeignKeyError = error.code === "23503" || error.cause?.code === "23503";
@@ -131,6 +135,7 @@ router.post("/catalog/types", async (req, res): Promise<void> => {
     extraCost: extraCost ?? "0",
     pricingMode: pricingMode ?? "volume"
   }).returning();
+  globalCache.clear();
   res.status(201).json(row);
 });
 
@@ -160,6 +165,7 @@ router.patch("/catalog/types/:id", async (req, res): Promise<void> => {
   try {
     const [row] = await db.update(ingredientTypesTable).set(patch).where(eq(ingredientTypesTable.id, id)).returning();
     if (!row) { res.status(404).json({ error: "Not found" }); return; }
+    globalCache.clear();
     res.json(row);
   } catch (err: any) {
     console.error("Update Type Error:", err);
@@ -171,6 +177,7 @@ router.delete("/catalog/types/:id", async (req, res): Promise<void> => {
   const id = parseInt(req.params.id);
   try {
     await db.delete(ingredientTypesTable).where(eq(ingredientTypesTable.id, id));
+    globalCache.clear();
     res.sendStatus(204);
   } catch (error: any) {
     const isForeignKeyError = error.code === "23503" || error.cause?.code === "23503";
@@ -219,6 +226,7 @@ router.post("/catalog/types/:id/volumes", async (req, res): Promise<void> => {
     sortOrder: sortOrder ?? 0,
     isActive: true,
   }).returning();
+  globalCache.clear();
   res.status(201).json(row);
 });
 
@@ -235,11 +243,13 @@ router.patch("/catalog/type-volumes/:id", async (req, res): Promise<void> => {
   if (isActive !== undefined) patch.isActive = isActive;
   const [row] = await db.update(ingredientTypeVolumesTable).set(patch).where(eq(ingredientTypeVolumesTable.id, id)).returning();
   if (!row) { res.status(404).json({ error: "Not found" }); return; }
+  globalCache.clear();
   res.json(row);
 });
 
 router.delete("/catalog/type-volumes/:id", async (req, res): Promise<void> => {
   await db.delete(ingredientTypeVolumesTable).where(eq(ingredientTypeVolumesTable.id, parseInt(req.params.id)));
+  globalCache.clear();
   res.sendStatus(204);
 });
 

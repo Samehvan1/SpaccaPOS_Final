@@ -1,4 +1,4 @@
-import { pgTable, serial, text, numeric, boolean, integer, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, numeric, boolean, integer, timestamp, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { ingredientsTable, ingredientOptionsTable, ingredientTypesTable, ingredientTypeVolumesTable } from "./ingredients";
@@ -36,6 +36,11 @@ export const drinksTable = pgTable("drinks", {
   kitchenStation: text("kitchen_station").notNull().default("main"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
+}, (table) => {
+  return {
+    categoryIdIdx: index("drinks_category_id_idx").on(table.categoryId),
+    isActiveIdx: index("drinks_is_active_idx").on(table.isActive),
+  };
 });
 
 export const drinkIngredientSlotsTable = pgTable("drink_ingredient_slots", {
@@ -57,6 +62,10 @@ export const drinkIngredientSlotsTable = pgTable("drink_ingredient_slots", {
   predefinedSlotId: integer("predefined_slot_id"), // Added for templates support
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
+}, (table) => {
+  return {
+    drinkIdIdx: index("drink_ingredient_slots_drink_id_idx").on(table.drinkId),
+  };
 });
 
 /**
@@ -76,6 +85,10 @@ export const drinkSlotTypeOptionsTable = pgTable("drink_slot_type_options", {
   unit: text("unit"),
   extraCost: numeric("extra_cost", { precision: 8, scale: 4 }),
   pricingMode: text("pricing_mode", { enum: ["volume", "unit"] }),
+}, (table) => {
+  return {
+    slotIdIdx: index("drink_slot_type_options_slot_id_idx").on(table.slotId),
+  };
 });
 
 /**
@@ -95,6 +108,10 @@ export const drinkSlotVolumesTable = pgTable("drink_slot_volumes", {
   isDefault: boolean("is_default").notNull().default(false),
   isEnabled: boolean("is_enabled").notNull().default(true),
   sortOrder: integer("sort_order").notNull().default(0),
+}, (table) => {
+  return {
+    slotIdIdx: index("drink_slot_volumes_slot_id_idx").on(table.slotId),
+  };
 });
 
 export const predefinedSlotsTable = pgTable("predefined_slots", {

@@ -57,10 +57,12 @@ router.get("/dashboard/summary", async (_req, res): Promise<void> => {
     (o) => o.status === "pending" || o.status === "in_progress"
   ).length;
 
-  const allIngredients = await db.select().from(ingredientsTable);
-  const lowStockCount = allIngredients.filter(
-    (i) => parseFloat(i.stockQuantity) < parseFloat(i.lowStockThreshold)
-  ).length;
+  const lowStockResult = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(ingredientsTable)
+    .where(sql`${ingredientsTable.stockQuantity} < ${ingredientsTable.lowStockThreshold}`);
+  
+  const lowStockCount = Number(lowStockResult[0]?.count || 0);
 
   res.json(
     GetDashboardSummaryResponse.parse({
@@ -88,57 +90,67 @@ router.get("/dashboard/active-orders", async (req, res): Promise<void> => {
     .where(inArray(ordersTable.status, statusList as any))
     .orderBy(ordersTable.createdAt);
 
+  if (activeOrders.length === 0) {
+    res.json(GetActiveOrdersResponse.parse([]));
+    return;
+  }
+
+  const orderIds = activeOrders.map(o => o.id);
+  
+  // Batch fetch items and customizations
+  const allItems = await db
+    .select()
+    .from(orderItemsTable)
+    .where(inArray(orderItemsTable.orderId, orderIds));
+    
+  const itemIds = allItems.map(i => i.id);
+  const allCustomizations = itemIds.length > 0
+    ? await db
+        .select()
+        .from(orderItemCustomizationsTable)
+        .where(inArray(orderItemCustomizationsTable.orderItemId, itemIds))
+    : [];
+
   const allUsers = await db.select().from(usersTable);
   const userMap = Object.fromEntries(allUsers.map((u) => [u.id, u.name]));
 
-  const ordersWithDetails = await Promise.all(
-    activeOrders.map(async (order) => {
-      const items = await db
-        .select()
-        .from(orderItemsTable)
-        .where(eq(orderItemsTable.orderId, order.id));
+  // Group items and customizations by parent ID
+  const customizationsByItemId = allCustomizations.reduce((acc, c) => {
+    if (!acc[c.orderItemId]) acc[c.orderItemId] = [];
+    acc[c.orderItemId].push({
+      ...c,
+      consumedQty: parseFloat(c.consumedQty),
+      producedQty: parseFloat(c.producedQty),
+      addedCost: parseFloat(c.addedCost),
+    });
+    return acc;
+  }, {} as Record<number, any[]>);
 
-      const itemsWithCustomizations = await Promise.all(
-        items.map(async (item) => {
-          const customizations = await db
-            .select()
-            .from(orderItemCustomizationsTable)
-            .where(eq(orderItemCustomizationsTable.orderItemId, item.id));
+  const itemsByOrderId = allItems.reduce((acc, i) => {
+    if (!acc[i.orderId]) acc[i.orderId] = [];
+    acc[i.orderId].push({
+      ...i,
+      status: i.status as "pending" | "ready",
+      kitchenStation: i.kitchenStation || "main",
+      unitPrice: parseFloat(i.unitPrice),
+      lineTotal: parseFloat(i.lineTotal),
+      customizations: customizationsByItemId[i.id] ?? [],
+    });
+    return acc;
+  }, {} as Record<number, any[]>);
 
-          // Debug kitchenStation directly from DB
-          console.log(`Item ID: ${item.id}, DB kitchenStation:`, (item as any).kitchenStation);
-
-          return {
-            ...item,
-            status: item.status as "pending" | "ready",
-            kitchenStation: item.kitchenStation || "main",
-            unitPrice: parseFloat(item.unitPrice),
-            lineTotal: parseFloat(item.lineTotal),
-            customizations: customizations.map((c) => ({
-              ...c,
-              consumedQty: parseFloat(c.consumedQty),
-              producedQty: parseFloat(c.producedQty),
-              addedCost: parseFloat(c.addedCost),
-              baristaSortOrder: c.baristaSortOrder,
-            })),
-          };
-        })
-      );
-
-      return {
-        ...order,
-        baristaName: userMap[order.baristaId] ?? "Unknown",
-        subtotal: parseFloat(order.subtotal),
-        discount: parseFloat(order.discount),
-        discountValue: order.discountValue ? parseFloat(order.discountValue) : null,
-        discountType: order.discountType as "percentage" | "fixed" | null,
-        total: parseFloat(order.total),
-        amountTendered: order.amountTendered ? parseFloat(order.amountTendered) : null,
-        changeDue: order.changeDue ? parseFloat(order.changeDue) : null,
-        items: itemsWithCustomizations,
-      };
-    })
-  );
+  const ordersWithDetails = activeOrders.map(order => ({
+    ...order,
+    baristaName: userMap[order.baristaId] ?? "Unknown",
+    subtotal: parseFloat(order.subtotal),
+    discount: parseFloat(order.discount),
+    discountValue: order.discountValue ? parseFloat(order.discountValue) : null,
+    discountType: order.discountType as "percentage" | "fixed" | null,
+    total: parseFloat(order.total),
+    amountTendered: order.amountTendered ? parseFloat(order.amountTendered) : null,
+    changeDue: order.changeDue ? parseFloat(order.changeDue) : null,
+    items: itemsByOrderId[order.id] ?? [],
+  }));
 
   res.json(GetActiveOrdersResponse.parse(serializeDates(ordersWithDetails)));
 });

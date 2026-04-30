@@ -1,4 +1,4 @@
-import { pgTable, serial, text, numeric, integer, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, numeric, integer, timestamp, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { usersTable } from "./users";
@@ -32,6 +32,11 @@ export const ordersTable = pgTable("orders", {
   cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
+}, (table) => {
+  return {
+    createdAtIdx: index("orders_created_at_idx").on(table.createdAt),
+    statusIdx: index("orders_status_idx").on(table.status),
+  };
 });
 
 export const orderItemsTable = pgTable("order_items", {
@@ -48,6 +53,10 @@ export const orderItemsTable = pgTable("order_items", {
   readyAt: timestamp("ready_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
+}, (table) => {
+  return {
+    orderIdIdx: index("order_items_order_id_idx").on(table.orderId),
+  };
 });
 
 export const orderItemCustomizationsTable = pgTable("order_item_customizations", {
@@ -64,6 +73,10 @@ export const orderItemCustomizationsTable = pgTable("order_item_customizations",
   baristaSortOrder: integer("barista_sort_order").notNull().default(1),
   customerSortOrder: integer("customer_sort_order").notNull().default(1),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => {
+  return {
+    orderItemIdIdx: index("order_item_customizations_item_id_idx").on(table.orderItemId),
+  };
 });
 
 export const insertOrderSchema = createInsertSchema(ordersTable).omit({ id: true, createdAt: true, updatedAt: true });

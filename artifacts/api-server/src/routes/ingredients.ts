@@ -4,6 +4,7 @@ import path from "path";
 import { eq, and, sql } from "drizzle-orm";
 import { db, ingredientsTable, ingredientOptionsTable, stockMovementsTable, ingredientTypesTable, drinkIngredientSlotsTable, drinksTable, orderItemCustomizationsTable, orderItemsTable, ordersTable, usersTable } from "@workspace/db";
 import { serializeDates } from "../lib/serialize";
+import { globalCache } from "../lib/cache";
 import {
   ListIngredientsQueryParams,
   ListIngredientsResponse,
@@ -147,6 +148,7 @@ router.post("/ingredients/import-csv", async (req, res): Promise<void> => {
     });
 
     res.json({ message: "Import completed successfully" });
+    globalCache.clear();
   } catch (err: any) {
     console.error("Import failed:", err);
     res.status(500).json({ error: err.message });
@@ -223,6 +225,7 @@ router.post("/ingredients", async (req, res): Promise<void> => {
       lowStockThreshold: parseFloat(ingredient.lowStockThreshold),
     }))
   );
+  globalCache.clear();
 });
 
 router.get("/ingredients/:id", async (req, res): Promise<void> => {
@@ -285,6 +288,7 @@ router.patch("/ingredients/:id", async (req, res): Promise<void> => {
       lowStockThreshold: parseFloat(ingredient.lowStockThreshold),
     }))
   );
+  globalCache.clear();
 });
 
 router.delete("/ingredients/:id", async (req, res): Promise<void> => {
@@ -321,6 +325,7 @@ router.delete("/ingredients/:id", async (req, res): Promise<void> => {
     }
 
     res.sendStatus(204);
+    globalCache.clear();
   } catch (err: any) {
     res.status(400).json({ error: "Cannot delete ingredient because it is in use by historical orders." });
   }
@@ -360,6 +365,7 @@ router.post("/ingredients/:id/options", async (req, res): Promise<void> => {
     producedQty: parseFloat(option.producedQty),
     extraCost: parseFloat(option.extraCost),
   });
+  globalCache.clear();
 });
 
 router.patch("/ingredients/:id/options/:optionId", async (req, res): Promise<void> => {
@@ -404,6 +410,7 @@ router.patch("/ingredients/:id/options/:optionId", async (req, res): Promise<voi
     producedQty: parseFloat(option.producedQty),
     extraCost: parseFloat(option.extraCost),
   });
+  globalCache.clear();
 });
 
 router.delete("/ingredients/:id/options/:optionId", async (req, res): Promise<void> => {
@@ -429,6 +436,7 @@ router.delete("/ingredients/:id/options/:optionId", async (req, res): Promise<vo
   }
 
   res.sendStatus(204);
+  globalCache.clear();
 });
 
 router.post("/ingredients/:id/restock", async (req, res): Promise<void> => {

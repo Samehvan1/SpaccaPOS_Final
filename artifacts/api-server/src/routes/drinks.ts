@@ -21,6 +21,7 @@ import {
   predefinedSlotVolumesTable,
 } from "@workspace/db";
 import { serializeDates } from "../lib/serialize";
+import { globalCache } from "../lib/cache";
 
 // ── Image upload: store in <cwd>/uploads/ ────────────────────────────────────
 const uploadsDir = path.join(process.cwd(), "uploads");
@@ -53,6 +54,10 @@ import {
 const router: IRouter = Router();
 
 async function buildDrinkDetail(drinkId: number) {
+  const cacheKey = `drink_detail_${drinkId}`;
+  const cached = globalCache.get<any>(cacheKey);
+  if (cached) return cached;
+
   const [drink] = await db.select().from(drinksTable).where(eq(drinksTable.id, drinkId));
   if (!drink) return null;
 
@@ -294,16 +299,24 @@ async function buildDrinkDetail(drinkId: number) {
     })
   );
 
-  return {
+  const result = {
     ...drink,
     basePrice: Number(drink.basePrice),
     slots: slotsWithDetails,
   };
+  
+  globalCache.set(cacheKey, result);
+  return result;
 }
 
 async function computeDefaultPrice(drinkId: number): Promise<number> {
+  const cacheKey = `drink_default_price_${drinkId}`;
+  const cached = globalCache.get<number>(cacheKey);
+  if (cached !== null) return cached;
+
   try {
     const data = await calculateDrinkData(drinkId, []);
+    globalCache.set(cacheKey, data.totalPrice);
     return data.totalPrice;
   } catch (error) {
     console.error(`Error computing default price for drink ${drinkId}:`, error);
@@ -465,6 +478,10 @@ router.patch("/drinks/:id", async (req, res): Promise<void> => {
 
   const [drink] = await db.update(drinksTable).set(updateData).where(eq(drinksTable.id, params.data.id)).returning();
   if (!drink) { res.status(404).json({ error: "Drink not found" }); return; }
+
+  // Invalidate cache
+  globalCache.delete(`drink_detail_${params.data.id}`);
+  globalCache.delete(`drink_default_price_${params.data.id}`);
 
   res.json(UpdateDrinkResponse.parse(serializeDates({ ...drink, basePrice: Number(drink.basePrice) })));
 });
@@ -693,6 +710,11 @@ router.put("/drinks/:id/slots", async (req, res): Promise<void> => {
 
   const detail = await buildDrinkDetail(drinkId);
   if (!detail) { res.status(404).json({ error: "Drink not found" }); return; }
+  
+  // Invalidate cache
+  globalCache.delete(`drink_detail_${drinkId}`);
+  globalCache.delete(`drink_default_price_${drinkId}`);
+  
   res.json(serializeDates(detail));
 });
 
