@@ -6,7 +6,8 @@ import { exec } from "child_process";
 
 import app from "./app";
 import { logger } from "./lib/logger";
-import { seedIfEmpty, runMigrations } from "@workspace/db";
+import { runMigrations } from "@workspace/db";
+import { seedIfEmpty } from "./lib/seed";
 
 const rawPort = process.env["PORT"];
 
