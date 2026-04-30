@@ -1,5 +1,6 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
+import fs from "fs";
 import * as schema from "./schema";
 
 const { Pool } = pg;
@@ -19,10 +20,23 @@ import { fileURLToPath } from "url";
 
 export async function runMigrations(migrationsPath?: string) {
   const currentDir = path.dirname(fileURLToPath(import.meta.url));
-  const folder = migrationsPath ?? path.resolve(currentDir, "../migrations");
-  console.log(`[db] Running migrations from: ${folder}`);
+  
+  // Try sibling migrations (dev) or child migrations (prod/dist)
+  let folder = migrationsPath ?? path.resolve(currentDir, "../migrations");
+  
+  if (!fs.existsSync(folder)) {
+    folder = path.resolve(currentDir, "./migrations");
+  }
+
+  console.log(`[db] Checking migrations at: ${folder}`);
+  
+  if (!fs.existsSync(folder)) {
+    console.warn(`[db] Migrations folder not found at ${folder}. Skipping.`);
+    return;
+  }
+
   await migrate(db, { migrationsFolder: folder });
-  console.log("[db] Migrations completed");
+  console.log("[db] Migrations completed successfully");
 }
 
 export * from "./schema";

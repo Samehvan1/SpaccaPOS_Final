@@ -23,23 +23,25 @@ if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
 
-app.listen(port, (err) => {
-  if (err) {
-    logger.error({ err }, "Error listening on port");
-    process.exit(1);
-  }
+// Ensure migrations run before server starts accepting requests
+runMigrations()
+  .then(() => seedIfEmpty())
+  .then(() => {
+    app.listen(port, (err) => {
+      if (err) {
+        logger.error({ err }, "Error listening on port");
+        process.exit(1);
+      }
 
-  logger.info({ port }, "Server listening");
-
-  runMigrations()
-    .then(() => seedIfEmpty())
-    .then(async () => {
-
-      // Auto-migration for ingredient volumes removed to allow persistence of deactivated states
+      logger.info({ port }, "Server listening");
       setupAutoBackup();
-    })
-    .catch((e) => logger.error({ err: e }, "Seed or migration failed"));
-});
+    });
+  })
+  .catch((e) => {
+    logger.error({ err: e }, "Critical startup error: Migration or Seed failed");
+    process.exit(1);
+  });
+
 
 function setupAutoBackup() {
   const performBackup = () => {
