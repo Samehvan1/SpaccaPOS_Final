@@ -660,7 +660,7 @@ export default function PosTerminal() {
                 {cart.map(item => (
                   <div key={item.id} className="p-3 border rounded-lg bg-background shadow-sm">
                     <div className="flex justify-between items-start mb-1.5">
-                      <span className="font-bold text-sm leading-tight pr-2 uppercase">{item.drinkName}</span>
+                      <span className="font-bold text-sm leading-tight pr-2 capitalize">{item.drinkName}</span>
                       <span className="font-bold text-sm shrink-0">{fmt(item.totalPrice * item.quantity)}</span>
                     </div>
                     <div className="text-xs text-muted-foreground space-y-0.5 mb-2">
@@ -720,7 +720,7 @@ export default function PosTerminal() {
         <DialogContent className="sm:max-w-[420px] max-h-[85vh] flex flex-col p-0 gap-0">
           <DialogHeader className="px-5 pt-5 pb-5 border-b shrink-0 flex-row items-center gap-4">
             <div className="flex-1 min-w-0 pb-1">
-              <DialogTitle className="text-xl truncate mb-1 uppercase">{activeDrink?.name}</DialogTitle>
+              <DialogTitle className="text-xl truncate mb-1 capitalize">{activeDrink?.name}</DialogTitle>
               {drinkDetail?.description && (
                 <p className="text-[11px] text-muted-foreground line-clamp-2 mb-2 leading-tight">
                   {drinkDetail.description}
@@ -1136,7 +1136,7 @@ function DrinkCard({ drink, onClick }: { drink: Drink; onClick: () => void }) {
       </div>
       {/* Two-line label */}
       <div className="flex flex-col items-center px-2 py-1.5 border-t bg-slate-100/5 shrink-0">
-        <span className="font-semibold text-[10px] sm:text-xs leading-tight line-clamp-2 w-full text-center uppercase">{drink.name}</span>
+        <span className="font-semibold text-[10px] sm:text-xs leading-tight line-clamp-2 w-full text-center capitalize">{drink.name}</span>
         <span className="text-[10px] sm:text-xs text-primary font-bold leading-tight">{fmt((drink as any).defaultPrice ?? drink.basePrice)}</span>
       </div>
     </button>

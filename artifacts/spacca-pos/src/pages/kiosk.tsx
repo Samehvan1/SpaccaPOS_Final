@@ -345,7 +345,7 @@ export default function KioskPage() {
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                     <div className="absolute bottom-6 left-6 text-left">
                        <p className="text-white/60 font-black text-[10px] uppercase tracking-[0.2em]">{(drink as any).category}</p>
-                       <h3 className="text-white font-black text-xl uppercase italic leading-none">{drink.name}</h3>
+                       <h3 className="text-white font-black text-xl capitalize italic leading-none">{drink.name}</h3>
                     </div>
                     <div className="absolute top-4 right-4 bg-primary text-white font-black px-3 py-1 rounded-full text-sm shadow-xl italic">
                        {fmt((drink as any).defaultPrice || drink.basePrice)}
@@ -385,7 +385,7 @@ export default function KioskPage() {
              <div className="flex flex-col items-center text-center">
                <div className="w-full flex justify-between items-start mb-6">
                  <div className="text-left">
-                   <DialogTitle className="text-4xl font-black uppercase italic tracking-tighter mb-1">{activeDrink?.name}</DialogTitle>
+                   <DialogTitle className="text-3xl font-black capitalize italic tracking-tighter mb-2">{activeDrink?.name}</DialogTitle>
                    <div className="text-3xl font-black text-primary italic">{fmt(displayPrice)}</div>
                  </div>
                  <button onClick={() => setIsCustomizing(false)} className="w-12 h-12 bg-muted rounded-full flex items-center justify-center">
@@ -490,7 +490,7 @@ export default function KioskPage() {
                        {item.image && <img src={item.image} className="w-full h-full object-cover" />}
                     </div>
                     <div className="flex-1">
-                      <h4 className="font-black uppercase text-base tracking-tight italic">{item.drinkName}</h4>
+                      <h4 className="font-black capitalize text-base tracking-tight italic">{item.drinkName}</h4>
                       <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest mb-1">
                         {item.selections.map((s: any) => s.optionLabel).join(" · ")}
                       </div>
