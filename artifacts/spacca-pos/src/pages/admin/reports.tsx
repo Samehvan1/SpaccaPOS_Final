@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useGetDashboardSummary, useGetSalesByCategory, useGetTopDrinks, useListOrders, useGetDrink, useListDrinks } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,6 +15,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { 
   ArrowLeft, BarChart2, TrendingUp, Coffee, Receipt, 
   Banknote, Medal, Calendar, ChevronLeft, ChevronRight,
@@ -52,12 +54,15 @@ const STATUS_COLORS: Record<string, string> = {
   cancelled: "bg-red-100 text-red-800",
 };
 
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "/api";
+
 export default function ReportsPage() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [period, setPeriod] = useState(PERIODS[1]);
   const [drinksView, setDrinksView] = useState<"grouped" | "individual">("grouped");
   const [showCustomizedOnly, setShowCustomizedOnly] = useState(false);
   const [selectedCustomizedItem, setSelectedCustomizedItem] = useState<any>(null);
+  const [isDailyGrouped, setIsDailyGrouped] = useState(false);
 
   // Fetch all drinks with slots for precise customization detection in the list
   const { data: allDrinksCatalog } = useListDrinks({ includeSlots: true } as any);
@@ -134,6 +139,17 @@ export default function ReportsPage() {
   const reportTotalOrders = reportSummary?.reduce((s, c) => s + c.totalOrders, 0) ?? 0;
   const reportTotalDrinks = reportSummary?.reduce((s, c) => s + c.totalDrinks, 0) ?? 0;
   const reportAvgOrder = reportTotalOrders > 0 ? reportTotalRevenue / reportTotalOrders : 0;
+
+  // Daily Summary Query
+  const { data: dailySummary, isLoading: loadingDailySummary } = useQuery({
+    queryKey: ["sales-by-day", reportStartDate, reportEndDate],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/dashboard/sales-by-day?startDate=${reportStartDate}&endDate=${reportEndDate}`);
+      if (!res.ok) throw new Error("Failed to fetch daily summary");
+      return res.json();
+    },
+    enabled: activeTab === "sales" && isDailyGrouped,
+  });
 
   // Drinks Report Processing
   const drinkItems = useMemo(() => {
@@ -339,7 +355,19 @@ export default function ReportsPage() {
                       className="bg-background w-full md:w-48"
                     />
                   </div>
-                  <div className="md:ml-auto flex items-center gap-2">
+                  <div className="md:ml-auto flex items-center gap-3 bg-background/50 px-4 py-2 rounded-xl border border-primary/10 shadow-sm">
+                    {activeTab === "sales" && (
+                      <>
+                        <Label htmlFor="daily-summary" className="text-xs font-bold uppercase tracking-wider text-muted-foreground cursor-pointer">
+                          Collect by Day
+                        </Label>
+                        <Switch 
+                          id="daily-summary"
+                          checked={isDailyGrouped}
+                          onCheckedChange={setIsDailyGrouped}
+                        />
+                      </>
+                    )}
                   </div>
                 </div>
               </CardContent>
@@ -634,7 +662,7 @@ export default function ReportsPage() {
           <Card className="border-none shadow-xl bg-card/50 backdrop-blur-sm overflow-hidden">
             <CardHeader className="flex flex-row items-center justify-between">
               <div className="flex items-center gap-4">
-                <CardTitle>Sales Transaction Log</CardTitle>
+                <CardTitle>{isDailyGrouped ? "Daily Sales Summary" : "Sales Transaction Log"}</CardTitle>
                 <Button 
                   variant="outline" 
                   size="sm"
@@ -645,137 +673,191 @@ export default function ReportsPage() {
                   <Download className="h-4 w-4" /> Export Sales
                 </Button>
               </div>
-              <div className="flex items-center gap-2">
-                <Button 
-                  variant="outline" 
-                  size="icon" 
-                  onClick={() => setReportPage(p => Math.max(1, p - 1))}
-                  disabled={reportPage === 1 || loadingReportOrders}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <span className="text-sm font-medium">Page {reportPage}</span>
-                <Button 
-                  variant="outline" 
-                  size="icon" 
-                  onClick={() => setReportPage(p => p + 1)}
-                  disabled={!reportOrders || reportOrders.length < rowsPerPage || loadingReportOrders}
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
+              {!isDailyGrouped && (
+                <div className="flex items-center gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="icon" 
+                    onClick={() => setReportPage(p => Math.max(1, p - 1))}
+                    disabled={reportPage === 1 || loadingReportOrders}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <span className="text-sm font-medium">Page {reportPage}</span>
+                  <Button 
+                    variant="outline" 
+                    size="icon" 
+                    onClick={() => setReportPage(p => p + 1)}
+                    disabled={!reportOrders || reportOrders.length < rowsPerPage || loadingReportOrders}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
             </CardHeader>
             <CardContent>
-              <div className="rounded-md border overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-muted/50">
-                      <TableHead className="font-bold">OrderID</TableHead>
-                      <TableHead className="font-bold">Date</TableHead>
-                      <TableHead className="font-bold">Time</TableHead>
-                      <TableHead className="font-bold">Order #</TableHead>
-                      <TableHead className="font-bold">Coupon</TableHead>
-                      <TableHead className="text-right font-bold whitespace-nowrap">Total Price (Gross)</TableHead>
-                      <TableHead className="text-right font-bold whitespace-nowrap">Before Tax (Net)</TableHead>
-                      <TableHead className="text-right font-bold">Tax amount</TableHead>
-                      <TableHead className="text-right font-bold">Discount (%)</TableHead>
-                      <TableHead className="text-right font-bold whitespace-nowrap">Discount amount</TableHead>
-                      <TableHead className="text-right font-bold whitespace-nowrap">SubTotal Price</TableHead>
-                      <TableHead className="text-right font-bold">Final Price</TableHead>
-                      <TableHead className="font-bold">Status</TableHead>
-                      <TableHead className="font-bold whitespace-nowrap">Payment Method</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {loadingReportOrders ? (
-                      <TableRow>
-                        <TableCell colSpan={12} className="text-center py-20">
-                          <div className="flex flex-col items-center gap-2">
-                            <BarChart2 className="h-8 w-8 text-primary animate-pulse" />
-                            <span className="text-muted-foreground font-medium">Generating report...</span>
-                          </div>
-                        </TableCell>
+              {isDailyGrouped ? (
+                <div className="rounded-md border overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/50">
+                        <TableHead className="font-bold">Date</TableHead>
+                        <TableHead className="text-right font-bold">Orders</TableHead>
+                        <TableHead className="text-right font-bold whitespace-nowrap">Gross Revenue</TableHead>
+                        <TableHead className="text-right font-bold whitespace-nowrap">Before Tax (Net)</TableHead>
+                        <TableHead className="text-right font-bold">Tax Amount</TableHead>
+                        <TableHead className="text-right font-bold">Total Discounts</TableHead>
+                        <TableHead className="text-right font-bold whitespace-nowrap">SubTotal Price</TableHead>
+                        <TableHead className="text-right font-bold">Final Price</TableHead>
                       </TableRow>
-                    ) : !reportOrders || reportOrders.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={12} className="text-center py-20 text-muted-foreground font-medium">
-                          No transactions found for the selected range.
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      reportOrders.map(order => {
-                        // User's requested calculations
-                        const totalPrice = order.subtotal; // Our DB subtotal is gross before discount
-                        const beforeTax = totalPrice / 1.14;
-                        const taxAmount = totalPrice - beforeTax;
-                        const discountAmt = order.discount; // Our DB discount is the amount
-                        
-                        // Percentage calculation (relative to Net/Before Tax as per their formula)
-                        const discountPercent = beforeTax > 0 ? (discountAmt / beforeTax) * 100 : 0;
-                        const subtotalPrice = beforeTax - discountAmt;
-                        const finalPrice = subtotalPrice + taxAmount; // effectively order.total
-
-                        return (
-                          <TableRow key={order.id} className="hover:bg-muted/30">
-                            <TableCell className="font-medium text-muted-foreground">{order.id}</TableCell>
-                            <TableCell className="whitespace-nowrap">{format(new Date(order.createdAt), "yyyy-MM-dd")}</TableCell>
-                            <TableCell>{format(new Date(order.createdAt), "HH:mm")}</TableCell>
-                             <TableCell className="font-mono font-bold">#{order.orderNumber}</TableCell>
-                             <TableCell>
-                               {(order as any).discountId ? (
-                                 <Badge variant="outline" className="font-mono text-[10px] bg-primary/5">
-                                   {(order as any).discountCode || `ID:${(order as any).discountId}`}
-                                 </Badge>
-                               ) : <span className="text-muted-foreground text-xs">—</span>}
-                             </TableCell>
-                            <TableCell className="text-right">{pure(totalPrice)}</TableCell>
-                            <TableCell className="text-right">{pure(beforeTax)}</TableCell>
-                            <TableCell className="text-right text-muted-foreground">{pure(taxAmount)}</TableCell>
-                            <TableCell className="text-right">
-                              {(order as any).discountType === 'percentage' 
-                                ? `${(order as any).discountValue}%` 
-                                : `${discountPercent.toFixed(1)}%`}
-                            </TableCell>
-                            <TableCell className="text-right font-medium text-destructive">-{pure(discountAmt)}</TableCell>
-                            <TableCell className="text-right">{pure(subtotalPrice)}</TableCell>
-                            <TableCell className="text-right font-black text-primary">{pure(finalPrice)}</TableCell>
-                            <TableCell>
-                              <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase whitespace-nowrap ${STATUS_COLORS[order.status] ?? "bg-muted text-muted-foreground"}`}>
-                                {order.status}
-                              </span>
-                            </TableCell>
-                            <TableCell className="capitalize font-medium">{order.paymentMethod}</TableCell>
+                    </TableHeader>
+                    <TableBody>
+                      {loadingDailySummary ? (
+                        <TableRow>
+                          <TableCell colSpan={8} className="text-center py-20">
+                            <div className="flex flex-col items-center gap-2">
+                              <BarChart2 className="h-8 w-8 text-primary animate-pulse" />
+                              <span className="text-muted-foreground font-medium">Summarizing by day...</span>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ) : !dailySummary || dailySummary.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={8} className="text-center py-20 text-muted-foreground font-medium">
+                            No summary data available for the selected range.
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        dailySummary.map((day: any) => (
+                          <TableRow key={day.date} className="hover:bg-muted/30">
+                            <TableCell className="font-bold">{day.date}</TableCell>
+                            <TableCell className="text-right font-medium">{day.orders}</TableCell>
+                            <TableCell className="text-right">{pure(day.net + day.tax)}</TableCell>
+                            <TableCell className="text-right">{pure(day.net)}</TableCell>
+                            <TableCell className="text-right text-muted-foreground">{pure(day.tax)}</TableCell>
+                            <TableCell className="text-right text-destructive">-{pure(day.discount)}</TableCell>
+                            <TableCell className="text-right font-medium">{pure(day.net - day.discount)}</TableCell>
+                            <TableCell className="text-right font-black text-primary">{pure(day.revenue)}</TableCell>
                           </TableRow>
-                        );
-                      })
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              ) : (
+                <div className="rounded-md border overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/50">
+                        <TableHead className="font-bold">OrderID</TableHead>
+                        <TableHead className="font-bold">Date</TableHead>
+                        <TableHead className="font-bold">Time</TableHead>
+                        <TableHead className="font-bold">Order #</TableHead>
+                        <TableHead className="font-bold">Coupon</TableHead>
+                        <TableHead className="text-right font-bold whitespace-nowrap">Total Price (Gross)</TableHead>
+                        <TableHead className="text-right font-bold whitespace-nowrap">Before Tax (Net)</TableHead>
+                        <TableHead className="text-right font-bold">Tax amount</TableHead>
+                        <TableHead className="text-right font-bold">Discount (%)</TableHead>
+                        <TableHead className="text-right font-bold whitespace-nowrap">Discount amount</TableHead>
+                        <TableHead className="text-right font-bold whitespace-nowrap">SubTotal Price</TableHead>
+                        <TableHead className="text-right font-bold">Final Price</TableHead>
+                        <TableHead className="font-bold">Status</TableHead>
+                        <TableHead className="font-bold whitespace-nowrap">Payment Method</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {loadingReportOrders ? (
+                        <TableRow>
+                          <TableCell colSpan={12} className="text-center py-20">
+                            <div className="flex flex-col items-center gap-2">
+                              <BarChart2 className="h-8 w-8 text-primary animate-pulse" />
+                              <span className="text-muted-foreground font-medium">Generating report...</span>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ) : !reportOrders || reportOrders.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={12} className="text-center py-20 text-muted-foreground font-medium">
+                            No transactions found for the selected range.
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        reportOrders.map(order => {
+                          // User's requested calculations
+                          const totalPrice = order.subtotal; // Our DB subtotal is gross before discount
+                          const beforeTax = totalPrice / 1.14;
+                          const taxAmount = totalPrice - beforeTax;
+                          const discountAmt = order.discount; // Our DB discount is the amount
+                          
+                          // Percentage calculation (relative to Net/Before Tax as per their formula)
+                          const discountPercent = beforeTax > 0 ? (discountAmt / beforeTax) * 100 : 0;
+                          const subtotalPrice = beforeTax - discountAmt;
+                          const finalPrice = subtotalPrice + taxAmount; // effectively order.total
+
+                          return (
+                            <TableRow key={order.id} className="hover:bg-muted/30">
+                              <TableCell className="font-medium text-muted-foreground">{order.id}</TableCell>
+                              <TableCell className="whitespace-nowrap">{format(new Date(order.createdAt), "yyyy-MM-dd")}</TableCell>
+                              <TableCell>{format(new Date(order.createdAt), "HH:mm")}</TableCell>
+                               <TableCell className="font-mono font-bold">#{order.orderNumber}</TableCell>
+                               <TableCell>
+                                 {(order as any).discountId ? (
+                                   <Badge variant="outline" className="font-mono text-[10px] bg-primary/5">
+                                     {(order as any).discountCode || `ID:${(order as any).discountId}`}
+                                   </Badge>
+                                 ) : <span className="text-muted-foreground text-xs">—</span>}
+                               </TableCell>
+                              <TableCell className="text-right">{pure(totalPrice)}</TableCell>
+                              <TableCell className="text-right">{pure(beforeTax)}</TableCell>
+                              <TableCell className="text-right text-muted-foreground">{pure(taxAmount)}</TableCell>
+                              <TableCell className="text-right">
+                                {(order as any).discountType === 'percentage' 
+                                  ? `${(order as any).discountValue}%` 
+                                  : `${discountPercent.toFixed(1)}%`}
+                              </TableCell>
+                              <TableCell className="text-right font-medium text-destructive">-{pure(discountAmt)}</TableCell>
+                              <TableCell className="text-right">{pure(subtotalPrice)}</TableCell>
+                              <TableCell className="text-right font-black text-primary">{pure(finalPrice)}</TableCell>
+                              <TableCell>
+                                <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase whitespace-nowrap ${STATUS_COLORS[order.status] ?? "bg-muted text-muted-foreground"}`}>
+                                  {order.status}
+                                </span>
+                              </TableCell>
+                              <TableCell className="capitalize font-medium">{order.paymentMethod}</TableCell>
+                            </TableRow>
+                          );
+                        })
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
               
-              <div className="flex justify-between items-center mt-6">
-                 <p className="text-xs text-muted-foreground">
-                    Calculations based on 14% VAT. Before Tax = Gross / 1.14. Discount applied to Net price.
-                 </p>
-                 <div className="flex items-center gap-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => setReportPage(p => Math.max(1, p - 1))}
-                      disabled={reportPage === 1 || loadingReportOrders}
-                    >
-                      Previous
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => setReportPage(p => p + 1)}
-                      disabled={!reportOrders || reportOrders.length < rowsPerPage || loadingReportOrders}
-                    >
-                      Next
-                    </Button>
-                 </div>
-              </div>
+              {!isDailyGrouped && (
+                <div className="flex justify-between items-center mt-6">
+                   <p className="text-xs text-muted-foreground">
+                      Calculations based on 14% VAT. Before Tax = Gross / 1.14. Discount applied to Net price.
+                   </p>
+                   <div className="flex items-center gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => setReportPage(p => Math.max(1, p - 1))}
+                        disabled={reportPage === 1 || loadingReportOrders}
+                      >
+                        Previous
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => setReportPage(p => p + 1)}
+                        disabled={!reportOrders || reportOrders.length < rowsPerPage || loadingReportOrders}
+                      >
+                        Next
+                      </Button>
+                   </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

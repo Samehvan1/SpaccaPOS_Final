@@ -312,4 +312,59 @@ router.get("/dashboard/top-drinks", async (req, res): Promise<void> => {
   res.json(GetTopDrinksResponse.parse(result));
 });
 
+router.get("/dashboard/sales-by-day", async (req, res): Promise<void> => {
+  const params = GetSalesByCategoryQueryParams.safeParse(req.query);
+  const conditions = [sql`${ordersTable.status} NOT IN ('cancelled', 'refunded')`];
+
+  if (params.success && params.data.startDate) {
+    conditions.push(gte(ordersTable.createdAt, new Date(params.data.startDate)));
+  }
+  if (params.success && params.data.endDate) {
+    const end = new Date(params.data.endDate);
+    end.setHours(23, 59, 59, 999);
+    conditions.push(lte(ordersTable.createdAt, end));
+  }
+
+  // Get orders in range
+  const orders = await db
+    .select({
+      id: ordersTable.id,
+      createdAt: ordersTable.createdAt,
+      subtotal: ordersTable.subtotal,
+      discount: ordersTable.discount,
+      total: ordersTable.total,
+    })
+    .from(ordersTable)
+    .where(and(...conditions))
+    .orderBy(ordersTable.createdAt);
+
+  const dailyStats: Record<string, { 
+    date: string; 
+    orders: number; 
+    revenue: number; 
+    net: number; 
+    tax: number; 
+    discount: number; 
+  }> = {};
+
+  for (const o of orders) {
+    const dateStr = o.createdAt.toISOString().split('T')[0];
+    if (!dailyStats[dateStr]) {
+      dailyStats[dateStr] = { date: dateStr, orders: 0, revenue: 0, net: 0, tax: 0, discount: 0 };
+    }
+    const subtotal = parseFloat(o.subtotal); // Gross
+    const net = subtotal / 1.14;
+    const tax = subtotal - net;
+    const discount = parseFloat(o.discount);
+    
+    dailyStats[dateStr].orders += 1;
+    dailyStats[dateStr].revenue += parseFloat(o.total); // Final collected
+    dailyStats[dateStr].net += net;
+    dailyStats[dateStr].tax += tax;
+    dailyStats[dateStr].discount += discount;
+  }
+
+  res.json(Object.values(dailyStats).sort((a, b) => b.date.localeCompare(a.date)));
+});
+
 export default router;

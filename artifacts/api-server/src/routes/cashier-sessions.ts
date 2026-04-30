@@ -44,11 +44,14 @@ router.post("/cashier/login", async (req, res): Promise<void> => {
     return;
   }
 
+  /* 
   // Close any existing active session for this cashier
+  // Disabled to allow multiple terminals/logins for the same cashier account
   await db
     .update(cashierSessionsTable)
     .set({ endedAt: new Date() })
     .where(and(eq(cashierSessionsTable.cashierId, user.id), isNull(cashierSessionsTable.endedAt)));
+  */
 
   // Create new session
   const [session] = await db
