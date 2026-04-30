@@ -394,16 +394,10 @@ router.get("/drinks", async (req, res): Promise<void> => {
     filtered = drinks.filter((d) => d.category === params.data.category);
   }
 
-  // Sort: by linked category's sortOrder first, then drink's own sortOrder
-  const { drinkCategoriesTable: catTable } = await import("@workspace/db");
-  const allCats = await db.select().from(catTable).orderBy(asc(catTable.sortOrder));
-  const catOrderMap = new Map(allCats.map((c, i) => [c.id, i]));
-
   filtered = [...filtered].sort((a, b) => {
-    const catA = a.categoryId != null ? (catOrderMap.get(a.categoryId) ?? 999) : 999;
-    const catB = b.categoryId != null ? (catOrderMap.get(b.categoryId) ?? 999) : 999;
-    if (catA !== catB) return catA - catB;
-    if ((a.sortOrder ?? 0) !== (b.sortOrder ?? 0)) return (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
+    const sortA = a.sortOrder ?? 0;
+    const sortB = b.sortOrder ?? 0;
+    if (sortA !== sortB) return sortA - sortB;
     return a.name.localeCompare(b.name);
   });
 
