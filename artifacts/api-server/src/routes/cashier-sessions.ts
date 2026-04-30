@@ -45,23 +45,42 @@ router.post("/cashier/login", async (req, res): Promise<void> => {
   }
 
   /* 
-  // Close any existing active session for this cashier
-  // Disabled to allow multiple terminals/logins for the same cashier account
-  await db
-    .update(cashierSessionsTable)
-    .set({ endedAt: new Date() })
-    .where(and(eq(cashierSessionsTable.cashierId, user.id), isNull(cashierSessionsTable.endedAt)));
+  // Reusing active session instead of creating duplicates
+  // This allows the same cashier to work across multiple devices in one shift
   */
+  const [existingSession] = await db
+    .select()
+    .from(cashierSessionsTable)
+    .where(and(eq(cashierSessionsTable.cashierId, user.id), isNull(cashierSessionsTable.endedAt)))
+    .limit(1);
 
-  // Create new session
-  const [session] = await db
-    .insert(cashierSessionsTable)
-    .values({ cashierId: user.id })
-    .returning();
+  let session = existingSession;
+
+  const ipAddress = req.ip || req.headers["x-forwarded-for"]?.toString() || req.socket.remoteAddress;
+  const userAgent = req.headers["user-agent"];
+
+  if (!session) {
+    // Create new session
+    const [newSession] = await db
+      .insert(cashierSessionsTable)
+      .values({ 
+        cashierId: user.id,
+        ipAddress,
+        userAgent
+      })
+      .returning();
+    session = newSession;
+  } else {
+    // Update existing session with current IP/UA
+    await db.update(cashierSessionsTable)
+      .set({ ipAddress, userAgent })
+      .where(eq(cashierSessionsTable.id, session.id));
+  }
 
   // Store session in express session
   (req.session as any).cashierSessionId = session.id;
   (req.session as any).cashierId = user.id;
+
 
   req.session.save((err) => {
     if (err) {

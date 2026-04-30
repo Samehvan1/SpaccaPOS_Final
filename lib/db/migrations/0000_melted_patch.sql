@@ -7,8 +7,7 @@ CREATE TABLE IF NOT EXISTS "users" (
 	"pin" varchar(6),
 	"is_active" boolean DEFAULT true NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "users_username_unique" UNIQUE("username")
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "ingredient_categories" (
@@ -84,8 +83,7 @@ CREATE TABLE IF NOT EXISTS "ingredients" (
 	"low_stock_threshold" numeric(12, 4) DEFAULT '500' NOT NULL,
 	"is_active" boolean DEFAULT true NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "ingredients_slug_unique" UNIQUE("slug")
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "drink_categories" (
@@ -93,8 +91,7 @@ CREATE TABLE IF NOT EXISTS "drink_categories" (
 	"name" text NOT NULL,
 	"sort_order" integer DEFAULT 0 NOT NULL,
 	"is_active" boolean DEFAULT true NOT NULL,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "drink_categories_name_unique" UNIQUE("name")
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "drink_ingredient_slots" (
@@ -165,8 +162,7 @@ CREATE TABLE IF NOT EXISTS "kitchen_stations" (
 	"name" text NOT NULL,
 	"is_active" boolean DEFAULT true NOT NULL,
 	"sort_order" integer DEFAULT 0 NOT NULL,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "kitchen_stations_name_unique" UNIQUE("name")
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "predefined_slot_type_options" (
@@ -261,8 +257,7 @@ CREATE TABLE IF NOT EXISTS "orders" (
 	"completed_at" timestamp with time zone,
 	"cancelled_at" timestamp with time zone,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "orders_order_number_unique" UNIQUE("order_number")
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "stock_movements" (
@@ -293,8 +288,7 @@ CREATE TABLE IF NOT EXISTS "discounts" (
 	"value" numeric(8, 2) NOT NULL,
 	"is_active" boolean DEFAULT true NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "discounts_code_unique" UNIQUE("code")
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "cashier_sessions" (
@@ -309,8 +303,7 @@ CREATE TABLE IF NOT EXISTS "permissions" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"key" varchar(100) NOT NULL,
 	"description" text,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "permissions_key_unique" UNIQUE("key")
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "role_permissions" (
@@ -335,6 +328,13 @@ CREATE TABLE IF NOT EXISTS "session" (
 	"sess" json NOT NULL,
 	"expire" timestamp (6) NOT NULL
 );
+ALTER TABLE "users" DROP CONSTRAINT IF EXISTS "users_username_unique"; ALTER TABLE "users" ADD CONSTRAINT "users_username_unique" UNIQUE("username");--> statement-breakpoint
+ALTER TABLE "ingredients" DROP CONSTRAINT IF EXISTS "ingredients_slug_unique"; ALTER TABLE "ingredients" ADD CONSTRAINT "ingredients_slug_unique" UNIQUE("slug");--> statement-breakpoint
+ALTER TABLE "drink_categories" DROP CONSTRAINT IF EXISTS "drink_categories_name_unique"; ALTER TABLE "drink_categories" ADD CONSTRAINT "drink_categories_name_unique" UNIQUE("name");--> statement-breakpoint
+ALTER TABLE "kitchen_stations" DROP CONSTRAINT IF EXISTS "kitchen_stations_name_unique"; ALTER TABLE "kitchen_stations" ADD CONSTRAINT "kitchen_stations_name_unique" UNIQUE("name");--> statement-breakpoint
+ALTER TABLE "orders" DROP CONSTRAINT IF EXISTS "orders_order_number_unique"; ALTER TABLE "orders" ADD CONSTRAINT "orders_order_number_unique" UNIQUE("order_number");--> statement-breakpoint
+ALTER TABLE "discounts" DROP CONSTRAINT IF EXISTS "discounts_code_unique"; ALTER TABLE "discounts" ADD CONSTRAINT "discounts_code_unique" UNIQUE("code");--> statement-breakpoint
+ALTER TABLE "permissions" DROP CONSTRAINT IF EXISTS "permissions_key_unique"; ALTER TABLE "permissions" ADD CONSTRAINT "permissions_key_unique" UNIQUE("key");--> statement-breakpoint
 --> statement-breakpoint
 ALTER TABLE "ingredient_options" DROP CONSTRAINT IF EXISTS "ingredient_options_ingredient_id_ingredients_id_fk"; ALTER TABLE "ingredient_options" ADD CONSTRAINT "ingredient_options_ingredient_id_ingredients_id_fk" FOREIGN KEY ("ingredient_id") REFERENCES "public"."ingredients"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "ingredient_options" DROP CONSTRAINT IF EXISTS "ingredient_options_linked_ingredient_id_ingredients_id_fk"; ALTER TABLE "ingredient_options" ADD CONSTRAINT "ingredient_options_linked_ingredient_id_ingredients_id_fk" FOREIGN KEY ("linked_ingredient_id") REFERENCES "public"."ingredients"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint

@@ -7,7 +7,10 @@ export const cashierSessionsTable = pgTable("cashier_sessions", {
   startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
   endedAt: timestamp("ended_at", { withTimezone: true }),
   notes: text("notes"),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
 });
+
 
 export type CashierSession = typeof cashierSessionsTable.$inferSelect;
 export type InsertCashierSession = typeof cashierSessionsTable.$inferInsert;
