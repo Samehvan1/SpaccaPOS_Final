@@ -272,8 +272,8 @@ router.get("/cashier/sessions/:id/performance", async (req, res): Promise<void> 
     .from(ordersTable)
     .where(and(
       eq(ordersTable.cashierId, session.cashierId),
-      gte(ordersTable.createdAt, start),
-      lte(ordersTable.createdAt, end)
+      gte(sql`COALESCE(${ordersTable.paidAt}, ${ordersTable.createdAt})`, start),
+      lte(sql`COALESCE(${ordersTable.paidAt}, ${ordersTable.createdAt})`, end)
     ));
 
   const completedOrders = orders.filter(o => ["completed", "paid", "ready", "in_progress"].includes(o.status));

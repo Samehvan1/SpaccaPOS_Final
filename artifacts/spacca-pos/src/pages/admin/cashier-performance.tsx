@@ -34,7 +34,20 @@ type Session = {
   cashierName: string;
   startedAt: string;
   endedAt: string | null;
+  ipAddress: string | null;
+  userAgent: string | null;
 };
+
+function parseUA(ua: string | null) {
+  if (!ua) return "Unknown";
+  if (ua.includes("Mobile")) return "Mobile Device";
+  if (ua.includes("Windows")) return "Windows PC";
+  if (ua.includes("Macintosh")) return "Mac";
+  if (ua.includes("Android")) return "Android";
+  if (ua.includes("iPhone")) return "iPhone";
+  return "Desktop";
+}
+
 
 function durationStr(start: string, end: string | null) {
   const ms = (end ? new Date(end).getTime() : Date.now()) - new Date(start).getTime();
@@ -243,13 +256,15 @@ export default function CashierPerformancePage() {
                     <TableHead>Started</TableHead>
                     <TableHead>Ended</TableHead>
                     <TableHead>Duration</TableHead>
+                    <TableHead>IP Address</TableHead>
+                    <TableHead>Device</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Action</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {sessions.length === 0 ? (
-                    <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">No sessions found</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">No sessions found</TableCell></TableRow>
                   ) : sessions.map(s => (
                     <TableRow key={s.id}>
                       <TableCell className="font-medium">
@@ -274,7 +289,14 @@ export default function CashierPerformancePage() {
                           {durationStr(s.startedAt, s.endedAt)}
                         </div>
                       </TableCell>
+                      <TableCell className="text-xs font-mono text-muted-foreground">
+                        {s.ipAddress || "—"}
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {parseUA(s.userAgent)}
+                      </TableCell>
                       <TableCell>
+
                         <Badge variant={s.endedAt ? "secondary" : "default"} className={s.endedAt ? "" : "bg-green-500/20 text-green-600 border-green-500/30"}>
                           {s.endedAt ? "Ended" : "Active"}
                         </Badge>
