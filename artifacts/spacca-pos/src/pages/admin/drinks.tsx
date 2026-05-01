@@ -18,8 +18,10 @@ import { useQuery } from "@tanstack/react-query";
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "/api";
 
 function slugifyStation(name: string) {
-  const n = (name ?? "main-bar").toLowerCase().trim().replace(/\s+/g, '-');
-  return n === "main" ? "main-bar" : n;
+  if (!name || name === "main" || name === "main-bar") return "hot-bar"; 
+  return name.toLowerCase().trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
 }
 
 type DrinkCategory = {

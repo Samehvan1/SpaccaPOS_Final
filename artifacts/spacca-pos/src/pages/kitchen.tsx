@@ -14,7 +14,10 @@ import { useOrderEvents } from "@/hooks/use-order-events";
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "/api";
 
 function slugifyStation(name: string) {
-  return (name ?? "main-bar").toLowerCase().trim().replace(/\s+/g, '-');
+  if (!name || name === "main" || name === "main-bar") return "hot-bar"; // Map defaults to Hot Bar
+  return name.toLowerCase().trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
 }
 
 function useKitchenStations() {
@@ -83,43 +86,15 @@ export default function KitchenDisplay() {
 
   const knownStationValues = new Set(allStations.map(s => s.value).filter(v => v !== "all"));
 
-  // Unified station matching helper
+  // Simple exact station matching
   const stationMatches = (itemStation: string, targetValue: string) => {
     if (targetValue === "all") return true;
     if (!itemStation) return false;
+    
     const iSlug = slugifyStation(itemStation);
     const tSlug = targetValue;
     
-    if (!iSlug || !tSlug) return false;
-
-    // Get the label for the target station to allow matching against the display name
-    const targetLabel = allStations.find(s => s.value === targetValue)?.label?.toLowerCase() || "";
-    const itemLabel = itemStation.toLowerCase();
-    
-    // 1. Exact slug match
-    if (iSlug === tSlug) return true;
-
-    // 2. Exact label match
-    if (targetLabel === itemLabel) return true;
-
-    // 3. Substring slug/label match (more strict: min 3 chars and not generic keywords like 'bar')
-    const genericKeywords = ["bar", "station", "main"];
-    const isGeneric = (s: string) => genericKeywords.includes(s.toLowerCase());
-
-    if (iSlug.length >= 3 && !isGeneric(iSlug)) {
-      if (tSlug.includes(iSlug) || iSlug.includes(tSlug)) return true;
-    }
-    
-    if (itemLabel.length >= 3 && !isGeneric(itemLabel)) {
-      if (targetLabel.includes(itemLabel) || itemLabel.includes(targetLabel)) return true;
-    }
-
-    // 4. Common synonyms & overrides (explicitly for Hot Bar)
-    const isHotStation = tSlug === "hot" || tSlug === "hot-bar";
-    const isPrimaryItem = iSlug === "main" || iSlug === "main-bar" || iSlug === "hot";
-    if (isHotStation && isPrimaryItem) return true;
-    
-    return false;
+    return iSlug === tSlug;
   };
 
   // Filter orders by station

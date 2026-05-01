@@ -78,7 +78,7 @@ router.get("/stock-audits/:id", async (req, res) => {
 // Create audit report (Staff)
 router.post("/stock-audits", async (req, res) => {
   const { notes, items } = req.body; // items: Array<{ ingredientId, actualQuantity, notes }>
-  const userId = (req.session as any)?.userId || (req.user as any)?.id || 1; // Fallback to 1 if no session
+  const userId = (req as any).session?.userId || (req as any).user?.id || 1; // Fallback to 1 if no session
 
   if (!items || !Array.isArray(items)) {
     res.status(400).json({ error: "Items array is required" });
