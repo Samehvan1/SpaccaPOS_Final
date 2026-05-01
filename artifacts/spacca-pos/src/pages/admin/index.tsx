@@ -137,20 +137,20 @@ export default function AdminHub() {
         <p className="text-muted-foreground mt-2">Manage your Spacca POS system settings, menu, and operations.</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {modules.map((mod) => {
           const Icon = mod.icon;
           return (
             <Link key={mod.href} href={mod.href}>
-              <Card className="hover:shadow-md transition-all cursor-pointer border-2 hover:border-primary/50 h-full">
-                <CardHeader>
-                  <div className="flex items-center gap-4">
-                    <div className={`p-3 rounded-lg ${mod.bg}`}>
-                      <Icon className={`h-8 w-8 ${mod.color}`} />
+              <Card className="hover:shadow-md transition-all cursor-pointer border-2 hover:border-primary/30 h-full group">
+                <CardHeader className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2.5 rounded-lg ${mod.bg} group-hover:scale-110 transition-transform`}>
+                      <Icon className={`h-6 w-6 ${mod.color}`} />
                     </div>
                     <div>
-                      <CardTitle className="text-xl">{mod.title}</CardTitle>
-                      <CardDescription className="mt-1 text-base">{mod.description}</CardDescription>
+                      <CardTitle className="text-lg leading-tight">{mod.title}</CardTitle>
+                      <CardDescription className="mt-1 text-xs line-clamp-1">{mod.description}</CardDescription>
                     </div>
                   </div>
                 </CardHeader>

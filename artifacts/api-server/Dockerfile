@@ -29,6 +29,9 @@ RUN pnpm run build
 # Stage 2: Production
 FROM node:20-alpine
 
+# Install postgresql-client for pg_dump (used for backups)
+RUN apk add --no-cache postgresql-client
+
 WORKDIR /app
 
 # Copy the bundled output from the builder
