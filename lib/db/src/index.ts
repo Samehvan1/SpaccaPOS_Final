@@ -1,7 +1,7 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
 import fs from "fs";
-import * as schema from "./schema";
+import * as schema from "./schema/index.js";
 
 const { Pool } = pg;
 
@@ -39,5 +39,5 @@ export async function runMigrations(migrationsPath?: string) {
   console.log("[db] Migrations completed successfully");
 }
 
-export * from "./schema";
+export * from "./schema/index.js";
 

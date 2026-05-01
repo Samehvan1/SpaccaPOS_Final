@@ -328,6 +328,7 @@ router.post("/orders", async (req, res): Promise<void> => {
           .where(inArray(ingredientsTable.id, allIngredientIds))
       : [];
     const stockMap = new Map(ingredientRows.map((r) => [r.id, parseFloat(r.stockQuantity)]));
+    console.log(`[stock] Pre-fetched stock for ${allIngredientIds.length} ingredients:`, Array.from(stockMap.entries()));
 
     const savedItems = [];
     for (const item of itemDetails) {
@@ -363,9 +364,13 @@ router.post("/orders", async (req, res): Promise<void> => {
       // Batch stock deductions: compute new quantities, then do 1 update + 1 insert per ingredient
       const stockUpdates: Array<{ id: number; newQty: number; delta: number }> = [];
       for (const c of item.customizations) {
-        if (!c.ingredientId || c.consumedQty === 0) continue;
+        if (!c.ingredientId || c.consumedQty === 0) {
+          if (c.ingredientId && c.consumedQty === 0) console.log(`[stock] Skipping deduction for ${c.slotLabel} because consumedQty is 0`);
+          continue;
+        }
         const current = stockMap.get(c.ingredientId) ?? 0;
         const newQty = Math.max(0, current - c.consumedQty);
+        console.log(`[stock] Deducting ${c.consumedQty} from ${c.ingredientId}. ${current} -> ${newQty}`);
         stockMap.set(c.ingredientId, newQty);
         stockUpdates.push({ id: c.ingredientId, newQty, delta: c.consumedQty });
       }
