@@ -9,6 +9,7 @@ import { format } from "date-fns";
 import { ChevronRight, ArrowLeft, CheckCircle2, XCircle, AlertTriangle, Edit3, Save, Info } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Link } from "wouter";
 
 type Audit = {
   id: number;
@@ -157,7 +158,7 @@ export default function StockAuditReviewPage() {
 
   if (selectedAuditId && detail) {
     return (
-      <div className="container mx-auto py-6 space-y-6 max-w-6xl animate-in fade-in slide-in-from-right-4 duration-300">
+      <div className="p-8 w-full flex flex-col gap-6 overflow-y-auto h-full animate-in fade-in slide-in-from-right-4 duration-300">
         <Button variant="ghost" onClick={() => setSelectedAuditId(null)} className="gap-2 mb-2">
           <ArrowLeft className="h-4 w-4" /> Back to List
         </Button>
@@ -274,8 +275,11 @@ export default function StockAuditReviewPage() {
   }
 
   return (
-    <div className="container mx-auto py-6 space-y-6 max-w-5xl">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="p-8 w-full flex flex-col gap-6 overflow-y-auto h-full">
+      <div className="flex items-center gap-4">
+        <Button variant="ghost" size="icon" asChild>
+          <Link href="/admin"><ArrowLeft className="h-5 w-5" /></Link>
+        </Button>
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Stock Audit Reports</h1>
           <p className="text-muted-foreground">Review and approve daily stock counts from staff.</p>

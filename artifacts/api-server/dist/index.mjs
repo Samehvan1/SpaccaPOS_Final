@@ -81855,6 +81855,7 @@ router5.post("/orders", async (req, res) => {
     ];
     const ingredientRows = allIngredientIds.length > 0 ? await tx.select({ id: ingredientsTable.id, stockQuantity: ingredientsTable.stockQuantity }).from(ingredientsTable).where(inArray(ingredientsTable.id, allIngredientIds)) : [];
     const stockMap = new Map(ingredientRows.map((r) => [r.id, parseFloat(r.stockQuantity)]));
+    console.log(`[stock] Pre-fetched stock for ${allIngredientIds.length} ingredients:`, Array.from(stockMap.entries()));
     const savedItems2 = [];
     for (const item of itemDetails) {
       const [orderItem] = await tx.insert(orderItemsTable).values({
@@ -81886,9 +81887,13 @@ router5.post("/orders", async (req, res) => {
       }
       const stockUpdates = [];
       for (const c of item.customizations) {
-        if (!c.ingredientId || c.consumedQty === 0) continue;
+        if (!c.ingredientId || c.consumedQty === 0) {
+          if (c.ingredientId && c.consumedQty === 0) console.log(`[stock] Skipping deduction for ${c.slotLabel} because consumedQty is 0`);
+          continue;
+        }
         const current = stockMap.get(c.ingredientId) ?? 0;
         const newQty = Math.max(0, current - c.consumedQty);
+        console.log(`[stock] Deducting ${c.consumedQty} from ${c.ingredientId}. ${current} -> ${newQty}`);
         stockMap.set(c.ingredientId, newQty);
         stockUpdates.push({ id: c.ingredientId, newQty, delta: c.consumedQty });
       }
@@ -83848,7 +83853,7 @@ router16.get("/stock-audits/:id", async (req, res) => {
 });
 router16.post("/stock-audits", async (req, res) => {
   const { notes, items } = req.body;
-  const userId = req.session.userId;
+  const userId = req.session?.userId || req.user?.id || 1;
   if (!items || !Array.isArray(items)) {
     res.status(400).json({ error: "Items array is required" });
     return;
@@ -83876,6 +83881,7 @@ router16.post("/stock-audits", async (req, res) => {
     await logActivity(req, "CREATE_STOCK_AUDIT", "stock_audit", audit.id);
     res.status(201).json(serializeDates(audit));
   } catch (err) {
+    console.error("[stock-audits] Create audit failed:", err);
     res.status(500).json({ error: err.message });
   }
 });
