@@ -16,6 +16,8 @@ import discountsRouter from "./discounts";
 import customersRouter from "./customers";
 import cashierSessionsRouter from "./cashier-sessions";
 import adminRouter from "./admin";
+import stockAuditsRouter from "./stock-audits";
+import rolesRouter from "./roles";
 import { addSseClient } from "../lib/sse";
 
 const router: IRouter = Router();
@@ -37,6 +39,8 @@ router.use(discountsRouter);
 router.use(customersRouter);
 router.use(cashierSessionsRouter);
 router.use(adminRouter);
+router.use(stockAuditsRouter);
+router.use("/roles", rolesRouter);
 
 // Server-Sent Events endpoint for real-time order push
 router.get("/events", (req, res) => {

@@ -5,6 +5,7 @@ import { eq, and, sql } from "drizzle-orm";
 import { db, ingredientsTable, ingredientOptionsTable, stockMovementsTable, ingredientTypesTable, drinkIngredientSlotsTable, drinksTable, orderItemCustomizationsTable, orderItemsTable, ordersTable, usersTable } from "@workspace/db";
 import { serializeDates } from "../lib/serialize";
 import { globalCache } from "../lib/cache";
+import { logActivity } from "../lib/activity-logger";
 import {
   ListIngredientsQueryParams,
   ListIngredientsResponse,
@@ -276,11 +277,12 @@ router.patch("/ingredients/:id", async (req, res): Promise<void> => {
     .set(updateData)
     .where(eq(ingredientsTable.id, params.data.id))
     .returning();
+    if (!ingredient) {
+      res.status(404).json({ error: "Ingredient not found" });
+      return;
+    }
 
-  if (!ingredient) {
-    res.status(404).json({ error: "Ingredient not found" });
-    return;
-  }
+  await logActivity(req, "UPDATE_INGREDIENT", "ingredient", params.data.id, updateData);
 
   res.json(
     UpdateIngredientResponse.parse(serializeDates({
@@ -320,11 +322,12 @@ router.delete("/ingredients/:id", async (req, res): Promise<void> => {
       .delete(ingredientsTable)
       .where(eq(ingredientsTable.id, id))
       .returning();
-
     if (!deleted) {
       res.status(404).json({ error: "Ingredient not found" });
       return;
     }
+
+    await logActivity(req, "DELETE_INGREDIENT", "ingredient", id);
 
     res.sendStatus(204);
     globalCache.clear();
@@ -489,6 +492,8 @@ router.post("/ingredients/:id/restock", async (req, res): Promise<void> => {
       lowStockThreshold: parseFloat(updated.lowStockThreshold),
     }))
   );
+  
+  await logActivity(req, "RESTOCK_INGREDIENT", "ingredient", params.data.id, { quantity: parsed.data.quantity });
   globalCache.clear();
   const { broadcastEvent } = await import("../lib/sse");
   broadcastEvent("inventory_updated", { ingredientId: params.data.id });

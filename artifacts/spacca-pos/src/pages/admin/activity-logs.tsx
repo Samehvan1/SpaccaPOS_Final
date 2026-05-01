@@ -11,14 +11,16 @@ import {
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { History, Search, User, Activity, Calendar } from "lucide-react";
+import { History, Search, Activity, Calendar, ArrowLeft } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Button } from "@/components/ui/button";
+import { Link } from "wouter";
 
 export default function ActivityLogs() {
   const [searchTerm, setSearchTerm] = useState("");
   const { data: logs = [], isLoading } = useListActivityLogs({ limit: 100 });
 
-  const filteredLogs = logs.filter(log => 
+  const filteredLogs = logs.filter((log: any) => 
     log.action.toLowerCase().includes(searchTerm.toLowerCase()) ||
     log.entityType?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     String(log.userId).includes(searchTerm)
@@ -27,12 +29,19 @@ export default function ActivityLogs() {
   return (
     <div className="p-8 w-full h-full overflow-hidden flex flex-col bg-muted/10">
       <div className="flex items-center justify-between mb-8 shrink-0">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-3">
-            <History className="h-8 w-8 text-primary" />
-            Activity Logs
-          </h1>
-          <p className="text-muted-foreground mt-1">Audit trail of system actions and administrative changes.</p>
+        <div className="flex items-center gap-4">
+          <Link href="/admin">
+            <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full hover:bg-background shadow-sm border">
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-3xl font-bold flex items-center gap-3">
+              <History className="h-8 w-8 text-primary" />
+              Activity Logs
+            </h1>
+            <p className="text-muted-foreground mt-1">Audit trail of system actions and administrative changes.</p>
+          </div>
         </div>
       </div>
 
@@ -73,7 +82,7 @@ export default function ActivityLogs() {
                     No activity logs found.
                   </TableCell>
                 </TableRow>
-              ) : filteredLogs.map((log) => (
+              ) : filteredLogs.map((log: any) => (
                 <TableRow key={log.id} className="hover:bg-muted/30 transition-colors">
                   <TableCell className="font-medium text-sm">
                     <div className="flex items-center gap-2">

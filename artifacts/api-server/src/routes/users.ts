@@ -1,9 +1,10 @@
 import { Router, type IRouter } from "express";
-import { db, usersTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { db, usersTable, userPermissionsTable, permissionsTable } from "@workspace/db";
+import { eq, and } from "drizzle-orm";
 import { CreateUserBody, UpdateUserBody, UserDetail } from "@workspace/api-zod";
 import bcrypt from "bcryptjs";
 import { requirePermission } from "../middleware/permissions";
+import { logActivity } from "../lib/activity-logger";
 
 const usersRouter: IRouter = Router();
 
@@ -19,8 +20,8 @@ usersRouter.get("/users", requirePermission("users:view"), async (req, res): Pro
       updatedAt: u.updatedAt?.toISOString(),
     })));
     return;
-  } catch (error) {
-    console.error("GET /users error:", error);
+  } catch (error: any) {
+    console.error("GET /users error:", error?.message || error);
     res.status(500).json({ error: "Failed to list users" });
     return;
   }
@@ -37,7 +38,6 @@ usersRouter.post("/users", requirePermission("users:create"), async (req, res): 
 
     const { password, ...userData } = parsed.data;
     const passwordHash = await bcrypt.hash(password, 10);
-
     const [newUser] = await db
       .insert(usersTable)
       .values({
@@ -45,6 +45,12 @@ usersRouter.post("/users", requirePermission("users:create"), async (req, res): 
         passwordHash,
       })
       .returning();
+
+    if (!newUser) {
+      throw new Error("User creation failed: no data returned");
+    }
+
+    await logActivity(req, "CREATE_USER", "user", newUser.id, { role: newUser.role, name: newUser.name });
 
     res.status(201).json(UserDetail.parse({
       ...newUser,
@@ -54,8 +60,8 @@ usersRouter.post("/users", requirePermission("users:create"), async (req, res): 
       updatedAt: newUser.updatedAt?.toISOString(),
     }));
     return;
-  } catch (error) {
-    console.error("POST /users error:", error);
+  } catch (error: any) {
+    console.error("POST /users error:", error?.message || error);
     res.status(500).json({ error: "Failed to create user" });
     return;
   }
@@ -76,7 +82,6 @@ usersRouter.patch("/users/:id", requirePermission("users:update"), async (req, r
       updateData.passwordHash = await bcrypt.hash(parsed.data.password, 10);
       delete updateData.password;
     }
-
     const [updatedUser] = await db
       .update(usersTable)
       .set({
@@ -91,6 +96,8 @@ usersRouter.patch("/users/:id", requirePermission("users:update"), async (req, r
       return;
     }
 
+    await logActivity(req, "UPDATE_USER", "user", id, { role: updatedUser.role, name: updatedUser.name });
+
     res.json(UserDetail.parse({
       ...updatedUser,
       username: updatedUser.username ?? `user_${updatedUser.id}`,
@@ -99,8 +106,8 @@ usersRouter.patch("/users/:id", requirePermission("users:update"), async (req, r
       updatedAt: updatedUser.updatedAt?.toISOString(),
     }));
     return;
-  } catch (error) {
-    console.error("PATCH /users/:id error:", error);
+  } catch (error: any) {
+    console.error("PATCH /users/:id error:", error?.message || error);
     res.status(500).json({ error: "Failed to update user" });
     return;
   }
@@ -117,12 +124,67 @@ usersRouter.delete("/users/:id", requirePermission("users:delete"), async (req, 
       return;
     }
 
+    await logActivity(req, "DELETE_USER", "user", id);
+
     res.status(204).end();
     return;
-  } catch (error) {
-    console.error("DELETE /users/:id error:", error);
+  } catch (error: any) {
+    console.error("DELETE /users/:id error:", error?.message || error);
     res.status(500).json({ error: "Failed to delete user" });
     return;
+  }
+});
+
+// ── User Permissions Endpoints ───────────────────────────────────────────────
+
+// GET /users/:id/permissions
+usersRouter.get("/users/:id/permissions", requirePermission("users:update"), async (req, res): Promise<void> => {
+  try {
+    const userId = parseInt(req.params.id as string);
+    const permissions = await db
+      .select()
+      .from(userPermissionsTable)
+      .where(eq(userPermissionsTable.userId, userId));
+    
+    res.json(permissions);
+  } catch (error: any) {
+    console.error("GET /users/:id/permissions error:", error?.message || error);
+    res.status(500).json({ error: "Failed to fetch user permissions" });
+  }
+});
+
+// POST /users/:id/permissions
+usersRouter.post("/users/:id/permissions", requirePermission("users:update"), async (req, res): Promise<void> => {
+  try {
+    const userId = parseInt(req.params.id as string);
+    const { permissions } = req.body; // Array<{ key, granted }>
+
+    if (!Array.isArray(permissions)) {
+      res.status(400).json({ error: "Permissions array required" });
+      return;
+    }
+
+    await db.transaction(async (tx) => {
+      // Clear existing overrides
+      await tx.delete(userPermissionsTable).where(eq(userPermissionsTable.userId, userId));
+      
+      // Insert new overrides
+      if (permissions.length > 0) {
+        await tx.insert(userPermissionsTable).values(
+          permissions.map((p: any) => ({
+            userId,
+            permissionKey: p.key,
+            granted: p.granted ?? true,
+          }))
+        );
+      }
+    });
+
+    await logActivity(req, "UPDATE_USER_PERMISSIONS", "user", userId);
+    res.json({ success: true });
+  } catch (error: any) {
+    console.error("POST /users/:id/permissions error:", error?.message || error);
+    res.status(500).json({ error: "Failed to update user permissions" });
   }
 });
 

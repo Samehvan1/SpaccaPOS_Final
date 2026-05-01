@@ -14,4 +14,5 @@ export const UserRole = {
   frontdesk: "frontdesk",
   cashier: "cashier",
   pickup: "pickup",
+  stockcontrol: "stockcontrol",
 } as const;

@@ -7,7 +7,7 @@ export const usersTable = pgTable("users", {
   name: text("name").notNull(),
   username: varchar("username", { length: 50 }).unique(),
   passwordHash: text("password_hash"),
-  role: text("role", { enum: ["admin", "barista", "frontdesk", "cashier", "pickup"] }).notNull().default("barista"),
+  role: text("role").notNull().default("barista"),
   pin: varchar("pin", { length: 6 }),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

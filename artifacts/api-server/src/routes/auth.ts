@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import { eq, and } from "drizzle-orm";
 import { db, usersTable, activityLogsTable } from "@workspace/db";
+import { logActivity } from "../lib/activity-logger";
 import { BaristaLoginBody, BaristaLoginResponse, GetMeResponse } from "@workspace/api-zod";
 import bcrypt from "bcryptjs";
 
@@ -66,6 +67,7 @@ router.post("/auth/login", async (req, res): Promise<void> => {
 });
 
 router.post("/auth/logout", async (req, res): Promise<void> => {
+  await logActivity(req, "LOGOUT", "user", (req.session as any).userId);
   req.session.destroy(() => {
     res.sendStatus(204);
   });

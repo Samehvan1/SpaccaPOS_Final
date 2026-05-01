@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useTheme } from "@/hooks/use-theme";
 import { useSettings } from "@/hooks/use-settings";
 import { useOrderEvents } from "@/hooks/use-order-events";
-import { Coffee, ChefHat, LayoutDashboard, LogOut, Sun, Moon, Printer, Wifi, WifiOff, Download, RefreshCw } from "lucide-react";
+import { Coffee, ChefHat, LayoutDashboard, LogOut, Sun, Moon, Printer, Wifi, WifiOff, Download, RefreshCw, ClipboardCheck, History } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -91,7 +91,7 @@ export function MainLayout({ children }: MainLayoutProps) {
   }
 
   // ─── Specialized roles (no sidebar) ───────────────────────────────────────
-  const specializedRoles = ["barista", "cashier", "pickup"];
+  const specializedRoles = ["barista", "cashier", "pickup", "stockcontrol"];
   if (specializedRoles.includes(user?.role || "")) {
     return (
       <div className="flex flex-col h-screen w-full bg-background overflow-hidden relative">
@@ -182,6 +182,7 @@ export function MainLayout({ children }: MainLayoutProps) {
 
   if (user?.role === "admin") {
     navItems.push({ href: "/admin", label: "Admin", icon: LayoutDashboard });
+    navItems.push({ href: "/admin/stock-audits", label: "Stock Audits", icon: History });
   }
 
   return (

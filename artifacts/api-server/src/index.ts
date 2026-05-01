@@ -8,6 +8,8 @@ import app from "./app";
 import { logger } from "./lib/logger";
 import { runMigrations } from "@workspace/db";
 import { seedIfEmpty } from "./lib/seed";
+import stockAuditsRouter from "./routes/stock-audits";
+import rolesRouter from "./routes/roles";
 
 const rawPort = process.env["PORT"];
 

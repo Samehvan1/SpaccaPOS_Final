@@ -15,4 +15,5 @@ export const CreateUserBodyRole = {
   frontdesk: "frontdesk",
   cashier: "cashier",
   pickup: "pickup",
+  stockcontrol: "stockcontrol",
 } as const;

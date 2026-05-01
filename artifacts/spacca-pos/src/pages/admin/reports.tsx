@@ -63,6 +63,7 @@ export default function ReportsPage() {
   const [showCustomizedOnly, setShowCustomizedOnly] = useState(false);
   const [selectedCustomizedItem, setSelectedCustomizedItem] = useState<any>(null);
   const [isDailyGrouped, setIsDailyGrouped] = useState(false);
+  const [selectedOrderDetails, setSelectedOrderDetails] = useState<any>(null);
 
   // Fetch all drinks with slots for precise customization detection in the list
   const { data: allDrinksCatalog } = useListDrinks({ includeSlots: true } as any);
@@ -154,7 +155,7 @@ export default function ReportsPage() {
   // Drinks Report Processing
   const drinkItems = useMemo(() => {
     if (!reportOrders) return [];
-    return reportOrders.flatMap(order => (order.items || []).map(item => {
+    return (reportOrders as any[]).flatMap((order: any) => (order.items || []).map((item: any) => {
       const customizations = item.customizations || [];
       const specialNotes = (item.specialNotes || "").trim();
       
@@ -168,7 +169,7 @@ export default function ReportsPage() {
           const itemDefaults = buildDefaultsMap(drinkInCatalog.slots);
           const norm = (s: string) => s.replace(/\s*[·()]\s*/g, "|").trim().toLowerCase();
           
-          isActuallyCustomized = customizations.some(c => {
+          isActuallyCustomized = customizations.some((c: any) => {
             const def = itemDefaults[c.slotLabel];
             if (!def) return false;
             
@@ -219,7 +220,7 @@ export default function ReportsPage() {
       "Tax Amount", "Discount %", "Discount Amount", "SubTotal Price", "Final Price", "Status", "Payment Method"
     ];
 
-    const rows = reportOrders.map(order => {
+    const rows = (reportOrders || []).map(order => {
       const totalPrice = order.subtotal;
       const beforeTax = totalPrice / 1.14;
       const taxAmount = totalPrice - beforeTax;
@@ -782,7 +783,7 @@ export default function ReportsPage() {
                           </TableCell>
                         </TableRow>
                       ) : (
-                        reportOrders.map(order => {
+                        (reportOrders || []).map(order => {
                           // User's requested calculations
                           const totalPrice = order.subtotal; // Our DB subtotal is gross before discount
                           const beforeTax = totalPrice / 1.14;
@@ -796,7 +797,12 @@ export default function ReportsPage() {
 
                           return (
                             <TableRow key={order.id} className="hover:bg-muted/30">
-                              <TableCell className="font-medium text-muted-foreground">{order.id}</TableCell>
+                              <TableCell 
+                                className="font-medium text-primary underline cursor-pointer hover:text-primary/70 transition-colors"
+                                onClick={() => setSelectedOrderDetails(order)}
+                              >
+                                {order.id}
+                              </TableCell>
                               <TableCell className="whitespace-nowrap">{format(new Date(order.createdAt), "yyyy-MM-dd")}</TableCell>
                               <TableCell>{format(new Date(order.createdAt), "HH:mm")}</TableCell>
                                <TableCell className="font-mono font-bold">#{order.orderNumber}</TableCell>
@@ -1004,7 +1010,15 @@ export default function ReportsPage() {
                                 {item.isCustomized ? "Customized" : "Standard"}
                               </Badge>
                             </TableCell>
-                            <TableCell className="text-muted-foreground font-mono text-xs">#{item.orderNumber}</TableCell>
+                            <TableCell 
+                              className="text-primary font-mono text-xs underline cursor-pointer hover:text-primary/70 transition-colors"
+                              onClick={() => {
+                                const order = reportOrders?.find(o => o.id === item.orderId);
+                                if (order) setSelectedOrderDetails(order);
+                              }}
+                            >
+                              #{item.orderNumber}
+                            </TableCell>
                             <TableCell className="text-right">{pure(itemGross)}</TableCell>
                             <TableCell className="text-right text-muted-foreground">{pure(itemNet)}</TableCell>
                             <TableCell className="text-right text-[10px] text-muted-foreground">{pure(itemTax)}</TableCell>
@@ -1085,7 +1099,7 @@ export default function ReportsPage() {
                         </TableCell>
                       </TableRow>
                     ) : drinksView === "grouped" ? (
-                      reportOrders.map(order => {
+                      (reportOrders || []).map(order => {
                         const created = order.createdAt ? new Date(order.createdAt) : null;
                         const paid = order.paidAt ? new Date(order.paidAt) : null;
                         const ready = order.readyAt ? new Date(order.readyAt) : null;
@@ -1099,7 +1113,12 @@ export default function ReportsPage() {
                         return (
                           <TableRow key={order.id} className="hover:bg-muted/30 transition-colors">
                             <TableCell className="font-mono">
-                              <div className="font-bold">#{order.orderNumber}</div>
+                              <div 
+                                className="font-bold text-primary underline cursor-pointer hover:text-primary/70 transition-colors"
+                                onClick={() => setSelectedOrderDetails(order)}
+                              >
+                                #{order.orderNumber}
+                              </div>
                               <div className="text-[10px] uppercase opacity-50">{order.status}</div>
                             </TableCell>
                             <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
@@ -1126,7 +1145,7 @@ export default function ReportsPage() {
                       drinkItems.map((item: any, idx: number) => {
                         const created = item.createdAt ? new Date(item.createdAt) : null;
                         // For drinks, we use the order's paid time to start barista duration
-                        const orderRaw = reportOrders.find(o => o.id === item.orderId);
+                        const orderRaw = reportOrders?.find(o => o.id === item.orderId);
                         const paid = orderRaw && (orderRaw as any).paidAt ? new Date((orderRaw as any).paidAt) : null;
                         const ready = item.readyAt ? new Date(item.readyAt) : null;
 
@@ -1164,6 +1183,88 @@ export default function ReportsPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Order Details Modal */}
+      <Dialog open={!!selectedOrderDetails} onOpenChange={(open) => !open && setSelectedOrderDetails(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Receipt className="h-5 w-5 text-primary" />
+              Order Details — #{selectedOrderDetails?.orderNumber}
+            </DialogTitle>
+            <DialogDescription>
+              Transaction ID: {selectedOrderDetails?.id} | Date: {selectedOrderDetails?.createdAt && format(new Date(selectedOrderDetails.createdAt), "PPP p")}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-6 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-muted/30 p-3 rounded-lg border">
+                <p className="text-[10px] uppercase font-bold text-muted-foreground mb-1">Status & Payment</p>
+                <div className="flex items-center gap-2">
+                   <Badge variant="outline" className="capitalize">{selectedOrderDetails?.status}</Badge>
+                   <Badge variant="outline" className="capitalize bg-primary/5">{selectedOrderDetails?.paymentMethod}</Badge>
+                </div>
+              </div>
+              <div className="bg-muted/30 p-3 rounded-lg border">
+                <p className="text-[10px] uppercase font-bold text-muted-foreground mb-1">Completion Duration</p>
+                <div className="flex items-center gap-2">
+                   <Clock className="h-4 w-4 text-primary" />
+                   <span className="font-mono font-bold">
+                     {selectedOrderDetails?.createdAt && selectedOrderDetails?.completedAt 
+                       ? formatDuration(differenceInSeconds(new Date(selectedOrderDetails.completedAt), new Date(selectedOrderDetails.createdAt)))
+                       : "In Progress / Cancelled"}
+                   </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-xl border overflow-hidden shadow-sm">
+              <Table>
+                <TableHeader className="bg-muted/50">
+                  <TableRow>
+                    <TableHead className="text-xs uppercase font-bold">Drink Item</TableHead>
+                    <TableHead className="text-center text-xs uppercase font-bold">Qty</TableHead>
+                    <TableHead className="text-right text-xs uppercase font-bold">Price</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {selectedOrderDetails?.items?.map((item: any, i: number) => (
+                    <TableRow key={i} className="hover:bg-transparent">
+                      <TableCell className="py-3">
+                        <p className="font-bold">{item.drinkName}</p>
+                        {item.customizations?.length > 0 && (
+                          <p className="text-[10px] text-muted-foreground mt-0.5">
+                            {item.customizations.map((c: any) => c.optionLabel).join(", ")}
+                          </p>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-center font-medium">x{item.quantity}</TableCell>
+                      <TableCell className="text-right font-bold">{pure(item.lineTotal)}</TableCell>
+                    </TableRow>
+                  ))}
+                  <TableRow className="bg-muted/20">
+                    <TableCell colSpan={2} className="text-right font-medium">Subtotal</TableCell>
+                    <TableCell className="text-right font-bold">{pure(selectedOrderDetails?.subtotal)}</TableCell>
+                  </TableRow>
+                  <TableRow className="bg-muted/20 border-t-0">
+                    <TableCell colSpan={2} className="text-right font-medium text-destructive">Discount</TableCell>
+                    <TableCell className="text-right font-bold text-destructive">-{pure(selectedOrderDetails?.discount)}</TableCell>
+                  </TableRow>
+                  <TableRow className="bg-primary/5 border-t-2 border-primary/20">
+                    <TableCell colSpan={2} className="text-right font-black text-primary">Total Paid</TableCell>
+                    <TableCell className="text-right font-black text-primary text-lg">{fmt(selectedOrderDetails?.total)}</TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+          
+          <div className="flex justify-end">
+            <Button variant="outline" onClick={() => setSelectedOrderDetails(null)}>Close</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Customization Details Modal */}
       <Dialog open={!!selectedCustomizedItem} onOpenChange={(open) => !open && setSelectedCustomizedItem(null)}>

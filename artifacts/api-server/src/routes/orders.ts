@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { eq, and, inArray, gte, lte, sql, desc } from "drizzle-orm";
 import { serializeDates } from "../lib/serialize";
 import { broadcastEvent } from "../lib/sse";
+import { logActivity } from "../lib/activity-logger";
 import { calculateDrinkData } from "../lib/price-calculator";
 import {
   db,
@@ -400,6 +401,7 @@ router.post("/orders", async (req, res): Promise<void> => {
   const [barista] = await db.select().from(usersTable).where(eq(usersTable.id, order.baristaId));
 
   broadcastEvent("order_created", { orderId: order.id, orderNumber: order.orderNumber });
+  await logActivity(req, "CREATE_ORDER", "order", order.id, { total });
   const { globalCache } = await import("../lib/cache");
   globalCache.clear();
   broadcastEvent("inventory_updated", { orderId: order.id });
@@ -505,6 +507,7 @@ router.patch("/orders/:id/status", async (req, res): Promise<void> => {
   }
 
   broadcastEvent("order_updated", { orderId: order.id, status: order.status });
+  await logActivity(req, "UPDATE_ORDER_STATUS", "order", order.id, { status: order.status });
   res.json(UpdateOrderStatusResponse.parse(serializeDates(detail)));
 });
 
@@ -598,6 +601,7 @@ router.post("/orders/:id/refund", async (req, res): Promise<void> => {
   }
 
   broadcastEvent("order_updated", { orderId: order.id, status: "refunded" });
+  await logActivity(req, "REFUND_ORDER", "order", order.id);
   res.json({ message: "Order refunded successfully", orderId: order.id });
 });
 

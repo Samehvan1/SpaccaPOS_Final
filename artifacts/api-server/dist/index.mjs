@@ -20807,27 +20807,27 @@ var require_router = __commonJS({
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var methods = METHODS.map((method) => method.toLowerCase());
-    module.exports = Router19;
+    module.exports = Router21;
     module.exports.Route = Route;
-    function Router19(options) {
-      if (!(this instanceof Router19)) {
-        return new Router19(options);
+    function Router21(options) {
+      if (!(this instanceof Router21)) {
+        return new Router21(options);
       }
       const opts = options || {};
-      function router17(req, res, next) {
-        router17.handle(req, res, next);
+      function router18(req, res, next) {
+        router18.handle(req, res, next);
       }
-      Object.setPrototypeOf(router17, this);
-      router17.caseSensitive = opts.caseSensitive;
-      router17.mergeParams = opts.mergeParams;
-      router17.params = {};
-      router17.strict = opts.strict;
-      router17.stack = [];
-      return router17;
+      Object.setPrototypeOf(router18, this);
+      router18.caseSensitive = opts.caseSensitive;
+      router18.mergeParams = opts.mergeParams;
+      router18.params = {};
+      router18.strict = opts.strict;
+      router18.stack = [];
+      return router18;
     }
-    Router19.prototype = function() {
+    Router21.prototype = function() {
     };
-    Router19.prototype.param = function param(name, fn) {
+    Router21.prototype.param = function param(name, fn) {
       if (!name) {
         throw new TypeError("argument name is required");
       }
@@ -20847,7 +20847,7 @@ var require_router = __commonJS({
       params.push(fn);
       return this;
     };
-    Router19.prototype.handle = function handle(req, res, callback) {
+    Router21.prototype.handle = function handle(req, res, callback) {
       if (!callback) {
         throw new TypeError("argument callback is required");
       }
@@ -20974,7 +20974,7 @@ var require_router = __commonJS({
         }
       }
     };
-    Router19.prototype.use = function use(handler) {
+    Router21.prototype.use = function use(handler) {
       let offset = 0;
       let path6 = "/";
       if (typeof handler !== "function") {
@@ -21007,7 +21007,7 @@ var require_router = __commonJS({
       }
       return this;
     };
-    Router19.prototype.route = function route(path6) {
+    Router21.prototype.route = function route(path6) {
       const route2 = new Route(path6);
       const layer = new Layer(path6, {
         sensitive: this.caseSensitive,
@@ -21022,7 +21022,7 @@ var require_router = __commonJS({
       return route2;
     };
     methods.concat("all").forEach(function(method) {
-      Router19.prototype[method] = function(path6) {
+      Router21.prototype[method] = function(path6) {
         const route = this.route(path6);
         route[method].apply(route, slice.call(arguments, 1));
         return this;
@@ -21205,13 +21205,13 @@ var require_application = __commonJS({
     var compileTrust = require_utils3().compileTrust;
     var resolve2 = __require("node:path").resolve;
     var once = require_once();
-    var Router19 = require_router();
+    var Router21 = require_router();
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var app2 = exports = module.exports = {};
     var trustProxyDefaultSymbol = "@@symbol:trust_proxy_default";
     app2.init = function init() {
-      var router17 = null;
+      var router18 = null;
       this.cache = /* @__PURE__ */ Object.create(null);
       this.engines = /* @__PURE__ */ Object.create(null);
       this.settings = /* @__PURE__ */ Object.create(null);
@@ -21220,13 +21220,13 @@ var require_application = __commonJS({
         configurable: true,
         enumerable: true,
         get: function getrouter() {
-          if (router17 === null) {
-            router17 = new Router19({
+          if (router18 === null) {
+            router18 = new Router21({
               caseSensitive: this.enabled("case sensitive routing"),
               strict: this.enabled("strict routing")
             });
           }
-          return router17;
+          return router18;
         }
       });
     };
@@ -21297,15 +21297,15 @@ var require_application = __commonJS({
       if (fns.length === 0) {
         throw new TypeError("app.use() requires a middleware function");
       }
-      var router17 = this.router;
+      var router18 = this.router;
       fns.forEach(function(fn2) {
         if (!fn2 || !fn2.handle || !fn2.set) {
-          return router17.use(path6, fn2);
+          return router18.use(path6, fn2);
         }
         debug(".use app under %s", path6);
         fn2.mountpath = path6;
         fn2.parent = this;
-        router17.use(path6, function mounted_app(req, res, next) {
+        router18.use(path6, function mounted_app(req, res, next) {
           var orig = req.app;
           fn2.handle(req, res, function(err) {
             Object.setPrototypeOf(req, orig.request);
@@ -23832,7 +23832,7 @@ var require_express = __commonJS({
     var EventEmitter = __require("node:events").EventEmitter;
     var mixin = require_merge_descriptors();
     var proto = require_application();
-    var Router19 = require_router();
+    var Router21 = require_router();
     var req = require_request();
     var res = require_response();
     exports = module.exports = createApplication;
@@ -23854,8 +23854,8 @@ var require_express = __commonJS({
     exports.application = proto;
     exports.request = req;
     exports.response = res;
-    exports.Route = Router19.Route;
-    exports.Router = Router19;
+    exports.Route = Router21.Route;
+    exports.Router = Router21;
     exports.json = bodyParser.json;
     exports.raw = bodyParser.raw;
     exports.static = require_serve_static();
@@ -36340,10 +36340,10 @@ var init_subquery = __esm({
     init_entity();
     Subquery = class {
       static [entityKind] = "Subquery";
-      constructor(sql3, fields, alias, isWith = false, usedTables = []) {
+      constructor(sql2, fields, alias, isWith = false, usedTables = []) {
         this._ = {
           brand: "Subquery",
-          sql: sql3,
+          sql: sql2,
           selectedFields: fields,
           alias,
           isWith,
@@ -36798,19 +36798,19 @@ var init_sql = __esm({
         return new SQL([this]);
       }
     };
-    ((sql22) => {
+    ((sql2) => {
       function empty() {
         return new SQL([]);
       }
-      sql22.empty = empty;
+      sql2.empty = empty;
       function fromList(list) {
         return new SQL(list);
       }
-      sql22.fromList = fromList;
+      sql2.fromList = fromList;
       function raw(str) {
         return new SQL([new StringChunk(str)]);
       }
-      sql22.raw = raw;
+      sql2.raw = raw;
       function join(chunks, separator) {
         const result = [];
         for (const [i, chunk] of chunks.entries()) {
@@ -36821,24 +36821,24 @@ var init_sql = __esm({
         }
         return new SQL(result);
       }
-      sql22.join = join;
+      sql2.join = join;
       function identifier(value) {
         return new Name(value);
       }
-      sql22.identifier = identifier;
+      sql2.identifier = identifier;
       function placeholder2(name2) {
         return new Placeholder(name2);
       }
-      sql22.placeholder = placeholder2;
+      sql2.placeholder = placeholder2;
       function param2(value, encoder) {
         return new Param(value, encoder);
       }
-      sql22.param = param2;
+      sql2.param = param2;
     })(sql || (sql = {}));
     ((SQL2) => {
       class Aliased {
-        constructor(sql22, fieldAlias) {
-          this.sql = sql22;
+        constructor(sql2, fieldAlias) {
+          this.sql = sql2;
           this.fieldAlias = fieldAlias;
         }
         static [entityKind] = "SQL.Aliased";
@@ -40200,8 +40200,8 @@ var init_dialect = __esm({
           return "none";
         }
       }
-      sqlToQuery(sql22, invokeSource) {
-        return sql22.toQuery({
+      sqlToQuery(sql2, invokeSource) {
+        return sql2.toQuery({
           casing: this.casing,
           escapeName: this.escapeName,
           escapeParam: this.escapeParam,
@@ -42943,10 +42943,10 @@ var init_raw = __esm({
     init_entity();
     init_query_promise();
     PgRaw = class extends QueryPromise {
-      constructor(execute, sql3, query, mapBatchResult) {
+      constructor(execute, sql2, query, mapBatchResult) {
         super();
         this.execute = execute;
-        this.sql = sql3;
+        this.sql = sql2;
         this.query = query;
         this.mapBatchResult = mapBatchResult;
       }
@@ -43266,8 +43266,8 @@ var init_db = __esm({
 });
 
 // ../../node_modules/.pnpm/drizzle-orm@0.45.1_@types+pg@8.18.0_pg@8.20.0/node_modules/drizzle-orm/cache/core/cache.js
-async function hashQuery(sql3, params) {
-  const dataToHash = `${sql3}-${JSON.stringify(params)}`;
+async function hashQuery(sql2, params) {
+  const dataToHash = `${sql2}-${JSON.stringify(params)}`;
   const encoder = new TextEncoder();
   const data = encoder.encode(dataToHash);
   const hashBuffer = await crypto.subtle.digest("SHA-256", data);
@@ -43538,8 +43538,8 @@ var init_session = __esm({
         ).all();
       }
       /** @internal */
-      async count(sql22, token) {
-        const res = await this.execute(sql22, token);
+      async count(sql2, token) {
+        const res = await this.execute(sql2, token);
         return Number(
           res[0]["count"]
         );
@@ -43815,8 +43815,8 @@ var init_session2 = __esm({
           if (isPool) session2.client.release();
         }
       }
-      async count(sql22) {
-        const res = await this.execute(sql22);
+      async count(sql2) {
+        const res = await this.execute(sql2);
         return Number(
           res["rows"][0]["count"]
         );
@@ -55636,11 +55636,11 @@ function numberColumnToSchema(column, z, coerce2) {
   let unsigned = column.getSQLType().includes("unsigned");
   let min;
   let max;
-  let integer4 = false;
+  let integer3 = false;
   if (isColumnType(column, ["MySqlTinyInt", "SingleStoreTinyInt"])) {
     min = unsigned ? 0 : CONSTANTS.INT8_MIN;
     max = unsigned ? CONSTANTS.INT8_UNSIGNED_MAX : CONSTANTS.INT8_MAX;
-    integer4 = true;
+    integer3 = true;
   } else if (isColumnType(column, [
     "PgSmallInt",
     "PgSmallSerial",
@@ -55649,7 +55649,7 @@ function numberColumnToSchema(column, z, coerce2) {
   ])) {
     min = unsigned ? 0 : CONSTANTS.INT16_MIN;
     max = unsigned ? CONSTANTS.INT16_UNSIGNED_MAX : CONSTANTS.INT16_MAX;
-    integer4 = true;
+    integer3 = true;
   } else if (isColumnType(column, [
     "PgReal",
     "MySqlFloat",
@@ -55659,7 +55659,7 @@ function numberColumnToSchema(column, z, coerce2) {
   ])) {
     min = unsigned ? 0 : CONSTANTS.INT24_MIN;
     max = unsigned ? CONSTANTS.INT24_UNSIGNED_MAX : CONSTANTS.INT24_MAX;
-    integer4 = isColumnType(column, ["MySqlMediumInt", "SingleStoreMediumInt"]);
+    integer3 = isColumnType(column, ["MySqlMediumInt", "SingleStoreMediumInt"]);
   } else if (isColumnType(column, [
     "PgInteger",
     "PgSerial",
@@ -55668,7 +55668,7 @@ function numberColumnToSchema(column, z, coerce2) {
   ])) {
     min = unsigned ? 0 : CONSTANTS.INT32_MIN;
     max = unsigned ? CONSTANTS.INT32_UNSIGNED_MAX : CONSTANTS.INT32_MAX;
-    integer4 = true;
+    integer3 = true;
   } else if (isColumnType(column, [
     "PgDoublePrecision",
     "MySqlReal",
@@ -55691,16 +55691,16 @@ function numberColumnToSchema(column, z, coerce2) {
     unsigned = unsigned || isColumnType(column, ["MySqlSerial", "SingleStoreSerial"]);
     min = unsigned ? 0 : Number.MIN_SAFE_INTEGER;
     max = Number.MAX_SAFE_INTEGER;
-    integer4 = true;
+    integer3 = true;
   } else if (isColumnType(column, ["MySqlYear", "SingleStoreYear"])) {
     min = 1901;
     max = 2155;
-    integer4 = true;
+    integer3 = true;
   } else {
     min = Number.MIN_SAFE_INTEGER;
     max = Number.MAX_SAFE_INTEGER;
   }
-  let schema = coerce2 === true || coerce2?.number ? integer4 ? z.coerce.number() : z.coerce.number().int() : integer4 ? z.int() : z.number();
+  let schema = coerce2 === true || coerce2?.number ? integer3 ? z.coerce.number() : z.coerce.number().int() : integer3 ? z.int() : z.number();
   schema = schema.gte(min).lte(max);
   return schema;
 }
@@ -55840,7 +55840,7 @@ var init_users = __esm({
       name: text("name").notNull(),
       username: varchar("username", { length: 50 }).unique(),
       passwordHash: text("password_hash"),
-      role: text("role", { enum: ["admin", "barista", "frontdesk", "cashier", "pickup"] }).notNull().default("barista"),
+      role: text("role").notNull().default("barista"),
       pin: varchar("pin", { length: 6 }),
       isActive: boolean("is_active").notNull().default(true),
       createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -56265,18 +56265,21 @@ var init_cashier_sessions = __esm({
       cashierId: integer("cashier_id").notNull().references(() => usersTable.id),
       startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
       endedAt: timestamp("ended_at", { withTimezone: true }),
-      notes: text("notes")
+      notes: text("notes"),
+      ipAddress: text("ip_address"),
+      userAgent: text("user_agent")
     });
   }
 });
 
 // ../../lib/db/src/schema/permissions.ts
-var permissionsTable, rolePermissionsTable, insertPermissionSchema, insertRolePermissionSchema;
+var permissionsTable, rolesTable, rolePermissionsTable, userPermissionsTable, insertPermissionSchema, insertRoleSchema, insertRolePermissionSchema, insertUserPermissionSchema;
 var init_permissions = __esm({
   "../../lib/db/src/schema/permissions.ts"() {
     "use strict";
     init_pg_core();
     init_drizzle_zod();
+    init_users();
     permissionsTable = pgTable("permissions", {
       id: serial("id").primaryKey(),
       key: varchar("key", { length: 100 }).unique().notNull(),
@@ -56284,14 +56287,31 @@ var init_permissions = __esm({
       description: text("description"),
       createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
     });
+    rolesTable = pgTable("roles", {
+      id: serial("id").primaryKey(),
+      key: varchar("key", { length: 50 }).unique().notNull(),
+      // e.g. "admin", "barista"
+      name: text("name").notNull(),
+      description: text("description"),
+      createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+    });
     rolePermissionsTable = pgTable("role_permissions", {
       id: serial("id").primaryKey(),
-      role: text("role", { enum: ["admin", "barista", "frontdesk", "cashier", "pickup"] }).notNull(),
+      roleKey: varchar("role_key", { length: 50 }).references(() => rolesTable.key).notNull(),
       permissionKey: varchar("permission_key", { length: 100 }).references(() => permissionsTable.key).notNull(),
       createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
     });
+    userPermissionsTable = pgTable("user_permissions", {
+      id: serial("id").primaryKey(),
+      userId: integer("user_id").references(() => usersTable.id).notNull(),
+      permissionKey: varchar("permission_key", { length: 100 }).references(() => permissionsTable.key).notNull(),
+      granted: boolean("granted").notNull().default(true),
+      createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+    });
     insertPermissionSchema = createInsertSchema(permissionsTable).omit({ id: true, createdAt: true });
+    insertRoleSchema = createInsertSchema(rolesTable).omit({ id: true, createdAt: true });
     insertRolePermissionSchema = createInsertSchema(rolePermissionsTable).omit({ id: true, createdAt: true });
+    insertUserPermissionSchema = createInsertSchema(userPermissionsTable).omit({ id: true, createdAt: true });
   }
 });
 
@@ -56334,6 +56354,39 @@ var init_sessions = __esm({
   }
 });
 
+// ../../lib/db/src/schema/stock-audit.ts
+var stockAuditsTable, stockAuditItemsTable, insertStockAuditSchema, insertStockAuditItemSchema;
+var init_stock_audit = __esm({
+  "../../lib/db/src/schema/stock-audit.ts"() {
+    "use strict";
+    init_pg_core();
+    init_users();
+    init_ingredients();
+    init_drizzle_zod();
+    stockAuditsTable = pgTable("stock_audits", {
+      id: serial("id").primaryKey(),
+      status: text("status", { enum: ["pending", "approved", "rejected"] }).notNull().default("pending"),
+      createdBy: integer("created_by").notNull().references(() => usersTable.id),
+      approvedBy: integer("approved_by").references(() => usersTable.id),
+      notes: text("notes"),
+      createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+      approvedAt: timestamp("approved_at", { withTimezone: true })
+    });
+    stockAuditItemsTable = pgTable("stock_audit_items", {
+      id: serial("id").primaryKey(),
+      auditId: integer("audit_id").notNull().references(() => stockAuditsTable.id, { onDelete: "cascade" }),
+      ingredientId: integer("ingredient_id").notNull().references(() => ingredientsTable.id),
+      expectedQuantity: numeric("expected_quantity", { precision: 12, scale: 4 }).notNull(),
+      actualQuantity: numeric("actual_quantity", { precision: 12, scale: 4 }).notNull(),
+      finalQuantity: numeric("final_quantity", { precision: 12, scale: 4 }),
+      // Admin can edit this
+      notes: text("notes")
+    });
+    insertStockAuditSchema = createInsertSchema(stockAuditsTable).omit({ id: true, createdAt: true, approvedAt: true });
+    insertStockAuditItemSchema = createInsertSchema(stockAuditItemsTable).omit({ id: true });
+  }
+});
+
 // ../../lib/db/src/schema/index.ts
 var schema_exports = {};
 __export(schema_exports, {
@@ -56369,8 +56422,12 @@ __export(schema_exports, {
   insertPermissionSchema: () => insertPermissionSchema,
   insertPredefinedSlotSchema: () => insertPredefinedSlotSchema,
   insertRolePermissionSchema: () => insertRolePermissionSchema,
+  insertRoleSchema: () => insertRoleSchema,
   insertSettingSchema: () => insertSettingSchema,
+  insertStockAuditItemSchema: () => insertStockAuditItemSchema,
+  insertStockAuditSchema: () => insertStockAuditSchema,
   insertStockMovementSchema: () => insertStockMovementSchema,
+  insertUserPermissionSchema: () => insertUserPermissionSchema,
   insertUserSchema: () => insertUserSchema,
   kitchenStationsTable: () => kitchenStationsTable,
   orderItemCustomizationsTable: () => orderItemCustomizationsTable,
@@ -56381,9 +56438,13 @@ __export(schema_exports, {
   predefinedSlotVolumesTable: () => predefinedSlotVolumesTable,
   predefinedSlotsTable: () => predefinedSlotsTable,
   rolePermissionsTable: () => rolePermissionsTable,
+  rolesTable: () => rolesTable,
   sessionsTable: () => sessionsTable,
   settingsTable: () => settingsTable,
+  stockAuditItemsTable: () => stockAuditItemsTable,
+  stockAuditsTable: () => stockAuditsTable,
   stockMovementsTable: () => stockMovementsTable,
+  userPermissionsTable: () => userPermissionsTable,
   usersTable: () => usersTable
 });
 var init_schema2 = __esm({
@@ -56400,6 +56461,7 @@ var init_schema2 = __esm({
     init_permissions();
     init_activity_logs();
     init_sessions();
+    init_stock_audit();
   }
 });
 
@@ -56486,8 +56548,12 @@ __export(src_exports, {
   insertPermissionSchema: () => insertPermissionSchema,
   insertPredefinedSlotSchema: () => insertPredefinedSlotSchema,
   insertRolePermissionSchema: () => insertRolePermissionSchema,
+  insertRoleSchema: () => insertRoleSchema,
   insertSettingSchema: () => insertSettingSchema,
+  insertStockAuditItemSchema: () => insertStockAuditItemSchema,
+  insertStockAuditSchema: () => insertStockAuditSchema,
   insertStockMovementSchema: () => insertStockMovementSchema,
+  insertUserPermissionSchema: () => insertUserPermissionSchema,
   insertUserSchema: () => insertUserSchema,
   kitchenStationsTable: () => kitchenStationsTable,
   orderItemCustomizationsTable: () => orderItemCustomizationsTable,
@@ -56499,10 +56565,14 @@ __export(src_exports, {
   predefinedSlotVolumesTable: () => predefinedSlotVolumesTable,
   predefinedSlotsTable: () => predefinedSlotsTable,
   rolePermissionsTable: () => rolePermissionsTable,
+  rolesTable: () => rolesTable,
   runMigrations: () => runMigrations,
   sessionsTable: () => sessionsTable,
   settingsTable: () => settingsTable,
+  stockAuditItemsTable: () => stockAuditItemsTable,
+  stockAuditsTable: () => stockAuditsTable,
   stockMovementsTable: () => stockMovementsTable,
+  userPermissionsTable: () => userPermissionsTable,
   usersTable: () => usersTable
 });
 import fs2 from "fs";
@@ -73230,7 +73300,7 @@ import fs6 from "fs";
 import { exec as exec2 } from "child_process";
 
 // src/app.ts
-var import_express19 = __toESM(require_express2(), 1);
+var import_express21 = __toESM(require_express2(), 1);
 var import_cors = __toESM(require_lib3(), 1);
 var import_pino_http = __toESM(require_logger(), 1);
 var import_express_session = __toESM(require_express_session(), 1);
@@ -73238,7 +73308,7 @@ var import_connect_pg_simple = __toESM(require_connect_pg_simple(), 1);
 init_src();
 
 // src/routes/index.ts
-var import_express18 = __toESM(require_express2(), 1);
+var import_express20 = __toESM(require_express2(), 1);
 
 // src/routes/health.ts
 var import_express = __toESM(require_express2(), 1);
@@ -77296,13 +77366,13 @@ var BaristaLoginResponse = objectType({
   user: objectType({
     id: numberType(),
     name: stringType(),
-    role: enumType(["admin", "barista", "frontdesk", "cashier", "pickup"])
+    role: enumType(["admin", "barista", "frontdesk", "cashier", "pickup", "stockcontrol"])
   })
 });
 var GetMeResponse = objectType({
   id: numberType(),
   name: stringType(),
-  role: enumType(["admin", "barista", "frontdesk", "cashier", "pickup"])
+  role: enumType(["admin", "barista", "frontdesk", "cashier", "pickup", "stockcontrol"])
 });
 var ListDrinksQueryParams = objectType({
   category: coerce.string().optional(),
@@ -78082,7 +78152,7 @@ var ListUsersResponseItem = objectType({
   id: numberType(),
   name: stringType(),
   username: stringType(),
-  role: enumType(["admin", "barista", "frontdesk", "cashier", "pickup"]),
+  role: enumType(["admin", "barista", "frontdesk", "cashier", "pickup", "stockcontrol"]),
   pin: stringType().optional(),
   isActive: booleanType(),
   createdAt: stringType().optional(),
@@ -78093,8 +78163,8 @@ var CreateUserBody = objectType({
   name: stringType(),
   username: stringType(),
   password: stringType(),
-  role: enumType(["admin", "barista", "frontdesk", "cashier", "pickup"]),
-  pin: stringType().optional()
+  role: enumType(["admin", "barista", "frontdesk", "cashier", "pickup", "stockcontrol"]),
+  pin: stringType().optional().nullable()
 });
 var UpdateUserParams = objectType({
   id: coerce.number()
@@ -78103,16 +78173,16 @@ var UpdateUserBody = objectType({
   name: stringType().optional(),
   username: stringType().optional(),
   password: stringType().optional(),
-  role: enumType(["admin", "barista", "frontdesk", "cashier", "pickup"]).optional(),
-  pin: stringType().optional(),
+  role: enumType(["admin", "barista", "frontdesk", "cashier", "pickup", "stockcontrol"]).optional(),
+  pin: stringType().optional().nullable(),
   isActive: booleanType().optional()
 });
 var UpdateUserResponse = objectType({
   id: numberType(),
   name: stringType(),
   username: stringType(),
-  role: enumType(["admin", "barista", "frontdesk", "cashier", "pickup"]),
-  pin: stringType().optional(),
+  role: enumType(["admin", "barista", "frontdesk", "cashier", "pickup", "stockcontrol"]),
+  pin: stringType().optional().nullable(),
   isActive: booleanType(),
   createdAt: stringType().optional(),
   updatedAt: stringType().optional()
@@ -78311,6 +78381,28 @@ var health_default = router;
 var import_express2 = __toESM(require_express2(), 1);
 init_drizzle_orm();
 init_src();
+
+// src/lib/activity-logger.ts
+init_src();
+async function logActivity(req, action, entityType, entityId, details) {
+  const userId = req.session.userId;
+  if (!userId) return;
+  try {
+    await db.insert(activityLogsTable).values({
+      userId,
+      action,
+      entityType,
+      entityId,
+      details: {
+        ...details,
+        ip: req.ip,
+        userAgent: req.get("user-agent")
+      }
+    });
+  } catch (err) {
+    console.error("[logActivity] error:", err);
+  }
+}
 
 // ../../node_modules/.pnpm/bcryptjs@3.0.3/node_modules/bcryptjs/index.js
 import nodeCrypto from "crypto";
@@ -80082,6 +80174,7 @@ router2.post("/auth/login", async (req, res) => {
   });
 });
 router2.post("/auth/logout", async (req, res) => {
+  await logActivity(req, "LOGOUT", "user", req.session.userId);
   req.session.destroy(() => {
     res.sendStatus(204);
   });
@@ -81376,6 +81469,7 @@ router4.patch("/ingredients/:id", async (req, res) => {
     res.status(404).json({ error: "Ingredient not found" });
     return;
   }
+  await logActivity(req, "UPDATE_INGREDIENT", "ingredient", params.data.id, updateData);
   res.json(
     UpdateIngredientResponse2.parse(serializeDates({
       ...ingredient,
@@ -81401,6 +81495,7 @@ router4.delete("/ingredients/:id", async (req, res) => {
       res.status(404).json({ error: "Ingredient not found" });
       return;
     }
+    await logActivity(req, "DELETE_INGREDIENT", "ingredient", id);
     res.sendStatus(204);
     globalCache.clear();
   } catch (err) {
@@ -81528,6 +81623,7 @@ router4.post("/ingredients/:id/restock", async (req, res) => {
       lowStockThreshold: parseFloat(updated.lowStockThreshold)
     }))
   );
+  await logActivity(req, "RESTOCK_INGREDIENT", "ingredient", params.data.id, { quantity: parsed.data.quantity });
   globalCache.clear();
   const { broadcastEvent: broadcastEvent2 } = await Promise.resolve().then(() => (init_sse(), sse_exports));
   broadcastEvent2("inventory_updated", { ingredientId: params.data.id });
@@ -81820,6 +81916,7 @@ router5.post("/orders", async (req, res) => {
   });
   const [barista] = await db.select().from(usersTable).where(eq(usersTable.id, order.baristaId));
   broadcastEvent("order_created", { orderId: order.id, orderNumber: order.orderNumber });
+  await logActivity(req, "CREATE_ORDER", "order", order.id, { total });
   const { globalCache: globalCache2 } = await Promise.resolve().then(() => (init_cache2(), cache_exports));
   globalCache2.clear();
   broadcastEvent("inventory_updated", { orderId: order.id });
@@ -81909,6 +82006,7 @@ router5.patch("/orders/:id/status", async (req, res) => {
     return;
   }
   broadcastEvent("order_updated", { orderId: order.id, status: order.status });
+  await logActivity(req, "UPDATE_ORDER_STATUS", "order", order.id, { status: order.status });
   res.json(UpdateOrderStatusResponse2.parse(serializeDates(detail)));
 });
 router5.patch("/order-items/:id/ready", async (req, res) => {
@@ -81960,6 +82058,7 @@ router5.post("/orders/:id/refund", async (req, res) => {
     return;
   }
   broadcastEvent("order_updated", { orderId: order.id, status: "refunded" });
+  await logActivity(req, "REFUND_ORDER", "order", order.id);
   res.json({ message: "Order refunded successfully", orderId: order.id });
 });
 var orders_default = router5;
@@ -82925,24 +83024,46 @@ function requirePermission(permissionKey) {
       return;
     }
     if (!req.user) {
-      const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
-      if (!user) {
+      const [user2] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+      if (!user2) {
         res.status(401).json({ error: "User not found" });
         return;
       }
-      req.user = user;
+      req.user = user2;
     }
-    const role = req.user.role;
+    const user = req.user;
+    const role = user.role;
     if (role === "admin") {
-      return next();
+      const [denial] = await db.select().from(userPermissionsTable).where(
+        and(
+          eq(userPermissionsTable.userId, userId),
+          eq(userPermissionsTable.permissionKey, permissionKey),
+          eq(userPermissionsTable.granted, false)
+        )
+      ).limit(1);
+      if (!denial) return next();
     }
-    const [hasPermission] = await db.select().from(rolePermissionsTable).where(
+    const [userOverride] = await db.select().from(userPermissionsTable).where(
       and(
-        eq(rolePermissionsTable.role, role),
+        eq(userPermissionsTable.userId, userId),
+        eq(userPermissionsTable.permissionKey, permissionKey)
+      )
+    ).limit(1);
+    if (userOverride) {
+      if (userOverride.granted) {
+        return next();
+      } else {
+        res.status(403).json({ error: "Insufficient permissions (denied at user level)" });
+        return;
+      }
+    }
+    const [rolePermission] = await db.select().from(rolePermissionsTable).where(
+      and(
+        eq(rolePermissionsTable.roleKey, role),
         eq(rolePermissionsTable.permissionKey, permissionKey)
       )
     ).limit(1);
-    if (!hasPermission) {
+    if (!rolePermission) {
       res.status(403).json({ error: "Insufficient permissions" });
       return;
     }
@@ -82964,7 +83085,7 @@ usersRouter.get("/users", requirePermission("users:view"), async (req, res) => {
     })));
     return;
   } catch (error40) {
-    console.error("GET /users error:", error40);
+    console.error("GET /users error:", error40?.message || error40);
     res.status(500).json({ error: "Failed to list users" });
     return;
   }
@@ -82982,6 +83103,10 @@ usersRouter.post("/users", requirePermission("users:create"), async (req, res) =
       ...userData,
       passwordHash
     }).returning();
+    if (!newUser) {
+      throw new Error("User creation failed: no data returned");
+    }
+    await logActivity(req, "CREATE_USER", "user", newUser.id, { role: newUser.role, name: newUser.name });
     res.status(201).json(UserDetail.parse({
       ...newUser,
       username: newUser.username ?? `user_${newUser.id}`,
@@ -82991,7 +83116,7 @@ usersRouter.post("/users", requirePermission("users:create"), async (req, res) =
     }));
     return;
   } catch (error40) {
-    console.error("POST /users error:", error40);
+    console.error("POST /users error:", error40?.message || error40);
     res.status(500).json({ error: "Failed to create user" });
     return;
   }
@@ -83017,6 +83142,7 @@ usersRouter.patch("/users/:id", requirePermission("users:update"), async (req, r
       res.status(404).json({ error: "User not found" });
       return;
     }
+    await logActivity(req, "UPDATE_USER", "user", id, { role: updatedUser.role, name: updatedUser.name });
     res.json(UserDetail.parse({
       ...updatedUser,
       username: updatedUser.username ?? `user_${updatedUser.id}`,
@@ -83026,7 +83152,7 @@ usersRouter.patch("/users/:id", requirePermission("users:update"), async (req, r
     }));
     return;
   } catch (error40) {
-    console.error("PATCH /users/:id error:", error40);
+    console.error("PATCH /users/:id error:", error40?.message || error40);
     res.status(500).json({ error: "Failed to update user" });
     return;
   }
@@ -83039,12 +83165,50 @@ usersRouter.delete("/users/:id", requirePermission("users:delete"), async (req, 
       res.status(404).json({ error: "User not found" });
       return;
     }
+    await logActivity(req, "DELETE_USER", "user", id);
     res.status(204).end();
     return;
   } catch (error40) {
-    console.error("DELETE /users/:id error:", error40);
+    console.error("DELETE /users/:id error:", error40?.message || error40);
     res.status(500).json({ error: "Failed to delete user" });
     return;
+  }
+});
+usersRouter.get("/users/:id/permissions", requirePermission("users:update"), async (req, res) => {
+  try {
+    const userId = parseInt(req.params.id);
+    const permissions = await db.select().from(userPermissionsTable).where(eq(userPermissionsTable.userId, userId));
+    res.json(permissions);
+  } catch (error40) {
+    console.error("GET /users/:id/permissions error:", error40?.message || error40);
+    res.status(500).json({ error: "Failed to fetch user permissions" });
+  }
+});
+usersRouter.post("/users/:id/permissions", requirePermission("users:update"), async (req, res) => {
+  try {
+    const userId = parseInt(req.params.id);
+    const { permissions } = req.body;
+    if (!Array.isArray(permissions)) {
+      res.status(400).json({ error: "Permissions array required" });
+      return;
+    }
+    await db.transaction(async (tx) => {
+      await tx.delete(userPermissionsTable).where(eq(userPermissionsTable.userId, userId));
+      if (permissions.length > 0) {
+        await tx.insert(userPermissionsTable).values(
+          permissions.map((p) => ({
+            userId,
+            permissionKey: p.key,
+            granted: p.granted ?? true
+          }))
+        );
+      }
+    });
+    await logActivity(req, "UPDATE_USER_PERMISSIONS", "user", userId);
+    res.json({ success: true });
+  } catch (error40) {
+    console.error("POST /users/:id/permissions error:", error40?.message || error40);
+    res.status(500).json({ error: "Failed to update user permissions" });
   }
 });
 var users_default = usersRouter;
@@ -83352,7 +83516,20 @@ router15.post("/cashier/login", async (req, res) => {
     res.status(403).json({ error: "User is not a cashier" });
     return;
   }
-  const [session2] = await db.insert(cashierSessionsTable).values({ cashierId: user.id }).returning();
+  const [existingSession] = await db.select().from(cashierSessionsTable).where(and(eq(cashierSessionsTable.cashierId, user.id), isNull(cashierSessionsTable.endedAt))).limit(1);
+  let session2 = existingSession;
+  const ipAddress = req.ip || req.headers["x-forwarded-for"]?.toString() || req.socket.remoteAddress;
+  const userAgent = req.headers["user-agent"];
+  if (!session2) {
+    const [newSession] = await db.insert(cashierSessionsTable).values({
+      cashierId: user.id,
+      ipAddress,
+      userAgent
+    }).returning();
+    session2 = newSession;
+  } else {
+    await db.update(cashierSessionsTable).set({ ipAddress, userAgent }).where(eq(cashierSessionsTable.id, session2.id));
+  }
   req.session.cashierSessionId = session2.id;
   req.session.cashierId = user.id;
   req.session.save((err) => {
@@ -83477,8 +83654,8 @@ router15.get("/cashier/sessions/:id/performance", async (req, res) => {
     status: ordersTable.status
   }).from(ordersTable).where(and(
     eq(ordersTable.cashierId, session2.cashierId),
-    gte(ordersTable.createdAt, start),
-    lte(ordersTable.createdAt, end)
+    gte(sql`COALESCE(${ordersTable.paidAt}, ${ordersTable.createdAt})`, start),
+    lte(sql`COALESCE(${ordersTable.paidAt}, ${ordersTable.createdAt})`, end)
   ));
   const completedOrders = orders.filter((o) => ["completed", "paid", "ready", "in_progress"].includes(o.status));
   const totalRevenue = completedOrders.reduce((sum, o) => sum + parseFloat(o.total), 0);
@@ -83551,11 +83728,11 @@ adminRouter.post("/admin/role-permissions", requirePermission("admin:manage_perm
       return;
     }
     await db.transaction(async (tx) => {
-      await tx.delete(rolePermissionsTable).where(eq(rolePermissionsTable.role, role));
+      await tx.delete(rolePermissionsTable).where(eq(rolePermissionsTable.roleKey, role));
       if (permissions.length > 0) {
         await tx.insert(rolePermissionsTable).values(
           permissions.map((p) => ({
-            role,
+            roleKey: role,
             permissionKey: p
           }))
         );
@@ -83614,27 +83791,300 @@ adminRouter.post("/admin/backup", requirePermission("admin:manage_permissions"),
 });
 var admin_default = adminRouter;
 
+// src/routes/stock-audits.ts
+var import_express18 = __toESM(require_express2(), 1);
+init_drizzle_orm();
+init_src();
+var router16 = (0, import_express18.Router)();
+router16.get("/stock-audits", async (req, res) => {
+  const audits = await db.select({
+    id: stockAuditsTable.id,
+    status: stockAuditsTable.status,
+    createdBy: stockAuditsTable.createdBy,
+    createdByName: usersTable.name,
+    approvedBy: stockAuditsTable.approvedBy,
+    notes: stockAuditsTable.notes,
+    createdAt: stockAuditsTable.createdAt,
+    approvedAt: stockAuditsTable.approvedAt
+  }).from(stockAuditsTable).leftJoin(usersTable, eq(stockAuditsTable.createdBy, usersTable.id)).orderBy(desc(stockAuditsTable.createdAt));
+  res.json(serializeDates(audits));
+});
+router16.get("/stock-audits/:id", async (req, res) => {
+  const auditId = parseInt(req.params.id);
+  const [audit] = await db.select({
+    id: stockAuditsTable.id,
+    status: stockAuditsTable.status,
+    createdBy: stockAuditsTable.createdBy,
+    createdByName: usersTable.name,
+    approvedBy: stockAuditsTable.approvedBy,
+    notes: stockAuditsTable.notes,
+    createdAt: stockAuditsTable.createdAt,
+    approvedAt: stockAuditsTable.approvedAt
+  }).from(stockAuditsTable).leftJoin(usersTable, eq(stockAuditsTable.createdBy, usersTable.id)).where(eq(stockAuditsTable.id, auditId));
+  if (!audit) {
+    res.status(404).json({ error: "Audit not found" });
+    return;
+  }
+  const items = await db.select({
+    id: stockAuditItemsTable.id,
+    ingredientId: stockAuditItemsTable.ingredientId,
+    ingredientName: ingredientsTable.name,
+    unit: ingredientsTable.unit,
+    expectedQuantity: stockAuditItemsTable.expectedQuantity,
+    actualQuantity: stockAuditItemsTable.actualQuantity,
+    finalQuantity: stockAuditItemsTable.finalQuantity,
+    notes: stockAuditItemsTable.notes
+  }).from(stockAuditItemsTable).innerJoin(ingredientsTable, eq(stockAuditItemsTable.ingredientId, ingredientsTable.id)).where(eq(stockAuditItemsTable.auditId, auditId));
+  res.json(serializeDates({
+    ...audit,
+    items: items.map((item) => ({
+      ...item,
+      expectedQuantity: parseFloat(item.expectedQuantity),
+      actualQuantity: parseFloat(item.actualQuantity),
+      finalQuantity: item.finalQuantity ? parseFloat(item.finalQuantity) : null,
+      deviation: parseFloat(item.actualQuantity) - parseFloat(item.expectedQuantity)
+    }))
+  }));
+});
+router16.post("/stock-audits", async (req, res) => {
+  const { notes, items } = req.body;
+  const userId = req.session.userId;
+  if (!items || !Array.isArray(items)) {
+    res.status(400).json({ error: "Items array is required" });
+    return;
+  }
+  try {
+    const audit = await db.transaction(async (tx) => {
+      const [newAudit] = await tx.insert(stockAuditsTable).values({
+        createdBy: userId,
+        notes,
+        status: "pending"
+      }).returning();
+      for (const item of items) {
+        const [ingredient] = await tx.select().from(ingredientsTable).where(eq(ingredientsTable.id, item.ingredientId));
+        if (!ingredient) continue;
+        await tx.insert(stockAuditItemsTable).values({
+          auditId: newAudit.id,
+          ingredientId: item.ingredientId,
+          expectedQuantity: ingredient.stockQuantity,
+          actualQuantity: String(item.actualQuantity),
+          notes: item.notes || null
+        });
+      }
+      return newAudit;
+    });
+    await logActivity(req, "CREATE_STOCK_AUDIT", "stock_audit", audit.id);
+    res.status(201).json(serializeDates(audit));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+router16.patch("/stock-audits/:id", async (req, res) => {
+  const auditId = parseInt(req.params.id);
+  const { items, notes } = req.body;
+  try {
+    await db.transaction(async (tx) => {
+      if (notes !== void 0) {
+        await tx.update(stockAuditsTable).set({ notes }).where(eq(stockAuditsTable.id, auditId));
+      }
+      if (items && Array.isArray(items)) {
+        for (const item of items) {
+          await tx.update(stockAuditItemsTable).set({
+            finalQuantity: item.finalQuantity !== void 0 ? String(item.finalQuantity) : void 0,
+            notes: item.notes
+          }).where(eq(stockAuditItemsTable.id, item.id));
+        }
+      }
+    });
+    await logActivity(req, "UPDATE_STOCK_AUDIT", "stock_audit", auditId);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+router16.post("/stock-audits/:id/approve", async (req, res) => {
+  const auditId = parseInt(req.params.id);
+  const userId = req.session.userId;
+  try {
+    await db.transaction(async (tx) => {
+      const [audit] = await tx.select().from(stockAuditsTable).where(eq(stockAuditsTable.id, auditId));
+      if (!audit) throw new Error("Audit not found");
+      if (audit.status !== "pending") throw new Error("Audit already processed");
+      const items = await tx.select().from(stockAuditItemsTable).where(eq(stockAuditItemsTable.auditId, auditId));
+      for (const item of items) {
+        const targetQuantity = item.finalQuantity !== null ? item.finalQuantity : item.actualQuantity;
+        const [ingredient] = await tx.select().from(ingredientsTable).where(eq(ingredientsTable.id, item.ingredientId));
+        if (!ingredient) continue;
+        const diff = parseFloat(targetQuantity) - parseFloat(ingredient.stockQuantity);
+        if (diff !== 0) {
+          await tx.insert(stockMovementsTable).values({
+            ingredientId: item.ingredientId,
+            movementType: "adjustment",
+            quantity: String(diff),
+            quantityAfter: String(targetQuantity),
+            note: `Approved Audit #${auditId}`,
+            createdBy: userId
+          });
+          await tx.update(ingredientsTable).set({ stockQuantity: String(targetQuantity) }).where(eq(ingredientsTable.id, item.ingredientId));
+        }
+      }
+      await tx.update(stockAuditsTable).set({
+        status: "approved",
+        approvedBy: userId,
+        approvedAt: /* @__PURE__ */ new Date()
+      }).where(eq(stockAuditsTable.id, auditId));
+    });
+    await logActivity(req, "APPROVE_STOCK_AUDIT", "stock_audit", auditId);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+router16.post("/stock-audits/:id/reject", async (req, res) => {
+  const auditId = parseInt(req.params.id);
+  const userId = req.session.userId;
+  await db.update(stockAuditsTable).set({
+    status: "rejected",
+    approvedBy: userId,
+    approvedAt: /* @__PURE__ */ new Date()
+  }).where(eq(stockAuditsTable.id, auditId));
+  await logActivity(req, "REJECT_STOCK_AUDIT", "stock_audit", auditId);
+  res.json({ success: true });
+});
+var stock_audits_default = router16;
+
+// src/routes/roles.ts
+var import_express19 = __toESM(require_express2(), 1);
+init_src();
+init_drizzle_orm();
+var rolesRouter = (0, import_express19.Router)();
+rolesRouter.get("/", requirePermission("users:view"), async (req, res) => {
+  try {
+    const allRoles = await db.select().from(rolesTable);
+    res.json(allRoles);
+  } catch (error40) {
+    console.error("GET /roles error:", error40?.message || error40);
+    res.status(500).json({ error: "Failed to list roles" });
+  }
+});
+rolesRouter.post("/", requirePermission("users:create"), async (req, res) => {
+  try {
+    const { key, name, description, permissions } = req.body;
+    if (!key || !name) {
+      res.status(400).json({ error: "Key and Name are required" });
+      return;
+    }
+    const [newRole] = await db.transaction(async (tx) => {
+      const [role] = await tx.insert(rolesTable).values({ key, name, description }).returning();
+      if (Array.isArray(permissions) && permissions.length > 0) {
+        await tx.insert(rolePermissionsTable).values(
+          permissions.map((pk) => ({
+            roleKey: role.key,
+            permissionKey: pk
+          }))
+        );
+      }
+      return [role];
+    });
+    await logActivity(req, "CREATE_ROLE", "role", newRole.id, { key: newRole.key });
+    res.status(201).json(newRole);
+  } catch (error40) {
+    console.error("POST /roles error:", error40?.message || error40);
+    res.status(500).json({ error: "Failed to create role" });
+  }
+});
+rolesRouter.get("/:key/permissions", requirePermission("users:view"), async (req, res) => {
+  try {
+    const key = req.params.key;
+    const perms = await db.select().from(rolePermissionsTable).where(eq(rolePermissionsTable.roleKey, key));
+    res.json(perms);
+  } catch (error40) {
+    console.error("GET /roles/:key/permissions error:", error40?.message || error40);
+    res.status(500).json({ error: "Failed to fetch role permissions" });
+  }
+});
+rolesRouter.patch("/:key", requirePermission("users:update"), async (req, res) => {
+  try {
+    const { name, description, permissions } = req.body;
+    const key = req.params.key;
+    const [updatedRole] = await db.transaction(async (tx) => {
+      const [role] = await tx.update(rolesTable).set({ name, description }).where(eq(rolesTable.key, key)).returning();
+      if (Array.isArray(permissions)) {
+        await tx.delete(rolePermissionsTable).where(eq(rolePermissionsTable.roleKey, key));
+        if (permissions.length > 0) {
+          await tx.insert(rolePermissionsTable).values(
+            permissions.map((pk) => ({
+              roleKey: key,
+              permissionKey: pk
+            }))
+          );
+        }
+      }
+      return [role];
+    });
+    if (!updatedRole) {
+      res.status(404).json({ error: "Role not found" });
+      return;
+    }
+    await logActivity(req, "UPDATE_ROLE", "role", updatedRole.id, { key: updatedRole.key });
+    res.json(updatedRole);
+  } catch (error40) {
+    console.error("PATCH /roles/:key error:", error40?.message || error40);
+    res.status(500).json({ error: "Failed to update role" });
+  }
+});
+rolesRouter.delete("/:key", requirePermission("users:update"), async (req, res) => {
+  try {
+    const key = req.params.key;
+    const [deletedRole] = await db.transaction(async (tx) => {
+      await tx.delete(rolePermissionsTable).where(eq(rolePermissionsTable.roleKey, key));
+      return await tx.delete(rolesTable).where(eq(rolesTable.key, key)).returning();
+    });
+    if (!deletedRole) {
+      res.status(404).json({ error: "Role not found" });
+      return;
+    }
+    await logActivity(req, "DELETE_ROLE", "role", deletedRole.id, { key: deletedRole.key });
+    res.status(204).end();
+  } catch (error40) {
+    console.error("DELETE /roles/:key error:", error40?.message || error40);
+    res.status(500).json({ error: "Failed to delete role" });
+  }
+});
+rolesRouter.get("/permissions/list", requirePermission("users:view"), async (req, res) => {
+  try {
+    const all = await db.select().from(permissionsTable);
+    res.json(all);
+  } catch (error40) {
+    console.error("GET /permissions/list error:", error40?.message || error40);
+    res.status(500).json({ error: "Failed to list permissions" });
+  }
+});
+var roles_default = rolesRouter;
+
 // src/routes/index.ts
 init_sse();
-var router16 = (0, import_express18.Router)();
-router16.use(health_default);
-router16.use(auth_default);
-router16.use(drinks_default);
-router16.use(ingredients_default);
-router16.use(orders_default);
-router16.use(stock_default);
-router16.use(dashboard_default);
-router16.use(catalog_default);
-router16.use(drink_categories_default);
-router16.use(kitchen_stations_default);
-router16.use(settings_default);
-router16.use(predefined_slots_default);
-router16.use(users_default);
-router16.use(discounts_default);
-router16.use(customers_default);
-router16.use(cashier_sessions_default);
-router16.use(admin_default);
-router16.get("/events", (req, res) => {
+var router17 = (0, import_express20.Router)();
+router17.use(health_default);
+router17.use(auth_default);
+router17.use(drinks_default);
+router17.use(ingredients_default);
+router17.use(orders_default);
+router17.use(stock_default);
+router17.use(dashboard_default);
+router17.use(catalog_default);
+router17.use(drink_categories_default);
+router17.use(kitchen_stations_default);
+router17.use(settings_default);
+router17.use(predefined_slots_default);
+router17.use(users_default);
+router17.use(discounts_default);
+router17.use(customers_default);
+router17.use(cashier_sessions_default);
+router17.use(admin_default);
+router17.use(stock_audits_default);
+router17.use("/roles", roles_default);
+router17.get("/events", (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache, no-transform");
   res.setHeader("X-Accel-Buffering", "no");
@@ -83643,7 +84093,7 @@ router16.get("/events", (req, res) => {
   res.write("event: connected\ndata: {}\n\n");
   addSseClient(res);
 });
-var routes_default = router16;
+var routes_default = router17;
 
 // src/lib/logger.ts
 var import_pino = __toESM(require_pino(), 1);
@@ -83665,7 +84115,7 @@ var logger = (0, import_pino.default)({
 
 // src/app.ts
 var PostgresStore = (0, import_connect_pg_simple.default)(import_express_session.default);
-var app = (0, import_express19.default)();
+var app = (0, import_express21.default)();
 app.set("json replacer", (_key2, value) => {
   if (value instanceof Date) return value.toISOString();
   return value;
@@ -83691,8 +84141,8 @@ app.use(
 );
 app.set("trust proxy", 1);
 app.use((0, import_cors.default)({ credentials: true, origin: true }));
-app.use(import_express19.default.json());
-app.use(import_express19.default.urlencoded({ extended: true }));
+app.use(import_express21.default.json());
+app.use(import_express21.default.urlencoded({ extended: true }));
 app.use(
   (0, import_express_session.default)({
     store: new PostgresStore({
@@ -83710,7 +84160,7 @@ app.use(
     }
   })
 );
-app.use("/uploads", import_express19.default.static("uploads"));
+app.use("/uploads", import_express21.default.static("uploads"));
 app.use("/api", routes_default);
 var app_default = app;
 

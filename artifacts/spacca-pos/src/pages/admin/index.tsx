@@ -46,6 +46,14 @@ export default function AdminHub() {
       bg: "bg-purple-500/10"
     },
     {
+      title: "Stock Audits & Deviations",
+      description: "Review staff reports and approve stock adjustments",
+      icon: History,
+      href: "/admin/stock-audits",
+      color: "text-rose-500",
+      bg: "bg-rose-500/10"
+    },
+    {
       title: "Drink Categories",
       description: "Manage POS categories, sort order, and visibility",
       icon: Tag,

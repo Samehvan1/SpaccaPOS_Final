@@ -33,6 +33,8 @@ import { CustomerAuthProvider } from "@/hooks/use-customer-auth";
 import CashierPerformancePage from "@/pages/admin/cashier-performance";
 import KioskPage from "./pages/kiosk";
 import SystemSettingsAdmin from "@/pages/admin/settings";
+import StockControlPage from "./pages/stock-control";
+import StockAuditReviewPage from "./pages/admin/stock-audit-review";
 
 // PWA Helper to update title for "Add to Home Screen"
 function PWAContextHandler() {
@@ -69,6 +71,8 @@ function getDefaultRoute(role: string): any {
     case "barista": return "/kitchen";
     case "cashier": return "/cashier";
     case "pickup": return "/pickup";
+    case "frontdesk": return "/pos";
+    case "stockcontrol": return "/stock-control";
     default: return "/pos";
   }
 }
@@ -126,10 +130,12 @@ function AppRoutes() {
               return <Redirect to={params.get("from") as any} />;
             }
             // Role-based default redirection
-            switch (user.role) {
+            switch (user.role as string) {
               case "barista": return <Redirect to="/kitchen" />;
               case "cashier": return <Redirect to="/cashier" />;
               case "pickup": return <Redirect to="/pickup" />;
+              case "frontdesk": return <Redirect to="/pos" />;
+              case "stockcontrol": return <Redirect to="/stock-control" />;
               case "admin": return <Redirect to="/admin" />;
               default: return <Redirect to="/pos" />;
             }
@@ -141,10 +147,12 @@ function AppRoutes() {
       <Route path="/">
         {() => {
           if (!user) return <Redirect to="/pos" />;
-          switch (user.role) {
+          switch (user.role as string) {
             case "barista": return <Redirect to="/kitchen" />;
             case "cashier": return <Redirect to="/cashier" />;
             case "pickup": return <Redirect to="/pickup" />;
+            case "frontdesk": return <Redirect to="/pos" />;
+            case "stockcontrol": return <Redirect to="/stock-control" />;
             case "admin": return <Redirect to="/admin" />;
             default: return <Redirect to="/pos" />;
           }
@@ -225,6 +233,11 @@ function AppRoutes() {
           <ProtectedRoute component={StockAdmin} adminOnly={true} />
         </MainLayout>
       </Route>
+      <Route path="/admin/stock-audits">
+        <MainLayout>
+          <ProtectedRoute component={StockAuditReviewPage} adminOnly={true} />
+        </MainLayout>
+      </Route>
 
       <Route path="/admin/reports">
         <MainLayout>
@@ -275,6 +288,11 @@ function AppRoutes() {
 
       <Route path="/kiosk">
         <KioskPage />
+      </Route>
+      <Route path="/stock-control">
+        <MainLayout>
+          <ProtectedRoute component={StockControlPage} allowedRoles={["stockcontrol"]} />
+        </MainLayout>
       </Route>
 
       <Route>

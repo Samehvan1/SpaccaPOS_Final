@@ -15,6 +15,20 @@
       "when": 1777573831690,
       "tag": "0001_dusty_crystal",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1777642581531,
+      "tag": "0002_stock_audits",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1777643500000,
+      "tag": "0003_dynamic_roles",
+      "breakpoints": true
     }
   ]
 }

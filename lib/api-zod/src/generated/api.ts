@@ -26,7 +26,7 @@ export const BaristaLoginResponse = zod.object({
   user: zod.object({
     id: zod.number(),
     name: zod.string(),
-    role: zod.enum(["admin", "barista", "frontdesk", "cashier", "pickup"]),
+    role: zod.enum(["admin", "barista", "frontdesk", "cashier", "pickup", "stockcontrol"]),
   }),
 });
 
@@ -36,7 +36,7 @@ export const BaristaLoginResponse = zod.object({
 export const GetMeResponse = zod.object({
   id: zod.number(),
   name: zod.string(),
-  role: zod.enum(["admin", "barista", "frontdesk", "cashier", "pickup"]),
+  role: zod.enum(["admin", "barista", "frontdesk", "cashier", "pickup", "stockcontrol"]),
 });
 
 /**
@@ -958,7 +958,7 @@ export const ListUsersResponseItem = zod.object({
   id: zod.number(),
   name: zod.string(),
   username: zod.string(),
-  role: zod.enum(["admin", "barista", "frontdesk", "cashier", "pickup"]),
+  role: zod.enum(["admin", "barista", "frontdesk", "cashier", "pickup", "stockcontrol"]),
   pin: zod.string().optional(),
   isActive: zod.boolean(),
   createdAt: zod.string().optional(),
@@ -973,8 +973,8 @@ export const CreateUserBody = zod.object({
   name: zod.string(),
   username: zod.string(),
   password: zod.string(),
-  role: zod.enum(["admin", "barista", "frontdesk", "cashier", "pickup"]),
-  pin: zod.string().optional(),
+  role: zod.enum(["admin", "barista", "frontdesk", "cashier", "pickup", "stockcontrol"]),
+  pin: zod.string().optional().nullable(),
 });
 
 /**
@@ -989,9 +989,9 @@ export const UpdateUserBody = zod.object({
   username: zod.string().optional(),
   password: zod.string().optional(),
   role: zod
-    .enum(["admin", "barista", "frontdesk", "cashier", "pickup"])
+    .enum(["admin", "barista", "frontdesk", "cashier", "pickup", "stockcontrol"])
     .optional(),
-  pin: zod.string().optional(),
+  pin: zod.string().optional().nullable(),
   isActive: zod.boolean().optional(),
 });
 
@@ -999,8 +999,8 @@ export const UpdateUserResponse = zod.object({
   id: zod.number(),
   name: zod.string(),
   username: zod.string(),
-  role: zod.enum(["admin", "barista", "frontdesk", "cashier", "pickup"]),
-  pin: zod.string().optional(),
+  role: zod.enum(["admin", "barista", "frontdesk", "cashier", "pickup", "stockcontrol"]),
+  pin: zod.string().optional().nullable(),
   isActive: zod.boolean(),
   createdAt: zod.string().optional(),
   updatedAt: zod.string().optional(),

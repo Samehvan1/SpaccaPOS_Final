@@ -70,13 +70,13 @@ adminRouter.post("/admin/role-permissions", requirePermission("admin:manage_perm
     // Wrap in transaction
     await db.transaction(async (tx) => {
       // Delete existing
-      await tx.delete(rolePermissionsTable).where(eq(rolePermissionsTable.role, role));
+      await tx.delete(rolePermissionsTable).where(eq(rolePermissionsTable.roleKey, role));
       
       // Insert new
       if (permissions.length > 0) {
         await tx.insert(rolePermissionsTable).values(
           permissions.map(p => ({
-            role,
+            roleKey: role,
             permissionKey: p
           }))
         );

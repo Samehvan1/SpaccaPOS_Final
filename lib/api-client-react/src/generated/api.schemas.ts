@@ -17,6 +17,7 @@ export const UserRole = {
   frontdesk: "frontdesk",
   cashier: "cashier",
   pickup: "pickup",
+  stockcontrol: "stockcontrol",
 } as const;
 
 export interface User {
@@ -43,6 +44,7 @@ export const UserDetailRole = {
   frontdesk: "frontdesk",
   cashier: "cashier",
   pickup: "pickup",
+  stockcontrol: "stockcontrol",
 } as const;
 
 export interface UserDetail {
@@ -65,6 +67,7 @@ export const CreateUserBodyRole = {
   frontdesk: "frontdesk",
   cashier: "cashier",
   pickup: "pickup",
+  stockcontrol: "stockcontrol",
 } as const;
 
 export interface CreateUserBody {
@@ -84,6 +87,7 @@ export const UpdateUserBodyRole = {
   frontdesk: "frontdesk",
   cashier: "cashier",
   pickup: "pickup",
+  stockcontrol: "stockcontrol",
 } as const;
 
 export interface UpdateUserBody {
