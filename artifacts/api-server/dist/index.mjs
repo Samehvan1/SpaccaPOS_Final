@@ -82024,9 +82024,12 @@ router5.get("/orders", async (req, res) => {
   }
   const limit = params.success && params.data.limit ? params.data.limit : 50;
   const offset = params.success && params.data.offset ? params.data.offset : 0;
-  const ordersRaw = conditions.length ? await db.select().from(ordersTable).where(and(...conditions)).orderBy(desc(ordersTable.createdAt)) : await db.select().from(ordersTable).orderBy(desc(ordersTable.createdAt));
-  const paginated = ordersRaw.slice(offset, offset + limit);
-  const orderIds = paginated.map((o) => o.id);
+  const query = db.select().from(ordersTable);
+  if (conditions.length > 0) {
+    query.where(and(...conditions));
+  }
+  const orders = await query.orderBy(desc(ordersTable.createdAt)).limit(limit).offset(offset);
+  const orderIds = orders.map((o) => o.id);
   const [items, baristas] = await Promise.all([
     orderIds.length > 0 ? db.select().from(orderItemsTable).where(inArray(orderItemsTable.orderId, orderIds)) : Promise.resolve([]),
     db.select().from(usersTable)
@@ -82054,7 +82057,7 @@ router5.get("/orders", async (req, res) => {
   }
   res.json(
     ListOrdersResponse2.parse(
-      serializeDates(paginated.map((o) => ({
+      serializeDates(orders.map((o) => ({
         ...o,
         baristaName: baristaMap[o.baristaId] ?? "Unknown",
         subtotal: parseFloat(o.subtotal),
@@ -82404,15 +82407,18 @@ router5.post("/orders/:id/refund", async (req, res) => {
     res.status(404).json({ error: "Order not found" });
     return;
   }
+  console.log(`[Refund-Debug] Order ${orderId}, Return Items:`, returnToStockItems);
   if (returnToStockItems && returnToStockItems.length > 0) {
     await db.transaction(async (tx) => {
       for (const itemId of returnToStockItems) {
         const customizations = await tx.select().from(orderItemCustomizationsTable).where(eq(orderItemCustomizationsTable.orderItemId, itemId));
+        console.log(`[Refund-Debug] Item ${itemId} has ${customizations.length} customizations`);
         for (const cust of customizations) {
           if (cust.ingredientId) {
             const consumed = parseFloat(cust.consumedQty);
+            console.log(`[Refund-Debug] Returning Ingredient ${cust.ingredientId}, Qty ${consumed} to Branch ${order.branchId}`);
             if (consumed > 0) {
-              await tx.update(branchStockTable).set({
+              const result = await tx.update(branchStockTable).set({
                 stockQuantity: sql`${branchStockTable.stockQuantity} + ${consumed}`,
                 updatedAt: /* @__PURE__ */ new Date()
               }).where(
@@ -82421,7 +82427,10 @@ router5.post("/orders/:id/refund", async (req, res) => {
                   eq(branchStockTable.branchId, order.branchId)
                 )
               );
+              console.log(`[Refund-Debug] Update result:`, result);
             }
+          } else {
+            console.log(`[Refund-Debug] Skipping customization ${cust.id} (No ingredientId)`);
           }
         }
       }

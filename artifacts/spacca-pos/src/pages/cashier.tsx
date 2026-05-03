@@ -300,7 +300,7 @@ export default function CashierPage() {
       <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-neon-cyan/5 blur-[120px] pointer-events-none rounded-full" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-neon-green/5 blur-[120px] pointer-events-none rounded-full" />
 
-      <Tabs defaultValue="approvals" className="flex flex-col h-full overflow-hidden">
+      <Tabs defaultValue="approvals" className="flex flex-col">
         <div className="bg-background/40 backdrop-blur-md border-b border-white/5 px-6 h-16 shrink-0 flex items-center justify-between z-10">
           <div className="flex items-center gap-6">
             <h1 className="text-xl font-black tracking-tighter text-foreground uppercase">
@@ -340,7 +340,7 @@ export default function CashierPage() {
           </div>
         </div>
 
-        <TabsContent value="approvals" className="h-[calc(100%-4rem)] overflow-y-auto m-0 p-0">
+        <TabsContent value="approvals" className="h-[calc(100vh-104px)] overflow-y-auto m-0 p-0">
             <div className="max-w-[1600px] mx-auto p-4 space-y-4">
               {orders.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-[70vh] text-muted-foreground animate-in fade-in zoom-in duration-500">
@@ -479,7 +479,7 @@ export default function CashierPage() {
             </div>
         </TabsContent>
 
-        <TabsContent value="recent" className="h-[calc(100%-4rem)] flex flex-col overflow-hidden m-0 p-0">
+        <TabsContent value="recent" className="h-[calc(100vh-104px)] flex flex-col overflow-hidden m-0 p-0">
           <div className="p-6 border-b border-white/5 bg-white/[0.01] shrink-0">
             <div className="relative max-w-md mx-auto">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -491,7 +491,7 @@ export default function CashierPage() {
               />
             </div>
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto">
+          <div className="overflow-y-auto flex-1">
             <div className="max-w-4xl mx-auto p-4 space-y-2">
               {recentOrders.length === 0 ? (
                 <div className="text-center py-20">
@@ -556,7 +556,7 @@ export default function CashierPage() {
           </div>
         </TabsContent>
 
-        <TabsContent value="terminal" className="h-[calc(100%-4rem)] overflow-hidden m-0">
+        <TabsContent value="terminal" className="h-[calc(100vh-104px)] overflow-hidden m-0">
           <PosTerminal />
         </TabsContent>
       </Tabs>
