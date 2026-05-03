@@ -29,6 +29,13 @@
       "when": 1777643500000,
       "tag": "0003_dynamic_roles",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1777801780115,
+      "tag": "0004_multi_tenant_branches",
+      "breakpoints": true
     }
   ]
 }
