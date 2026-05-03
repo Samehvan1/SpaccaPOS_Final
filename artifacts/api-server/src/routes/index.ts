@@ -18,9 +18,16 @@ import cashierSessionsRouter from "./cashier-sessions";
 import adminRouter from "./admin";
 import stockAuditsRouter from "./stock-audits";
 import rolesRouter from "./roles";
+import branchesRouter from "./branches";
+import { db, branchesTable } from "@workspace/db";
 import { addSseClient } from "../lib/sse";
 
 const router: IRouter = Router();
+
+// Simple health check
+router.get("/health-test", (req, res) => res.send("OK"));
+
+router.use("/admin/branches", branchesRouter);
 
 router.use(healthRouter);
 router.use(authRouter);

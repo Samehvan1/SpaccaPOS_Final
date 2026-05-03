@@ -13,11 +13,16 @@ import { ArrowLeft, Plus, AlertTriangle, ArrowDownToLine, ArrowUpFromLine, Packa
 import { Link } from "wouter";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function StockAdmin() {
-  const { data: movements, isLoading, refetch: refetchMovements } = useListStockMovements();
-  const { data: lowStock, refetch: refetchLowStock } = useGetLowStockIngredients();
-  const { data: ingredients, refetch: refetchIngredients } = useListIngredients({ active: true });
+  const { selectedBranchId } = useAuth();
+  const { data: movements, isLoading, refetch: refetchMovements } = useListStockMovements({ branchId: selectedBranchId } as any);
+  const { data: lowStock, refetch: refetchLowStock } = useGetLowStockIngredients({ branchId: selectedBranchId } as any);
+  const { data: ingredients, refetch: refetchIngredients } = useListIngredients({ 
+    active: true,
+    branchId: selectedBranchId 
+  } as any);
   const { toast } = useToast();
 
   const [isRestockOpen, setIsRestockOpen] = useState(false);
@@ -56,16 +61,25 @@ export default function StockAdmin() {
 
   const handleRestock = () => {
     if (!selectedIngredient || !quantity) return;
+    if (!selectedBranchId) {
+      toast({ variant: "destructive", title: "Select a branch first", description: "You must select a specific branch to update its stock." });
+      return;
+    }
     restock({
       id: parseInt(selectedIngredient),
       data: {
         quantity: parseFloat(quantity),
-        note: note || undefined
-      }
+        note: note || undefined,
+        branchId: selectedBranchId
+      } as any
     });
   };
 
   const handleSaveStartupStock = async () => {
+    if (!selectedBranchId) {
+      toast({ variant: "destructive", title: "Select a branch first", description: "You must select a specific branch to update its stock." });
+      return;
+    }
     const entries = Object.entries(startupValues).filter(([, v]) => v !== "" && !isNaN(parseFloat(v)));
     if (entries.length === 0) {
       toast({ variant: "destructive", title: "No quantities entered" });
@@ -84,8 +98,9 @@ export default function StockAdmin() {
         id: parseInt(id),
         data: {
           quantity: diff,
-          note: "Opening / startup stock entry"
-        }
+          note: "Opening / startup stock entry",
+          branchId: selectedBranchId
+        } as any
       });
       saved++;
     }

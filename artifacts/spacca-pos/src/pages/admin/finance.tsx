@@ -10,7 +10,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { Link } from "wouter";
 
 export default function FinanceDashboard() {
-  const { user } = useAuth();
+  const { user, selectedBranchId } = useAuth();
   const [, setLocation] = useLocation();
 
   if (user?.role !== "admin") {
@@ -18,9 +18,9 @@ export default function FinanceDashboard() {
     return null;
   }
 
-  const { data: summary, isLoading: isLoadingSummary } = useGetDashboardSummary();
-  const { data: categorySales, isLoading: isLoadingSales } = useGetSalesByCategory({ days: 7 });
-  const { data: topDrinks, isLoading: isLoadingTop } = useGetTopDrinks({ limit: 5 });
+  const { data: summary, isLoading: isLoadingSummary } = useGetDashboardSummary({ branchId: selectedBranchId } as any);
+  const { data: categorySales, isLoading: isLoadingSales } = useGetSalesByCategory({ days: 7, branchId: selectedBranchId } as any);
+  const { data: topDrinks, isLoading: isLoadingTop } = useGetTopDrinks({ limit: 5, branchId: selectedBranchId } as any);
 
   return (
     <div className="p-8 w-full flex flex-col gap-6 overflow-y-auto h-full">

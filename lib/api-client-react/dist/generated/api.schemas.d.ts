@@ -15,6 +15,7 @@ export declare const UserRole: {
     readonly frontdesk: "frontdesk";
     readonly cashier: "cashier";
     readonly pickup: "pickup";
+    readonly stockcontrol: "stockcontrol";
 };
 export interface User {
     id: number;
@@ -22,7 +23,8 @@ export interface User {
     role: UserRole;
 }
 export interface LoginBody {
-    pin: string;
+    username: string;
+    password: string;
 }
 export interface LoginResponse {
     user: User;
@@ -34,12 +36,15 @@ export declare const UserDetailRole: {
     readonly frontdesk: "frontdesk";
     readonly cashier: "cashier";
     readonly pickup: "pickup";
+    readonly stockcontrol: "stockcontrol";
 };
 export interface UserDetail {
     id: number;
     name: string;
+    username: string;
     role: UserDetailRole;
     pin?: string;
+    isActive: boolean;
     createdAt?: string;
     updatedAt?: string;
 }
@@ -50,11 +55,14 @@ export declare const CreateUserBodyRole: {
     readonly frontdesk: "frontdesk";
     readonly cashier: "cashier";
     readonly pickup: "pickup";
+    readonly stockcontrol: "stockcontrol";
 };
 export interface CreateUserBody {
     name: string;
+    username: string;
+    password: string;
     role: CreateUserBodyRole;
-    pin: string;
+    pin?: string;
 }
 export type UpdateUserBodyRole = (typeof UpdateUserBodyRole)[keyof typeof UpdateUserBodyRole];
 export declare const UpdateUserBodyRole: {
@@ -63,11 +71,15 @@ export declare const UpdateUserBodyRole: {
     readonly frontdesk: "frontdesk";
     readonly cashier: "cashier";
     readonly pickup: "pickup";
+    readonly stockcontrol: "stockcontrol";
 };
 export interface UpdateUserBody {
     name?: string;
+    username?: string;
+    password?: string;
     role?: UpdateUserBodyRole;
     pin?: string;
+    isActive?: boolean;
 }
 export type IngredientIngredientType = (typeof IngredientIngredientType)[keyof typeof IngredientIngredientType];
 export declare const IngredientIngredientType: {
@@ -78,6 +90,9 @@ export declare const IngredientIngredientType: {
     readonly sweetener: "sweetener";
     readonly topping: "topping";
     readonly base: "base";
+    readonly cup: "cup";
+    readonly tea: "tea";
+    readonly packing: "packing";
     readonly other: "other";
 };
 export interface Ingredient {
@@ -90,6 +105,8 @@ export interface Ingredient {
     stockQuantity: number;
     lowStockThreshold: number;
     isActive: boolean;
+    linkedTypeCount?: number;
+    linkedProductCount?: number;
     createdAt: string;
     updatedAt: string;
 }
@@ -118,6 +135,9 @@ export declare const CreateIngredientBodyIngredientType: {
     readonly sweetener: "sweetener";
     readonly topping: "topping";
     readonly base: "base";
+    readonly cup: "cup";
+    readonly tea: "tea";
+    readonly packing: "packing";
     readonly other: "other";
 };
 export interface CreateIngredientBody {
@@ -138,6 +158,9 @@ export declare const UpdateIngredientBodyIngredientType: {
     readonly sweetener: "sweetener";
     readonly topping: "topping";
     readonly base: "base";
+    readonly cup: "cup";
+    readonly tea: "tea";
+    readonly packing: "packing";
     readonly other: "other";
 };
 export interface UpdateIngredientBody {
@@ -200,6 +223,9 @@ export interface Drink {
     prepTimeSeconds: number;
     /** @nullable */
     cupSizeMl?: number | null;
+    /** @nullable */
+    cupIngredientId?: number | null;
+    isCustomizable?: boolean;
     kitchenStation?: string;
     categoryId?: number;
     sortOrder?: number;
@@ -233,6 +259,8 @@ export interface CreateDrinkBody {
     kitchenStation?: string;
     categoryId?: number;
     sortOrder?: number;
+    cupIngredientId?: number;
+    isCustomizable?: boolean;
     slots?: CreateDrinkBodySlotsItem[];
 }
 export interface UpdateDrinkBody {
@@ -246,6 +274,8 @@ export interface UpdateDrinkBody {
     kitchenStation?: string;
     categoryId?: number;
     sortOrder?: number;
+    cupIngredientId?: number;
+    isCustomizable?: boolean;
 }
 export type PriceCalculationBodySelectionsItem = {
     ingredientId?: number;
@@ -285,6 +315,7 @@ export interface OrderItemCustomization {
     /** @nullable */
     typeVolumeId?: number | null;
     consumedQty: number;
+    producedQty?: number;
     addedCost: number;
     slotLabel: string;
     optionLabel: string;
@@ -477,6 +508,30 @@ export interface TopDrink {
     totalSold: number;
     totalRevenue: number;
 }
+export interface Permission {
+    id: number;
+    key: string;
+    /** @nullable */
+    description?: string | null;
+}
+/**
+ * @nullable
+ */
+export type ActivityLogDetails = {
+    [key: string]: unknown;
+} | null;
+export interface ActivityLog {
+    id: number;
+    userId: number;
+    action: string;
+    /** @nullable */
+    entityType?: string | null;
+    /** @nullable */
+    entityId?: number | null;
+    /** @nullable */
+    details?: ActivityLogDetails;
+    createdAt: string;
+}
 export type SettingScope = (typeof SettingScope)[keyof typeof SettingScope];
 export declare const SettingScope: {
     readonly global: "global";
@@ -541,6 +596,7 @@ export interface UpdateDiscountBody {
 export type ListDrinksParams = {
     category?: string;
     active?: boolean;
+    includeSlots?: boolean;
 };
 export type ListIngredientsParams = {
     type?: string;
@@ -567,6 +623,12 @@ export declare const GetActiveOrdersStatus: {
     readonly paid: "paid";
     readonly in_progress: "in_progress";
     readonly ready: "ready";
+};
+export type ListActivityLogsParams = {
+    userId?: number;
+    action?: string;
+    limit?: number;
+    offset?: number;
 };
 export type GetSalesByCategoryParams = {
     days?: number;

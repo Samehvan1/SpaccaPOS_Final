@@ -2,12 +2,14 @@ import { pgTable, serial, text, numeric, integer, timestamp, index } from "drizz
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { usersTable } from "./users";
-import { drinksTable } from "./drinks";
+import { drinksTable, kitchenStationsTable } from "./drinks";
 import { ingredientsTable, ingredientOptionsTable } from "./ingredients";
 import { discountsTable } from "./discounts";
+import { branchesTable } from "./branches";
 
 export const ordersTable = pgTable("orders", {
   id: serial("id").primaryKey(),
+  branchId: integer("branch_id").notNull().references(() => branchesTable.id),
   orderNumber: text("order_number").notNull().unique(),
   baristaId: integer("barista_id").notNull().references(() => usersTable.id),
   status: text("status", {
@@ -49,6 +51,7 @@ export const orderItemsTable = pgTable("order_items", {
   lineTotal: numeric("line_total", { precision: 8, scale: 2 }).notNull(),
   specialNotes: text("special_notes"),
   kitchenStation: text("kitchen_station").notNull().default("main"),
+  kitchenStationId: integer("kitchen_station_id").references(() => kitchenStationsTable.id),
   status: text("status", { enum: ["pending", "ready"] }).notNull().default("pending"),
   readyAt: timestamp("ready_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

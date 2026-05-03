@@ -10,13 +10,14 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useOnlineStatus } from "@/hooks/use-online-status";
 import { usePWAInstall } from "@/hooks/use-pwa-install";
+import { useQuery } from "@tanstack/react-query";
 
 interface MainLayoutProps {
   children: ReactNode;
 }
 
 export function MainLayout({ children }: MainLayoutProps) {
-  const { user, logout } = useAuth();
+  const { user, logout, selectedBranchId, setSelectedBranchId } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { autoPrintCustomer, setAutoPrintCustomer, autoPrintAgent, setAutoPrintAgent } = useSettings();
   const isOnline = useOnlineStatus();
@@ -24,9 +25,45 @@ export function MainLayout({ children }: MainLayoutProps) {
   useOrderEvents(!!user);
   const [location, setLocation] = useLocation();
 
+  const { data: branches = [] } = useQuery({
+    queryKey: ["/api/admin/branches"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/branches");
+      if (!res.ok) throw new Error("Failed to fetch branches");
+      return res.json() as Promise<{ id: number; name: string }[]>;
+    },
+    enabled: !!user || location === "/pos",
+  });
+
   if (!user) {
     return (
       <div className="flex flex-col h-screen w-full bg-background overflow-hidden">
+        {location === "/pos" && (
+          <header className="flex items-center justify-between px-6 py-3 border-b bg-card shrink-0 shadow-sm z-40">
+            <div className="flex flex-col">
+              <span className="font-black text-2xl tracking-tighter text-primary select-none leading-none">
+                SPACCA
+              </span>
+              {selectedBranchId && (
+                <div className="flex items-center gap-1.5 mt-0.5">
+                   <Badge variant="outline" className="h-4 px-1.5 text-[8px] border-primary/20 bg-primary/5 text-primary font-black tracking-widest uppercase">
+                     {(branches as any[])?.find((b: any) => b.id === selectedBranchId)?.name || "Store Front"}
+                   </Badge>
+                </div>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="rounded-lg h-8 w-8 p-0 text-muted-foreground"
+                onClick={toggleTheme}
+              >
+                 {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+              </Button>
+            </div>
+          </header>
+        )}
         <main className="flex-1 flex flex-col h-full overflow-hidden relative">
           {children}
         </main>
@@ -40,9 +77,14 @@ export function MainLayout({ children }: MainLayoutProps) {
       <div className="flex flex-col h-screen w-full bg-background overflow-hidden">
         {/* Slim top bar */}
         <header className="flex items-center justify-between px-6 py-3 border-b bg-card shrink-0 shadow-sm">
-          <span className="font-bold text-xl tracking-tighter text-primary select-none">
-            SPACCA
-          </span>
+          <div className="flex flex-col">
+            <span className="font-black text-2xl tracking-tighter text-primary select-none leading-none">
+              SPACCA
+            </span>
+            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] mt-0.5">
+              {user.branch?.name || (selectedBranchId ? (branches as any[])?.find(b => b.id === selectedBranchId)?.name : "Global View")}
+            </span>
+          </div>
 
           <div className="flex items-center gap-2">
             <Button
@@ -102,6 +144,15 @@ export function MainLayout({ children }: MainLayoutProps) {
               <Badge variant="outline" className="capitalize px-2.5 py-0 rounded-full bg-primary/5 text-primary border-primary/20 font-bold text-[10px] tracking-tight">
                 {user.role}
               </Badge>
+              <div className="h-4 w-px bg-border mx-1" />
+              <div className="flex flex-col">
+                <span className="text-[10px] font-black text-foreground uppercase tracking-wider leading-tight">
+                  {user.branch?.name || (selectedBranchId ? (branches as any[])?.find(b => b.id === selectedBranchId)?.name : "Global")}
+                </span>
+                <span className="text-[8px] font-bold text-muted-foreground uppercase tracking-widest">
+                  Branch
+                </span>
+              </div>
            </div>
 
            <div className="flex items-center gap-4">
@@ -223,8 +274,44 @@ export function MainLayout({ children }: MainLayoutProps) {
         <div className="p-4 w-full border-t space-y-2">
           <div className="hidden md:block mb-2 px-2">
             <div className="text-sm font-medium">{user.name}</div>
-            <div className="text-xs text-muted-foreground capitalize">{user?.role}</div>
+            <div className="text-xs text-muted-foreground capitalize flex items-center gap-1.5">
+              {user?.role}
+              {(user as any).branch?.name && (
+                <span className="bg-primary/10 text-primary px-1.5 py-0.5 rounded text-[10px] font-bold">
+                  {(user as any).branch?.name}
+                </span>
+              )}
+            </div>
           </div>
+
+          {user?.role === "admin" && (
+            <div className="px-2 pb-4 pt-2">
+              <div className={`mb-3 p-2 rounded-lg border flex items-center gap-2 transition-all ${selectedBranchId ? 'bg-primary/5 border-primary/20' : 'bg-muted border-muted-foreground/10'}`}>
+                <div className={`h-2 w-2 rounded-full animate-pulse ${selectedBranchId ? 'bg-primary' : 'bg-slate-400'}`} />
+                <div className="text-[10px] font-bold uppercase tracking-wider truncate">
+                  {selectedBranchId ? (branches?.find(b => b.id === selectedBranchId)?.name || 'Branch View') : 'Global View'}
+                </div>
+              </div>
+              <label className="text-[10px] uppercase font-bold text-muted-foreground ml-1 mb-1 block tracking-wider">
+                Switch Context
+              </label>
+              <select
+                className="w-full bg-muted border-none rounded-md text-xs p-2 focus:ring-1 focus:ring-primary outline-none transition-all cursor-pointer hover:bg-muted/80"
+                value={selectedBranchId ?? "all"}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setSelectedBranchId(val === "all" ? null : parseInt(val));
+                }}
+              >
+                <option value="all">All Branches (Global)</option>
+                {branches?.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <Button
             variant="ghost"

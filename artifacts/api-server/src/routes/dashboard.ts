@@ -9,6 +9,7 @@ import {
   usersTable,
   orderItemCustomizationsTable,
   drinksTable,
+  branchStockTable,
 } from "@workspace/db";
 import {
   GetDashboardSummaryResponse,
@@ -22,19 +23,30 @@ import {
 
 const router: IRouter = Router();
 
-router.get("/dashboard/summary", async (_req, res): Promise<void> => {
+router.get("/dashboard/summary", async (req, res): Promise<void> => {
+  const sessionUser = (req.session as any);
+  const isAdmin = sessionUser.role === "admin";
+  const sessionBranchId = sessionUser.branchId;
+
+  const targetBranchId = req.query.branchId && req.query.branchId !== 'all'
+    ? parseInt(req.query.branchId as string)
+    : (isAdmin && (req.query.branchId === 'all' || !req.query.branchId)) ? null : sessionBranchId;
+
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+
+  const orderConditions = [
+    gte(ordersTable.createdAt, today),
+    sql`${ordersTable.status} NOT IN ('cancelled', 'refunded')`
+  ];
+  if (targetBranchId) {
+    orderConditions.push(eq(ordersTable.branchId, targetBranchId));
+  }
 
   const todayOrders = await db
     .select()
     .from(ordersTable)
-    .where(
-      and(
-        gte(ordersTable.createdAt, today),
-        sql`${ordersTable.status} NOT IN ('cancelled', 'refunded')`
-      )
-    );
+    .where(and(...orderConditions));
 
   const todayCashOrders = todayOrders.filter(o => o.paymentMethod === 'cash');
   const todayCardOrders = todayOrders.filter(o => o.paymentMethod === 'card');
@@ -59,8 +71,13 @@ router.get("/dashboard/summary", async (_req, res): Promise<void> => {
 
   const lowStockResult = await db
     .select({ count: sql<number>`count(*)` })
-    .from(ingredientsTable)
-    .where(sql`${ingredientsTable.stockQuantity} < ${ingredientsTable.lowStockThreshold}`);
+    .from(branchStockTable)
+    .where(
+      and(
+        targetBranchId ? eq(branchStockTable.branchId, targetBranchId) : sql`1=1`,
+        sql`${branchStockTable.stockQuantity} < ${branchStockTable.lowStockThreshold}`
+      )
+    );
   
   const lowStockCount = Number(lowStockResult[0]?.count || 0);
 
@@ -79,15 +96,28 @@ router.get("/dashboard/summary", async (_req, res): Promise<void> => {
 });
 
 router.get("/dashboard/active-orders", async (req, res): Promise<void> => {
+  const sessionUser = (req.session as any);
+  const isAdmin = sessionUser.role === "admin";
+  const sessionBranchId = sessionUser.branchId;
+
+  const targetBranchId = req.query.branchId && req.query.branchId !== 'all'
+    ? parseInt(req.query.branchId as string)
+    : (isAdmin && (req.query.branchId === 'all' || !req.query.branchId)) ? null : sessionBranchId;
+
   const { status } = req.query;
   const statusList = status 
     ? [status] 
     : ["pending", "paid", "in_progress", "ready"];
 
+  const conditions = [inArray(ordersTable.status, statusList as any)];
+  if (targetBranchId) {
+    conditions.push(eq(ordersTable.branchId, targetBranchId));
+  }
+
   const activeOrders = await db
     .select()
     .from(ordersTable)
-    .where(inArray(ordersTable.status, statusList as any))
+    .where(and(...conditions))
     .orderBy(ordersTable.createdAt);
 
   if (activeOrders.length === 0) {
@@ -132,10 +162,12 @@ router.get("/dashboard/active-orders", async (req, res): Promise<void> => {
       ...i,
       status: i.status as "pending" | "ready",
       kitchenStation: i.kitchenStation || "main",
+      kitchenStationId: i.kitchenStationId,
       unitPrice: parseFloat(i.unitPrice),
       lineTotal: parseFloat(i.lineTotal),
       customizations: customizationsByItemId[i.id] ?? [],
     });
+    console.log(`[KDS-Debug] Item: ${i.drinkName}, Station: ${i.kitchenStation}`);
     return acc;
   }, {} as Record<number, any[]>);
 
@@ -155,16 +187,46 @@ router.get("/dashboard/active-orders", async (req, res): Promise<void> => {
   res.json(GetActiveOrdersResponse.parse(serializeDates(ordersWithDetails)));
 });
 
-router.get("/dashboard/low-stock", async (_req, res): Promise<void> => {
-  const allIngredients = await db.select().from(ingredientsTable).where(eq(ingredientsTable.isActive, true));
+router.get("/dashboard/low-stock", async (req, res): Promise<void> => {
+  const sessionUser = (req.session as any);
+  const isAdmin = sessionUser.role === "admin";
+  const sessionBranchId = sessionUser.branchId;
 
-  const lowStock = allIngredients.filter(
-    (i) => parseFloat(i.stockQuantity) < parseFloat(i.lowStockThreshold)
+  const targetBranchId = req.query.branchId && req.query.branchId !== 'all'
+    ? parseInt(req.query.branchId as string)
+    : (isAdmin && (req.query.branchId === 'all' || !req.query.branchId)) ? null : sessionBranchId;
+  
+  const query = db
+    .select({
+      id: ingredientsTable.id,
+      name: ingredientsTable.name,
+      slug: ingredientsTable.slug,
+      ingredientType: ingredientsTable.ingredientType,
+      unit: ingredientsTable.unit,
+      costPerUnit: ingredientsTable.costPerUnit,
+      isActive: ingredientsTable.isActive,
+      stockQuantity: branchStockTable.stockQuantity,
+      lowStockThreshold: branchStockTable.lowStockThreshold,
+    })
+    .from(ingredientsTable)
+    .innerJoin(
+      branchStockTable,
+      and(
+        eq(branchStockTable.ingredientId, ingredientsTable.id),
+        targetBranchId ? eq(branchStockTable.branchId, targetBranchId) : sql`1=1`
+      )
+    );
+
+  const results = await query.where(
+    and(
+      eq(ingredientsTable.isActive, true),
+      sql`${branchStockTable.stockQuantity} < ${branchStockTable.lowStockThreshold}`
+    )
   );
 
   res.json(
     GetLowStockIngredientsResponse.parse(
-      serializeDates(lowStock.map((i) => ({
+      serializeDates(results.map((i) => ({
         ...i,
         costPerUnit: parseFloat(i.costPerUnit),
         stockQuantity: parseFloat(i.stockQuantity),
@@ -176,7 +238,19 @@ router.get("/dashboard/low-stock", async (_req, res): Promise<void> => {
 
 router.get("/dashboard/sales-by-category", async (req, res): Promise<void> => {
   const params = GetSalesByCategoryQueryParams.safeParse(req.query);
+  const sessionUser = (req.session as any);
+  const isAdmin = sessionUser.role === "admin";
+  const sessionBranchId = sessionUser.branchId;
+
+  const targetBranchId = req.query.branchId && req.query.branchId !== 'all'
+    ? parseInt(req.query.branchId as string)
+    : (isAdmin && (req.query.branchId === 'all' || !req.query.branchId)) ? null : sessionBranchId;
+
   const conditions = [sql`${ordersTable.status} NOT IN ('cancelled', 'refunded')`];
+
+  if (targetBranchId) {
+    conditions.push(eq(ordersTable.branchId, targetBranchId));
+  }
 
   if (params.success && params.data.startDate) {
     conditions.push(gte(ordersTable.createdAt, new Date(params.data.startDate)));
@@ -243,8 +317,19 @@ router.get("/dashboard/sales-by-category", async (req, res): Promise<void> => {
 router.get("/dashboard/top-drinks", async (req, res): Promise<void> => {
   const params = GetTopDrinksQueryParams.safeParse(req.query);
   const limit = (params.success && params.data.limit) ? params.data.limit : 5;
+  const sessionUser = (req.session as any);
+  const isAdmin = sessionUser.role === "admin";
+  const sessionBranchId = sessionUser.branchId;
+
+  const targetBranchId = req.query.branchId && req.query.branchId !== 'all'
+    ? parseInt(req.query.branchId as string)
+    : (isAdmin && (req.query.branchId === 'all' || !req.query.branchId)) ? null : sessionBranchId;
   
   const conditions = [sql`${ordersTable.status} != 'cancelled'`];
+
+  if (targetBranchId) {
+    conditions.push(eq(ordersTable.branchId, targetBranchId));
+  }
 
   if (params.success && params.data.startDate) {
     conditions.push(gte(ordersTable.createdAt, new Date(params.data.startDate)));
@@ -314,7 +399,19 @@ router.get("/dashboard/top-drinks", async (req, res): Promise<void> => {
 
 router.get("/dashboard/sales-by-day", async (req, res): Promise<void> => {
   const params = GetSalesByCategoryQueryParams.safeParse(req.query);
+  const sessionUser = (req.session as any);
+  const isAdmin = sessionUser.role === "admin";
+  const sessionBranchId = sessionUser.branchId;
+
+  const targetBranchId = req.query.branchId && req.query.branchId !== 'all'
+    ? parseInt(req.query.branchId as string)
+    : (isAdmin && (req.query.branchId === 'all' || !req.query.branchId)) ? null : sessionBranchId;
+
   const conditions = [sql`${ordersTable.status} NOT IN ('cancelled', 'refunded')`];
+
+  if (targetBranchId) {
+    conditions.push(eq(ordersTable.branchId, targetBranchId));
+  }
 
   if (params.success && params.data.startDate) {
     conditions.push(gte(ordersTable.createdAt, new Date(params.data.startDate)));

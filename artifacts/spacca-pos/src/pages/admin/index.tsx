@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Coffee, Droplet, LayoutDashboard, LineChart, PackageSearch, BarChart2, Tag, ChefHat, Users, Ticket, UserCheck, History, Shield, Settings } from "lucide-react";
+import { Coffee, Droplet, LayoutDashboard, LineChart, PackageSearch, BarChart2, Tag, ChefHat, Users, Ticket, UserCheck, History, Shield, Settings, Building2 } from "lucide-react";
 
 export default function AdminHub() {
   const { user } = useAuth();
@@ -124,6 +124,14 @@ export default function AdminHub() {
       href: "/admin/settings",
       color: "text-primary",
       bg: "bg-primary/10"
+    },
+    {
+      title: "Branch Management",
+      description: "Manage locations, branch codes, and addresses",
+      icon: Building2,
+      href: "/admin/branches",
+      color: "text-blue-600",
+      bg: "bg-blue-600/10"
     }
   ];
 

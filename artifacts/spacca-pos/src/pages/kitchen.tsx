@@ -10,11 +10,13 @@ import { formatDistanceToNow } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { useOrderEvents } from "@/hooks/use-order-events";
+import { useAuth } from "@/hooks/use-auth";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "/api";
 
 function slugifyStation(name: string) {
   if (!name || name === "main" || name === "main-bar") return "hot-bar"; // Map defaults to Hot Bar
+  if (name === "cold") return "cold-bar";
   return name.toLowerCase().trim()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
@@ -34,13 +36,14 @@ function useKitchenStations() {
 export default function KitchenDisplay() {
   const { toast } = useToast();
   const [activeStation, setActiveStation] = useState("all");
+  const { selectedBranchId } = useAuth();
   const queryClient = useQueryClient();
   const { data: stations = [] } = useKitchenStations();
 
   const allStations = [
     { value: "all", label: "Global View" },
     ...stations.map(s => ({
-      value: slugifyStation(s.name),
+      value: s.id.toString(),
       label: s.name
     }))
   ];
@@ -52,12 +55,12 @@ export default function KitchenDisplay() {
   useOrderEvents();
 
   const { data: activeOrders, isLoading } = useGetActiveOrders(
-    undefined,
+    { branchId: selectedBranchId || undefined },
     { 
       query: { 
         // No polling needed, using SSE
       } as any
-    }
+    } as any
   );
 
   const { mutate: updateStatus } = useUpdateOrderStatus();
@@ -87,14 +90,23 @@ export default function KitchenDisplay() {
   const knownStationValues = new Set(allStations.map(s => s.value).filter(v => v !== "all"));
 
   // Simple exact station matching
-  const stationMatches = (itemStation: string, targetValue: string) => {
+  const stationMatches = (item: any, targetValue: string) => {
     if (targetValue === "all") return true;
-    if (!itemStation) return false;
+    if (!item) return false;
     
-    const iSlug = slugifyStation(itemStation);
-    const tSlug = targetValue;
+    // 1. Try ID matching first (robust)
+    if (item.kitchenStationId && item.kitchenStationId.toString() === targetValue) {
+      return true;
+    }
     
-    return iSlug === tSlug;
+    // 2. Fallback to slug matching for legacy data
+    const iSlug = slugifyStation(item.kitchenStation);
+    const matched = iSlug === targetValue || targetValue.includes(iSlug) || iSlug.includes(targetValue);
+    
+    if (matched) {
+       // console.log(`[KDS-Match] Item: ${item.kitchenStation} (${iSlug}) vs Tab: ${targetValue} => ${matched}`);
+    }
+    return matched;
   };
 
   // Filter orders by station
@@ -103,14 +115,8 @@ export default function KitchenDisplay() {
 
     if (activeStation === "all") return order.status !== "pending";
     
-    const isFirstStation = allStations[1]?.value === activeStation;
-
     const hasItemsForThisStation = order.items.some((item: any) => {
-      if (stationMatches(item.kitchenStation, activeStation)) return true;
-      
-      // Fallback for "forgotten" items to the first bar
-      if (isFirstStation && !Array.from(knownStationValues).some(v => stationMatches(item.kitchenStation, v))) return true;
-
+      if (stationMatches(item, activeStation)) return true;
       return false;
     });
 
@@ -124,10 +130,8 @@ export default function KitchenDisplay() {
     stationCounts[s.value] = activeOrders?.filter(o =>
       (o.status === "paid" || o.status === "in_progress") && 
       o.items.some((item: any) => {
-        const isMatched = stationMatches(item.kitchenStation, s.value);
-        const isUnknown = !Array.from(knownStationValues).some(v => stationMatches(item.kitchenStation, v));
-
-        return (isMatched || (isFirst && isUnknown)) && item.status === "pending";
+        const isMatched = stationMatches(item, s.value);
+        return isMatched && item.status === "pending";
       })
     ).length ?? 0;
   });
@@ -244,10 +248,8 @@ export default function KitchenDisplay() {
                 <CardContent className="p-0">
                   <div className="divide-y divide-white/5">
                     {order.items.map((item: any) => {
-                      const isMatched = stationMatches(item.kitchenStation, activeStation);
-                      const isUnknown = !Array.from(knownStationValues).some(v => stationMatches(item.kitchenStation, v));
-                      const isFirstStation = allStations[1]?.value === activeStation;
-                      const isThisStation = activeStation === "all" || isMatched || (isFirstStation && isUnknown);
+                      const isMatched = stationMatches(item, activeStation);
+                      const isThisStation = activeStation === "all" || isMatched;
 
                       return (
                         <div

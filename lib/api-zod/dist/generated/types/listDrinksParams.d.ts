@@ -8,5 +8,6 @@
 export type ListDrinksParams = {
     category?: string;
     active?: boolean;
+    includeSlots?: boolean;
 };
 //# sourceMappingURL=listDrinksParams.d.ts.map

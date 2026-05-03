@@ -22,12 +22,13 @@ import {
   Download, Tag, CheckCircle2, XCircle, FileText, Layers, Clock
 } from "lucide-react";
 import { Link } from "wouter";
+import { useAuth } from "@/hooks/use-auth";
+import { format, subDays, startOfDay, endOfDay, parseISO, differenceInSeconds } from "date-fns";
 import { fmt, pure, CURRENCY } from "@/lib/currency";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend,
 } from "recharts";
-import { format, subDays, startOfDay, endOfDay, differenceInSeconds } from "date-fns";
 
 function formatDuration(seconds: number | null | undefined): string {
   if (seconds == null || isNaN(seconds)) return "-";
@@ -64,6 +65,17 @@ export default function ReportsPage() {
   const [selectedCustomizedItem, setSelectedCustomizedItem] = useState<any>(null);
   const [isDailyGrouped, setIsDailyGrouped] = useState(false);
   const [selectedOrderDetails, setSelectedOrderDetails] = useState<any>(null);
+  const { selectedBranchId } = useAuth();
+
+  // Fetch branches for the title indicator
+  const { data: branches } = useQuery<any[]>({
+    queryKey: ["admin-branches"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/admin/branches`);
+      if (!res.ok) throw new Error("Failed to fetch branches");
+      return res.json();
+    }
+  });
 
   // Fetch all drinks with slots for precise customization detection in the list
   const { data: allDrinksCatalog } = useListDrinks({ includeSlots: true } as any);
@@ -97,20 +109,24 @@ export default function ReportsPage() {
 
   // Fetch drink details for defaults when a customized item is selected (modal)
   const { data: drinkDetail, isLoading: loadingDrinkDetail } = useGetDrink(selectedCustomizedItem?.drinkId || 0, {
-    query: { enabled: !!selectedCustomizedItem?.drinkId } as any
+    query: { 
+      enabled: !!selectedCustomizedItem?.drinkId,
+      branchId: selectedBranchId
+    } as any
   });
 
   const defaultsMap = useMemo(() => buildDefaultsMap(drinkDetail?.slots as any[]), [drinkDetail]);
 
   // Dashboard Tab Data
-  const { data: summary, isLoading: loadingSummary } = useGetDashboardSummary();
-  const { data: dashboardCategorySales, isLoading: loadingDashboardCategory } = useGetSalesByCategory({ days: period.days });
-  const { data: topDrinks, isLoading: loadingTop } = useGetTopDrinks({ limit: 10, days: period.days });
+  const { data: summary, isLoading: loadingSummary } = useGetDashboardSummary({ branchId: selectedBranchId } as any);
+  const { data: dashboardCategorySales, isLoading: loadingDashboardCategory } = useGetSalesByCategory({ days: period.days, branchId: selectedBranchId } as any);
+  const { data: topDrinks, isLoading: loadingTop } = useGetTopDrinks({ limit: 10, days: period.days, branchId: selectedBranchId } as any);
   const { data: recentOrders, isLoading: loadingRecentOrders } = useListOrders({ 
     status: "completed", 
     limit: 10,
-    startDate: format(subDays(new Date(), period.days - 1), "yyyy-MM-dd")
-  });
+    startDate: format(subDays(new Date(), period.days - 1), "yyyy-MM-dd"),
+    branchId: selectedBranchId
+  } as any);
 
   const dashTotalRevenue = dashboardCategorySales?.reduce((s, c) => s + c.totalRevenue, 0) ?? 0;
   const dashTotalOrders = dashboardCategorySales?.reduce((s, c) => s + c.totalOrders, 0) ?? 0;
@@ -127,14 +143,16 @@ export default function ReportsPage() {
     startDate: reportStartDate,
     endDate: reportEndDate,
     limit: rowsPerPage,
-    offset: (reportPage - 1) * rowsPerPage
-  });
+    offset: (reportPage - 1) * rowsPerPage,
+    branchId: selectedBranchId
+  } as any);
 
   // Calculate totals for report banner using the updated category sales endpoint
   const { data: reportSummary, isLoading: loadingReportSummary } = useGetSalesByCategory({
     startDate: reportStartDate,
-    endDate: reportEndDate
-  });
+    endDate: reportEndDate,
+    branchId: selectedBranchId
+  } as any);
 
   const reportTotalRevenue = reportSummary?.reduce((s, c) => s + c.totalRevenue, 0) ?? 0;
   const reportTotalOrders = reportSummary?.reduce((s, c) => s + c.totalOrders, 0) ?? 0;
@@ -143,9 +161,14 @@ export default function ReportsPage() {
 
   // Daily Summary Query
   const { data: dailySummary, isLoading: loadingDailySummary } = useQuery({
-    queryKey: ["sales-by-day", reportStartDate, reportEndDate],
+    queryKey: ["sales-by-day", reportStartDate, reportEndDate, selectedBranchId],
     queryFn: async () => {
-      const res = await fetch(`${API_BASE}/dashboard/sales-by-day?startDate=${reportStartDate}&endDate=${reportEndDate}`);
+      const url = new URL(`${API_BASE}/dashboard/sales-by-day`, window.location.origin);
+      url.searchParams.set("startDate", reportStartDate);
+      url.searchParams.set("endDate", reportEndDate);
+      if (selectedBranchId) url.searchParams.set("branchId", String(selectedBranchId));
+      
+      const res = await fetch(url.toString());
       if (!res.ok) throw new Error("Failed to fetch daily summary");
       return res.json();
     },
@@ -311,7 +334,14 @@ export default function ReportsPage() {
           <div>
             <h1 className="text-3xl font-bold flex items-center gap-3">
               <BarChart2 className="h-8 w-8 text-primary" />
-              Reports
+              <span>
+                Reports
+                {selectedBranchId && (
+                  <span className="text-primary/50 ml-2">
+                    — {branches?.find(b => b.id === selectedBranchId)?.name}
+                  </span>
+                )}
+              </span>
             </h1>
             <p className="text-muted-foreground mt-1">Sales performance and operational analytics.</p>
           </div>

@@ -1,5 +1,5 @@
 import type { QueryKey, UseMutationOptions, UseMutationResult, UseQueryOptions, UseQueryResult } from "@tanstack/react-query";
-import type { CategorySales, CreateDiscountBody, CreateDrinkBody, CreateIngredientBody, CreateIngredientOptionBody, CreateOrderBody, CreateUserBody, DashboardSummary, Discount, Drink, DrinkDetail, GetActiveOrdersParams, GetSalesByCategoryParams, GetSettingsParams, GetTopDrinksParams, HealthStatus, Ingredient, IngredientDetail, IngredientOption, ListDrinksParams, ListIngredientsParams, ListOrdersParams, ListStockMovementsParams, LoginBody, LoginResponse, Order, OrderDetail, PriceBreakdown, PriceCalculationBody, RestockBody, Setting, StockAdjustmentBody, StockMovement, TopDrink, UpdateDiscountBody, UpdateDrinkBody, UpdateIngredientBody, UpdateIngredientOptionBody, UpdateOrderStatusBody, UpdateSettingsBody, UpdateUserBody, User, UserDetail } from "./api.schemas";
+import type { ActivityLog, CategorySales, CreateDiscountBody, CreateDrinkBody, CreateIngredientBody, CreateIngredientOptionBody, CreateOrderBody, CreateUserBody, DashboardSummary, Discount, Drink, DrinkDetail, GetActiveOrdersParams, GetSalesByCategoryParams, GetSettingsParams, GetTopDrinksParams, HealthStatus, Ingredient, IngredientDetail, IngredientOption, ListActivityLogsParams, ListDrinksParams, ListIngredientsParams, ListOrdersParams, ListStockMovementsParams, LoginBody, LoginResponse, Order, OrderDetail, Permission, PriceBreakdown, PriceCalculationBody, RestockBody, Setting, StockAdjustmentBody, StockMovement, TopDrink, UpdateDiscountBody, UpdateDrinkBody, UpdateIngredientBody, UpdateIngredientOptionBody, UpdateOrderStatusBody, UpdateSettingsBody, UpdateUserBody, User, UserDetail } from "./api.schemas";
 import { customFetch } from "../custom-fetch";
 import type { ErrorType, BodyType } from "../custom-fetch";
 type AwaitedInput<T> = PromiseLike<T> | T;
@@ -281,7 +281,7 @@ export declare function useListIngredients<TData = Awaited<ReturnType<typeof lis
     queryKey: QueryKey;
 };
 /**
- * @summary Create an ingredient
+ * @summary Create a new ingredient
  */
 export declare const getCreateIngredientUrl: () => string;
 export declare const createIngredient: (createIngredientBody: CreateIngredientBody, options?: RequestInit) => Promise<Ingredient>;
@@ -297,7 +297,7 @@ export type CreateIngredientMutationResult = NonNullable<Awaited<ReturnType<type
 export type CreateIngredientMutationBody = BodyType<CreateIngredientBody>;
 export type CreateIngredientMutationError = ErrorType<unknown>;
 /**
- * @summary Create an ingredient
+ * @summary Create a new ingredient
  */
 export declare const useCreateIngredient: <TError = ErrorType<unknown>, TContext = unknown>(options?: {
     mutation?: UseMutationOptions<Awaited<ReturnType<typeof createIngredient>>, TError, {
@@ -307,6 +307,24 @@ export declare const useCreateIngredient: <TError = ErrorType<unknown>, TContext
 }) => UseMutationResult<Awaited<ReturnType<typeof createIngredient>>, TError, {
     data: BodyType<CreateIngredientBody>;
 }, TContext>;
+/**
+ * @summary Wipe current inventory and import from Inventory2026.csv
+ */
+export declare const getImportInventoryCsvUrl: () => string;
+export declare const importInventoryCsv: (options?: RequestInit) => Promise<void>;
+export declare const getImportInventoryCsvMutationOptions: <TError = ErrorType<void>, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof importInventoryCsv>>, TError, void, TContext>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseMutationOptions<Awaited<ReturnType<typeof importInventoryCsv>>, TError, void, TContext>;
+export type ImportInventoryCsvMutationResult = NonNullable<Awaited<ReturnType<typeof importInventoryCsv>>>;
+export type ImportInventoryCsvMutationError = ErrorType<void>;
+/**
+ * @summary Wipe current inventory and import from Inventory2026.csv
+ */
+export declare const useImportInventoryCsv: <TError = ErrorType<void>, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof importInventoryCsv>>, TError, void, TContext>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseMutationResult<Awaited<ReturnType<typeof importInventoryCsv>>, TError, void, TContext>;
 /**
  * @summary Get ingredient with options
  */
@@ -360,6 +378,32 @@ export declare const useUpdateIngredient: <TError = ErrorType<unknown>, TContext
 }) => UseMutationResult<Awaited<ReturnType<typeof updateIngredient>>, TError, {
     id: number;
     data: BodyType<UpdateIngredientBody>;
+}, TContext>;
+/**
+ * @summary Delete an ingredient
+ */
+export declare const getDeleteIngredientUrl: (id: number) => string;
+export declare const deleteIngredient: (id: number, options?: RequestInit) => Promise<void>;
+export declare const getDeleteIngredientMutationOptions: <TError = ErrorType<void>, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof deleteIngredient>>, TError, {
+        id: number;
+    }, TContext>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseMutationOptions<Awaited<ReturnType<typeof deleteIngredient>>, TError, {
+    id: number;
+}, TContext>;
+export type DeleteIngredientMutationResult = NonNullable<Awaited<ReturnType<typeof deleteIngredient>>>;
+export type DeleteIngredientMutationError = ErrorType<void>;
+/**
+ * @summary Delete an ingredient
+ */
+export declare const useDeleteIngredient: <TError = ErrorType<void>, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof deleteIngredient>>, TError, {
+        id: number;
+    }, TContext>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseMutationResult<Awaited<ReturnType<typeof deleteIngredient>>, TError, {
+    id: number;
 }, TContext>;
 /**
  * @summary Add an option to an ingredient
@@ -844,6 +888,52 @@ export declare const useDeleteUser: <TError = ErrorType<unknown>, TContext = unk
 }) => UseMutationResult<Awaited<ReturnType<typeof deleteUser>>, TError, {
     id: number;
 }, TContext>;
+/**
+ * @summary List activity logs
+ */
+export declare const getListActivityLogsUrl: (params?: ListActivityLogsParams) => string;
+export declare const listActivityLogs: (params?: ListActivityLogsParams, options?: RequestInit) => Promise<ActivityLog[]>;
+export declare const getListActivityLogsQueryKey: (params?: ListActivityLogsParams) => readonly ["/api/admin/activity-logs", ...ListActivityLogsParams[]];
+export declare const getListActivityLogsQueryOptions: <TData = Awaited<ReturnType<typeof listActivityLogs>>, TError = ErrorType<unknown>>(params?: ListActivityLogsParams, options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof listActivityLogs>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseQueryOptions<Awaited<ReturnType<typeof listActivityLogs>>, TError, TData> & {
+    queryKey: QueryKey;
+};
+export type ListActivityLogsQueryResult = NonNullable<Awaited<ReturnType<typeof listActivityLogs>>>;
+export type ListActivityLogsQueryError = ErrorType<unknown>;
+/**
+ * @summary List activity logs
+ */
+export declare function useListActivityLogs<TData = Awaited<ReturnType<typeof listActivityLogs>>, TError = ErrorType<unknown>>(params?: ListActivityLogsParams, options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof listActivityLogs>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+};
+/**
+ * @summary List all available permissions
+ */
+export declare const getListPermissionsUrl: () => string;
+export declare const listPermissions: (options?: RequestInit) => Promise<Permission[]>;
+export declare const getListPermissionsQueryKey: () => readonly ["/api/admin/permissions"];
+export declare const getListPermissionsQueryOptions: <TData = Awaited<ReturnType<typeof listPermissions>>, TError = ErrorType<unknown>>(options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof listPermissions>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseQueryOptions<Awaited<ReturnType<typeof listPermissions>>, TError, TData> & {
+    queryKey: QueryKey;
+};
+export type ListPermissionsQueryResult = NonNullable<Awaited<ReturnType<typeof listPermissions>>>;
+export type ListPermissionsQueryError = ErrorType<unknown>;
+/**
+ * @summary List all available permissions
+ */
+export declare function useListPermissions<TData = Awaited<ReturnType<typeof listPermissions>>, TError = ErrorType<unknown>>(options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof listPermissions>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+};
 /**
  * @summary Get sales grouped by drink category
  */

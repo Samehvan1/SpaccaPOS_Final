@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq, and } from "drizzle-orm";
-import { db, usersTable, activityLogsTable } from "@workspace/db";
+import { db, usersTable, activityLogsTable, branchesTable } from "@workspace/db";
 import { logActivity } from "../lib/activity-logger";
 import { BaristaLoginBody, BaristaLoginResponse, GetMeResponse } from "@workspace/api-zod";
 import bcrypt from "bcryptjs";
@@ -16,44 +16,54 @@ router.post("/auth/login", async (req, res): Promise<void> => {
 
   const { username, password } = parsed.data;
 
-  const [user] = await db
-    .select()
+  const [result] = await db
+    .select({
+      user: usersTable,
+      branchName: branchesTable.name,
+    })
     .from(usersTable)
+    .leftJoin(branchesTable, eq(usersTable.branchId, branchesTable.id))
     .where(eq(usersTable.username, username))
     .limit(1);
 
-  if (!user || !user.passwordHash) {
+  if (!result || !result.user.passwordHash) {
     res.status(401).json({ error: "Invalid username or password" });
     return;
   }
 
-  const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
+  const isPasswordValid = await bcrypt.compare(password, result.user.passwordHash);
   if (!isPasswordValid) {
     res.status(401).json({ error: "Invalid username or password" });
     return;
   }
 
-  if (!user.isActive) {
+  if (!result.user.isActive) {
     res.status(403).json({ error: "Account is inactive" });
     return;
   }
 
-  (req.session as unknown as Record<string, unknown>).userId = user.id;
+  (req.session as unknown as Record<string, unknown>).userId = result.user.id;
+  (req.session as unknown as Record<string, unknown>).branchId = result.user.branchId;
 
   // Log activity
   await db.insert(activityLogsTable).values({
-    userId: user.id,
+    userId: result.user.id,
     action: "LOGIN",
     entityType: "user",
-    entityId: user.id,
+    entityId: result.user.id,
     details: { ip: req.ip, userAgent: req.get("user-agent") },
   });
 
   const payload = BaristaLoginResponse.parse({
     user: {
-      id: user.id,
-      name: user.name,
-      role: user.role,
+      id: result.user.id,
+      name: result.user.name,
+      role: result.user.role,
+      branchId: result.user.branchId,
+      branch: result.user.branchId ? {
+        id: result.user.branchId,
+        name: result.branchName || "Unknown Branch",
+      } : undefined,
     },
   });
 
@@ -81,22 +91,31 @@ router.get("/auth/me", async (req, res): Promise<void> => {
     return;
   }
 
-  const [user] = await db
-    .select()
+  const [result] = await db
+    .select({
+      user: usersTable,
+      branchName: branchesTable.name,
+    })
     .from(usersTable)
+    .leftJoin(branchesTable, eq(usersTable.branchId, branchesTable.id))
     .where(eq(usersTable.id, userId))
     .limit(1);
 
-  if (!user) {
+  if (!result) {
     res.status(401).json({ error: "Not authenticated" });
     return;
   }
 
   res.json(
     GetMeResponse.parse({
-      id: user.id,
-      name: user.name,
-      role: user.role,
+      id: result.user.id,
+      name: result.user.name,
+      role: result.user.role,
+      branchId: result.user.branchId,
+      branch: result.user.branchId ? {
+        id: result.user.branchId,
+        name: result.branchName || "Unknown Branch",
+      } : undefined,
     })
   );
 });

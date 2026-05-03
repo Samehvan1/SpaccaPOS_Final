@@ -26,7 +26,21 @@ export const BaristaLoginResponse = zod.object({
   user: zod.object({
     id: zod.number(),
     name: zod.string(),
-    role: zod.enum(["admin", "barista", "frontdesk", "cashier", "pickup", "stockcontrol"]),
+    role: zod.enum([
+      "admin",
+      "barista",
+      "frontdesk",
+      "cashier",
+      "pickup",
+      "stockcontrol",
+    ]),
+    branchId: zod.number().nullish(),
+    branch: zod
+      .object({
+        id: zod.number().optional(),
+        name: zod.string().optional(),
+      })
+      .optional(),
   }),
 });
 
@@ -36,7 +50,21 @@ export const BaristaLoginResponse = zod.object({
 export const GetMeResponse = zod.object({
   id: zod.number(),
   name: zod.string(),
-  role: zod.enum(["admin", "barista", "frontdesk", "cashier", "pickup", "stockcontrol"]),
+  role: zod.enum([
+    "admin",
+    "barista",
+    "frontdesk",
+    "cashier",
+    "pickup",
+    "stockcontrol",
+  ]),
+  branchId: zod.number().nullish(),
+  branch: zod
+    .object({
+      id: zod.number().optional(),
+      name: zod.string().optional(),
+    })
+    .optional(),
 });
 
 /**
@@ -46,6 +74,7 @@ export const ListDrinksQueryParams = zod.object({
   category: zod.coerce.string().optional(),
   active: zod.coerce.boolean().optional(),
   includeSlots: zod.coerce.boolean().optional(),
+  branchId: zod.coerce.number().optional(),
 });
 
 export const ListDrinksResponseItem = zod.object({
@@ -109,6 +138,10 @@ export const GetDrinkParams = zod.object({
   id: zod.coerce.number(),
 });
 
+export const GetDrinkQueryParams = zod.object({
+  branchId: zod.coerce.number().optional(),
+});
+
 export const GetDrinkResponse = zod
   .object({
     id: zod.number(),
@@ -156,6 +189,10 @@ export const UpdateDrinkParams = zod.object({
   id: zod.coerce.number(),
 });
 
+export const UpdateDrinkQueryParams = zod.object({
+  branchId: zod.coerce.number().optional(),
+});
+
 export const UpdateDrinkBody = zod.object({
   name: zod.string().optional(),
   description: zod.string().optional(),
@@ -198,6 +235,10 @@ export const DeleteDrinkParams = zod.object({
   id: zod.coerce.number(),
 });
 
+export const DeleteDrinkQueryParams = zod.object({
+  branchId: zod.coerce.number().optional(),
+});
+
 /**
  * @summary Calculate price with customizations (side-effect free)
  */
@@ -205,7 +246,12 @@ export const CalculateDrinkPriceParams = zod.object({
   id: zod.coerce.number(),
 });
 
+export const CalculateDrinkPriceQueryParams = zod.object({
+  branchId: zod.coerce.number().optional(),
+});
+
 export const CalculateDrinkPriceBody = zod.object({
+  branchId: zod.number().optional(),
   selections: zod.array(
     zod.object({
       ingredientId: zod.number().optional(),
@@ -307,6 +353,10 @@ export const GetIngredientParams = zod.object({
   id: zod.coerce.number(),
 });
 
+export const GetIngredientQueryParams = zod.object({
+  branchId: zod.coerce.number().optional(),
+});
+
 export const GetIngredientResponse = zod
   .object({
     id: zod.number(),
@@ -359,6 +409,10 @@ export const GetIngredientResponse = zod
  */
 export const UpdateIngredientParams = zod.object({
   id: zod.coerce.number(),
+});
+
+export const UpdateIngredientQueryParams = zod.object({
+  branchId: zod.coerce.number().optional(),
 });
 
 export const UpdateIngredientBody = zod.object({
@@ -420,11 +474,19 @@ export const DeleteIngredientParams = zod.object({
   id: zod.coerce.number(),
 });
 
+export const DeleteIngredientQueryParams = zod.object({
+  branchId: zod.coerce.number().optional(),
+});
+
 /**
  * @summary Add an option to an ingredient
  */
 export const CreateIngredientOptionParams = zod.object({
   id: zod.coerce.number(),
+});
+
+export const CreateIngredientOptionQueryParams = zod.object({
+  branchId: zod.coerce.number().optional(),
 });
 
 export const CreateIngredientOptionBody = zod.object({
@@ -444,6 +506,10 @@ export const CreateIngredientOptionBody = zod.object({
 export const UpdateIngredientOptionParams = zod.object({
   id: zod.coerce.number(),
   optionId: zod.coerce.number(),
+});
+
+export const UpdateIngredientOptionQueryParams = zod.object({
+  branchId: zod.coerce.number().optional(),
 });
 
 export const UpdateIngredientOptionBody = zod.object({
@@ -478,11 +544,19 @@ export const DeleteIngredientOptionParams = zod.object({
   optionId: zod.coerce.number(),
 });
 
+export const DeleteIngredientOptionQueryParams = zod.object({
+  branchId: zod.coerce.number().optional(),
+});
+
 /**
  * @summary Restock an ingredient
  */
 export const RestockIngredientParams = zod.object({
   id: zod.coerce.number(),
+});
+
+export const RestockIngredientQueryParams = zod.object({
+  branchId: zod.coerce.number().optional(),
 });
 
 export const RestockIngredientBody = zod.object({
@@ -527,6 +601,7 @@ export const ListOrdersQueryParams = zod.object({
   endDate: zod.coerce.date().optional(),
   limit: zod.coerce.number().optional(),
   offset: zod.coerce.number().optional(),
+  branchId: zod.coerce.number().optional(),
 });
 
 export const ListOrdersResponseItem = zod
@@ -576,6 +651,8 @@ export const ListOrdersResponseItem = zod
           specialNotes: zod.string().nullable(),
           status: zod.enum(["pending", "ready"]),
           readyAt: zod.string().nullable(),
+          kitchenStation: zod.string().optional(),
+          kitchenStationId: zod.number().nullish(),
           customizations: zod.array(
             zod.object({
               id: zod.number(),
@@ -601,6 +678,7 @@ export const ListOrdersResponse = zod.array(ListOrdersResponseItem);
  * @summary Place a new order (full transaction)
  */
 export const CreateOrderBody = zod.object({
+  branchId: zod.number().optional(),
   customerName: zod.string().optional(),
   paymentMethod: zod.enum(["cash", "card", "wallet"]),
   amountTendered: zod.number().optional(),
@@ -631,6 +709,10 @@ export const CreateOrderBody = zod.object({
  */
 export const GetOrderParams = zod.object({
   id: zod.coerce.number(),
+});
+
+export const GetOrderQueryParams = zod.object({
+  branchId: zod.coerce.number().optional(),
 });
 
 export const GetOrderResponse = zod
@@ -680,6 +762,8 @@ export const GetOrderResponse = zod
           specialNotes: zod.string().nullable(),
           status: zod.enum(["pending", "ready"]),
           readyAt: zod.string().nullable(),
+          kitchenStation: zod.string().optional(),
+          kitchenStationId: zod.number().nullish(),
           customizations: zod.array(
             zod.object({
               id: zod.number(),
@@ -705,6 +789,10 @@ export const GetOrderResponse = zod
  */
 export const UpdateOrderStatusParams = zod.object({
   id: zod.coerce.number(),
+});
+
+export const UpdateOrderStatusQueryParams = zod.object({
+  branchId: zod.coerce.number().optional(),
 });
 
 export const UpdateOrderStatusBody = zod.object({
@@ -757,6 +845,10 @@ export const UpdateOrderStatusResponse = zod.object({
  */
 export const MarkOrderItemReadyParams = zod.object({
   id: zod.coerce.number(),
+});
+
+export const MarkOrderItemReadyQueryParams = zod.object({
+  branchId: zod.coerce.number().optional(),
 });
 
 export const MarkOrderItemReadyResponse = zod.object({
@@ -847,6 +939,7 @@ export const GetDashboardSummaryResponse = zod.object({
  */
 export const GetActiveOrdersQueryParams = zod.object({
   status: zod.enum(["pending", "paid", "in_progress", "ready"]).optional(),
+  branchId: zod.coerce.number().optional(),
 });
 
 export const GetActiveOrdersResponseItem = zod
@@ -896,6 +989,8 @@ export const GetActiveOrdersResponseItem = zod
           specialNotes: zod.string().nullable(),
           status: zod.enum(["pending", "ready"]),
           readyAt: zod.string().nullable(),
+          kitchenStation: zod.string().optional(),
+          kitchenStationId: zod.number().nullish(),
           customizations: zod.array(
             zod.object({
               id: zod.number(),
@@ -958,11 +1053,10 @@ export const ListUsersResponseItem = zod.object({
   id: zod.number(),
   name: zod.string(),
   username: zod.string(),
-  role: zod.enum(["admin", "barista", "frontdesk", "cashier", "pickup", "stockcontrol"]),
-  pin: zod.string().optional(),
+  role: zod.string(),
+  branchId: zod.number().nullish(),
   isActive: zod.boolean(),
-  createdAt: zod.string().optional(),
-  updatedAt: zod.string().optional(),
+  createdAt: zod.coerce.date().optional(),
 });
 export const ListUsersResponse = zod.array(ListUsersResponseItem);
 
@@ -973,8 +1067,16 @@ export const CreateUserBody = zod.object({
   name: zod.string(),
   username: zod.string(),
   password: zod.string(),
-  role: zod.enum(["admin", "barista", "frontdesk", "cashier", "pickup", "stockcontrol"]),
-  pin: zod.string().optional().nullable(),
+  role: zod.enum([
+    "admin",
+    "barista",
+    "frontdesk",
+    "cashier",
+    "pickup",
+    "stockcontrol",
+  ]),
+  branchId: zod.number().optional(),
+  pin: zod.string().optional(),
 });
 
 /**
@@ -984,14 +1086,18 @@ export const UpdateUserParams = zod.object({
   id: zod.coerce.number(),
 });
 
+export const UpdateUserQueryParams = zod.object({
+  branchId: zod.coerce.number().optional(),
+});
+
 export const UpdateUserBody = zod.object({
   name: zod.string().optional(),
   username: zod.string().optional(),
   password: zod.string().optional(),
   role: zod
-    .enum(["admin", "barista", "frontdesk", "cashier", "pickup", "stockcontrol"])
+    .enum(["admin", "barista", "frontdesk", "cashier", "pickup"])
     .optional(),
-  pin: zod.string().optional().nullable(),
+  pin: zod.string().optional(),
   isActive: zod.boolean().optional(),
 });
 
@@ -999,11 +1105,10 @@ export const UpdateUserResponse = zod.object({
   id: zod.number(),
   name: zod.string(),
   username: zod.string(),
-  role: zod.enum(["admin", "barista", "frontdesk", "cashier", "pickup", "stockcontrol"]),
-  pin: zod.string().optional().nullable(),
+  role: zod.string(),
+  branchId: zod.number().nullish(),
   isActive: zod.boolean(),
-  createdAt: zod.string().optional(),
-  updatedAt: zod.string().optional(),
+  createdAt: zod.coerce.date().optional(),
 });
 
 /**
@@ -1011,6 +1116,10 @@ export const UpdateUserResponse = zod.object({
  */
 export const DeleteUserParams = zod.object({
   id: zod.coerce.number(),
+});
+
+export const DeleteUserQueryParams = zod.object({
+  branchId: zod.coerce.number().optional(),
 });
 
 /**
@@ -1149,6 +1258,10 @@ export const UpdateDiscountParams = zod.object({
   id: zod.coerce.number(),
 });
 
+export const UpdateDiscountQueryParams = zod.object({
+  branchId: zod.coerce.number().optional(),
+});
+
 export const UpdateDiscountBody = zod.object({
   code: zod.string().optional(),
   type: zod.enum(["percentage", "fixed"]).optional(),
@@ -1170,6 +1283,59 @@ export const UpdateDiscountResponse = zod.object({
  * @summary Delete a discount
  */
 export const DeleteDiscountParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const DeleteDiscountQueryParams = zod.object({
+  branchId: zod.coerce.number().optional(),
+});
+
+/**
+ * @summary List all branches
+ */
+export const ListBranchesResponseItem = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  location: zod.string().optional(),
+  isActive: zod.boolean().optional(),
+  createdAt: zod.coerce.date().optional(),
+});
+export const ListBranchesResponse = zod.array(ListBranchesResponseItem);
+
+/**
+ * @summary Create a new branch
+ */
+export const CreateBranchBody = zod.object({
+  name: zod.string(),
+  location: zod.string().optional(),
+  isActive: zod.boolean().optional(),
+});
+
+/**
+ * @summary Update a branch
+ */
+export const UpdateBranchParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const UpdateBranchBody = zod.object({
+  name: zod.string().optional(),
+  location: zod.string().optional(),
+  isActive: zod.boolean().optional(),
+});
+
+export const UpdateBranchResponse = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  location: zod.string().optional(),
+  isActive: zod.boolean().optional(),
+  createdAt: zod.coerce.date().optional(),
+});
+
+/**
+ * @summary Delete a branch
+ */
+export const DeleteBranchParams = zod.object({
   id: zod.coerce.number(),
 });
 

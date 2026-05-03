@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { eq, and, desc } from "drizzle-orm";
-import { db, stockAuditsTable, stockAuditItemsTable, ingredientsTable, stockMovementsTable, usersTable } from "@workspace/db";
+import { eq, and, desc, sql } from "drizzle-orm";
+import { db, stockAuditsTable, stockAuditItemsTable, ingredientsTable, stockMovementsTable, usersTable, branchStockTable } from "@workspace/db";
 import { serializeDates } from "../lib/serialize";
 import { logActivity } from "../lib/activity-logger";
 
@@ -8,10 +8,24 @@ const router: IRouter = Router();
 
 // List all audits
 router.get("/stock-audits", async (req, res) => {
+  const sessionUser = (req.session as any);
+  const sessionBranchId = sessionUser.branchId;
+  const isAdmin = sessionUser.role === "admin";
+
+  const targetBranchId = req.query.branchId && req.query.branchId !== 'all'
+    ? parseInt(req.query.branchId as string)
+    : (isAdmin && (req.query.branchId === 'all' || !req.query.branchId)) ? null : sessionBranchId;
+
+  const conditions = [];
+  if (targetBranchId) {
+    conditions.push(eq(stockAuditsTable.branchId, targetBranchId));
+  }
+
   const audits = await db
     .select({
       id: stockAuditsTable.id,
       status: stockAuditsTable.status,
+      branchId: stockAuditsTable.branchId,
       createdBy: stockAuditsTable.createdBy,
       createdByName: usersTable.name,
       approvedBy: stockAuditsTable.approvedBy,
@@ -21,6 +35,7 @@ router.get("/stock-audits", async (req, res) => {
     })
     .from(stockAuditsTable)
     .leftJoin(usersTable, eq(stockAuditsTable.createdBy, usersTable.id))
+    .where(conditions.length > 0 ? and(...conditions) : undefined)
     .orderBy(desc(stockAuditsTable.createdAt));
   res.json(serializeDates(audits));
 });
@@ -32,6 +47,7 @@ router.get("/stock-audits/:id", async (req, res) => {
     .select({
       id: stockAuditsTable.id,
       status: stockAuditsTable.status,
+      branchId: stockAuditsTable.branchId,
       createdBy: stockAuditsTable.createdBy,
       createdByName: usersTable.name,
       approvedBy: stockAuditsTable.approvedBy,
@@ -78,7 +94,14 @@ router.get("/stock-audits/:id", async (req, res) => {
 // Create audit report (Staff)
 router.post("/stock-audits", async (req, res) => {
   const { notes, items } = req.body; // items: Array<{ ingredientId, actualQuantity, notes }>
-  const userId = (req as any).session?.userId || (req as any).user?.id || 1; // Fallback to 1 if no session
+  const sessionUser = (req.session as any);
+  const userId = sessionUser?.userId || 1;
+  const branchId = sessionUser?.branchId;
+
+  if (!branchId) {
+    res.status(400).json({ error: "Branch ID required for audit" });
+    return;
+  }
 
   if (!items || !Array.isArray(items)) {
     res.status(400).json({ error: "Items array is required" });
@@ -91,23 +114,29 @@ router.post("/stock-audits", async (req, res) => {
         .insert(stockAuditsTable)
         .values({
           createdBy: userId,
+          branchId: branchId,
           notes,
           status: "pending",
         })
         .returning();
 
       for (const item of items) {
-        const [ingredient] = await tx
-          .select()
-          .from(ingredientsTable)
-          .where(eq(ingredientsTable.id, item.ingredientId));
+        // Fetch current stock for this specific branch
+        const [stockRow] = await tx
+          .select({ stock: branchStockTable.stockQuantity })
+          .from(branchStockTable)
+          .where(and(
+            eq(branchStockTable.ingredientId, item.ingredientId),
+            eq(branchStockTable.branchId, branchId)
+          ))
+          .limit(1);
 
-        if (!ingredient) continue;
+        const expectedQty = stockRow ? stockRow.stock : "0";
 
         await tx.insert(stockAuditItemsTable).values({
           auditId: newAudit.id,
           ingredientId: item.ingredientId,
-          expectedQuantity: ingredient.stockQuantity,
+          expectedQuantity: expectedQty,
           actualQuantity: String(item.actualQuantity),
           notes: item.notes || null,
         });
@@ -169,31 +198,46 @@ router.post("/stock-audits/:id/approve", async (req, res) => {
 
       for (const item of items) {
         // Use finalQuantity if set by admin, otherwise use actualQuantity reported by staff
-        const targetQuantity = item.finalQuantity !== null ? item.finalQuantity : item.actualQuantity;
+        const targetQuantity = item.finalQuantity !== null ? item.actualQuantity : item.actualQuantity;
+        // Wait, if finalQuantity is set, we should use it. 
+        // Logic fix: 
+        const finalQty = item.finalQuantity !== null ? item.finalQuantity : item.actualQuantity;
         
-        const [ingredient] = await tx
-          .select()
-          .from(ingredientsTable)
-          .where(eq(ingredientsTable.id, item.ingredientId));
+        // Fetch current stock for this specific branch
+        const [stockRow] = await tx
+          .select({ stock: branchStockTable.stockQuantity })
+          .from(branchStockTable)
+          .where(and(
+            eq(branchStockTable.ingredientId, item.ingredientId),
+            eq(branchStockTable.branchId, audit.branchId)
+          ))
+          .limit(1);
 
-        if (!ingredient) continue;
-
-        const diff = parseFloat(targetQuantity) - parseFloat(ingredient.stockQuantity);
+        const currentQty = stockRow ? stockRow.stock : "0";
+        const diff = parseFloat(finalQty) - parseFloat(currentQty);
         
         if (diff !== 0) {
           await tx.insert(stockMovementsTable).values({
+            branchId: audit.branchId,
             ingredientId: item.ingredientId,
             movementType: "adjustment",
             quantity: String(diff),
-            quantityAfter: String(targetQuantity),
+            quantityAfter: String(finalQty),
             note: `Approved Audit #${auditId}`,
             createdBy: userId,
           });
 
           await tx
-            .update(ingredientsTable)
-            .set({ stockQuantity: String(targetQuantity) })
-            .where(eq(ingredientsTable.id, item.ingredientId));
+            .insert(branchStockTable)
+            .values({
+              branchId: audit.branchId,
+              ingredientId: item.ingredientId,
+              stockQuantity: String(finalQty),
+            })
+            .onConflictDoUpdate({
+              target: [branchStockTable.branchId, branchStockTable.ingredientId],
+              set: { stockQuantity: String(finalQty) }
+            });
         }
       }
 
@@ -210,6 +254,7 @@ router.post("/stock-audits/:id/approve", async (req, res) => {
     await logActivity(req, "APPROVE_STOCK_AUDIT", "stock_audit", auditId);
     res.json({ success: true });
   } catch (err: any) {
+    console.error("[stock-audits] Approve failed:", err);
     res.status(500).json({ error: err.message });
   }
 });

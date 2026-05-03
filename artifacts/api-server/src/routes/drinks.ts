@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, and, inArray, asc } from "drizzle-orm";
+import { eq, and, inArray, asc, sql } from "drizzle-orm";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -19,6 +19,7 @@ import {
   predefinedSlotsTable,
   predefinedSlotTypeOptionsTable,
   predefinedSlotVolumesTable,
+  branchStockTable,
 } from "@workspace/db";
 import { serializeDates } from "../lib/serialize";
 import { globalCache } from "../lib/cache";
@@ -53,7 +54,7 @@ import {
 
 const router: IRouter = Router();
 
-async function buildDrinkDetail(drinkId: number) {
+async function buildDrinkDetail(drinkId: number, branchId?: number) {
   const cacheKey = `drink_detail_${drinkId}`;
   const cached = globalCache.get<any>(cacheKey);
   if (cached) return cached;
@@ -176,13 +177,18 @@ async function buildDrinkDetail(drinkId: number) {
                   .where(eq(ingredientCategoriesTable.id, ingType.categoryId))
               : [null];
 
-            // Fetch current stock from linked inventory item
+            // Fetch current stock from linked inventory item for specific branch
             let stockQuantity = 999999;
             if (ingType?.inventoryIngredientId) {
-              const [inv] = await db.select({ stock: ingredientsTable.stockQuantity })
-                .from(ingredientsTable)
-                .where(eq(ingredientsTable.id, ingType.inventoryIngredientId));
+              const [inv] = await db.select({ stock: branchStockTable.stockQuantity })
+                .from(branchStockTable)
+                .where(and(
+                  eq(branchStockTable.ingredientId, ingType.inventoryIngredientId),
+                  branchId ? eq(branchStockTable.branchId, branchId) : sql`1=1`
+                ))
+                .limit(1);
               if (inv) stockQuantity = Number(inv.stock);
+              else if (branchId) stockQuantity = 0; // If branch specified but no record, it's 0
             } else if (!ingType) {
               // If no type defined, assume out of stock unless it's a very simple drink
               stockQuantity = 0;
@@ -268,7 +274,17 @@ async function buildDrinkDetail(drinkId: number) {
           .where(eq(ingredientOptionsTable.ingredientId, slot.ingredientId))
           .orderBy(ingredientOptionsTable.sortOrder);
 
-        const stock = Number(ingredient?.stockQuantity ?? 0);
+        let stockQuantity = 0;
+        if (ingredient) {
+          const [stockRow] = await db.select({ stock: branchStockTable.stockQuantity })
+            .from(branchStockTable)
+            .where(and(
+              eq(branchStockTable.ingredientId, ingredient.id),
+              branchId ? eq(branchStockTable.branchId, branchId) : sql`1=1`
+            ))
+            .limit(1);
+          stockQuantity = stockRow ? Number(stockRow.stock) : 0;
+        }
 
         const enrichedOptions = await Promise.all(
           options.map(async (o) => {
@@ -293,7 +309,7 @@ async function buildDrinkDetail(drinkId: number) {
                 };
               }
             }
-            const isAvailable = stock >= Number(o.processedQty);
+            const isAvailable = stockQuantity >= Number(o.processedQty);
             return {
               ...o,
               isAvailable,
@@ -313,8 +329,8 @@ async function buildDrinkDetail(drinkId: number) {
           ingredient: ingredient ? {
             ...ingredient,
             costPerUnit: Number(ingredient.costPerUnit),
-            stockQuantity: Number(ingredient.stockQuantity),
-            lowStockThreshold: Number(ingredient.lowStockThreshold),
+            stockQuantity,
+            lowStockThreshold: 100, // Default for legacy
             options: enrichedOptions,
           } : null,
           volumes: [],
@@ -342,11 +358,17 @@ async function buildDrinkDetail(drinkId: number) {
 
   let isCupAvailable = true;
   if (drink.cupIngredientId) {
-    const [cupInv] = await db.select({ stock: ingredientsTable.stockQuantity })
-      .from(ingredientsTable)
-      .where(eq(ingredientsTable.id, drink.cupIngredientId));
+    const [cupInv] = await db.select({ stock: branchStockTable.stockQuantity })
+      .from(branchStockTable)
+      .where(and(
+        eq(branchStockTable.ingredientId, drink.cupIngredientId),
+        branchId ? eq(branchStockTable.branchId, branchId) : sql`1=1`
+      ))
+      .limit(1);
     if (cupInv) {
       isCupAvailable = Number(cupInv.stock) >= 1; // Assuming 1 cup per drink
+    } else if (branchId) {
+      isCupAvailable = false;
     }
   }
 
@@ -380,6 +402,15 @@ async function computeDefaultPrice(drinkId: number): Promise<number> {
 
 router.get("/drinks", async (req, res): Promise<void> => {
   const params = ListDrinksQueryParams.safeParse(req.query);
+  const sessionUser = (req.session as any);
+  const sessionBranchId = sessionUser.branchId;
+  const isAdmin = sessionUser.role === "admin";
+  
+  // Use session branch by default, but allow query override for admins OR if no session exists (Kiosk/Public)
+  const targetBranchId = (req.query.branchId && (isAdmin || !sessionBranchId))
+    ? parseInt(req.query.branchId as string)
+    : sessionBranchId;
+
   const conditions = [];
   if (params.success && params.data.active !== undefined) {
     conditions.push(eq(drinksTable.isActive, params.data.active));
@@ -403,7 +434,7 @@ router.get("/drinks", async (req, res): Promise<void> => {
 
   const drinksWithDetails = await Promise.all(
     filtered.map(async (d) => {
-      const detail = await buildDrinkDetail(d.id);
+      const detail = await buildDrinkDetail(d.id, targetBranchId);
       if (!detail) return { ...d, basePrice: Number(d.basePrice), defaultPrice: 0, isAvailable: false };
       
       const defaultPrice = await computeDefaultPrice(d.id);
@@ -470,7 +501,7 @@ router.post("/drinks", async (req, res): Promise<void> => {
     );
   }
 
-  const detail = await buildDrinkDetail(drink.id);
+  const detail = await buildDrinkDetail(drink.id, (req.session as any).branchId);
   res.status(201).json(serializeDates(detail));
 });
 
@@ -481,7 +512,15 @@ router.get("/drinks/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  const detail = await buildDrinkDetail(params.data.id);
+  const sessionUser = (req.session as any);
+  const isAdmin = sessionUser?.role === "admin";
+  const sessionBranchId = sessionUser?.branchId;
+
+  const targetBranchId = (req.query.branchId && (isAdmin || !sessionBranchId))
+    ? parseInt(req.query.branchId as string)
+    : sessionBranchId;
+
+  const detail = await buildDrinkDetail(params.data.id, targetBranchId);
   if (!detail) {
     res.status(404).json({ error: "Drink not found" });
     return;
@@ -535,7 +574,11 @@ router.patch("/drinks/:id", async (req, res): Promise<void> => {
   globalCache.delete(`drink_detail_${params.data.id}`);
   globalCache.delete(`drink_default_price_${params.data.id}`);
 
-  res.json(UpdateDrinkResponse.parse(serializeDates({ ...drink, basePrice: Number(drink.basePrice) })));
+  res.json(UpdateDrinkResponse.parse(serializeDates({ 
+    ...drink, 
+    basePrice: Number(drink.basePrice),
+    categoryId: drink.categoryId ?? undefined
+  })));
 });
 
 // POST /drinks/:id/image — upload a drink image
@@ -760,7 +803,7 @@ router.put("/drinks/:id/slots", async (req, res): Promise<void> => {
     }
   }
 
-  const detail = await buildDrinkDetail(drinkId);
+  const detail = await buildDrinkDetail(drinkId, (req.session as any).branchId);
   if (!detail) { res.status(404).json({ error: "Drink not found" }); return; }
   
   // Invalidate cache
@@ -812,8 +855,20 @@ router.post("/drinks/:id/price", async (req, res): Promise<void> => {
   }
   const parsed = { data: { selections: rawBody.selections as any[] } };
 
+  const sessionUser = (req.session as any);
+  const isAdmin = sessionUser?.role === "admin";
+  const sessionBranchId = sessionUser?.branchId;
+
+  // Allow branchId in query or body for price calculation
+  const bodyBranchId = (req.body as any).branchId;
+  const queryBranchId = req.query.branchId ? parseInt(req.query.branchId as string) : undefined;
+  
+  const targetBranchId = (isAdmin || !sessionBranchId) 
+    ? (queryBranchId || bodyBranchId || sessionBranchId) 
+    : sessionBranchId;
+
   try {
-    const data = await calculateDrinkData(params.data.id, parsed.data.selections);
+    const data = await calculateDrinkData(params.data.id, parsed.data.selections, targetBranchId);
     
     // Format extras for the response (without revealing backend schema complexities if not needed)
     // The previous implementation mapped them out, we can return the Customizations

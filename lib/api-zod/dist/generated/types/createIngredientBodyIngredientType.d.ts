@@ -14,6 +14,9 @@ export declare const CreateIngredientBodyIngredientType: {
     readonly sweetener: "sweetener";
     readonly topping: "topping";
     readonly base: "base";
+    readonly cup: "cup";
+    readonly tea: "tea";
+    readonly packing: "packing";
     readonly other: "other";
 };
 //# sourceMappingURL=createIngredientBodyIngredientType.d.ts.map

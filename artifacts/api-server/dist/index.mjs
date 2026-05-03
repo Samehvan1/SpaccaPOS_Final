@@ -20807,27 +20807,27 @@ var require_router = __commonJS({
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var methods = METHODS.map((method) => method.toLowerCase());
-    module.exports = Router21;
+    module.exports = Router22;
     module.exports.Route = Route;
-    function Router21(options) {
-      if (!(this instanceof Router21)) {
-        return new Router21(options);
+    function Router22(options) {
+      if (!(this instanceof Router22)) {
+        return new Router22(options);
       }
       const opts = options || {};
-      function router18(req, res, next) {
-        router18.handle(req, res, next);
+      function router19(req, res, next) {
+        router19.handle(req, res, next);
       }
-      Object.setPrototypeOf(router18, this);
-      router18.caseSensitive = opts.caseSensitive;
-      router18.mergeParams = opts.mergeParams;
-      router18.params = {};
-      router18.strict = opts.strict;
-      router18.stack = [];
-      return router18;
+      Object.setPrototypeOf(router19, this);
+      router19.caseSensitive = opts.caseSensitive;
+      router19.mergeParams = opts.mergeParams;
+      router19.params = {};
+      router19.strict = opts.strict;
+      router19.stack = [];
+      return router19;
     }
-    Router21.prototype = function() {
+    Router22.prototype = function() {
     };
-    Router21.prototype.param = function param(name, fn) {
+    Router22.prototype.param = function param(name, fn) {
       if (!name) {
         throw new TypeError("argument name is required");
       }
@@ -20847,7 +20847,7 @@ var require_router = __commonJS({
       params.push(fn);
       return this;
     };
-    Router21.prototype.handle = function handle(req, res, callback) {
+    Router22.prototype.handle = function handle(req, res, callback) {
       if (!callback) {
         throw new TypeError("argument callback is required");
       }
@@ -20974,7 +20974,7 @@ var require_router = __commonJS({
         }
       }
     };
-    Router21.prototype.use = function use(handler) {
+    Router22.prototype.use = function use(handler) {
       let offset = 0;
       let path6 = "/";
       if (typeof handler !== "function") {
@@ -21007,7 +21007,7 @@ var require_router = __commonJS({
       }
       return this;
     };
-    Router21.prototype.route = function route(path6) {
+    Router22.prototype.route = function route(path6) {
       const route2 = new Route(path6);
       const layer = new Layer(path6, {
         sensitive: this.caseSensitive,
@@ -21022,7 +21022,7 @@ var require_router = __commonJS({
       return route2;
     };
     methods.concat("all").forEach(function(method) {
-      Router21.prototype[method] = function(path6) {
+      Router22.prototype[method] = function(path6) {
         const route = this.route(path6);
         route[method].apply(route, slice.call(arguments, 1));
         return this;
@@ -21205,13 +21205,13 @@ var require_application = __commonJS({
     var compileTrust = require_utils3().compileTrust;
     var resolve2 = __require("node:path").resolve;
     var once = require_once();
-    var Router21 = require_router();
+    var Router22 = require_router();
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var app2 = exports = module.exports = {};
     var trustProxyDefaultSymbol = "@@symbol:trust_proxy_default";
     app2.init = function init() {
-      var router18 = null;
+      var router19 = null;
       this.cache = /* @__PURE__ */ Object.create(null);
       this.engines = /* @__PURE__ */ Object.create(null);
       this.settings = /* @__PURE__ */ Object.create(null);
@@ -21220,13 +21220,13 @@ var require_application = __commonJS({
         configurable: true,
         enumerable: true,
         get: function getrouter() {
-          if (router18 === null) {
-            router18 = new Router21({
+          if (router19 === null) {
+            router19 = new Router22({
               caseSensitive: this.enabled("case sensitive routing"),
               strict: this.enabled("strict routing")
             });
           }
-          return router18;
+          return router19;
         }
       });
     };
@@ -21297,15 +21297,15 @@ var require_application = __commonJS({
       if (fns.length === 0) {
         throw new TypeError("app.use() requires a middleware function");
       }
-      var router18 = this.router;
+      var router19 = this.router;
       fns.forEach(function(fn2) {
         if (!fn2 || !fn2.handle || !fn2.set) {
-          return router18.use(path6, fn2);
+          return router19.use(path6, fn2);
         }
         debug(".use app under %s", path6);
         fn2.mountpath = path6;
         fn2.parent = this;
-        router18.use(path6, function mounted_app(req, res, next) {
+        router19.use(path6, function mounted_app(req, res, next) {
           var orig = req.app;
           fn2.handle(req, res, function(err) {
             Object.setPrototypeOf(req, orig.request);
@@ -23832,7 +23832,7 @@ var require_express = __commonJS({
     var EventEmitter = __require("node:events").EventEmitter;
     var mixin = require_merge_descriptors();
     var proto = require_application();
-    var Router21 = require_router();
+    var Router22 = require_router();
     var req = require_request();
     var res = require_response();
     exports = module.exports = createApplication;
@@ -23854,8 +23854,8 @@ var require_express = __commonJS({
     exports.application = proto;
     exports.request = req;
     exports.response = res;
-    exports.Route = Router21.Route;
-    exports.Router = Router21;
+    exports.Route = Router22.Route;
+    exports.Router = Router22;
     exports.json = bodyParser.json;
     exports.raw = bodyParser.raw;
     exports.static = require_serve_static();
@@ -36340,10 +36340,10 @@ var init_subquery = __esm({
     init_entity();
     Subquery = class {
       static [entityKind] = "Subquery";
-      constructor(sql2, fields, alias, isWith = false, usedTables = []) {
+      constructor(sql3, fields, alias, isWith = false, usedTables = []) {
         this._ = {
           brand: "Subquery",
-          sql: sql2,
+          sql: sql3,
           selectedFields: fields,
           alias,
           isWith,
@@ -36798,19 +36798,19 @@ var init_sql = __esm({
         return new SQL([this]);
       }
     };
-    ((sql2) => {
+    ((sql22) => {
       function empty() {
         return new SQL([]);
       }
-      sql2.empty = empty;
+      sql22.empty = empty;
       function fromList(list) {
         return new SQL(list);
       }
-      sql2.fromList = fromList;
+      sql22.fromList = fromList;
       function raw(str) {
         return new SQL([new StringChunk(str)]);
       }
-      sql2.raw = raw;
+      sql22.raw = raw;
       function join(chunks, separator) {
         const result = [];
         for (const [i, chunk] of chunks.entries()) {
@@ -36821,24 +36821,24 @@ var init_sql = __esm({
         }
         return new SQL(result);
       }
-      sql2.join = join;
+      sql22.join = join;
       function identifier(value) {
         return new Name(value);
       }
-      sql2.identifier = identifier;
+      sql22.identifier = identifier;
       function placeholder2(name2) {
         return new Placeholder(name2);
       }
-      sql2.placeholder = placeholder2;
+      sql22.placeholder = placeholder2;
       function param2(value, encoder) {
         return new Param(value, encoder);
       }
-      sql2.param = param2;
+      sql22.param = param2;
     })(sql || (sql = {}));
     ((SQL2) => {
       class Aliased {
-        constructor(sql2, fieldAlias) {
-          this.sql = sql2;
+        constructor(sql22, fieldAlias) {
+          this.sql = sql22;
           this.fieldAlias = fieldAlias;
         }
         static [entityKind] = "SQL.Aliased";
@@ -39196,6 +39196,12 @@ var init_policies = __esm({
 });
 
 // ../../node_modules/.pnpm/drizzle-orm@0.45.1_@types+pg@8.18.0_pg@8.20.0/node_modules/drizzle-orm/pg-core/primary-keys.js
+function primaryKey(...config3) {
+  if (config3[0].columns) {
+    return new PrimaryKeyBuilder(config3[0].columns, config3[0].name);
+  }
+  return new PrimaryKeyBuilder(config3);
+}
 var PrimaryKeyBuilder, PrimaryKey;
 var init_primary_keys = __esm({
   "../../node_modules/.pnpm/drizzle-orm@0.45.1_@types+pg@8.18.0_pg@8.20.0/node_modules/drizzle-orm/pg-core/primary-keys.js"() {
@@ -39552,19 +39558,19 @@ function extractTablesRelationalConfig(schema, configHelpers) {
       const relations2 = value.config(
         configHelpers(value.table)
       );
-      let primaryKey;
+      let primaryKey2;
       for (const [relationName, relation] of Object.entries(relations2)) {
         if (tableName) {
           const tableConfig = tablesConfig[tableName];
           tableConfig.relations[relationName] = relation;
-          if (primaryKey) {
-            tableConfig.primaryKey.push(...primaryKey);
+          if (primaryKey2) {
+            tableConfig.primaryKey.push(...primaryKey2);
           }
         } else {
           if (!(dbName in relationsBuffer)) {
             relationsBuffer[dbName] = {
               relations: {},
-              primaryKey
+              primaryKey: primaryKey2
             };
           }
           relationsBuffer[dbName].relations[relationName] = relation;
@@ -40200,8 +40206,8 @@ var init_dialect = __esm({
           return "none";
         }
       }
-      sqlToQuery(sql2, invokeSource) {
-        return sql2.toQuery({
+      sqlToQuery(sql22, invokeSource) {
+        return sql22.toQuery({
           casing: this.casing,
           escapeName: this.escapeName,
           escapeParam: this.escapeParam,
@@ -42943,10 +42949,10 @@ var init_raw = __esm({
     init_entity();
     init_query_promise();
     PgRaw = class extends QueryPromise {
-      constructor(execute, sql2, query, mapBatchResult) {
+      constructor(execute, sql3, query, mapBatchResult) {
         super();
         this.execute = execute;
-        this.sql = sql2;
+        this.sql = sql3;
         this.query = query;
         this.mapBatchResult = mapBatchResult;
       }
@@ -43266,8 +43272,8 @@ var init_db = __esm({
 });
 
 // ../../node_modules/.pnpm/drizzle-orm@0.45.1_@types+pg@8.18.0_pg@8.20.0/node_modules/drizzle-orm/cache/core/cache.js
-async function hashQuery(sql2, params) {
-  const dataToHash = `${sql2}-${JSON.stringify(params)}`;
+async function hashQuery(sql3, params) {
+  const dataToHash = `${sql3}-${JSON.stringify(params)}`;
   const encoder = new TextEncoder();
   const data = encoder.encode(dataToHash);
   const hashBuffer = await crypto.subtle.digest("SHA-256", data);
@@ -43538,8 +43544,8 @@ var init_session = __esm({
         ).all();
       }
       /** @internal */
-      async count(sql2, token) {
-        const res = await this.execute(sql2, token);
+      async count(sql22, token) {
+        const res = await this.execute(sql22, token);
         return Number(
           res[0]["count"]
         );
@@ -43815,8 +43821,8 @@ var init_session2 = __esm({
           if (isPool) session2.client.release();
         }
       }
-      async count(sql2) {
-        const res = await this.execute(sql2);
+      async count(sql22) {
+        const res = await this.execute(sql22);
         return Number(
           res["rows"][0]["count"]
         );
@@ -55828,6 +55834,28 @@ var init_drizzle_zod = __esm({
   }
 });
 
+// ../../lib/db/src/schema/branches.ts
+var branchesTable, insertBranchSchema;
+var init_branches = __esm({
+  "../../lib/db/src/schema/branches.ts"() {
+    "use strict";
+    init_pg_core();
+    init_drizzle_zod();
+    branchesTable = pgTable("branches", {
+      id: serial("id").primaryKey(),
+      name: text("name").notNull(),
+      code: varchar("code", { length: 20 }).unique().notNull(),
+      // e.g. "MAIN", "BRANCH-01"
+      address: text("address"),
+      phone: varchar("phone", { length: 20 }),
+      isActive: boolean("is_active").notNull().default(true),
+      createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+      updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => /* @__PURE__ */ new Date())
+    });
+    insertBranchSchema = createInsertSchema(branchesTable).omit({ id: true, createdAt: true, updatedAt: true });
+  }
+});
+
 // ../../lib/db/src/schema/users.ts
 var usersTable, insertUserSchema;
 var init_users = __esm({
@@ -55835,8 +55863,11 @@ var init_users = __esm({
     "use strict";
     init_pg_core();
     init_drizzle_zod();
+    init_branches();
     usersTable = pgTable("users", {
       id: serial("id").primaryKey(),
+      branchId: integer("branch_id").references(() => branchesTable.id),
+      // Nullable for global admins
       name: text("name").notNull(),
       username: varchar("username", { length: 50 }).unique(),
       passwordHash: text("password_hash"),
@@ -55851,12 +55882,13 @@ var init_users = __esm({
 });
 
 // ../../lib/db/src/schema/ingredients.ts
-var ingredientsTable, ingredientOptionsTable, ingredientCategoriesTable, ingredientTypesTable, ingredientVolumesTable, ingredientTypeVolumesTable, insertIngredientSchema, insertIngredientOptionSchema, insertIngredientCategorySchema, insertIngredientTypeSchema, insertIngredientVolumeSchema, insertIngredientTypeVolumeSchema;
+var ingredientsTable, branchStockTable, ingredientOptionsTable, ingredientCategoriesTable, ingredientTypesTable, ingredientVolumesTable, ingredientTypeVolumesTable, insertIngredientSchema, insertBranchStockSchema, insertIngredientOptionSchema, insertIngredientCategorySchema, insertIngredientTypeSchema, insertIngredientVolumeSchema, insertIngredientTypeVolumeSchema;
 var init_ingredients = __esm({
   "../../lib/db/src/schema/ingredients.ts"() {
     "use strict";
     init_pg_core();
     init_drizzle_zod();
+    init_branches();
     ingredientsTable = pgTable("ingredients", {
       id: serial("id").primaryKey(),
       name: text("name").notNull(),
@@ -55866,12 +55898,19 @@ var init_ingredients = __esm({
       }).notNull(),
       unit: text("unit").notNull(),
       costPerUnit: numeric("cost_per_unit", { precision: 10, scale: 4 }).notNull(),
-      stockQuantity: numeric("stock_quantity", { precision: 12, scale: 4 }).notNull().default("0"),
-      lowStockThreshold: numeric("low_stock_threshold", { precision: 12, scale: 4 }).notNull().default("500"),
       isActive: boolean("is_active").notNull().default(true),
       createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
       updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => /* @__PURE__ */ new Date())
     });
+    branchStockTable = pgTable("branch_stock", {
+      branchId: integer("branch_id").notNull().references(() => branchesTable.id, { onDelete: "cascade" }),
+      ingredientId: integer("ingredient_id").notNull().references(() => ingredientsTable.id, { onDelete: "cascade" }),
+      stockQuantity: numeric("stock_quantity", { precision: 12, scale: 4 }).notNull().default("0"),
+      lowStockThreshold: numeric("low_stock_threshold", { precision: 12, scale: 4 }).notNull().default("500"),
+      updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => /* @__PURE__ */ new Date())
+    }, (table) => ({
+      pk: primaryKey({ columns: [table.branchId, table.ingredientId] })
+    }));
     ingredientOptionsTable = pgTable("ingredient_options", {
       id: serial("id").primaryKey(),
       ingredientId: integer("ingredient_id").notNull().references(() => ingredientsTable.id, { onDelete: "cascade" }),
@@ -55931,6 +55970,7 @@ var init_ingredients = __esm({
       isActive: boolean("is_active").notNull().default(true)
     });
     insertIngredientSchema = createInsertSchema(ingredientsTable).omit({ id: true, createdAt: true, updatedAt: true });
+    insertBranchStockSchema = createInsertSchema(branchStockTable).omit({ updatedAt: true });
     insertIngredientOptionSchema = createInsertSchema(ingredientOptionsTable).omit({ id: true, createdAt: true, updatedAt: true });
     insertIngredientCategorySchema = createInsertSchema(ingredientCategoriesTable).omit({ id: true, createdAt: true });
     insertIngredientTypeSchema = createInsertSchema(ingredientTypesTable).omit({ id: true, createdAt: true });
@@ -55977,6 +56017,7 @@ var init_drinks = __esm({
       cupIngredientId: integer("cup_ingredient_id").references(() => ingredientsTable.id, { onDelete: "set null" }),
       isCustomizable: boolean("is_customizable").notNull().default(true),
       kitchenStation: text("kitchen_station").notNull().default("main"),
+      kitchenStationId: integer("kitchen_station_id").references(() => kitchenStationsTable.id),
       createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
       updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => /* @__PURE__ */ new Date())
     }, (table) => {
@@ -56122,8 +56163,10 @@ var init_orders = __esm({
     init_drinks();
     init_ingredients();
     init_discounts();
+    init_branches();
     ordersTable = pgTable("orders", {
       id: serial("id").primaryKey(),
+      branchId: integer("branch_id").notNull().references(() => branchesTable.id),
       orderNumber: text("order_number").notNull().unique(),
       baristaId: integer("barista_id").notNull().references(() => usersTable.id),
       status: text("status", {
@@ -56164,6 +56207,7 @@ var init_orders = __esm({
       lineTotal: numeric("line_total", { precision: 8, scale: 2 }).notNull(),
       specialNotes: text("special_notes"),
       kitchenStation: text("kitchen_station").notNull().default("main"),
+      kitchenStationId: integer("kitchen_station_id").references(() => kitchenStationsTable.id),
       status: text("status", { enum: ["pending", "ready"] }).notNull().default("pending"),
       readyAt: timestamp("ready_at", { withTimezone: true }),
       createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -56209,8 +56253,10 @@ var init_stock = __esm({
     init_ingredients();
     init_orders();
     init_users();
+    init_branches();
     stockMovementsTable = pgTable("stock_movements", {
       id: serial("id").primaryKey(),
+      branchId: integer("branch_id").references(() => branchesTable.id),
       ingredientId: integer("ingredient_id").notNull().references(() => ingredientsTable.id),
       orderId: integer("order_id").references(() => ordersTable.id, { onDelete: "set null" }),
       movementType: text("movement_type", {
@@ -56362,6 +56408,7 @@ var init_stock_audit = __esm({
     init_pg_core();
     init_users();
     init_ingredients();
+    init_branches();
     init_drizzle_zod();
     stockAuditsTable = pgTable("stock_audits", {
       id: serial("id").primaryKey(),
@@ -56369,6 +56416,7 @@ var init_stock_audit = __esm({
       createdBy: integer("created_by").notNull().references(() => usersTable.id),
       approvedBy: integer("approved_by").references(() => usersTable.id),
       notes: text("notes"),
+      branchId: integer("branch_id").notNull().references(() => branchesTable.id),
       createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
       approvedAt: timestamp("approved_at", { withTimezone: true })
     });
@@ -56391,6 +56439,8 @@ var init_stock_audit = __esm({
 var schema_exports = {};
 __export(schema_exports, {
   activityLogsTable: () => activityLogsTable,
+  branchStockTable: () => branchStockTable,
+  branchesTable: () => branchesTable,
   cashierSessionsTable: () => cashierSessionsTable,
   discountsTable: () => discountsTable,
   drinkCategoriesTable: () => drinkCategoriesTable,
@@ -56405,6 +56455,8 @@ __export(schema_exports, {
   ingredientVolumesTable: () => ingredientVolumesTable,
   ingredientsTable: () => ingredientsTable,
   insertActivityLogSchema: () => insertActivityLogSchema,
+  insertBranchSchema: () => insertBranchSchema,
+  insertBranchStockSchema: () => insertBranchStockSchema,
   insertDiscountSchema: () => insertDiscountSchema,
   insertDrinkCategorySchema: () => insertDrinkCategorySchema,
   insertDrinkSchema: () => insertDrinkSchema,
@@ -56450,6 +56502,7 @@ __export(schema_exports, {
 var init_schema2 = __esm({
   "../../lib/db/src/schema/index.ts"() {
     "use strict";
+    init_branches();
     init_users();
     init_ingredients();
     init_drinks();
@@ -56516,6 +56569,8 @@ var init_migrator2 = __esm({
 var src_exports = {};
 __export(src_exports, {
   activityLogsTable: () => activityLogsTable,
+  branchStockTable: () => branchStockTable,
+  branchesTable: () => branchesTable,
   cashierSessionsTable: () => cashierSessionsTable,
   db: () => db,
   discountsTable: () => discountsTable,
@@ -56531,6 +56586,8 @@ __export(src_exports, {
   ingredientVolumesTable: () => ingredientVolumesTable,
   ingredientsTable: () => ingredientsTable,
   insertActivityLogSchema: () => insertActivityLogSchema,
+  insertBranchSchema: () => insertBranchSchema,
+  insertBranchStockSchema: () => insertBranchStockSchema,
   insertDiscountSchema: () => insertDiscountSchema,
   insertDrinkCategorySchema: () => insertDrinkCategorySchema,
   insertDrinkSchema: () => insertDrinkSchema,
@@ -73300,7 +73357,7 @@ import fs6 from "fs";
 import { exec as exec2 } from "child_process";
 
 // src/app.ts
-var import_express21 = __toESM(require_express2(), 1);
+var import_express22 = __toESM(require_express2(), 1);
 var import_cors = __toESM(require_lib3(), 1);
 var import_pino_http = __toESM(require_logger(), 1);
 var import_express_session = __toESM(require_express_session(), 1);
@@ -73308,7 +73365,7 @@ var import_connect_pg_simple = __toESM(require_connect_pg_simple(), 1);
 init_src();
 
 // src/routes/index.ts
-var import_express20 = __toESM(require_express2(), 1);
+var import_express21 = __toESM(require_express2(), 1);
 
 // src/routes/health.ts
 var import_express = __toESM(require_express2(), 1);
@@ -77366,18 +77423,43 @@ var BaristaLoginResponse = objectType({
   user: objectType({
     id: numberType(),
     name: stringType(),
-    role: enumType(["admin", "barista", "frontdesk", "cashier", "pickup", "stockcontrol"])
+    role: enumType([
+      "admin",
+      "barista",
+      "frontdesk",
+      "cashier",
+      "pickup",
+      "stockcontrol"
+    ]),
+    branchId: numberType().nullish(),
+    branch: objectType({
+      id: numberType().optional(),
+      name: stringType().optional()
+    }).optional()
   })
 });
 var GetMeResponse = objectType({
   id: numberType(),
   name: stringType(),
-  role: enumType(["admin", "barista", "frontdesk", "cashier", "pickup", "stockcontrol"])
+  role: enumType([
+    "admin",
+    "barista",
+    "frontdesk",
+    "cashier",
+    "pickup",
+    "stockcontrol"
+  ]),
+  branchId: numberType().nullish(),
+  branch: objectType({
+    id: numberType().optional(),
+    name: stringType().optional()
+  }).optional()
 });
 var ListDrinksQueryParams = objectType({
   category: coerce.string().optional(),
   active: coerce.boolean().optional(),
-  includeSlots: coerce.boolean().optional()
+  includeSlots: coerce.boolean().optional(),
+  branchId: coerce.number().optional()
 });
 var ListDrinksResponseItem = objectType({
   id: numberType(),
@@ -77429,6 +77511,9 @@ var CreateDrinkBody = objectType({
 var GetDrinkParams = objectType({
   id: coerce.number()
 });
+var GetDrinkQueryParams = objectType({
+  branchId: coerce.number().optional()
+});
 var GetDrinkResponse = objectType({
   id: numberType(),
   name: stringType(),
@@ -77469,6 +77554,9 @@ var GetDrinkResponse = objectType({
 var UpdateDrinkParams = objectType({
   id: coerce.number()
 });
+var UpdateDrinkQueryParams = objectType({
+  branchId: coerce.number().optional()
+});
 var UpdateDrinkBody = objectType({
   name: stringType().optional(),
   description: stringType().optional(),
@@ -77505,10 +77593,17 @@ var UpdateDrinkResponse = objectType({
 var DeleteDrinkParams = objectType({
   id: coerce.number()
 });
+var DeleteDrinkQueryParams = objectType({
+  branchId: coerce.number().optional()
+});
 var CalculateDrinkPriceParams = objectType({
   id: coerce.number()
 });
+var CalculateDrinkPriceQueryParams = objectType({
+  branchId: coerce.number().optional()
+});
 var CalculateDrinkPriceBody = objectType({
+  branchId: numberType().optional(),
   selections: arrayType(
     objectType({
       ingredientId: numberType().optional(),
@@ -77593,6 +77688,9 @@ var CreateIngredientBody = objectType({
 var GetIngredientParams = objectType({
   id: coerce.number()
 });
+var GetIngredientQueryParams = objectType({
+  branchId: coerce.number().optional()
+});
 var GetIngredientResponse = objectType({
   id: numberType(),
   name: stringType(),
@@ -77639,6 +77737,9 @@ var GetIngredientResponse = objectType({
 );
 var UpdateIngredientParams = objectType({
   id: coerce.number()
+});
+var UpdateIngredientQueryParams = objectType({
+  branchId: coerce.number().optional()
 });
 var UpdateIngredientBody = objectType({
   name: stringType().optional(),
@@ -77691,8 +77792,14 @@ var UpdateIngredientResponse = objectType({
 var DeleteIngredientParams = objectType({
   id: coerce.number()
 });
+var DeleteIngredientQueryParams = objectType({
+  branchId: coerce.number().optional()
+});
 var CreateIngredientOptionParams = objectType({
   id: coerce.number()
+});
+var CreateIngredientOptionQueryParams = objectType({
+  branchId: coerce.number().optional()
 });
 var CreateIngredientOptionBody = objectType({
   label: stringType(),
@@ -77707,6 +77814,9 @@ var CreateIngredientOptionBody = objectType({
 var UpdateIngredientOptionParams = objectType({
   id: coerce.number(),
   optionId: coerce.number()
+});
+var UpdateIngredientOptionQueryParams = objectType({
+  branchId: coerce.number().optional()
 });
 var UpdateIngredientOptionBody = objectType({
   label: stringType().optional(),
@@ -77734,8 +77844,14 @@ var DeleteIngredientOptionParams = objectType({
   id: coerce.number(),
   optionId: coerce.number()
 });
+var DeleteIngredientOptionQueryParams = objectType({
+  branchId: coerce.number().optional()
+});
 var RestockIngredientParams = objectType({
   id: coerce.number()
+});
+var RestockIngredientQueryParams = objectType({
+  branchId: coerce.number().optional()
 });
 var RestockIngredientBody = objectType({
   quantity: numberType(),
@@ -77773,7 +77889,8 @@ var ListOrdersQueryParams = objectType({
   startDate: coerce.date().optional(),
   endDate: coerce.date().optional(),
   limit: coerce.number().optional(),
-  offset: coerce.number().optional()
+  offset: coerce.number().optional(),
+  branchId: coerce.number().optional()
 });
 var ListOrdersResponseItem = objectType({
   id: numberType(),
@@ -77820,6 +77937,8 @@ var ListOrdersResponseItem = objectType({
         specialNotes: stringType().nullable(),
         status: enumType(["pending", "ready"]),
         readyAt: stringType().nullable(),
+        kitchenStation: stringType().optional(),
+        kitchenStationId: numberType().nullish(),
         customizations: arrayType(
           objectType({
             id: numberType(),
@@ -77841,6 +77960,7 @@ var ListOrdersResponseItem = objectType({
 );
 var ListOrdersResponse = arrayType(ListOrdersResponseItem);
 var CreateOrderBody = objectType({
+  branchId: numberType().optional(),
   customerName: stringType().optional(),
   paymentMethod: enumType(["cash", "card", "wallet"]),
   amountTendered: numberType().optional(),
@@ -77867,6 +77987,9 @@ var CreateOrderBody = objectType({
 });
 var GetOrderParams = objectType({
   id: coerce.number()
+});
+var GetOrderQueryParams = objectType({
+  branchId: coerce.number().optional()
 });
 var GetOrderResponse = objectType({
   id: numberType(),
@@ -77913,6 +78036,8 @@ var GetOrderResponse = objectType({
         specialNotes: stringType().nullable(),
         status: enumType(["pending", "ready"]),
         readyAt: stringType().nullable(),
+        kitchenStation: stringType().optional(),
+        kitchenStationId: numberType().nullish(),
         customizations: arrayType(
           objectType({
             id: numberType(),
@@ -77934,6 +78059,9 @@ var GetOrderResponse = objectType({
 );
 var UpdateOrderStatusParams = objectType({
   id: coerce.number()
+});
+var UpdateOrderStatusQueryParams = objectType({
+  branchId: coerce.number().optional()
 });
 var UpdateOrderStatusBody = objectType({
   status: enumType([
@@ -77980,6 +78108,9 @@ var UpdateOrderStatusResponse = objectType({
 });
 var MarkOrderItemReadyParams = objectType({
   id: coerce.number()
+});
+var MarkOrderItemReadyQueryParams = objectType({
+  branchId: coerce.number().optional()
 });
 var MarkOrderItemReadyResponse = objectType({
   id: numberType(),
@@ -78051,7 +78182,8 @@ var GetDashboardSummaryResponse = objectType({
   lowStockCount: numberType()
 });
 var GetActiveOrdersQueryParams = objectType({
-  status: enumType(["pending", "paid", "in_progress", "ready"]).optional()
+  status: enumType(["pending", "paid", "in_progress", "ready"]).optional(),
+  branchId: coerce.number().optional()
 });
 var GetActiveOrdersResponseItem = objectType({
   id: numberType(),
@@ -78098,6 +78230,8 @@ var GetActiveOrdersResponseItem = objectType({
         specialNotes: stringType().nullable(),
         status: enumType(["pending", "ready"]),
         readyAt: stringType().nullable(),
+        kitchenStation: stringType().optional(),
+        kitchenStationId: numberType().nullish(),
         customizations: arrayType(
           objectType({
             id: numberType(),
@@ -78152,43 +78286,55 @@ var ListUsersResponseItem = objectType({
   id: numberType(),
   name: stringType(),
   username: stringType(),
-  role: enumType(["admin", "barista", "frontdesk", "cashier", "pickup", "stockcontrol"]),
-  pin: stringType().optional(),
+  role: stringType(),
+  branchId: numberType().nullish(),
   isActive: booleanType(),
-  createdAt: stringType().optional(),
-  updatedAt: stringType().optional()
+  createdAt: coerce.date().optional()
 });
 var ListUsersResponse = arrayType(ListUsersResponseItem);
 var CreateUserBody = objectType({
   name: stringType(),
   username: stringType(),
   password: stringType(),
-  role: enumType(["admin", "barista", "frontdesk", "cashier", "pickup", "stockcontrol"]),
-  pin: stringType().optional().nullable()
+  role: enumType([
+    "admin",
+    "barista",
+    "frontdesk",
+    "cashier",
+    "pickup",
+    "stockcontrol"
+  ]),
+  branchId: numberType().optional(),
+  pin: stringType().optional()
 });
 var UpdateUserParams = objectType({
   id: coerce.number()
+});
+var UpdateUserQueryParams = objectType({
+  branchId: coerce.number().optional()
 });
 var UpdateUserBody = objectType({
   name: stringType().optional(),
   username: stringType().optional(),
   password: stringType().optional(),
-  role: enumType(["admin", "barista", "frontdesk", "cashier", "pickup", "stockcontrol"]).optional(),
-  pin: stringType().optional().nullable(),
+  role: enumType(["admin", "barista", "frontdesk", "cashier", "pickup"]).optional(),
+  pin: stringType().optional(),
   isActive: booleanType().optional()
 });
 var UpdateUserResponse = objectType({
   id: numberType(),
   name: stringType(),
   username: stringType(),
-  role: enumType(["admin", "barista", "frontdesk", "cashier", "pickup", "stockcontrol"]),
-  pin: stringType().optional().nullable(),
+  role: stringType(),
+  branchId: numberType().nullish(),
   isActive: booleanType(),
-  createdAt: stringType().optional(),
-  updatedAt: stringType().optional()
+  createdAt: coerce.date().optional()
 });
 var DeleteUserParams = objectType({
   id: coerce.number()
+});
+var DeleteUserQueryParams = objectType({
+  branchId: coerce.number().optional()
 });
 var ListActivityLogsQueryParams = objectType({
   userId: coerce.number().optional(),
@@ -78285,6 +78431,9 @@ var CreateDiscountBody = objectType({
 var UpdateDiscountParams = objectType({
   id: coerce.number()
 });
+var UpdateDiscountQueryParams = objectType({
+  branchId: coerce.number().optional()
+});
 var UpdateDiscountBody = objectType({
   code: stringType().optional(),
   type: enumType(["percentage", "fixed"]).optional(),
@@ -78301,6 +78450,40 @@ var UpdateDiscountResponse = objectType({
   updatedAt: stringType()
 });
 var DeleteDiscountParams = objectType({
+  id: coerce.number()
+});
+var DeleteDiscountQueryParams = objectType({
+  branchId: coerce.number().optional()
+});
+var ListBranchesResponseItem = objectType({
+  id: numberType(),
+  name: stringType(),
+  location: stringType().optional(),
+  isActive: booleanType().optional(),
+  createdAt: coerce.date().optional()
+});
+var ListBranchesResponse = arrayType(ListBranchesResponseItem);
+var CreateBranchBody = objectType({
+  name: stringType(),
+  location: stringType().optional(),
+  isActive: booleanType().optional()
+});
+var UpdateBranchParams = objectType({
+  id: coerce.number()
+});
+var UpdateBranchBody = objectType({
+  name: stringType().optional(),
+  location: stringType().optional(),
+  isActive: booleanType().optional()
+});
+var UpdateBranchResponse = objectType({
+  id: numberType(),
+  name: stringType(),
+  location: stringType().optional(),
+  isActive: booleanType().optional(),
+  createdAt: coerce.date().optional()
+});
+var DeleteBranchParams = objectType({
   id: coerce.number()
 });
 var ValidateDiscountParams = objectType({
@@ -78342,7 +78525,6 @@ var CreateIngredientOptionBody2 = CreateIngredientOptionBody;
 var UpdateIngredientOptionParams2 = UpdateIngredientOptionParams;
 var UpdateIngredientOptionBody2 = UpdateIngredientOptionBody;
 var DeleteIngredientOptionParams2 = DeleteIngredientOptionParams;
-var RestockIngredientParams2 = RestockIngredientParams;
 var RestockIngredientBody2 = RestockIngredientBody;
 var RestockIngredientResponse2 = RestockIngredientResponse;
 var ListOrdersQueryParams2 = ListOrdersQueryParams;
@@ -80136,33 +80318,42 @@ router2.post("/auth/login", async (req, res) => {
     return;
   }
   const { username, password } = parsed.data;
-  const [user] = await db.select().from(usersTable).where(eq(usersTable.username, username)).limit(1);
-  if (!user || !user.passwordHash) {
+  const [result] = await db.select({
+    user: usersTable,
+    branchName: branchesTable.name
+  }).from(usersTable).leftJoin(branchesTable, eq(usersTable.branchId, branchesTable.id)).where(eq(usersTable.username, username)).limit(1);
+  if (!result || !result.user.passwordHash) {
     res.status(401).json({ error: "Invalid username or password" });
     return;
   }
-  const isPasswordValid = await bcryptjs_default.compare(password, user.passwordHash);
+  const isPasswordValid = await bcryptjs_default.compare(password, result.user.passwordHash);
   if (!isPasswordValid) {
     res.status(401).json({ error: "Invalid username or password" });
     return;
   }
-  if (!user.isActive) {
+  if (!result.user.isActive) {
     res.status(403).json({ error: "Account is inactive" });
     return;
   }
-  req.session.userId = user.id;
+  req.session.userId = result.user.id;
+  req.session.branchId = result.user.branchId;
   await db.insert(activityLogsTable).values({
-    userId: user.id,
+    userId: result.user.id,
     action: "LOGIN",
     entityType: "user",
-    entityId: user.id,
+    entityId: result.user.id,
     details: { ip: req.ip, userAgent: req.get("user-agent") }
   });
   const payload = BaristaLoginResponse2.parse({
     user: {
-      id: user.id,
-      name: user.name,
-      role: user.role
+      id: result.user.id,
+      name: result.user.name,
+      role: result.user.role,
+      branchId: result.user.branchId,
+      branch: result.user.branchId ? {
+        id: result.user.branchId,
+        name: result.branchName || "Unknown Branch"
+      } : void 0
     }
   });
   req.session.save((err) => {
@@ -80185,16 +80376,24 @@ router2.get("/auth/me", async (req, res) => {
     res.status(401).json({ error: "Not authenticated" });
     return;
   }
-  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
-  if (!user) {
+  const [result] = await db.select({
+    user: usersTable,
+    branchName: branchesTable.name
+  }).from(usersTable).leftJoin(branchesTable, eq(usersTable.branchId, branchesTable.id)).where(eq(usersTable.id, userId)).limit(1);
+  if (!result) {
     res.status(401).json({ error: "Not authenticated" });
     return;
   }
   res.json(
     GetMeResponse2.parse({
-      id: user.id,
-      name: user.name,
-      role: user.role
+      id: result.user.id,
+      name: result.user.name,
+      role: result.user.role,
+      branchId: result.user.branchId,
+      branch: result.user.branchId ? {
+        id: result.user.branchId,
+        name: result.branchName || "Unknown Branch"
+      } : void 0
     })
   );
 });
@@ -80253,7 +80452,7 @@ init_drizzle_orm();
 init_src();
 init_schema2();
 init_schema2();
-async function calculateDrinkData(drinkId, selections) {
+async function calculateDrinkData(drinkId, selections, branchId = null) {
   const [drink] = await db.select().from(drinksTable).where(eq(drinksTable.id, drinkId));
   if (!drink) throw new Error("Drink not found");
   const rawSlots = await db.select().from(drinkIngredientSlotsTable).where(eq(drinkIngredientSlotsTable.drinkId, drinkId));
@@ -80613,7 +80812,7 @@ var storage = import_multer.default.diskStorage({
 });
 var upload = (0, import_multer.default)({ storage, limits: { fileSize: 5 * 1024 * 1024 } });
 var router3 = (0, import_express3.Router)();
-async function buildDrinkDetail(drinkId) {
+async function buildDrinkDetail(drinkId, branchId) {
   const cacheKey = `drink_detail_${drinkId}`;
   const cached2 = globalCache.get(cacheKey);
   if (cached2) return cached2;
@@ -80707,8 +80906,12 @@ async function buildDrinkDetail(drinkId) {
             const [category] = ingType ? await db.select().from(ingredientCategoriesTable).where(eq(ingredientCategoriesTable.id, ingType.categoryId)) : [null];
             let stockQuantity = 999999;
             if (ingType?.inventoryIngredientId) {
-              const [inv] = await db.select({ stock: ingredientsTable.stockQuantity }).from(ingredientsTable).where(eq(ingredientsTable.id, ingType.inventoryIngredientId));
+              const [inv] = await db.select({ stock: branchStockTable.stockQuantity }).from(branchStockTable).where(and(
+                eq(branchStockTable.ingredientId, ingType.inventoryIngredientId),
+                branchId ? eq(branchStockTable.branchId, branchId) : sql`1=1`
+              )).limit(1);
               if (inv) stockQuantity = Number(inv.stock);
+              else if (branchId) stockQuantity = 0;
             } else if (!ingType) {
               stockQuantity = 0;
             }
@@ -80773,7 +80976,14 @@ async function buildDrinkDetail(drinkId) {
       } else if (slot.ingredientId) {
         const [ingredient] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, slot.ingredientId));
         const options = await db.select().from(ingredientOptionsTable).where(eq(ingredientOptionsTable.ingredientId, slot.ingredientId)).orderBy(ingredientOptionsTable.sortOrder);
-        const stock = Number(ingredient?.stockQuantity ?? 0);
+        let stockQuantity = 0;
+        if (ingredient) {
+          const [stockRow] = await db.select({ stock: branchStockTable.stockQuantity }).from(branchStockTable).where(and(
+            eq(branchStockTable.ingredientId, ingredient.id),
+            branchId ? eq(branchStockTable.branchId, branchId) : sql`1=1`
+          )).limit(1);
+          stockQuantity = stockRow ? Number(stockRow.stock) : 0;
+        }
         const enrichedOptions = await Promise.all(
           options.map(async (o) => {
             let linkedIngredient = null;
@@ -80793,7 +81003,7 @@ async function buildDrinkDetail(drinkId) {
                 };
               }
             }
-            const isAvailable2 = stock >= Number(o.processedQty);
+            const isAvailable2 = stockQuantity >= Number(o.processedQty);
             return {
               ...o,
               isAvailable: isAvailable2,
@@ -80812,8 +81022,9 @@ async function buildDrinkDetail(drinkId) {
           ingredient: ingredient ? {
             ...ingredient,
             costPerUnit: Number(ingredient.costPerUnit),
-            stockQuantity: Number(ingredient.stockQuantity),
-            lowStockThreshold: Number(ingredient.lowStockThreshold),
+            stockQuantity,
+            lowStockThreshold: 100,
+            // Default for legacy
             options: enrichedOptions
           } : null,
           volumes: [],
@@ -80837,9 +81048,14 @@ async function buildDrinkDetail(drinkId) {
   );
   let isCupAvailable = true;
   if (drink.cupIngredientId) {
-    const [cupInv] = await db.select({ stock: ingredientsTable.stockQuantity }).from(ingredientsTable).where(eq(ingredientsTable.id, drink.cupIngredientId));
+    const [cupInv] = await db.select({ stock: branchStockTable.stockQuantity }).from(branchStockTable).where(and(
+      eq(branchStockTable.ingredientId, drink.cupIngredientId),
+      branchId ? eq(branchStockTable.branchId, branchId) : sql`1=1`
+    )).limit(1);
     if (cupInv) {
       isCupAvailable = Number(cupInv.stock) >= 1;
+    } else if (branchId) {
+      isCupAvailable = false;
     }
   }
   const isDrinkAvailable = isCupAvailable && slotsWithDetails.every((s) => s.isAvailable);
@@ -80867,6 +81083,10 @@ async function computeDefaultPrice(drinkId) {
 }
 router3.get("/drinks", async (req, res) => {
   const params = ListDrinksQueryParams2.safeParse(req.query);
+  const sessionUser = req.session;
+  const sessionBranchId = sessionUser.branchId;
+  const isAdmin = sessionUser.role === "admin";
+  const targetBranchId = req.query.branchId && (isAdmin || !sessionBranchId) ? parseInt(req.query.branchId) : sessionBranchId;
   const conditions = [];
   if (params.success && params.data.active !== void 0) {
     conditions.push(eq(drinksTable.isActive, params.data.active));
@@ -80884,7 +81104,7 @@ router3.get("/drinks", async (req, res) => {
   });
   const drinksWithDetails = await Promise.all(
     filtered.map(async (d) => {
-      const detail = await buildDrinkDetail(d.id);
+      const detail = await buildDrinkDetail(d.id, targetBranchId);
       if (!detail) return { ...d, basePrice: Number(d.basePrice), defaultPrice: 0, isAvailable: false };
       const defaultPrice = await computeDefaultPrice(d.id);
       return {
@@ -80937,7 +81157,7 @@ router3.post("/drinks", async (req, res) => {
       }))
     );
   }
-  const detail = await buildDrinkDetail(drink.id);
+  const detail = await buildDrinkDetail(drink.id, req.session.branchId);
   res.status(201).json(serializeDates(detail));
 });
 router3.get("/drinks/:id", async (req, res) => {
@@ -80946,7 +81166,11 @@ router3.get("/drinks/:id", async (req, res) => {
     res.status(400).json({ error: params.error.message });
     return;
   }
-  const detail = await buildDrinkDetail(params.data.id);
+  const sessionUser = req.session;
+  const isAdmin = sessionUser?.role === "admin";
+  const sessionBranchId = sessionUser?.branchId;
+  const targetBranchId = req.query.branchId && (isAdmin || !sessionBranchId) ? parseInt(req.query.branchId) : sessionBranchId;
+  const detail = await buildDrinkDetail(params.data.id, targetBranchId);
   if (!detail) {
     res.status(404).json({ error: "Drink not found" });
     return;
@@ -80994,7 +81218,11 @@ router3.patch("/drinks/:id", async (req, res) => {
   }
   globalCache.delete(`drink_detail_${params.data.id}`);
   globalCache.delete(`drink_default_price_${params.data.id}`);
-  res.json(UpdateDrinkResponse2.parse(serializeDates({ ...drink, basePrice: Number(drink.basePrice) })));
+  res.json(UpdateDrinkResponse2.parse(serializeDates({
+    ...drink,
+    basePrice: Number(drink.basePrice),
+    categoryId: drink.categoryId ?? void 0
+  })));
 });
 router3.post("/drinks/:id/image", upload.single("image"), async (req, res) => {
   const id = parseInt(req.params.id);
@@ -81184,7 +81412,7 @@ router3.put("/drinks/:id/slots", async (req, res) => {
       await db.insert(drinkSlotVolumesTable).values(slotVolumeRows);
     }
   }
-  const detail = await buildDrinkDetail(drinkId);
+  const detail = await buildDrinkDetail(drinkId, req.session.branchId);
   if (!detail) {
     res.status(404).json({ error: "Drink not found" });
     return;
@@ -81230,8 +81458,14 @@ router3.post("/drinks/:id/price", async (req, res) => {
     return;
   }
   const parsed = { data: { selections: rawBody.selections } };
+  const sessionUser = req.session;
+  const isAdmin = sessionUser?.role === "admin";
+  const sessionBranchId = sessionUser?.branchId;
+  const bodyBranchId = req.body.branchId;
+  const queryBranchId = req.query.branchId ? parseInt(req.query.branchId) : void 0;
+  const targetBranchId = isAdmin || !sessionBranchId ? queryBranchId || bodyBranchId || sessionBranchId : sessionBranchId;
   try {
-    const data = await calculateDrinkData(params.data.id, parsed.data.selections);
+    const data = await calculateDrinkData(params.data.id, parsed.data.selections, targetBranchId);
     const extras = data.customizations.map((c) => ({
       ingredientId: c.ingredientId,
       ingredientTypeId: c.ingredientTypeId,
@@ -81269,15 +81503,22 @@ var router4 = (0, import_express4.Router)();
 function slugify(text2) {
   return text2.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 }
-async function buildIngredientDetail(ingredientId) {
+async function buildIngredientDetail(ingredientId, branchId) {
   const [ingredient] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, ingredientId));
   if (!ingredient) return null;
+  let stockInfo = { stockQuantity: "0", lowStockThreshold: "0" };
+  if (branchId) {
+    const [stock] = await db.select().from(branchStockTable).where(and(eq(branchStockTable.ingredientId, ingredientId), eq(branchStockTable.branchId, branchId)));
+    if (stock) {
+      stockInfo = { stockQuantity: stock.stockQuantity, lowStockThreshold: stock.lowStockThreshold };
+    }
+  }
   const options = await db.select().from(ingredientOptionsTable).where(eq(ingredientOptionsTable.ingredientId, ingredientId)).orderBy(ingredientOptionsTable.sortOrder);
   return {
     ...ingredient,
     costPerUnit: parseFloat(ingredient.costPerUnit),
-    stockQuantity: parseFloat(ingredient.stockQuantity),
-    lowStockThreshold: parseFloat(ingredient.lowStockThreshold),
+    stockQuantity: parseFloat(stockInfo.stockQuantity),
+    lowStockThreshold: parseFloat(stockInfo.lowStockThreshold),
     options: options.map((o) => ({
       ...o,
       processedQty: parseFloat(o.processedQty),
@@ -81334,6 +81575,10 @@ router4.post("/ingredients/import-csv", async (req, res) => {
       await tx.update(drinkIngredientSlotsTable).set({ ingredientId: null });
       await tx.delete(ingredientOptionsTable);
       await tx.delete(ingredientsTable);
+      const adminBranchId = admin.branchId;
+      if (!adminBranchId) {
+        throw new Error("Admin must be associated with a branch to import inventory.");
+      }
       const usedSlugs = /* @__PURE__ */ new Set();
       for (const line2 of dataLines) {
         const parts = line2.split(",");
@@ -81349,15 +81594,19 @@ router4.post("/ingredients/import-csv", async (req, res) => {
           if (usedSlugs.has(slug)) slug = `${slug}-${Math.floor(Math.random() * 1e3)}`;
         }
         usedSlugs.add(slug);
-        await tx.insert(ingredientsTable).values({
+        const [newIng] = await tx.insert(ingredientsTable).values({
           name,
           slug,
           ingredientType: type,
           unit,
           costPerUnit: "0",
-          stockQuantity: "0",
-          lowStockThreshold: "100",
           isActive: true
+        }).returning();
+        await tx.insert(branchStockTable).values({
+          branchId: adminBranchId,
+          ingredientId: newIng.id,
+          stockQuantity: "0",
+          lowStockThreshold: "100"
         });
       }
     });
@@ -81372,11 +81621,36 @@ router4.post("/ingredients/import-csv", async (req, res) => {
 });
 router4.get("/ingredients", async (req, res) => {
   const params = ListIngredientsQueryParams2.safeParse(req.query);
+  const sessionUser = req.session;
+  const sessionBranchId = sessionUser.branchId;
+  const isAdmin = sessionUser.role === "admin";
+  const targetBranchId = isAdmin && req.query.branchId && req.query.branchId !== "all" ? parseInt(req.query.branchId) : isAdmin && req.query.branchId === "all" ? null : sessionBranchId;
+  let query = db.select({
+    id: ingredientsTable.id,
+    name: ingredientsTable.name,
+    slug: ingredientsTable.slug,
+    ingredientType: ingredientsTable.ingredientType,
+    unit: ingredientsTable.unit,
+    costPerUnit: ingredientsTable.costPerUnit,
+    isActive: ingredientsTable.isActive,
+    stockQuantity: targetBranchId ? sql`COALESCE(${branchStockTable.stockQuantity}, '0')` : sql`(SELECT COALESCE(SUM(bs.stock_quantity), 0)::text FROM branch_stock bs WHERE bs.ingredient_id = ${ingredientsTable.id})`,
+    lowStockThreshold: targetBranchId ? sql`COALESCE(${branchStockTable.lowStockThreshold}, '500')` : sql`'500'`,
+    updatedAt: ingredientsTable.updatedAt
+  }).from(ingredientsTable).leftJoin(
+    branchStockTable,
+    and(
+      eq(branchStockTable.ingredientId, ingredientsTable.id),
+      targetBranchId ? eq(branchStockTable.branchId, targetBranchId) : sql`1=0`
+    )
+  );
   const conditions = [];
   if (params.success && params.data.active !== void 0) {
     conditions.push(eq(ingredientsTable.isActive, params.data.active));
   }
-  const ingredients = await db.select().from(ingredientsTable).where(conditions.length ? and(...conditions) : void 0);
+  if (params.success && params.data.type) {
+    conditions.push(eq(ingredientsTable.ingredientType, params.data.type));
+  }
+  const ingredients = conditions.length ? await query.where(and(...conditions)) : await query;
   const [typeLinks, optionLinks, drinkLinks] = await Promise.all([
     db.select({ id: ingredientTypesTable.inventoryIngredientId, count: sql`count(*)` }).from(ingredientTypesTable).groupBy(ingredientTypesTable.inventoryIngredientId),
     db.select({ id: ingredientOptionsTable.linkedIngredientId, count: sql`count(*)` }).from(ingredientOptionsTable).groupBy(ingredientOptionsTable.linkedIngredientId),
@@ -81385,12 +81659,8 @@ router4.get("/ingredients", async (req, res) => {
   const typeCountMap = new Map(typeLinks.map((l) => [l.id, Number(l.count)]));
   const optionCountMap = new Map(optionLinks.map((l) => [l.id, Number(l.count)]));
   const drinkCountMap = new Map(drinkLinks.map((l) => [l.id, Number(l.count)]));
-  let filtered = ingredients;
-  if (params.success && params.data.type) {
-    filtered = ingredients.filter((i) => i.ingredientType === params.data.type);
-  }
   res.json(
-    serializeDates(filtered.map((i) => {
+    serializeDates(ingredients.map((i) => {
       return {
         ...i,
         costPerUnit: parseFloat(i.costPerUnit),
@@ -81408,6 +81678,11 @@ router4.post("/ingredients", async (req, res) => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
+  const sessionBranchId = req.session.branchId;
+  if (!sessionBranchId) {
+    res.status(400).json({ error: "No branch associated with session" });
+    return;
+  }
   const slug = slugify(parsed.data.name);
   const [ingredient] = await db.insert(ingredientsTable).values({
     name: parsed.data.name,
@@ -81415,16 +81690,20 @@ router4.post("/ingredients", async (req, res) => {
     ingredientType: parsed.data.ingredientType,
     unit: parsed.data.unit,
     costPerUnit: String(parsed.data.costPerUnit),
-    stockQuantity: String(parsed.data.stockQuantity ?? 0),
-    lowStockThreshold: String(parsed.data.lowStockThreshold ?? 500),
     isActive: parsed.data.isActive ?? true
+  }).returning();
+  const [stock] = await db.insert(branchStockTable).values({
+    branchId: sessionBranchId,
+    ingredientId: ingredient.id,
+    stockQuantity: String(parsed.data.stockQuantity ?? 0),
+    lowStockThreshold: String(parsed.data.lowStockThreshold ?? 500)
   }).returning();
   res.status(201).json(
     ListIngredientsResponse2.element.parse(serializeDates({
       ...ingredient,
       costPerUnit: parseFloat(ingredient.costPerUnit),
-      stockQuantity: parseFloat(ingredient.stockQuantity),
-      lowStockThreshold: parseFloat(ingredient.lowStockThreshold)
+      stockQuantity: parseFloat(stock.stockQuantity),
+      lowStockThreshold: parseFloat(stock.lowStockThreshold)
     }))
   );
   globalCache.clear();
@@ -81435,7 +81714,9 @@ router4.get("/ingredients/:id", async (req, res) => {
     res.status(400).json({ error: params.error.message });
     return;
   }
-  const detail = await buildIngredientDetail(params.data.id);
+  const sessionUser = req.session;
+  const targetBranchId = sessionUser.role === "admin" && req.query.branchId && req.query.branchId !== "all" ? parseInt(req.query.branchId) : sessionUser.branchId;
+  const detail = await buildIngredientDetail(params.data.id, targetBranchId);
   if (!detail) {
     res.status(404).json({ error: "Ingredient not found" });
     return;
@@ -81453,7 +81734,9 @@ router4.patch("/ingredients/:id", async (req, res) => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
+  const sessionBranchId = req.session.branchId;
   const updateData = {};
+  const stockUpdateData = {};
   if (parsed.data.name !== void 0) {
     updateData.name = parsed.data.name;
     updateData.slug = slugify(parsed.data.name);
@@ -81461,21 +81744,35 @@ router4.patch("/ingredients/:id", async (req, res) => {
   if (parsed.data.ingredientType !== void 0) updateData.ingredientType = parsed.data.ingredientType;
   if (parsed.data.unit !== void 0) updateData.unit = parsed.data.unit;
   if (parsed.data.costPerUnit !== void 0) updateData.costPerUnit = String(parsed.data.costPerUnit);
-  if (parsed.data.stockQuantity !== void 0) updateData.stockQuantity = String(parsed.data.stockQuantity);
-  if (parsed.data.lowStockThreshold !== void 0) updateData.lowStockThreshold = String(parsed.data.lowStockThreshold);
   if (parsed.data.isActive !== void 0) updateData.isActive = parsed.data.isActive;
-  const [ingredient] = await db.update(ingredientsTable).set(updateData).where(eq(ingredientsTable.id, params.data.id)).returning();
+  if (parsed.data.stockQuantity !== void 0) stockUpdateData.stockQuantity = String(parsed.data.stockQuantity);
+  if (parsed.data.lowStockThreshold !== void 0) stockUpdateData.lowStockThreshold = String(parsed.data.lowStockThreshold);
+  const [ingredient] = Object.keys(updateData).length > 0 ? await db.update(ingredientsTable).set(updateData).where(eq(ingredientsTable.id, params.data.id)).returning() : await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, params.data.id));
   if (!ingredient) {
     res.status(404).json({ error: "Ingredient not found" });
     return;
   }
-  await logActivity(req, "UPDATE_INGREDIENT", "ingredient", params.data.id, updateData);
+  let stock;
+  if (Object.keys(stockUpdateData).length > 0 && sessionBranchId) {
+    [stock] = await db.insert(branchStockTable).values({
+      branchId: sessionBranchId,
+      ingredientId: params.data.id,
+      stockQuantity: stockUpdateData.stockQuantity || "0",
+      lowStockThreshold: stockUpdateData.lowStockThreshold || "500"
+    }).onConflictDoUpdate({
+      target: [branchStockTable.branchId, branchStockTable.ingredientId],
+      set: stockUpdateData
+    }).returning();
+  } else if (sessionBranchId) {
+    [stock] = await db.select().from(branchStockTable).where(and(eq(branchStockTable.ingredientId, params.data.id), eq(branchStockTable.branchId, sessionBranchId)));
+  }
+  await logActivity(req, "UPDATE_INGREDIENT", "ingredient", params.data.id, { ...updateData, ...stockUpdateData });
   res.json(
     UpdateIngredientResponse2.parse(serializeDates({
       ...ingredient,
       costPerUnit: parseFloat(ingredient.costPerUnit),
-      stockQuantity: parseFloat(ingredient.stockQuantity),
-      lowStockThreshold: parseFloat(ingredient.lowStockThreshold)
+      stockQuantity: parseFloat(stock?.stockQuantity || "0"),
+      lowStockThreshold: parseFloat(stock?.lowStockThreshold || "500")
     }))
   );
   globalCache.clear();
@@ -81587,14 +81884,14 @@ router4.delete("/ingredients/:id/options/:optionId", async (req, res) => {
   globalCache.clear();
 });
 router4.post("/ingredients/:id/restock", async (req, res) => {
-  const params = RestockIngredientParams2.safeParse(req.params);
+  const params = GetIngredientParams2.safeParse(req.params);
   if (!params.success) {
-    res.status(400).json({ error: params.error.message });
+    res.status(400).json({ error: params.error.format() });
     return;
   }
   const parsed = RestockIngredientBody2.safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.message });
+    res.status(400).json({ error: parsed.error.format() });
     return;
   }
   const [ingredient] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, params.data.id));
@@ -81602,10 +81899,19 @@ router4.post("/ingredients/:id/restock", async (req, res) => {
     res.status(404).json({ error: "Ingredient not found" });
     return;
   }
-  const currentQty = parseFloat(ingredient.stockQuantity);
+  const sessionBranchId = req.session.branchId;
+  const isAdmin = req.session.role === "admin";
+  const targetBranchId = isAdmin && req.body.branchId ? parseInt(req.body.branchId) : sessionBranchId;
+  if (!targetBranchId) {
+    res.status(400).json({ error: "No target branch specified" });
+    return;
+  }
+  const [stock] = await db.select().from(branchStockTable).where(and(eq(branchStockTable.ingredientId, params.data.id), eq(branchStockTable.branchId, targetBranchId)));
+  const currentQty = stock ? parseFloat(stock.stockQuantity) : 0;
   const newQty = currentQty + parsed.data.quantity;
   const sessionUserId = req.session.userId ?? 1;
   await db.insert(stockMovementsTable).values({
+    branchId: targetBranchId,
     ingredientId: params.data.id,
     orderId: null,
     movementType: "restock",
@@ -81614,13 +81920,20 @@ router4.post("/ingredients/:id/restock", async (req, res) => {
     note: parsed.data.note ?? null,
     createdBy: sessionUserId
   });
-  const [updated] = await db.update(ingredientsTable).set({ stockQuantity: String(newQty) }).where(eq(ingredientsTable.id, params.data.id)).returning();
+  const [updatedStock] = await db.insert(branchStockTable).values({
+    branchId: targetBranchId,
+    ingredientId: params.data.id,
+    stockQuantity: String(newQty)
+  }).onConflictDoUpdate({
+    target: [branchStockTable.branchId, branchStockTable.ingredientId],
+    set: { stockQuantity: String(newQty) }
+  }).returning();
   res.json(
     RestockIngredientResponse2.parse(serializeDates({
-      ...updated,
-      costPerUnit: parseFloat(updated.costPerUnit),
-      stockQuantity: parseFloat(updated.stockQuantity),
-      lowStockThreshold: parseFloat(updated.lowStockThreshold)
+      ...ingredient,
+      costPerUnit: parseFloat(ingredient.costPerUnit),
+      stockQuantity: parseFloat(updatedStock.stockQuantity),
+      lowStockThreshold: parseFloat(updatedStock.lowStockThreshold)
     }))
   );
   await logActivity(req, "RESTOCK_INGREDIENT", "ingredient", params.data.id, { quantity: parsed.data.quantity });
@@ -81636,12 +81949,12 @@ init_drizzle_orm();
 init_sse();
 init_src();
 var router5 = (0, import_express5.Router)();
-async function generateOrderNumber() {
+async function generateOrderNumber(branchId) {
   const now = /* @__PURE__ */ new Date();
   const startOfYear = new Date(now.getFullYear(), 0, 1);
   const dayOfYear = Math.floor((now.getTime() - startOfYear.getTime()) / 864e5) + 1;
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const [row] = await db.select({ count: sql`cast(count(*) as int)` }).from(ordersTable).where(gte(ordersTable.createdAt, todayStart));
+  const [row] = await db.select({ count: sql`cast(count(*) as int)` }).from(ordersTable).where(and(eq(ordersTable.branchId, branchId), gte(ordersTable.createdAt, todayStart)));
   const serial2 = (row?.count ?? 0) + 1;
   return `${dayOfYear}${String(serial2).padStart(3, "0")}`;
 }
@@ -81689,7 +82002,14 @@ async function buildOrderDetail(orderId) {
 }
 router5.get("/orders", async (req, res) => {
   const params = ListOrdersQueryParams2.safeParse(req.query);
+  const sessionUser = req.session;
+  const isAdmin = sessionUser.role === "admin";
+  const sessionBranchId = sessionUser.branchId;
+  const targetBranchId = isAdmin && req.query.branchId && req.query.branchId !== "all" ? parseInt(req.query.branchId) : isAdmin && req.query.branchId === "all" ? null : sessionBranchId;
   const conditions = [];
+  if (targetBranchId) {
+    conditions.push(eq(ordersTable.branchId, targetBranchId));
+  }
   if (params.success && params.data.status) {
     const statuses = params.data.status.split(",");
     conditions.push(inArray(ordersTable.status, statuses));
@@ -81758,6 +82078,13 @@ router5.post("/orders", async (req, res) => {
     return;
   }
   const sessionUserId = req.session.userId ?? 1;
+  const sessionBranchId = req.session.branchId;
+  const bodyBranchId = req.body.branchId;
+  const targetBranchId = sessionBranchId || bodyBranchId;
+  if (!targetBranchId) {
+    res.status(400).json({ error: "No branch associated with session or request" });
+    return;
+  }
   const { items: orderItems } = parsed.data;
   const drinkIds = [...new Set(orderItems.map((i) => i.drinkId))];
   const allOptionIds = [
@@ -81770,6 +82097,8 @@ router5.post("/orders", async (req, res) => {
       )
     )
   ];
+  const availStations = await db.select().from(kitchenStationsTable);
+  console.log(`[KDS] Available stations:`, availStations.map((s) => ({ name: s.name, slug: s.name.toLowerCase().replace(/\s+/g, "-") })));
   let subtotal = 0;
   const itemDetails = [];
   for (const item of orderItems) {
@@ -81794,12 +82123,14 @@ router5.post("/orders", async (req, res) => {
         drinkId: item.drinkId,
         drinkName: calcData.drink.name,
         kitchenStation: calcData.drink.kitchenStation,
+        kitchenStationId: calcData.drink.kitchenStationId,
         quantity: item.quantity,
         unitPrice,
         lineTotal,
         specialNotes: item.specialNotes ?? null,
         customizations
       });
+      console.log(`[KDS] Order Item: ${calcData.drink.name}, Assigned Station: ${calcData.drink.kitchenStation}`);
     } catch (e) {
       if (e.message === "Drink not found") {
         res.status(400).json({ error: `Drink ${item.drinkId} not found` });
@@ -81831,9 +82162,10 @@ router5.post("/orders", async (req, res) => {
   const total = subtotal - discountAmount;
   const amountTendered = parsed.data.amountTendered ?? null;
   const changeDue = amountTendered != null ? amountTendered - total : null;
-  const orderNumber = await generateOrderNumber();
+  const orderNumber = await generateOrderNumber(targetBranchId);
   const { order, savedItems } = await db.transaction(async (tx) => {
     const [order2] = await tx.insert(ordersTable).values({
+      branchId: targetBranchId,
       orderNumber,
       baristaId: sessionUserId,
       status: "pending",
@@ -81853,9 +82185,9 @@ router5.post("/orders", async (req, res) => {
     const allIngredientIds = [
       ...new Set(itemDetails.flatMap((d) => d.customizations.map((c) => c.ingredientId).filter((id) => id !== null)))
     ];
-    const ingredientRows = allIngredientIds.length > 0 ? await tx.select({ id: ingredientsTable.id, stockQuantity: ingredientsTable.stockQuantity }).from(ingredientsTable).where(inArray(ingredientsTable.id, allIngredientIds)) : [];
-    const stockMap = new Map(ingredientRows.map((r) => [r.id, parseFloat(r.stockQuantity)]));
-    console.log(`[stock] Pre-fetched stock for ${allIngredientIds.length} ingredients:`, Array.from(stockMap.entries()));
+    const stockRows = allIngredientIds.length > 0 ? await tx.select({ ingredientId: branchStockTable.ingredientId, stockQuantity: branchStockTable.stockQuantity }).from(branchStockTable).where(and(eq(branchStockTable.branchId, targetBranchId), inArray(branchStockTable.ingredientId, allIngredientIds))) : [];
+    const stockMap = new Map(stockRows.map((r) => [r.ingredientId, parseFloat(r.stockQuantity)]));
+    console.log(`[stock] Pre-fetched stock for ${allIngredientIds.length} ingredients in branch ${targetBranchId}:`, Array.from(stockMap.entries()));
     const savedItems2 = [];
     for (const item of itemDetails) {
       const [orderItem] = await tx.insert(orderItemsTable).values({
@@ -81866,7 +82198,8 @@ router5.post("/orders", async (req, res) => {
         unitPrice: String(item.unitPrice),
         lineTotal: String(item.lineTotal),
         specialNotes: item.specialNotes,
-        kitchenStation: item.kitchenStation
+        kitchenStation: item.kitchenStation,
+        kitchenStationId: item.kitchenStationId
       }).returning();
       if (item.customizations.length > 0) {
         await tx.insert(orderItemCustomizationsTable).values(
@@ -81893,18 +82226,26 @@ router5.post("/orders", async (req, res) => {
         }
         const current = stockMap.get(c.ingredientId) ?? 0;
         const newQty = Math.max(0, current - c.consumedQty);
-        console.log(`[stock] Deducting ${c.consumedQty} from ${c.ingredientId}. ${current} -> ${newQty}`);
+        console.log(`[stock] Deducting ${c.consumedQty} from ${c.ingredientId} in branch ${targetBranchId}. ${current} -> ${newQty}`);
         stockMap.set(c.ingredientId, newQty);
         stockUpdates.push({ id: c.ingredientId, newQty, delta: c.consumedQty });
       }
       await Promise.all(
         stockUpdates.map(
-          (u) => tx.update(ingredientsTable).set({ stockQuantity: String(u.newQty) }).where(eq(ingredientsTable.id, u.id))
+          (u) => tx.insert(branchStockTable).values({
+            branchId: targetBranchId,
+            ingredientId: u.id,
+            stockQuantity: String(u.newQty)
+          }).onConflictDoUpdate({
+            target: [branchStockTable.branchId, branchStockTable.ingredientId],
+            set: { stockQuantity: String(u.newQty) }
+          })
         )
       );
       if (stockUpdates.length > 0) {
         await tx.insert(stockMovementsTable).values(
           stockUpdates.map((u) => ({
+            branchId: targetBranchId,
             ingredientId: u.id,
             orderId: order2.id,
             movementType: "sale",
@@ -82047,7 +82388,7 @@ router5.patch("/order-items/:id/ready", async (req, res) => {
 });
 router5.post("/orders/:id/refund", async (req, res) => {
   const { id } = req.params;
-  const { adminPin } = req.body;
+  const { adminPin, returnToStockItems } = req.body;
   if (!adminPin) {
     res.status(400).json({ error: "Admin PIN is required" });
     return;
@@ -82057,14 +82398,39 @@ router5.post("/orders/:id/refund", async (req, res) => {
     res.status(401).json({ error: "Invalid Admin PIN" });
     return;
   }
-  const [order] = await db.update(ordersTable).set({ status: "refunded", cancelledAt: /* @__PURE__ */ new Date() }).where(eq(ordersTable.id, parseInt(id))).returning();
+  const orderId = parseInt(id);
+  const [order] = await db.select().from(ordersTable).where(eq(ordersTable.id, orderId)).limit(1);
   if (!order) {
     res.status(404).json({ error: "Order not found" });
     return;
   }
-  broadcastEvent("order_updated", { orderId: order.id, status: "refunded" });
-  await logActivity(req, "REFUND_ORDER", "order", order.id);
-  res.json({ message: "Order refunded successfully", orderId: order.id });
+  if (returnToStockItems && returnToStockItems.length > 0) {
+    await db.transaction(async (tx) => {
+      for (const itemId of returnToStockItems) {
+        const customizations = await tx.select().from(orderItemCustomizationsTable).where(eq(orderItemCustomizationsTable.orderItemId, itemId));
+        for (const cust of customizations) {
+          if (cust.ingredientId) {
+            const consumed = parseFloat(cust.consumedQty);
+            if (consumed > 0) {
+              await tx.update(branchStockTable).set({
+                stockQuantity: sql`${branchStockTable.stockQuantity} + ${consumed}`,
+                updatedAt: /* @__PURE__ */ new Date()
+              }).where(
+                and(
+                  eq(branchStockTable.ingredientId, cust.ingredientId),
+                  eq(branchStockTable.branchId, order.branchId)
+                )
+              );
+            }
+          }
+        }
+      }
+    });
+  }
+  const [updatedOrder] = await db.update(ordersTable).set({ status: "refunded", cancelledAt: /* @__PURE__ */ new Date() }).where(eq(ordersTable.id, orderId)).returning();
+  broadcastEvent("order_updated", { orderId: updatedOrder.id, status: "refunded" });
+  await logActivity(req, "REFUND_ORDER", "order", updatedOrder.id, { returnToStockItems });
+  res.json({ message: "Order refunded successfully", orderId: updatedOrder.id });
 });
 var orders_default = router5;
 
@@ -82075,7 +82441,14 @@ init_src();
 var router6 = (0, import_express6.Router)();
 router6.get("/stock/movements", async (req, res) => {
   const params = ListStockMovementsQueryParams2.safeParse(req.query);
+  const sessionUser = req.session;
+  const isAdmin = sessionUser.role === "admin";
+  const sessionBranchId = sessionUser.branchId;
+  const targetBranchId = req.query.branchId && req.query.branchId !== "all" ? parseInt(req.query.branchId) : isAdmin && (req.query.branchId === "all" || !req.query.branchId) ? null : sessionBranchId;
   const conditions = [];
+  if (targetBranchId) {
+    conditions.push(eq(stockMovementsTable.branchId, targetBranchId));
+  }
   if (params.success && params.data.ingredientId) {
     conditions.push(eq(stockMovementsTable.ingredientId, params.data.ingredientId));
   }
@@ -82083,10 +82456,6 @@ router6.get("/stock/movements", async (req, res) => {
   const limit = params.success && params.data.limit ? params.data.limit : 100;
   const offset = params.success && params.data.offset ? params.data.offset : 0;
   const paginated = movements.slice(offset, offset + limit).reverse();
-  const ingredientIds = [...new Set(paginated.map((m) => m.ingredientId))];
-  const userIds = [...new Set(paginated.map((m) => m.createdBy))];
-  const ingredients = ingredientIds.length > 0 ? await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, ingredientIds[0])) : [];
-  const users = userIds.length > 0 ? await db.select().from(usersTable).where(eq(usersTable.id, userIds[0])) : [];
   const allIngredients = await db.select().from(ingredientsTable);
   const allUsers = await db.select().from(usersTable);
   const ingredientMap = Object.fromEntries(allIngredients.map((i) => [i.id, i.name]));
@@ -82103,8 +82472,6 @@ router6.get("/stock/movements", async (req, res) => {
       })))
     )
   );
-  void ingredients;
-  void users;
 });
 router6.post("/stock/adjustments", async (req, res) => {
   const parsed = CreateStockAdjustmentBody2.safeParse(req.body);
@@ -82113,17 +82480,31 @@ router6.post("/stock/adjustments", async (req, res) => {
     return;
   }
   const sessionUserId = req.session.userId ?? 1;
+  const sessionBranchId = req.session.branchId;
+  if (!sessionBranchId) {
+    res.status(400).json({ error: "No branch associated with session" });
+    return;
+  }
   const [ingredient] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, parsed.data.ingredientId));
   if (!ingredient) {
     res.status(404).json({ error: "Ingredient not found" });
     return;
   }
-  const currentQty = parseFloat(ingredient.stockQuantity);
+  const [stock] = await db.select().from(branchStockTable).where(and(eq(branchStockTable.ingredientId, parsed.data.ingredientId), eq(branchStockTable.branchId, sessionBranchId)));
+  const currentQty = stock ? parseFloat(stock.stockQuantity) : 0;
   const adjustedQty = parsed.data.movementType === "waste" ? currentQty - parsed.data.quantity : currentQty + parsed.data.quantity;
   const newQty = Math.max(0, adjustedQty);
-  await db.update(ingredientsTable).set({ stockQuantity: String(newQty) }).where(eq(ingredientsTable.id, parsed.data.ingredientId));
+  await db.insert(branchStockTable).values({
+    branchId: sessionBranchId,
+    ingredientId: parsed.data.ingredientId,
+    stockQuantity: String(newQty)
+  }).onConflictDoUpdate({
+    target: [branchStockTable.branchId, branchStockTable.ingredientId],
+    set: { stockQuantity: String(newQty) }
+  });
   const quantityValue = parsed.data.movementType === "waste" ? -parsed.data.quantity : parsed.data.quantity;
   const [movement] = await db.insert(stockMovementsTable).values({
+    branchId: sessionBranchId,
     ingredientId: parsed.data.ingredientId,
     orderId: null,
     movementType: parsed.data.movementType,
@@ -82153,15 +82534,21 @@ var import_express7 = __toESM(require_express2(), 1);
 init_drizzle_orm();
 init_src();
 var router7 = (0, import_express7.Router)();
-router7.get("/dashboard/summary", async (_req, res) => {
+router7.get("/dashboard/summary", async (req, res) => {
+  const sessionUser = req.session;
+  const isAdmin = sessionUser.role === "admin";
+  const sessionBranchId = sessionUser.branchId;
+  const targetBranchId = req.query.branchId && req.query.branchId !== "all" ? parseInt(req.query.branchId) : isAdmin && (req.query.branchId === "all" || !req.query.branchId) ? null : sessionBranchId;
   const today = /* @__PURE__ */ new Date();
   today.setHours(0, 0, 0, 0);
-  const todayOrders = await db.select().from(ordersTable).where(
-    and(
-      gte(ordersTable.createdAt, today),
-      sql`${ordersTable.status} NOT IN ('cancelled', 'refunded')`
-    )
-  );
+  const orderConditions = [
+    gte(ordersTable.createdAt, today),
+    sql`${ordersTable.status} NOT IN ('cancelled', 'refunded')`
+  ];
+  if (targetBranchId) {
+    orderConditions.push(eq(ordersTable.branchId, targetBranchId));
+  }
+  const todayOrders = await db.select().from(ordersTable).where(and(...orderConditions));
   const todayCashOrders = todayOrders.filter((o) => o.paymentMethod === "cash");
   const todayCardOrders = todayOrders.filter((o) => o.paymentMethod === "card");
   const todayRevenue = todayOrders.reduce((sum, o) => sum + parseFloat(o.total), 0);
@@ -82175,7 +82562,12 @@ router7.get("/dashboard/summary", async (_req, res) => {
   const pendingOrders = todayOrders.filter(
     (o) => o.status === "pending" || o.status === "in_progress"
   ).length;
-  const lowStockResult = await db.select({ count: sql`count(*)` }).from(ingredientsTable).where(sql`${ingredientsTable.stockQuantity} < ${ingredientsTable.lowStockThreshold}`);
+  const lowStockResult = await db.select({ count: sql`count(*)` }).from(branchStockTable).where(
+    and(
+      targetBranchId ? eq(branchStockTable.branchId, targetBranchId) : sql`1=1`,
+      sql`${branchStockTable.stockQuantity} < ${branchStockTable.lowStockThreshold}`
+    )
+  );
   const lowStockCount = Number(lowStockResult[0]?.count || 0);
   res.json(
     GetDashboardSummaryResponse2.parse({
@@ -82191,9 +82583,17 @@ router7.get("/dashboard/summary", async (_req, res) => {
   );
 });
 router7.get("/dashboard/active-orders", async (req, res) => {
+  const sessionUser = req.session;
+  const isAdmin = sessionUser.role === "admin";
+  const sessionBranchId = sessionUser.branchId;
+  const targetBranchId = req.query.branchId && req.query.branchId !== "all" ? parseInt(req.query.branchId) : isAdmin && (req.query.branchId === "all" || !req.query.branchId) ? null : sessionBranchId;
   const { status } = req.query;
   const statusList = status ? [status] : ["pending", "paid", "in_progress", "ready"];
-  const activeOrders = await db.select().from(ordersTable).where(inArray(ordersTable.status, statusList)).orderBy(ordersTable.createdAt);
+  const conditions = [inArray(ordersTable.status, statusList)];
+  if (targetBranchId) {
+    conditions.push(eq(ordersTable.branchId, targetBranchId));
+  }
+  const activeOrders = await db.select().from(ordersTable).where(and(...conditions)).orderBy(ordersTable.createdAt);
   if (activeOrders.length === 0) {
     res.json(GetActiveOrdersResponse2.parse([]));
     return;
@@ -82220,10 +82620,12 @@ router7.get("/dashboard/active-orders", async (req, res) => {
       ...i,
       status: i.status,
       kitchenStation: i.kitchenStation || "main",
+      kitchenStationId: i.kitchenStationId,
       unitPrice: parseFloat(i.unitPrice),
       lineTotal: parseFloat(i.lineTotal),
       customizations: customizationsByItemId[i.id] ?? []
     });
+    console.log(`[KDS-Debug] Item: ${i.drinkName}, Station: ${i.kitchenStation}`);
     return acc;
   }, {});
   const ordersWithDetails = activeOrders.map((order) => ({
@@ -82240,14 +82642,37 @@ router7.get("/dashboard/active-orders", async (req, res) => {
   }));
   res.json(GetActiveOrdersResponse2.parse(serializeDates(ordersWithDetails)));
 });
-router7.get("/dashboard/low-stock", async (_req, res) => {
-  const allIngredients = await db.select().from(ingredientsTable).where(eq(ingredientsTable.isActive, true));
-  const lowStock = allIngredients.filter(
-    (i) => parseFloat(i.stockQuantity) < parseFloat(i.lowStockThreshold)
+router7.get("/dashboard/low-stock", async (req, res) => {
+  const sessionUser = req.session;
+  const isAdmin = sessionUser.role === "admin";
+  const sessionBranchId = sessionUser.branchId;
+  const targetBranchId = req.query.branchId && req.query.branchId !== "all" ? parseInt(req.query.branchId) : isAdmin && (req.query.branchId === "all" || !req.query.branchId) ? null : sessionBranchId;
+  const query = db.select({
+    id: ingredientsTable.id,
+    name: ingredientsTable.name,
+    slug: ingredientsTable.slug,
+    ingredientType: ingredientsTable.ingredientType,
+    unit: ingredientsTable.unit,
+    costPerUnit: ingredientsTable.costPerUnit,
+    isActive: ingredientsTable.isActive,
+    stockQuantity: branchStockTable.stockQuantity,
+    lowStockThreshold: branchStockTable.lowStockThreshold
+  }).from(ingredientsTable).innerJoin(
+    branchStockTable,
+    and(
+      eq(branchStockTable.ingredientId, ingredientsTable.id),
+      targetBranchId ? eq(branchStockTable.branchId, targetBranchId) : sql`1=1`
+    )
+  );
+  const results = await query.where(
+    and(
+      eq(ingredientsTable.isActive, true),
+      sql`${branchStockTable.stockQuantity} < ${branchStockTable.lowStockThreshold}`
+    )
   );
   res.json(
     GetLowStockIngredientsResponse2.parse(
-      serializeDates(lowStock.map((i) => ({
+      serializeDates(results.map((i) => ({
         ...i,
         costPerUnit: parseFloat(i.costPerUnit),
         stockQuantity: parseFloat(i.stockQuantity),
@@ -82258,7 +82683,14 @@ router7.get("/dashboard/low-stock", async (_req, res) => {
 });
 router7.get("/dashboard/sales-by-category", async (req, res) => {
   const params = GetSalesByCategoryQueryParams2.safeParse(req.query);
+  const sessionUser = req.session;
+  const isAdmin = sessionUser.role === "admin";
+  const sessionBranchId = sessionUser.branchId;
+  const targetBranchId = req.query.branchId && req.query.branchId !== "all" ? parseInt(req.query.branchId) : isAdmin && (req.query.branchId === "all" || !req.query.branchId) ? null : sessionBranchId;
   const conditions = [sql`${ordersTable.status} NOT IN ('cancelled', 'refunded')`];
+  if (targetBranchId) {
+    conditions.push(eq(ordersTable.branchId, targetBranchId));
+  }
   if (params.success && params.data.startDate) {
     conditions.push(gte(ordersTable.createdAt, new Date(params.data.startDate)));
   }
@@ -82305,7 +82737,14 @@ router7.get("/dashboard/sales-by-category", async (req, res) => {
 router7.get("/dashboard/top-drinks", async (req, res) => {
   const params = GetTopDrinksQueryParams2.safeParse(req.query);
   const limit = params.success && params.data.limit ? params.data.limit : 5;
+  const sessionUser = req.session;
+  const isAdmin = sessionUser.role === "admin";
+  const sessionBranchId = sessionUser.branchId;
+  const targetBranchId = req.query.branchId && req.query.branchId !== "all" ? parseInt(req.query.branchId) : isAdmin && (req.query.branchId === "all" || !req.query.branchId) ? null : sessionBranchId;
   const conditions = [sql`${ordersTable.status} != 'cancelled'`];
+  if (targetBranchId) {
+    conditions.push(eq(ordersTable.branchId, targetBranchId));
+  }
   if (params.success && params.data.startDate) {
     conditions.push(gte(ordersTable.createdAt, new Date(params.data.startDate)));
   }
@@ -82353,7 +82792,14 @@ router7.get("/dashboard/top-drinks", async (req, res) => {
 });
 router7.get("/dashboard/sales-by-day", async (req, res) => {
   const params = GetSalesByCategoryQueryParams2.safeParse(req.query);
+  const sessionUser = req.session;
+  const isAdmin = sessionUser.role === "admin";
+  const sessionBranchId = sessionUser.branchId;
+  const targetBranchId = req.query.branchId && req.query.branchId !== "all" ? parseInt(req.query.branchId) : isAdmin && (req.query.branchId === "all" || !req.query.branchId) ? null : sessionBranchId;
   const conditions = [sql`${ordersTable.status} NOT IN ('cancelled', 'refunded')`];
+  if (targetBranchId) {
+    conditions.push(eq(ordersTable.branchId, targetBranchId));
+  }
   if (params.success && params.data.startDate) {
     conditions.push(gte(ordersTable.createdAt, new Date(params.data.startDate)));
   }
@@ -83080,7 +83526,11 @@ function requirePermission(permissionKey) {
 var usersRouter = (0, import_express13.Router)();
 usersRouter.get("/users", requirePermission("users:view"), async (req, res) => {
   try {
-    const allUsers = await db.select().from(usersTable);
+    const sessionUser = req.session;
+    const isAdmin = sessionUser.role === "admin";
+    const sessionBranchId = sessionUser.branchId;
+    const targetBranchId = isAdmin && req.query.branchId && req.query.branchId !== "all" ? parseInt(req.query.branchId) : isAdmin && req.query.branchId === "all" ? null : sessionBranchId;
+    const allUsers = targetBranchId ? await db.select().from(usersTable).where(eq(usersTable.branchId, targetBranchId)) : await db.select().from(usersTable);
     res.json(allUsers.map((u) => UserDetail.parse({
       ...u,
       username: u.username ?? `user_${u.id}`,
@@ -83102,10 +83552,12 @@ usersRouter.post("/users", requirePermission("users:create"), async (req, res) =
       res.status(400).json({ error: parsed.error.format() });
       return;
     }
+    const sessionBranchId = req.session.branchId;
     const { password, ...userData } = parsed.data;
     const passwordHash = await bcryptjs_default.hash(password, 10);
     const [newUser] = await db.insert(usersTable).values({
       ...userData,
+      branchId: sessionBranchId,
       passwordHash
     }).returning();
     if (!newUser) {
@@ -83802,16 +84254,25 @@ init_drizzle_orm();
 init_src();
 var router16 = (0, import_express18.Router)();
 router16.get("/stock-audits", async (req, res) => {
+  const sessionUser = req.session;
+  const sessionBranchId = sessionUser.branchId;
+  const isAdmin = sessionUser.role === "admin";
+  const targetBranchId = req.query.branchId && req.query.branchId !== "all" ? parseInt(req.query.branchId) : isAdmin && (req.query.branchId === "all" || !req.query.branchId) ? null : sessionBranchId;
+  const conditions = [];
+  if (targetBranchId) {
+    conditions.push(eq(stockAuditsTable.branchId, targetBranchId));
+  }
   const audits = await db.select({
     id: stockAuditsTable.id,
     status: stockAuditsTable.status,
+    branchId: stockAuditsTable.branchId,
     createdBy: stockAuditsTable.createdBy,
     createdByName: usersTable.name,
     approvedBy: stockAuditsTable.approvedBy,
     notes: stockAuditsTable.notes,
     createdAt: stockAuditsTable.createdAt,
     approvedAt: stockAuditsTable.approvedAt
-  }).from(stockAuditsTable).leftJoin(usersTable, eq(stockAuditsTable.createdBy, usersTable.id)).orderBy(desc(stockAuditsTable.createdAt));
+  }).from(stockAuditsTable).leftJoin(usersTable, eq(stockAuditsTable.createdBy, usersTable.id)).where(conditions.length > 0 ? and(...conditions) : void 0).orderBy(desc(stockAuditsTable.createdAt));
   res.json(serializeDates(audits));
 });
 router16.get("/stock-audits/:id", async (req, res) => {
@@ -83819,6 +84280,7 @@ router16.get("/stock-audits/:id", async (req, res) => {
   const [audit] = await db.select({
     id: stockAuditsTable.id,
     status: stockAuditsTable.status,
+    branchId: stockAuditsTable.branchId,
     createdBy: stockAuditsTable.createdBy,
     createdByName: usersTable.name,
     approvedBy: stockAuditsTable.approvedBy,
@@ -83853,7 +84315,13 @@ router16.get("/stock-audits/:id", async (req, res) => {
 });
 router16.post("/stock-audits", async (req, res) => {
   const { notes, items } = req.body;
-  const userId = req.session?.userId || req.user?.id || 1;
+  const sessionUser = req.session;
+  const userId = sessionUser?.userId || 1;
+  const branchId = sessionUser?.branchId;
+  if (!branchId) {
+    res.status(400).json({ error: "Branch ID required for audit" });
+    return;
+  }
   if (!items || !Array.isArray(items)) {
     res.status(400).json({ error: "Items array is required" });
     return;
@@ -83862,16 +84330,20 @@ router16.post("/stock-audits", async (req, res) => {
     const audit = await db.transaction(async (tx) => {
       const [newAudit] = await tx.insert(stockAuditsTable).values({
         createdBy: userId,
+        branchId,
         notes,
         status: "pending"
       }).returning();
       for (const item of items) {
-        const [ingredient] = await tx.select().from(ingredientsTable).where(eq(ingredientsTable.id, item.ingredientId));
-        if (!ingredient) continue;
+        const [stockRow] = await tx.select({ stock: branchStockTable.stockQuantity }).from(branchStockTable).where(and(
+          eq(branchStockTable.ingredientId, item.ingredientId),
+          eq(branchStockTable.branchId, branchId)
+        )).limit(1);
+        const expectedQty = stockRow ? stockRow.stock : "0";
         await tx.insert(stockAuditItemsTable).values({
           auditId: newAudit.id,
           ingredientId: item.ingredientId,
-          expectedQuantity: ingredient.stockQuantity,
+          expectedQuantity: expectedQty,
           actualQuantity: String(item.actualQuantity),
           notes: item.notes || null
         });
@@ -83918,20 +84390,32 @@ router16.post("/stock-audits/:id/approve", async (req, res) => {
       if (audit.status !== "pending") throw new Error("Audit already processed");
       const items = await tx.select().from(stockAuditItemsTable).where(eq(stockAuditItemsTable.auditId, auditId));
       for (const item of items) {
-        const targetQuantity = item.finalQuantity !== null ? item.finalQuantity : item.actualQuantity;
-        const [ingredient] = await tx.select().from(ingredientsTable).where(eq(ingredientsTable.id, item.ingredientId));
-        if (!ingredient) continue;
-        const diff = parseFloat(targetQuantity) - parseFloat(ingredient.stockQuantity);
+        const targetQuantity = item.finalQuantity !== null ? item.actualQuantity : item.actualQuantity;
+        const finalQty = item.finalQuantity !== null ? item.finalQuantity : item.actualQuantity;
+        const [stockRow] = await tx.select({ stock: branchStockTable.stockQuantity }).from(branchStockTable).where(and(
+          eq(branchStockTable.ingredientId, item.ingredientId),
+          eq(branchStockTable.branchId, audit.branchId)
+        )).limit(1);
+        const currentQty = stockRow ? stockRow.stock : "0";
+        const diff = parseFloat(finalQty) - parseFloat(currentQty);
         if (diff !== 0) {
           await tx.insert(stockMovementsTable).values({
+            branchId: audit.branchId,
             ingredientId: item.ingredientId,
             movementType: "adjustment",
             quantity: String(diff),
-            quantityAfter: String(targetQuantity),
+            quantityAfter: String(finalQty),
             note: `Approved Audit #${auditId}`,
             createdBy: userId
           });
-          await tx.update(ingredientsTable).set({ stockQuantity: String(targetQuantity) }).where(eq(ingredientsTable.id, item.ingredientId));
+          await tx.insert(branchStockTable).values({
+            branchId: audit.branchId,
+            ingredientId: item.ingredientId,
+            stockQuantity: String(finalQty)
+          }).onConflictDoUpdate({
+            target: [branchStockTable.branchId, branchStockTable.ingredientId],
+            set: { stockQuantity: String(finalQty) }
+          });
         }
       }
       await tx.update(stockAuditsTable).set({
@@ -83943,6 +84427,7 @@ router16.post("/stock-audits/:id/approve", async (req, res) => {
     await logActivity(req, "APPROVE_STOCK_AUDIT", "stock_audit", auditId);
     res.json({ success: true });
   } catch (err) {
+    console.error("[stock-audits] Approve failed:", err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -84068,29 +84553,82 @@ rolesRouter.get("/permissions/list", requirePermission("users:view"), async (req
 });
 var roles_default = rolesRouter;
 
+// src/routes/branches.ts
+var import_express20 = __toESM(require_express2(), 1);
+init_drizzle_orm();
+init_src();
+var router17 = (0, import_express20.Router)();
+router17.get("/", async (req, res) => {
+  const branches = await db.select().from(branchesTable).orderBy(asc(branchesTable.name));
+  res.json(branches);
+});
+router17.post("/", async (req, res) => {
+  const parsed = insertBranchSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+  const [branch] = await db.insert(branchesTable).values(parsed.data).returning();
+  res.status(201).json(branch);
+});
+router17.patch("/:id", async (req, res) => {
+  const id = parseInt(req.params.id);
+  if (isNaN(id)) {
+    res.status(400).json({ error: "Invalid id" });
+    return;
+  }
+  const parsed = insertBranchSchema.partial().safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+  const [branch] = await db.update(branchesTable).set({ ...parsed.data, updatedAt: /* @__PURE__ */ new Date() }).where(eq(branchesTable.id, id)).returning();
+  if (!branch) {
+    res.status(404).json({ error: "Branch not found" });
+    return;
+  }
+  res.json(branch);
+});
+router17.delete("/:id", async (req, res) => {
+  const id = parseInt(req.params.id);
+  if (isNaN(id)) {
+    res.status(400).json({ error: "Invalid id" });
+    return;
+  }
+  const [branch] = await db.delete(branchesTable).where(eq(branchesTable.id, id)).returning();
+  if (!branch) {
+    res.status(404).json({ error: "Branch not found" });
+    return;
+  }
+  res.sendStatus(204);
+});
+var branches_default = router17;
+
 // src/routes/index.ts
 init_sse();
-var router17 = (0, import_express20.Router)();
-router17.use(health_default);
-router17.use(auth_default);
-router17.use(drinks_default);
-router17.use(ingredients_default);
-router17.use(orders_default);
-router17.use(stock_default);
-router17.use(dashboard_default);
-router17.use(catalog_default);
-router17.use(drink_categories_default);
-router17.use(kitchen_stations_default);
-router17.use(settings_default);
-router17.use(predefined_slots_default);
-router17.use(users_default);
-router17.use(discounts_default);
-router17.use(customers_default);
-router17.use(cashier_sessions_default);
-router17.use(admin_default);
-router17.use(stock_audits_default);
-router17.use("/roles", roles_default);
-router17.get("/events", (req, res) => {
+var router18 = (0, import_express21.Router)();
+router18.get("/health-test", (req, res) => res.send("OK"));
+router18.use("/admin/branches", branches_default);
+router18.use(health_default);
+router18.use(auth_default);
+router18.use(drinks_default);
+router18.use(ingredients_default);
+router18.use(orders_default);
+router18.use(stock_default);
+router18.use(dashboard_default);
+router18.use(catalog_default);
+router18.use(drink_categories_default);
+router18.use(kitchen_stations_default);
+router18.use(settings_default);
+router18.use(predefined_slots_default);
+router18.use(users_default);
+router18.use(discounts_default);
+router18.use(customers_default);
+router18.use(cashier_sessions_default);
+router18.use(admin_default);
+router18.use(stock_audits_default);
+router18.use("/roles", roles_default);
+router18.get("/events", (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache, no-transform");
   res.setHeader("X-Accel-Buffering", "no");
@@ -84099,7 +84637,7 @@ router17.get("/events", (req, res) => {
   res.write("event: connected\ndata: {}\n\n");
   addSseClient(res);
 });
-var routes_default = router17;
+var routes_default = router18;
 
 // src/lib/logger.ts
 var import_pino = __toESM(require_pino(), 1);
@@ -84121,7 +84659,7 @@ var logger = (0, import_pino.default)({
 
 // src/app.ts
 var PostgresStore = (0, import_connect_pg_simple.default)(import_express_session.default);
-var app = (0, import_express21.default)();
+var app = (0, import_express22.default)();
 app.set("json replacer", (_key2, value) => {
   if (value instanceof Date) return value.toISOString();
   return value;
@@ -84147,8 +84685,8 @@ app.use(
 );
 app.set("trust proxy", 1);
 app.use((0, import_cors.default)({ credentials: true, origin: true }));
-app.use(import_express21.default.json());
-app.use(import_express21.default.urlencoded({ extended: true }));
+app.use(import_express22.default.json());
+app.use(import_express22.default.urlencoded({ extended: true }));
 app.use(
   (0, import_express_session.default)({
     store: new PostgresStore({
@@ -84166,7 +84704,7 @@ app.use(
     }
   })
 );
-app.use("/uploads", import_express21.default.static("uploads"));
+app.use("/uploads", import_express22.default.static("uploads"));
 app.use("/api", routes_default);
 var app_default = app;
 
@@ -84180,28 +84718,47 @@ async function seedIfEmpty() {
   const [{ count }] = await db.select({ count: sql`count(*)::int` }).from(usersTable);
   if (count > 0) return;
   logger.info("Database is empty \u2014 seeding initial data...");
-  const passwordHash = "$2a$10$7R8uE/Mv7y5zW3zX.P9OieV7pX4P3P3P3P3P3P3P3P3P3P3P3P3P";
+  const [mainBranch] = await db.insert(branchesTable).values([
+    { name: "Main Branch", code: "MAIN", address: "123 Coffee St." }
+  ]).returning();
+  const passwordHash = "$2b$10$nbgE.aj.RL2scpd02tJLtuHAgwBNIzguKSPStHc8/pmWeDwqbYTem";
   await db.insert(usersTable).values([
-    { name: "Admin User", username: "admin", passwordHash, role: "admin", pin: "000000" },
-    { name: "Sarah", username: "sarah", passwordHash, role: "barista", pin: "111111" },
-    { name: "James", username: "james", passwordHash, role: "barista", pin: "222222" },
-    { name: "Spacca POS", username: "spaccapos", passwordHash, role: "frontdesk", pin: "999999" }
+    { branchId: mainBranch.id, name: "Admin User", username: "admin", passwordHash, role: "admin", pin: "000000" },
+    { branchId: mainBranch.id, name: "Sarah", username: "sarah", passwordHash, role: "barista", pin: "111111" },
+    { branchId: mainBranch.id, name: "James", username: "james", passwordHash, role: "barista", pin: "222222" },
+    { branchId: mainBranch.id, name: "Spacca POS", username: "spaccapos", passwordHash, role: "frontdesk", pin: "999999" }
   ]);
   const [espresso, wholeMilk, oatMilk, almondMilk, vanillaSyrup, caramelSauce, chocSauce, hazelnutSyrup, sugarSyrup, whippedCream, coldBrew, matcha, milkType] = await db.insert(ingredientsTable).values([
-    { name: "Espresso Beans", slug: "espresso-beans", ingredientType: "coffee", unit: "g", costPerUnit: "0.5", stockQuantity: "2000", lowStockThreshold: "500" },
-    { name: "Whole Milk", slug: "whole-milk", ingredientType: "milk", unit: "ml", costPerUnit: "0.02", stockQuantity: "4000", lowStockThreshold: "1000" },
-    { name: "Oat Milk", slug: "oat-milk", ingredientType: "milk", unit: "ml", costPerUnit: "0.04", stockQuantity: "3000", lowStockThreshold: "800" },
-    { name: "Almond Milk", slug: "almond-milk", ingredientType: "milk", unit: "ml", costPerUnit: "0.04", stockQuantity: "2000", lowStockThreshold: "500" },
-    { name: "Vanilla Syrup", slug: "vanilla-syrup", ingredientType: "syrup", unit: "ml", costPerUnit: "0.2", stockQuantity: "1000", lowStockThreshold: "200" },
-    { name: "Caramel Sauce", slug: "caramel-sauce", ingredientType: "sauce", unit: "ml", costPerUnit: "0.25", stockQuantity: "800", lowStockThreshold: "150" },
-    { name: "Chocolate Sauce", slug: "chocolate-sauce", ingredientType: "sauce", unit: "ml", costPerUnit: "0.2", stockQuantity: "800", lowStockThreshold: "150" },
-    { name: "Hazelnut Syrup", slug: "hazelnut-syrup", ingredientType: "syrup", unit: "ml", costPerUnit: "0.22", stockQuantity: "600", lowStockThreshold: "100" },
-    { name: "Sugar Syrup", slug: "sugar-syrup", ingredientType: "sweetener", unit: "ml", costPerUnit: "0.1", stockQuantity: "1500", lowStockThreshold: "300" },
-    { name: "Whipped Cream", slug: "whipped-cream", ingredientType: "topping", unit: "g", costPerUnit: "0.3", stockQuantity: "500", lowStockThreshold: "100" },
-    { name: "Cold Brew Concentrate", slug: "cold-brew-concentrate", ingredientType: "coffee", unit: "ml", costPerUnit: "0.4", stockQuantity: "1500", lowStockThreshold: "400" },
-    { name: "Matcha Powder", slug: "matcha-powder", ingredientType: "base", unit: "g", costPerUnit: "1.8", stockQuantity: "400", lowStockThreshold: "100" },
-    { name: "Milk Type", slug: "milk-type", ingredientType: "milk", unit: "", costPerUnit: "0", stockQuantity: "9999", lowStockThreshold: "0" }
+    { name: "Espresso Beans", slug: "espresso-beans", ingredientType: "coffee", unit: "g", costPerUnit: "0.5" },
+    { name: "Whole Milk", slug: "whole-milk", ingredientType: "milk", unit: "ml", costPerUnit: "0.02" },
+    { name: "Oat Milk", slug: "oat-milk", ingredientType: "milk", unit: "ml", costPerUnit: "0.04" },
+    { name: "Almond Milk", slug: "almond-milk", ingredientType: "milk", unit: "ml", costPerUnit: "0.04" },
+    { name: "Vanilla Syrup", slug: "vanilla-syrup", ingredientType: "syrup", unit: "ml", costPerUnit: "0.2" },
+    { name: "Caramel Sauce", slug: "caramel-sauce", ingredientType: "sauce", unit: "ml", costPerUnit: "0.25" },
+    { name: "Chocolate Sauce", slug: "chocolate-sauce", ingredientType: "sauce", unit: "ml", costPerUnit: "0.2" },
+    { name: "Hazelnut Syrup", slug: "hazelnut-syrup", ingredientType: "syrup", unit: "ml", costPerUnit: "0.22" },
+    { name: "Sugar Syrup", slug: "sugar-syrup", ingredientType: "sweetener", unit: "ml", costPerUnit: "0.1" },
+    { name: "Whipped Cream", slug: "whipped-cream", ingredientType: "topping", unit: "g", costPerUnit: "0.3" },
+    { name: "Cold Brew Concentrate", slug: "cold-brew-concentrate", ingredientType: "coffee", unit: "ml", costPerUnit: "0.4" },
+    { name: "Matcha Powder", slug: "matcha-powder", ingredientType: "base", unit: "g", costPerUnit: "1.8" },
+    { name: "Milk Type", slug: "milk-type", ingredientType: "milk", unit: "", costPerUnit: "0" }
   ]).returning();
+  const { branchStockTable: branchStockTable2 } = await Promise.resolve().then(() => (init_src(), src_exports));
+  await db.insert(branchStockTable2).values([
+    { branchId: mainBranch.id, ingredientId: espresso.id, stockQuantity: "2000", lowStockThreshold: "500" },
+    { branchId: mainBranch.id, ingredientId: wholeMilk.id, stockQuantity: "4000", lowStockThreshold: "1000" },
+    { branchId: mainBranch.id, ingredientId: oatMilk.id, stockQuantity: "3000", lowStockThreshold: "800" },
+    { branchId: mainBranch.id, ingredientId: almondMilk.id, stockQuantity: "2000", lowStockThreshold: "500" },
+    { branchId: mainBranch.id, ingredientId: vanillaSyrup.id, stockQuantity: "1000", lowStockThreshold: "200" },
+    { branchId: mainBranch.id, ingredientId: caramelSauce.id, stockQuantity: "800", lowStockThreshold: "150" },
+    { branchId: mainBranch.id, ingredientId: chocSauce.id, stockQuantity: "800", lowStockThreshold: "150" },
+    { branchId: mainBranch.id, ingredientId: hazelnutSyrup.id, stockQuantity: "600", lowStockThreshold: "100" },
+    { branchId: mainBranch.id, ingredientId: sugarSyrup.id, stockQuantity: "1500", lowStockThreshold: "300" },
+    { branchId: mainBranch.id, ingredientId: whippedCream.id, stockQuantity: "500", lowStockThreshold: "100" },
+    { branchId: mainBranch.id, ingredientId: coldBrew.id, stockQuantity: "1500", lowStockThreshold: "400" },
+    { branchId: mainBranch.id, ingredientId: matcha.id, stockQuantity: "400", lowStockThreshold: "100" },
+    { branchId: mainBranch.id, ingredientId: milkType.id, stockQuantity: "9999", lowStockThreshold: "0" }
+  ]);
   const opts = await db.insert(ingredientOptionsTable).values([
     { ingredientId: espresso.id, label: "Single Shot", processedQty: "9", producedQty: "18", producedUnit: "ml", extraCost: "0", isDefault: false, sortOrder: 0 },
     { ingredientId: espresso.id, label: "Double Shot", processedQty: "18", producedQty: "36", producedUnit: "ml", extraCost: "0", isDefault: true, sortOrder: 1 },

@@ -17,6 +17,8 @@ export interface CreateDrinkBody {
     kitchenStation?: string;
     categoryId?: number;
     sortOrder?: number;
+    cupIngredientId?: number;
+    isCustomizable?: boolean;
     slots?: CreateDrinkBodySlotsItem[];
 }
 //# sourceMappingURL=createDrinkBody.d.ts.map

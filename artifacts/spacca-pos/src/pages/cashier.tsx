@@ -146,6 +146,7 @@ function CashierPinLogin({ onSuccess }: { onSuccess: () => void }) {
 
 export default function CashierPage() {
   const { toast } = useToast();
+  const { selectedBranchId } = useAuth();
   const queryClient = useQueryClient();
   const { autoPrintCustomer, autoPrintAgent } = useSettings();
   const [completedOrder, setCompletedOrder] = useState<any>(null);
@@ -156,6 +157,8 @@ export default function CashierPage() {
   const [isAdminAuthOpen, setIsAdminAuthOpen] = useState(false);
   const [adminPin, setAdminPin] = useState("");
   const [isRefunding, setIsRefunding] = useState(false);
+  const [isRefundItemsOpen, setIsRefundItemsOpen] = useState(false);
+  const [selectedRefundItems, setSelectedRefundItems] = useState<Set<number>>(new Set());
   const [recentSearch, setRecentSearch] = useState("");
   const { session, loading: sessionLoading, endSession, refetch } = useCashierSession();
   const [now, setNow] = useState(Date.now());
@@ -168,13 +171,13 @@ export default function CashierPage() {
   useOrderEvents();
 
   const { data: orders = [], isLoading } = useGetActiveOrders(
-    { status: "pending" as any },
-    { query: { refetchInterval: 5000 } as any }
+    { status: "pending" as any, branchId: selectedBranchId || undefined },
+    { query: { refetchInterval: 5000 } as any } as any
   );
 
   const { data: recentOrders = [], refetch: refetchRecent } = useListOrders(
-    { limit: 20, status: "paid,completed,ready,in_progress,refunded" as any },
-    { query: { refetchInterval: 10000 } as any }
+    { limit: 20, status: "paid,completed,ready,in_progress,refunded" as any, branchId: selectedBranchId || undefined },
+    { query: { refetchInterval: 10000 } as any } as any
   );
 
   const { mutate: updateStatus, isPending } = useUpdateOrderStatus();
@@ -184,25 +187,51 @@ export default function CashierPage() {
     printAgentReceipts(order);
   };
 
-  const handleRefund = async () => {
+  const handleRefundAuth = async () => {
+    if (!refundOrderId || !adminPin) return;
+    setIsRefunding(true);
+    try {
+      // Verify PIN by calling a dummy or small check (or just wait for items dialog)
+      const res = await fetch(`${API_BASE}/auth/verify-pin`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pin: adminPin }),
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error((await res.json()).error ?? "Verification failed");
+      
+      setIsAdminAuthOpen(false);
+      setIsRefundItemsOpen(true);
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Auth Failed", description: e.message });
+      setAdminPin("");
+    } finally {
+      setIsRefunding(false);
+    }
+  };
+
+  const handleFinalRefund = async () => {
     if (!refundOrderId || !adminPin) return;
     setIsRefunding(true);
     try {
       const res = await fetch(`${API_BASE}/orders/${refundOrderId}/refund`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ adminPin }),
+        body: JSON.stringify({ 
+          adminPin, 
+          returnToStockItems: Array.from(selectedRefundItems) 
+        }),
         credentials: "include",
       });
       if (!res.ok) throw new Error((await res.json()).error ?? "Refund failed");
       toast({ title: "Order Refunded", description: "The order has been marked as refunded." });
-      setIsAdminAuthOpen(false);
+      setIsRefundItemsOpen(false);
       setAdminPin("");
       setRefundOrderId(null);
+      setSelectedRefundItems(new Set());
       refetchRecent();
     } catch (e: any) {
-      toast({ variant: "destructive", title: "Auth Failed", description: e.message });
-      setAdminPin("");
+      toast({ variant: "destructive", title: "Refund Error", description: e.message });
     } finally {
       setIsRefunding(false);
     }
@@ -683,9 +712,72 @@ export default function CashierPage() {
             <Button 
               className="w-full h-14 text-base font-black uppercase tracking-widest rounded-2xl bg-red-500 hover:bg-red-600 text-white border-none shadow-lg shadow-red-500/20"
               disabled={adminPin.length < 4 || isRefunding}
-              onClick={handleRefund}
+              onClick={handleRefundAuth}
             >
-              {isRefunding ? <Loader2 className="h-5 w-5 animate-spin" /> : "Confirm Refund"}
+              {isRefunding ? <Loader2 className="h-5 w-5 animate-spin" /> : "Verify Admin PIN"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Refund Items Selection Dialog */}
+      <Dialog open={isRefundItemsOpen} onOpenChange={setIsRefundItemsOpen}>
+        <DialogContent className="sm:max-w-[500px] bg-[#0A0A0B] border-white/10 text-white">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-xl font-black uppercase tracking-tighter">
+              <RotateCcw className="h-6 w-6 text-neon-cyan" />
+              Return to Stock
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-4 space-y-6">
+            <p className="text-sm text-muted-foreground font-medium">Select items that should be <span className="text-neon-green">returned to stock</span>. Unchecked items will be marked as <span className="text-red-400">Waste</span>.</p>
+            
+            <ScrollArea className="max-h-[300px] pr-4">
+              <div className="space-y-3">
+                {recentOrders.find(o => o.id === refundOrderId)?.items.map((item: any) => {
+                  const isSelected = selectedRefundItems.has(item.id);
+                  return (
+                    <div 
+                      key={item.id} 
+                      onClick={() => {
+                        const next = new Set(selectedRefundItems);
+                        if (next.has(item.id)) next.delete(item.id);
+                        else next.add(item.id);
+                        setSelectedRefundItems(next);
+                      }}
+                      className={`p-4 rounded-2xl border-2 cursor-pointer transition-all flex items-center justify-between ${
+                        isSelected 
+                          ? "border-neon-green bg-neon-green/10" 
+                          : "border-white/10 bg-white/5 opacity-60 hover:opacity-100"
+                      }`}
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${
+                          isSelected ? "bg-neon-green border-neon-green text-background" : "border-white/20"
+                        }`}>
+                          {isSelected && <Check className="h-4 w-4 stroke-[4]" />}
+                        </div>
+                        <div>
+                          <div className="font-bold">{item.drinkName}</div>
+                          <div className="text-[10px] uppercase font-black tracking-widest opacity-60">Qty: {item.quantity}</div>
+                        </div>
+                      </div>
+                      <div className="text-xs font-black uppercase tracking-widest">
+                        {isSelected ? <span className="text-neon-green">Return</span> : <span className="text-red-400">Waste</span>}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </ScrollArea>
+          </div>
+          <DialogFooter>
+            <Button 
+              className="w-full h-14 text-base font-black uppercase tracking-widest rounded-2xl bg-neon-cyan hover:bg-neon-cyan/80 text-background border-none shadow-lg shadow-neon-cyan/20"
+              disabled={isRefunding}
+              onClick={handleFinalRefund}
+            >
+              {isRefunding ? <Loader2 className="h-5 w-5 animate-spin" /> : "Complete Refund"}
             </Button>
           </DialogFooter>
         </DialogContent>

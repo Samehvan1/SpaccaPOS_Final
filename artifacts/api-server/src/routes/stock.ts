@@ -1,10 +1,11 @@
 import { Router, type IRouter } from "express";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { serializeDates } from "../lib/serialize";
 import {
   db,
   stockMovementsTable,
   ingredientsTable,
+  branchStockTable,
   usersTable,
 } from "@workspace/db";
 import {
@@ -17,7 +18,20 @@ const router: IRouter = Router();
 
 router.get("/stock/movements", async (req, res): Promise<void> => {
   const params = ListStockMovementsQueryParams.safeParse(req.query);
+  const sessionUser = (req.session as any);
+  const isAdmin = sessionUser.role === "admin";
+  const sessionBranchId = sessionUser.branchId;
+
+  const targetBranchId = req.query.branchId && req.query.branchId !== 'all'
+    ? parseInt(req.query.branchId as string)
+    : (isAdmin && (req.query.branchId === 'all' || !req.query.branchId)) ? null : sessionBranchId;
+
   const conditions = [];
+
+  if (targetBranchId) {
+    conditions.push(eq(stockMovementsTable.branchId, targetBranchId));
+  }
+
   if (params.success && params.data.ingredientId) {
     conditions.push(eq(stockMovementsTable.ingredientId, params.data.ingredientId));
   }
@@ -30,26 +44,6 @@ router.get("/stock/movements", async (req, res): Promise<void> => {
   const offset = params.success && params.data.offset ? params.data.offset : 0;
   const paginated = movements.slice(offset, offset + limit).reverse();
 
-  const ingredientIds = [...new Set(paginated.map((m) => m.ingredientId))];
-  const userIds = [...new Set(paginated.map((m) => m.createdBy))];
-
-  const ingredients =
-    ingredientIds.length > 0
-      ? await db
-          .select()
-          .from(ingredientsTable)
-          .where(eq(ingredientsTable.id, ingredientIds[0]))
-      : [];
-
-  const users =
-    userIds.length > 0
-      ? await db
-          .select()
-          .from(usersTable)
-          .where(eq(usersTable.id, userIds[0]))
-      : [];
-
-  // Fetch all relevant ingredients and users
   const allIngredients = await db.select().from(ingredientsTable);
   const allUsers = await db.select().from(usersTable);
   const ingredientMap = Object.fromEntries(allIngredients.map((i) => [i.id, i.name]));
@@ -67,8 +61,6 @@ router.get("/stock/movements", async (req, res): Promise<void> => {
       })))
     )
   );
-  void ingredients;
-  void users;
 });
 
 router.post("/stock/adjustments", async (req, res): Promise<void> => {
@@ -79,6 +71,11 @@ router.post("/stock/adjustments", async (req, res): Promise<void> => {
   }
 
   const sessionUserId = ((req.session as unknown as Record<string, unknown>).userId as number) ?? 1;
+  const sessionBranchId = (req.session as any).branchId;
+  if (!sessionBranchId) {
+    res.status(400).json({ error: "No branch associated with session" });
+    return;
+  }
 
   const [ingredient] = await db
     .select()
@@ -90,7 +87,12 @@ router.post("/stock/adjustments", async (req, res): Promise<void> => {
     return;
   }
 
-  const currentQty = parseFloat(ingredient.stockQuantity);
+  const [stock] = await db
+    .select()
+    .from(branchStockTable)
+    .where(and(eq(branchStockTable.ingredientId, parsed.data.ingredientId), eq(branchStockTable.branchId, sessionBranchId)));
+
+  const currentQty = stock ? parseFloat(stock.stockQuantity) : 0;
   const adjustedQty = parsed.data.movementType === "waste"
     ? currentQty - parsed.data.quantity
     : currentQty + parsed.data.quantity;
@@ -98,9 +100,16 @@ router.post("/stock/adjustments", async (req, res): Promise<void> => {
   const newQty = Math.max(0, adjustedQty);
 
   await db
-    .update(ingredientsTable)
-    .set({ stockQuantity: String(newQty) })
-    .where(eq(ingredientsTable.id, parsed.data.ingredientId));
+    .insert(branchStockTable)
+    .values({
+      branchId: sessionBranchId,
+      ingredientId: parsed.data.ingredientId,
+      stockQuantity: String(newQty),
+    })
+    .onConflictDoUpdate({
+      target: [branchStockTable.branchId, branchStockTable.ingredientId],
+      set: { stockQuantity: String(newQty) }
+    });
 
   const quantityValue =
     parsed.data.movementType === "waste" ? -parsed.data.quantity : parsed.data.quantity;
@@ -108,6 +117,7 @@ router.post("/stock/adjustments", async (req, res): Promise<void> => {
   const [movement] = await db
     .insert(stockMovementsTable)
     .values({
+      branchId: sessionBranchId,
       ingredientId: parsed.data.ingredientId,
       orderId: null,
       movementType: parsed.data.movementType,

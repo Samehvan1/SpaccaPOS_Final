@@ -2,7 +2,7 @@ import { Router, type IRouter } from "express";
 import fs from "fs";
 import path from "path";
 import { eq, and, sql } from "drizzle-orm";
-import { db, ingredientsTable, ingredientOptionsTable, stockMovementsTable, ingredientTypesTable, drinkIngredientSlotsTable, drinksTable, orderItemCustomizationsTable, orderItemsTable, ordersTable, usersTable } from "@workspace/db";
+import { db, ingredientsTable, branchStockTable, ingredientOptionsTable, stockMovementsTable, ingredientTypesTable, drinkIngredientSlotsTable, drinksTable, orderItemCustomizationsTable, orderItemsTable, ordersTable, usersTable } from "@workspace/db";
 import { serializeDates } from "../lib/serialize";
 import { globalCache } from "../lib/cache";
 import { logActivity } from "../lib/activity-logger";
@@ -34,9 +34,20 @@ function slugify(text: string): string {
     .replace(/(^-|-$)/g, "");
 }
 
-async function buildIngredientDetail(ingredientId: number) {
+async function buildIngredientDetail(ingredientId: number, branchId?: number) {
   const [ingredient] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, ingredientId));
   if (!ingredient) return null;
+
+  let stockInfo = { stockQuantity: "0", lowStockThreshold: "0" };
+  if (branchId) {
+    const [stock] = await db
+      .select()
+      .from(branchStockTable)
+      .where(and(eq(branchStockTable.ingredientId, ingredientId), eq(branchStockTable.branchId, branchId)));
+    if (stock) {
+      stockInfo = { stockQuantity: stock.stockQuantity, lowStockThreshold: stock.lowStockThreshold };
+    }
+  }
 
   const options = await db
     .select()
@@ -47,8 +58,8 @@ async function buildIngredientDetail(ingredientId: number) {
   return {
     ...ingredient,
     costPerUnit: parseFloat(ingredient.costPerUnit),
-    stockQuantity: parseFloat(ingredient.stockQuantity),
-    lowStockThreshold: parseFloat(ingredient.lowStockThreshold),
+    stockQuantity: parseFloat(stockInfo.stockQuantity),
+    lowStockThreshold: parseFloat(stockInfo.lowStockThreshold),
     options: options.map((o) => ({
       ...o,
       processedQty: parseFloat(o.processedQty),
@@ -106,17 +117,21 @@ router.post("/ingredients/import-csv", async (req, res): Promise<void> => {
     };
 
     await db.transaction(async (tx) => {
-      // 1. Clear links in operational tables (keep data, just unlink)
+      // 1. Clear links in operational tables
       await tx.update(ingredientTypesTable).set({ inventoryIngredientId: null });
       await tx.update(drinksTable).set({ cupIngredientId: null });
       await tx.update(ingredientOptionsTable).set({ linkedIngredientId: null });
       await tx.update(drinkIngredientSlotsTable).set({ ingredientId: null });
 
-      // 2. Wipe ONLY the master inventory definitions
-      // Note: We don't wipe ordersTable or orderItemsTable anymore to preserve history.
-      
+      // 2. Wipe stock records for this branch (or all? if items are for all branches, maybe wipe all stock)
+      // Since we are wiping ingredientsTable, it will cascade and wipe branchStockTable too.
       await tx.delete(ingredientOptionsTable);
       await tx.delete(ingredientsTable);
+
+      const adminBranchId = (admin as any).branchId;
+      if (!adminBranchId) {
+        throw new Error("Admin must be associated with a branch to import inventory.");
+      }
 
       const usedSlugs = new Set<string>();
       for (const line of dataLines) {
@@ -135,15 +150,21 @@ router.post("/ingredients/import-csv", async (req, res): Promise<void> => {
         }
         usedSlugs.add(slug);
 
-        await tx.insert(ingredientsTable).values({
+        const [newIng] = await tx.insert(ingredientsTable).values({
           name,
           slug,
           ingredientType: type,
           unit,
           costPerUnit: "0",
-          stockQuantity: "0",
-          lowStockThreshold: "100",
           isActive: true
+        }).returning();
+
+        // Initialize stock for the current branch
+        await tx.insert(branchStockTable).values({
+          branchId: adminBranchId,
+          ingredientId: newIng.id,
+          stockQuantity: "0",
+          lowStockThreshold: "100"
         });
       }
     });
@@ -160,12 +181,51 @@ router.post("/ingredients/import-csv", async (req, res): Promise<void> => {
 
 router.get("/ingredients", async (req, res): Promise<void> => {
   const params = ListIngredientsQueryParams.safeParse(req.query);
+  const sessionUser = (req.session as any);
+  const sessionBranchId = sessionUser.branchId;
+  const isAdmin = sessionUser.role === "admin";
+
+  const targetBranchId = (isAdmin && req.query.branchId && req.query.branchId !== 'all') 
+    ? parseInt(req.query.branchId as string) 
+    : (isAdmin && req.query.branchId === 'all') ? null : sessionBranchId;
+
+  let query = db
+    .select({
+      id: ingredientsTable.id,
+      name: ingredientsTable.name,
+      slug: ingredientsTable.slug,
+      ingredientType: ingredientsTable.ingredientType,
+      unit: ingredientsTable.unit,
+      costPerUnit: ingredientsTable.costPerUnit,
+      isActive: ingredientsTable.isActive,
+      stockQuantity: targetBranchId 
+        ? sql<string>`COALESCE(${branchStockTable.stockQuantity}, '0')` 
+        : sql<string>`(SELECT COALESCE(SUM(bs.stock_quantity), 0)::text FROM branch_stock bs WHERE bs.ingredient_id = ${ingredientsTable.id})`,
+      lowStockThreshold: targetBranchId 
+        ? sql<string>`COALESCE(${branchStockTable.lowStockThreshold}, '500')` 
+        : sql<string>`'500'`,
+      updatedAt: ingredientsTable.updatedAt,
+    })
+    .from(ingredientsTable)
+    .leftJoin(
+      branchStockTable,
+      and(
+        eq(branchStockTable.ingredientId, ingredientsTable.id),
+        targetBranchId ? eq(branchStockTable.branchId, targetBranchId) : sql`1=0`
+      )
+    );
+
   const conditions = [];
   if (params.success && params.data.active !== undefined) {
     conditions.push(eq(ingredientsTable.isActive, params.data.active));
   }
+  if (params.success && params.data.type) {
+    conditions.push(eq(ingredientsTable.ingredientType, params.data.type as any));
+  }
 
-  const ingredients = await db.select().from(ingredientsTable).where(conditions.length ? and(...conditions) : undefined);
+  const ingredients = conditions.length 
+    ? await query.where(and(...conditions))
+    : await query;
 
   // Get counts of links
   const [typeLinks, optionLinks, drinkLinks] = await Promise.all([
@@ -178,13 +238,8 @@ router.get("/ingredients", async (req, res): Promise<void> => {
   const optionCountMap = new Map(optionLinks.map(l => [l.id, Number(l.count)]));
   const drinkCountMap = new Map(drinkLinks.map(l => [l.id, Number(l.count)]));
 
-  let filtered = ingredients;
-  if (params.success && params.data.type) {
-    filtered = ingredients.filter((i) => i.ingredientType === params.data.type);
-  }
-
   res.json(
-    serializeDates(filtered.map((i) => {
+    serializeDates(ingredients.map((i) => {
       return {
         ...i,
         costPerUnit: parseFloat(i.costPerUnit),
@@ -204,6 +259,12 @@ router.post("/ingredients", async (req, res): Promise<void> => {
     return;
   }
 
+  const sessionBranchId = ((req.session as any).branchId as number);
+  if (!sessionBranchId) {
+    res.status(400).json({ error: "No branch associated with session" });
+    return;
+  }
+
   const slug = slugify(parsed.data.name);
 
   const [ingredient] = await db
@@ -214,9 +275,17 @@ router.post("/ingredients", async (req, res): Promise<void> => {
       ingredientType: parsed.data.ingredientType,
       unit: parsed.data.unit,
       costPerUnit: String(parsed.data.costPerUnit),
+      isActive: parsed.data.isActive ?? true,
+    })
+    .returning();
+
+  const [stock] = await db
+    .insert(branchStockTable)
+    .values({
+      branchId: sessionBranchId,
+      ingredientId: ingredient.id,
       stockQuantity: String(parsed.data.stockQuantity ?? 0),
       lowStockThreshold: String(parsed.data.lowStockThreshold ?? 500),
-      isActive: parsed.data.isActive ?? true,
     })
     .returning();
 
@@ -224,8 +293,8 @@ router.post("/ingredients", async (req, res): Promise<void> => {
     ListIngredientsResponse.element.parse(serializeDates({
       ...ingredient,
       costPerUnit: parseFloat(ingredient.costPerUnit),
-      stockQuantity: parseFloat(ingredient.stockQuantity),
-      lowStockThreshold: parseFloat(ingredient.lowStockThreshold),
+      stockQuantity: parseFloat(stock.stockQuantity),
+      lowStockThreshold: parseFloat(stock.lowStockThreshold),
     }))
   );
   globalCache.clear();
@@ -238,7 +307,12 @@ router.get("/ingredients/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  const detail = await buildIngredientDetail(params.data.id);
+  const sessionUser = (req.session as any);
+  const targetBranchId = (sessionUser.role === "admin" && req.query.branchId && req.query.branchId !== 'all') 
+    ? parseInt(req.query.branchId as string) 
+    : sessionUser.branchId;
+
+  const detail = await buildIngredientDetail(params.data.id, targetBranchId);
   if (!detail) {
     res.status(404).json({ error: "Ingredient not found" });
     return;
@@ -260,7 +334,10 @@ router.patch("/ingredients/:id", async (req, res): Promise<void> => {
     return;
   }
 
+  const sessionBranchId = (req.session as any).branchId;
   const updateData: Record<string, unknown> = {};
+  const stockUpdateData: Record<string, unknown> = {};
+
   if (parsed.data.name !== undefined) {
     updateData.name = parsed.data.name;
     updateData.slug = slugify(parsed.data.name);
@@ -268,28 +345,47 @@ router.patch("/ingredients/:id", async (req, res): Promise<void> => {
   if (parsed.data.ingredientType !== undefined) updateData.ingredientType = parsed.data.ingredientType;
   if (parsed.data.unit !== undefined) updateData.unit = parsed.data.unit;
   if (parsed.data.costPerUnit !== undefined) updateData.costPerUnit = String(parsed.data.costPerUnit);
-  if (parsed.data.stockQuantity !== undefined) updateData.stockQuantity = String(parsed.data.stockQuantity);
-  if (parsed.data.lowStockThreshold !== undefined) updateData.lowStockThreshold = String(parsed.data.lowStockThreshold);
   if (parsed.data.isActive !== undefined) updateData.isActive = parsed.data.isActive;
 
-  const [ingredient] = await db
-    .update(ingredientsTable)
-    .set(updateData)
-    .where(eq(ingredientsTable.id, params.data.id))
-    .returning();
-    if (!ingredient) {
-      res.status(404).json({ error: "Ingredient not found" });
-      return;
-    }
+  if (parsed.data.stockQuantity !== undefined) stockUpdateData.stockQuantity = String(parsed.data.stockQuantity);
+  if (parsed.data.lowStockThreshold !== undefined) stockUpdateData.lowStockThreshold = String(parsed.data.lowStockThreshold);
 
-  await logActivity(req, "UPDATE_INGREDIENT", "ingredient", params.data.id, updateData);
+  const [ingredient] = Object.keys(updateData).length > 0
+    ? await db.update(ingredientsTable).set(updateData).where(eq(ingredientsTable.id, params.data.id)).returning()
+    : await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, params.data.id));
+
+  if (!ingredient) {
+    res.status(404).json({ error: "Ingredient not found" });
+    return;
+  }
+
+  let stock;
+  if (Object.keys(stockUpdateData).length > 0 && sessionBranchId) {
+    [stock] = await db
+      .insert(branchStockTable)
+      .values({
+        branchId: sessionBranchId,
+        ingredientId: params.data.id,
+        stockQuantity: stockUpdateData.stockQuantity as string || "0",
+        lowStockThreshold: stockUpdateData.lowStockThreshold as string || "500",
+      })
+      .onConflictDoUpdate({
+        target: [branchStockTable.branchId, branchStockTable.ingredientId],
+        set: stockUpdateData,
+      })
+      .returning();
+  } else if (sessionBranchId) {
+    [stock] = await db.select().from(branchStockTable).where(and(eq(branchStockTable.ingredientId, params.data.id), eq(branchStockTable.branchId, sessionBranchId)));
+  }
+
+  await logActivity(req, "UPDATE_INGREDIENT", "ingredient", params.data.id, { ...updateData, ...stockUpdateData });
 
   res.json(
     UpdateIngredientResponse.parse(serializeDates({
       ...ingredient,
       costPerUnit: parseFloat(ingredient.costPerUnit),
-      stockQuantity: parseFloat(ingredient.stockQuantity),
-      lowStockThreshold: parseFloat(ingredient.lowStockThreshold),
+      stockQuantity: parseFloat(stock?.stockQuantity || "0"),
+      lowStockThreshold: parseFloat(stock?.lowStockThreshold || "500"),
     }))
   );
   globalCache.clear();
@@ -445,15 +541,15 @@ router.delete("/ingredients/:id/options/:optionId", async (req, res): Promise<vo
 });
 
 router.post("/ingredients/:id/restock", async (req, res): Promise<void> => {
-  const params = RestockIngredientParams.safeParse(req.params);
+  const params = GetIngredientParams.safeParse(req.params);
   if (!params.success) {
-    res.status(400).json({ error: params.error.message });
+    res.status(400).json({ error: params.error.format() });
     return;
   }
 
   const parsed = RestockIngredientBody.safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.message });
+    res.status(400).json({ error: parsed.error.format() });
     return;
   }
 
@@ -463,12 +559,27 @@ router.post("/ingredients/:id/restock", async (req, res): Promise<void> => {
     return;
   }
 
-  const currentQty = parseFloat(ingredient.stockQuantity);
+  const sessionBranchId = (req.session as any).branchId as number;
+  const isAdmin = (req.session as any).role === "admin";
+  const targetBranchId = (isAdmin && req.body.branchId) ? parseInt(req.body.branchId) : sessionBranchId;
+
+  if (!targetBranchId) {
+    res.status(400).json({ error: "No target branch specified" });
+    return;
+  }
+
+  const [stock] = await db
+    .select()
+    .from(branchStockTable)
+    .where(and(eq(branchStockTable.ingredientId, params.data.id), eq(branchStockTable.branchId, targetBranchId)));
+
+  const currentQty = stock ? parseFloat(stock.stockQuantity) : 0;
   const newQty = currentQty + parsed.data.quantity;
 
   const sessionUserId = ((req.session as unknown as Record<string, unknown>).userId as number) ?? 1;
 
   await db.insert(stockMovementsTable).values({
+    branchId: targetBranchId,
     ingredientId: params.data.id,
     orderId: null,
     movementType: "restock",
@@ -478,18 +589,25 @@ router.post("/ingredients/:id/restock", async (req, res): Promise<void> => {
     createdBy: sessionUserId,
   });
 
-  const [updated] = await db
-    .update(ingredientsTable)
-    .set({ stockQuantity: String(newQty) })
-    .where(eq(ingredientsTable.id, params.data.id))
+  const [updatedStock] = await db
+    .insert(branchStockTable)
+    .values({
+      branchId: targetBranchId,
+      ingredientId: (params.data as any).id,
+      stockQuantity: String(newQty),
+    })
+    .onConflictDoUpdate({
+      target: [branchStockTable.branchId, branchStockTable.ingredientId],
+      set: { stockQuantity: String(newQty) }
+    })
     .returning();
 
   res.json(
     RestockIngredientResponse.parse(serializeDates({
-      ...updated,
-      costPerUnit: parseFloat(updated.costPerUnit),
-      stockQuantity: parseFloat(updated.stockQuantity),
-      lowStockThreshold: parseFloat(updated.lowStockThreshold),
+      ...ingredient,
+      costPerUnit: parseFloat(ingredient.costPerUnit),
+      stockQuantity: parseFloat(updatedStock.stockQuantity),
+      lowStockThreshold: parseFloat(updatedStock.lowStockThreshold),
     }))
   );
   

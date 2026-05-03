@@ -15,5 +15,4 @@ export const UpdateUserBodyRole = {
   frontdesk: "frontdesk",
   cashier: "cashier",
   pickup: "pickup",
-  stockcontrol: "stockcontrol",
 } as const;

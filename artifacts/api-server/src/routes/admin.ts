@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, activityLogsTable, permissionsTable, usersTable, rolePermissionsTable } from "@workspace/db";
+import { db, activityLogsTable, permissionsTable, usersTable, rolePermissionsTable, branchesTable } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
 import { exec } from "child_process";
 import path from "path";
@@ -147,5 +147,7 @@ adminRouter.post("/admin/backup", requirePermission("admin:manage_permissions"),
     res.status(500).json({ error: error.message });
   }
 });
+
+// Branches route moved to index.ts for better visibility
 
 export default adminRouter;

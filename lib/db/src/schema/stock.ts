@@ -4,9 +4,11 @@ import { z } from "zod/v4";
 import { ingredientsTable } from "./ingredients";
 import { ordersTable } from "./orders";
 import { usersTable } from "./users";
+import { branchesTable } from "./branches";
 
 export const stockMovementsTable = pgTable("stock_movements", {
   id: serial("id").primaryKey(),
+  branchId: integer("branch_id").references(() => branchesTable.id),
   ingredientId: integer("ingredient_id").notNull().references(() => ingredientsTable.id),
   orderId: integer("order_id").references(() => ordersTable.id, { onDelete: "set null" }),
   movementType: text("movement_type", {

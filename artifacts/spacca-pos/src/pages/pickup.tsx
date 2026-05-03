@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardFooter } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, Clock, Loader2, PackageCheck, Zap, History, User } from "lucide-react";
+import { CheckCircle2, Clock, Loader2, PackageCheck, Zap, History, User as UserIcon } from "lucide-react";
 import { useGetActiveOrders, useUpdateOrderStatus } from "@workspace/api-client-react";
 import { useOrderEvents } from "@/hooks/use-order-events";
 
@@ -15,15 +15,16 @@ export default function PickupPage() {
 
   useOrderEvents();
 
+  const { selectedBranchId } = useAuth();
   const { data: readyOrders = [], isLoading: isLoadingReady } = useGetActiveOrders(
-    { status: "ready" as any },
-    { query: { } as any }
+    { status: "ready" as any, branchId: selectedBranchId || undefined },
+    { query: { } as any } as any
   );
 
   // Fetch recently completed orders for the sidebar
   const { data: completedOrders = [] } = useGetActiveOrders(
-    { status: "completed" as any },
-    { query: { } as any }
+    { status: "completed" as any, branchId: selectedBranchId || undefined },
+    { query: { } as any } as any
   );
 
   const { mutate: updateStatus, isPending } = useUpdateOrderStatus();
@@ -117,7 +118,7 @@ export default function PickupPage() {
                     <CardContent className="p-6 pb-4">
                        <div className="flex items-center gap-3 mb-6 p-3 bg-white/5 rounded-xl border border-white/5">
                           <div className="w-8 h-8 rounded-lg bg-neon-green/10 flex items-center justify-center text-neon-green">
-                             <User className="h-4 w-4" />
+                             <UserIcon className="h-4 w-4" />
                           </div>
                           <div>
                              <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest leading-none">Customer Name</p>

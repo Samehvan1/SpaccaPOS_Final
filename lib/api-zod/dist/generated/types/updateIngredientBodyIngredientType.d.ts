@@ -14,6 +14,9 @@ export declare const UpdateIngredientBodyIngredientType: {
     readonly sweetener: "sweetener";
     readonly topping: "topping";
     readonly base: "base";
+    readonly cup: "cup";
+    readonly tea: "tea";
+    readonly packing: "packing";
     readonly other: "other";
 };
 //# sourceMappingURL=updateIngredientBodyIngredientType.d.ts.map

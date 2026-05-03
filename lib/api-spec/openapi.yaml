@@ -103,6 +103,10 @@ paths:
           name: includeSlots
           schema:
             type: boolean
+        - in: query
+          name: branchId
+          schema:
+            type: integer
       responses:
         "200":
           description: List of drinks
@@ -141,6 +145,10 @@ paths:
           required: true
           schema:
             type: integer
+        - in: query
+          name: branchId
+          schema:
+            type: integer
       responses:
         "200":
           description: Drink with slots
@@ -158,6 +166,10 @@ paths:
         - in: path
           name: id
           required: true
+          schema:
+            type: integer
+        - in: query
+          name: branchId
           schema:
             type: integer
       requestBody:
@@ -183,6 +195,10 @@ paths:
           required: true
           schema:
             type: integer
+        - in: query
+          name: branchId
+          schema:
+            type: integer
       responses:
         "204":
           description: Deleted
@@ -196,6 +212,10 @@ paths:
         - in: path
           name: id
           required: true
+          schema:
+            type: integer
+        - in: query
+          name: branchId
           schema:
             type: integer
       requestBody:
@@ -275,6 +295,10 @@ paths:
           required: true
           schema:
             type: integer
+        - in: query
+          name: branchId
+          schema:
+            type: integer
       responses:
         "200":
           description: Ingredient with options
@@ -292,6 +316,10 @@ paths:
         - in: path
           name: id
           required: true
+          schema:
+            type: integer
+        - in: query
+          name: branchId
           schema:
             type: integer
       requestBody:
@@ -317,6 +345,10 @@ paths:
           required: true
           schema:
             type: integer
+        - in: query
+          name: branchId
+          schema:
+            type: integer
       responses:
         "204":
           description: Deleted
@@ -333,6 +365,10 @@ paths:
         - in: path
           name: id
           required: true
+          schema:
+            type: integer
+        - in: query
+          name: branchId
           schema:
             type: integer
       requestBody:
@@ -358,6 +394,10 @@ paths:
         - in: path
           name: id
           required: true
+          schema:
+            type: integer
+        - in: query
+          name: branchId
           schema:
             type: integer
         - in: path
@@ -388,6 +428,10 @@ paths:
           required: true
           schema:
             type: integer
+        - in: query
+          name: branchId
+          schema:
+            type: integer
         - in: path
           name: optionId
           required: true
@@ -406,6 +450,10 @@ paths:
         - in: path
           name: id
           required: true
+          schema:
+            type: integer
+        - in: query
+          name: branchId
           schema:
             type: integer
       requestBody:
@@ -450,6 +498,10 @@ paths:
           name: offset
           schema:
             type: integer
+        - in: query
+          name: branchId
+          schema:
+            type: integer
       responses:
         "200":
           description: List of orders
@@ -490,6 +542,10 @@ paths:
           required: true
           schema:
             type: integer
+        - in: query
+          name: branchId
+          schema:
+            type: integer
       responses:
         "200":
           description: Order with items
@@ -509,6 +565,10 @@ paths:
         - in: path
           name: id
           required: true
+          schema:
+            type: integer
+        - in: query
+          name: branchId
           schema:
             type: integer
       requestBody:
@@ -534,6 +594,10 @@ paths:
         - in: path
           name: id
           required: true
+          schema:
+            type: integer
+        - in: query
+          name: branchId
           schema:
             type: integer
       responses:
@@ -615,6 +679,10 @@ paths:
           schema:
             type: string
             enum: [pending, paid, in_progress, ready]
+        - in: query
+          name: branchId
+          schema:
+            type: integer
       responses:
         "200":
           description: Active orders
@@ -683,6 +751,10 @@ paths:
           required: true
           schema:
             type: integer
+        - in: query
+          name: branchId
+          schema:
+            type: integer
       requestBody:
         required: true
         content:
@@ -704,6 +776,10 @@ paths:
         - in: path
           name: id
           required: true
+          schema:
+            type: integer
+        - in: query
+          name: branchId
           schema:
             type: integer
       responses:
@@ -905,6 +981,10 @@ paths:
           required: true
           schema:
             type: integer
+        - in: query
+          name: branchId
+          schema:
+            type: integer
       requestBody:
         required: true
         content:
@@ -922,6 +1002,80 @@ paths:
       operationId: deleteDiscount
       tags: [discounts]
       summary: Delete a discount
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: query
+          name: branchId
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /admin/branches:
+    get:
+      operationId: listBranches
+      tags: [admin]
+      summary: List all branches
+      responses:
+        "200":
+          description: List of branches
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Branch"
+    post:
+      operationId: createBranch
+      tags: [admin]
+      summary: Create a new branch
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBranchBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Branch"
+
+  /admin/branches/{id}:
+    patch:
+      operationId: updateBranch
+      tags: [admin]
+      summary: Update a branch
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateBranchBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Branch"
+    delete:
+      operationId: deleteBranch
+      tags: [admin]
+      summary: Delete a branch
       parameters:
         - in: path
           name: id
@@ -972,7 +1126,16 @@ components:
           type: string
         role:
           type: string
-          enum: [admin, barista, frontdesk, cashier, pickup]
+          enum: [admin, barista, frontdesk, cashier, pickup, stockcontrol]
+        branchId:
+          type: ["integer", "null"]
+        branch:
+          type: object
+          properties:
+            id:
+              type: integer
+            name:
+              type: string
       required:
         - id
         - name
@@ -1008,21 +1171,59 @@ components:
           type: string
         role:
           type: string
-          enum: [admin, barista, frontdesk, cashier, pickup]
-        pin:
-          type: string
+        branchId:
+          type: ["integer", "null"]
         isActive:
           type: boolean
         createdAt:
           type: string
-        updatedAt:
-          type: string
+          format: date-time
       required:
         - id
         - name
         - username
         - role
         - isActive
+
+    Branch:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        location:
+          type: string
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+
+    CreateBranchBody:
+      type: object
+      properties:
+        name:
+          type: string
+        location:
+          type: string
+        isActive:
+          type: boolean
+      required:
+        - name
+
+    UpdateBranchBody:
+      type: object
+      properties:
+        name:
+          type: string
+        location:
+          type: string
+        isActive:
+          type: boolean
 
     CreateUserBody:
       type: object
@@ -1035,7 +1236,9 @@ components:
           type: string
         role:
           type: string
-          enum: [admin, barista, frontdesk, cashier, pickup]
+          enum: [admin, barista, frontdesk, cashier, pickup, stockcontrol]
+        branchId:
+          type: integer
         pin:
           type: string
       required:
@@ -1043,6 +1246,7 @@ components:
         - username
         - password
         - role
+
 
     UpdateUserBody:
       type: object
@@ -1425,6 +1629,8 @@ components:
     PriceCalculationBody:
       type: object
       properties:
+        branchId:
+          type: integer
         selections:
           type: array
           items:
@@ -1656,6 +1862,8 @@ components:
     CreateOrderBody:
       type: object
       properties:
+        branchId:
+          type: integer
         customerName:
           type: string
         paymentMethod:

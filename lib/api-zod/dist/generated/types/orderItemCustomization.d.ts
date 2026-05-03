@@ -15,6 +15,7 @@ export interface OrderItemCustomization {
     /** @nullable */
     typeVolumeId?: number | null;
     consumedQty: number;
+    producedQty?: number;
     addedCost: number;
     slotLabel: string;
     optionLabel: string;

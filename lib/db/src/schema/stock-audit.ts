@@ -1,6 +1,7 @@
 import { pgTable, serial, text, numeric, integer, timestamp } from "drizzle-orm/pg-core";
 import { usersTable } from "./users";
 import { ingredientsTable } from "./ingredients";
+import { branchesTable } from "./branches";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -10,6 +11,7 @@ export const stockAuditsTable = pgTable("stock_audits", {
   createdBy: integer("created_by").notNull().references(() => usersTable.id),
   approvedBy: integer("approved_by").references(() => usersTable.id),
   notes: text("notes"),
+  branchId: integer("branch_id").notNull().references(() => branchesTable.id),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   approvedAt: timestamp("approved_at", { withTimezone: true }),
 });

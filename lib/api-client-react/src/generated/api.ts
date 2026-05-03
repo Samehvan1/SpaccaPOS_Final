@@ -18,18 +18,30 @@ import type {
 
 import type {
   ActivityLog,
+  Branch,
+  CalculateDrinkPriceParams,
   CategorySales,
+  CreateBranchBody,
   CreateDiscountBody,
   CreateDrinkBody,
   CreateIngredientBody,
   CreateIngredientOptionBody,
+  CreateIngredientOptionParams,
   CreateOrderBody,
   CreateUserBody,
   DashboardSummary,
+  DeleteDiscountParams,
+  DeleteDrinkParams,
+  DeleteIngredientOptionParams,
+  DeleteIngredientParams,
+  DeleteUserParams,
   Discount,
   Drink,
   DrinkDetail,
   GetActiveOrdersParams,
+  GetDrinkParams,
+  GetIngredientParams,
+  GetOrderParams,
   GetSalesByCategoryParams,
   GetSettingsParams,
   GetTopDrinksParams,
@@ -44,23 +56,32 @@ import type {
   ListStockMovementsParams,
   LoginBody,
   LoginResponse,
+  MarkOrderItemReadyParams,
   Order,
   OrderDetail,
   Permission,
   PriceBreakdown,
   PriceCalculationBody,
   RestockBody,
+  RestockIngredientParams,
   Setting,
   StockAdjustmentBody,
   StockMovement,
   TopDrink,
+  UpdateBranchBody,
   UpdateDiscountBody,
+  UpdateDiscountParams,
   UpdateDrinkBody,
+  UpdateDrinkParams,
   UpdateIngredientBody,
   UpdateIngredientOptionBody,
+  UpdateIngredientOptionParams,
+  UpdateIngredientParams,
   UpdateOrderStatusBody,
+  UpdateOrderStatusParams,
   UpdateSettingsBody,
   UpdateUserBody,
+  UpdateUserParams,
   User,
   UserDetail,
 } from "./api.schemas";
@@ -560,22 +581,35 @@ export const useCreateDrink = <
 /**
  * @summary Get a drink with its ingredient slots
  */
-export const getGetDrinkUrl = (id: number) => {
-  return `/api/drinks/${id}`;
+export const getGetDrinkUrl = (id: number, params?: GetDrinkParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/drinks/${id}?${stringifiedParams}`
+    : `/api/drinks/${id}`;
 };
 
 export const getDrink = async (
   id: number,
+  params?: GetDrinkParams,
   options?: RequestInit,
 ): Promise<DrinkDetail> => {
-  return customFetch<DrinkDetail>(getGetDrinkUrl(id), {
+  return customFetch<DrinkDetail>(getGetDrinkUrl(id, params), {
     ...options,
     method: "GET",
   });
 };
 
-export const getGetDrinkQueryKey = (id: number) => {
-  return [`/api/drinks/${id}`] as const;
+export const getGetDrinkQueryKey = (id: number, params?: GetDrinkParams) => {
+  return [`/api/drinks/${id}`, ...(params ? [params] : [])] as const;
 };
 
 export const getGetDrinkQueryOptions = <
@@ -583,6 +617,7 @@ export const getGetDrinkQueryOptions = <
   TError = ErrorType<void>,
 >(
   id: number,
+  params?: GetDrinkParams,
   options?: {
     query?: UseQueryOptions<
       Awaited<ReturnType<typeof getDrink>>,
@@ -594,11 +629,11 @@ export const getGetDrinkQueryOptions = <
 ) => {
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey = queryOptions?.queryKey ?? getGetDrinkQueryKey(id);
+  const queryKey = queryOptions?.queryKey ?? getGetDrinkQueryKey(id, params);
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof getDrink>>> = ({
     signal,
-  }) => getDrink(id, { signal, ...requestOptions });
+  }) => getDrink(id, params, { signal, ...requestOptions });
 
   return {
     queryKey,
@@ -624,6 +659,7 @@ export function useGetDrink<
   TError = ErrorType<void>,
 >(
   id: number,
+  params?: GetDrinkParams,
   options?: {
     query?: UseQueryOptions<
       Awaited<ReturnType<typeof getDrink>>,
@@ -633,7 +669,7 @@ export function useGetDrink<
     request?: SecondParameter<typeof customFetch>;
   },
 ): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-  const queryOptions = getGetDrinkQueryOptions(id, options);
+  const queryOptions = getGetDrinkQueryOptions(id, params, options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;
@@ -645,16 +681,29 @@ export function useGetDrink<
 /**
  * @summary Update a drink
  */
-export const getUpdateDrinkUrl = (id: number) => {
-  return `/api/drinks/${id}`;
+export const getUpdateDrinkUrl = (id: number, params?: UpdateDrinkParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/drinks/${id}?${stringifiedParams}`
+    : `/api/drinks/${id}`;
 };
 
 export const updateDrink = async (
   id: number,
   updateDrinkBody: UpdateDrinkBody,
+  params?: UpdateDrinkParams,
   options?: RequestInit,
 ): Promise<Drink> => {
-  return customFetch<Drink>(getUpdateDrinkUrl(id), {
+  return customFetch<Drink>(getUpdateDrinkUrl(id, params), {
     ...options,
     method: "PATCH",
     headers: { "Content-Type": "application/json", ...options?.headers },
@@ -669,14 +718,14 @@ export const getUpdateDrinkMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof updateDrink>>,
     TError,
-    { id: number; data: BodyType<UpdateDrinkBody> },
+    { id: number; data: BodyType<UpdateDrinkBody>; params?: UpdateDrinkParams },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof updateDrink>>,
   TError,
-  { id: number; data: BodyType<UpdateDrinkBody> },
+  { id: number; data: BodyType<UpdateDrinkBody>; params?: UpdateDrinkParams },
   TContext
 > => {
   const mutationKey = ["updateDrink"];
@@ -690,11 +739,11 @@ export const getUpdateDrinkMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof updateDrink>>,
-    { id: number; data: BodyType<UpdateDrinkBody> }
+    { id: number; data: BodyType<UpdateDrinkBody>; params?: UpdateDrinkParams }
   > = (props) => {
-    const { id, data } = props ?? {};
+    const { id, data, params } = props ?? {};
 
-    return updateDrink(id, data, requestOptions);
+    return updateDrink(id, data, params, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -716,14 +765,14 @@ export const useUpdateDrink = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof updateDrink>>,
     TError,
-    { id: number; data: BodyType<UpdateDrinkBody> },
+    { id: number; data: BodyType<UpdateDrinkBody>; params?: UpdateDrinkParams },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationResult<
   Awaited<ReturnType<typeof updateDrink>>,
   TError,
-  { id: number; data: BodyType<UpdateDrinkBody> },
+  { id: number; data: BodyType<UpdateDrinkBody>; params?: UpdateDrinkParams },
   TContext
 > => {
   return useMutation(getUpdateDrinkMutationOptions(options));
@@ -732,15 +781,28 @@ export const useUpdateDrink = <
 /**
  * @summary Delete a drink
  */
-export const getDeleteDrinkUrl = (id: number) => {
-  return `/api/drinks/${id}`;
+export const getDeleteDrinkUrl = (id: number, params?: DeleteDrinkParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/drinks/${id}?${stringifiedParams}`
+    : `/api/drinks/${id}`;
 };
 
 export const deleteDrink = async (
   id: number,
+  params?: DeleteDrinkParams,
   options?: RequestInit,
 ): Promise<void> => {
-  return customFetch<void>(getDeleteDrinkUrl(id), {
+  return customFetch<void>(getDeleteDrinkUrl(id, params), {
     ...options,
     method: "DELETE",
   });
@@ -753,14 +815,14 @@ export const getDeleteDrinkMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof deleteDrink>>,
     TError,
-    { id: number },
+    { id: number; params?: DeleteDrinkParams },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof deleteDrink>>,
   TError,
-  { id: number },
+  { id: number; params?: DeleteDrinkParams },
   TContext
 > => {
   const mutationKey = ["deleteDrink"];
@@ -774,11 +836,11 @@ export const getDeleteDrinkMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof deleteDrink>>,
-    { id: number }
+    { id: number; params?: DeleteDrinkParams }
   > = (props) => {
-    const { id } = props ?? {};
+    const { id, params } = props ?? {};
 
-    return deleteDrink(id, requestOptions);
+    return deleteDrink(id, params, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -800,14 +862,14 @@ export const useDeleteDrink = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof deleteDrink>>,
     TError,
-    { id: number },
+    { id: number; params?: DeleteDrinkParams },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationResult<
   Awaited<ReturnType<typeof deleteDrink>>,
   TError,
-  { id: number },
+  { id: number; params?: DeleteDrinkParams },
   TContext
 > => {
   return useMutation(getDeleteDrinkMutationOptions(options));
@@ -816,16 +878,32 @@ export const useDeleteDrink = <
 /**
  * @summary Calculate price with customizations (side-effect free)
  */
-export const getCalculateDrinkPriceUrl = (id: number) => {
-  return `/api/drinks/${id}/price`;
+export const getCalculateDrinkPriceUrl = (
+  id: number,
+  params?: CalculateDrinkPriceParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/drinks/${id}/price?${stringifiedParams}`
+    : `/api/drinks/${id}/price`;
 };
 
 export const calculateDrinkPrice = async (
   id: number,
   priceCalculationBody: PriceCalculationBody,
+  params?: CalculateDrinkPriceParams,
   options?: RequestInit,
 ): Promise<PriceBreakdown> => {
-  return customFetch<PriceBreakdown>(getCalculateDrinkPriceUrl(id), {
+  return customFetch<PriceBreakdown>(getCalculateDrinkPriceUrl(id, params), {
     ...options,
     method: "POST",
     headers: { "Content-Type": "application/json", ...options?.headers },
@@ -840,14 +918,22 @@ export const getCalculateDrinkPriceMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof calculateDrinkPrice>>,
     TError,
-    { id: number; data: BodyType<PriceCalculationBody> },
+    {
+      id: number;
+      data: BodyType<PriceCalculationBody>;
+      params?: CalculateDrinkPriceParams;
+    },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof calculateDrinkPrice>>,
   TError,
-  { id: number; data: BodyType<PriceCalculationBody> },
+  {
+    id: number;
+    data: BodyType<PriceCalculationBody>;
+    params?: CalculateDrinkPriceParams;
+  },
   TContext
 > => {
   const mutationKey = ["calculateDrinkPrice"];
@@ -861,11 +947,15 @@ export const getCalculateDrinkPriceMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof calculateDrinkPrice>>,
-    { id: number; data: BodyType<PriceCalculationBody> }
+    {
+      id: number;
+      data: BodyType<PriceCalculationBody>;
+      params?: CalculateDrinkPriceParams;
+    }
   > = (props) => {
-    const { id, data } = props ?? {};
+    const { id, data, params } = props ?? {};
 
-    return calculateDrinkPrice(id, data, requestOptions);
+    return calculateDrinkPrice(id, data, params, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -887,14 +977,22 @@ export const useCalculateDrinkPrice = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof calculateDrinkPrice>>,
     TError,
-    { id: number; data: BodyType<PriceCalculationBody> },
+    {
+      id: number;
+      data: BodyType<PriceCalculationBody>;
+      params?: CalculateDrinkPriceParams;
+    },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationResult<
   Awaited<ReturnType<typeof calculateDrinkPrice>>,
   TError,
-  { id: number; data: BodyType<PriceCalculationBody> },
+  {
+    id: number;
+    data: BodyType<PriceCalculationBody>;
+    params?: CalculateDrinkPriceParams;
+  },
   TContext
 > => {
   return useMutation(getCalculateDrinkPriceMutationOptions(options));
@@ -1164,22 +1262,41 @@ export const useImportInventoryCsv = <
 /**
  * @summary Get ingredient with options
  */
-export const getGetIngredientUrl = (id: number) => {
-  return `/api/ingredients/${id}`;
+export const getGetIngredientUrl = (
+  id: number,
+  params?: GetIngredientParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/ingredients/${id}?${stringifiedParams}`
+    : `/api/ingredients/${id}`;
 };
 
 export const getIngredient = async (
   id: number,
+  params?: GetIngredientParams,
   options?: RequestInit,
 ): Promise<IngredientDetail> => {
-  return customFetch<IngredientDetail>(getGetIngredientUrl(id), {
+  return customFetch<IngredientDetail>(getGetIngredientUrl(id, params), {
     ...options,
     method: "GET",
   });
 };
 
-export const getGetIngredientQueryKey = (id: number) => {
-  return [`/api/ingredients/${id}`] as const;
+export const getGetIngredientQueryKey = (
+  id: number,
+  params?: GetIngredientParams,
+) => {
+  return [`/api/ingredients/${id}`, ...(params ? [params] : [])] as const;
 };
 
 export const getGetIngredientQueryOptions = <
@@ -1187,6 +1304,7 @@ export const getGetIngredientQueryOptions = <
   TError = ErrorType<void>,
 >(
   id: number,
+  params?: GetIngredientParams,
   options?: {
     query?: UseQueryOptions<
       Awaited<ReturnType<typeof getIngredient>>,
@@ -1198,11 +1316,12 @@ export const getGetIngredientQueryOptions = <
 ) => {
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey = queryOptions?.queryKey ?? getGetIngredientQueryKey(id);
+  const queryKey =
+    queryOptions?.queryKey ?? getGetIngredientQueryKey(id, params);
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof getIngredient>>> = ({
     signal,
-  }) => getIngredient(id, { signal, ...requestOptions });
+  }) => getIngredient(id, params, { signal, ...requestOptions });
 
   return {
     queryKey,
@@ -1230,6 +1349,7 @@ export function useGetIngredient<
   TError = ErrorType<void>,
 >(
   id: number,
+  params?: GetIngredientParams,
   options?: {
     query?: UseQueryOptions<
       Awaited<ReturnType<typeof getIngredient>>,
@@ -1239,7 +1359,7 @@ export function useGetIngredient<
     request?: SecondParameter<typeof customFetch>;
   },
 ): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-  const queryOptions = getGetIngredientQueryOptions(id, options);
+  const queryOptions = getGetIngredientQueryOptions(id, params, options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;
@@ -1251,16 +1371,32 @@ export function useGetIngredient<
 /**
  * @summary Update an ingredient
  */
-export const getUpdateIngredientUrl = (id: number) => {
-  return `/api/ingredients/${id}`;
+export const getUpdateIngredientUrl = (
+  id: number,
+  params?: UpdateIngredientParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/ingredients/${id}?${stringifiedParams}`
+    : `/api/ingredients/${id}`;
 };
 
 export const updateIngredient = async (
   id: number,
   updateIngredientBody: UpdateIngredientBody,
+  params?: UpdateIngredientParams,
   options?: RequestInit,
 ): Promise<Ingredient> => {
-  return customFetch<Ingredient>(getUpdateIngredientUrl(id), {
+  return customFetch<Ingredient>(getUpdateIngredientUrl(id, params), {
     ...options,
     method: "PATCH",
     headers: { "Content-Type": "application/json", ...options?.headers },
@@ -1275,14 +1411,22 @@ export const getUpdateIngredientMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof updateIngredient>>,
     TError,
-    { id: number; data: BodyType<UpdateIngredientBody> },
+    {
+      id: number;
+      data: BodyType<UpdateIngredientBody>;
+      params?: UpdateIngredientParams;
+    },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof updateIngredient>>,
   TError,
-  { id: number; data: BodyType<UpdateIngredientBody> },
+  {
+    id: number;
+    data: BodyType<UpdateIngredientBody>;
+    params?: UpdateIngredientParams;
+  },
   TContext
 > => {
   const mutationKey = ["updateIngredient"];
@@ -1296,11 +1440,15 @@ export const getUpdateIngredientMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof updateIngredient>>,
-    { id: number; data: BodyType<UpdateIngredientBody> }
+    {
+      id: number;
+      data: BodyType<UpdateIngredientBody>;
+      params?: UpdateIngredientParams;
+    }
   > = (props) => {
-    const { id, data } = props ?? {};
+    const { id, data, params } = props ?? {};
 
-    return updateIngredient(id, data, requestOptions);
+    return updateIngredient(id, data, params, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -1322,14 +1470,22 @@ export const useUpdateIngredient = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof updateIngredient>>,
     TError,
-    { id: number; data: BodyType<UpdateIngredientBody> },
+    {
+      id: number;
+      data: BodyType<UpdateIngredientBody>;
+      params?: UpdateIngredientParams;
+    },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationResult<
   Awaited<ReturnType<typeof updateIngredient>>,
   TError,
-  { id: number; data: BodyType<UpdateIngredientBody> },
+  {
+    id: number;
+    data: BodyType<UpdateIngredientBody>;
+    params?: UpdateIngredientParams;
+  },
   TContext
 > => {
   return useMutation(getUpdateIngredientMutationOptions(options));
@@ -1338,15 +1494,31 @@ export const useUpdateIngredient = <
 /**
  * @summary Delete an ingredient
  */
-export const getDeleteIngredientUrl = (id: number) => {
-  return `/api/ingredients/${id}`;
+export const getDeleteIngredientUrl = (
+  id: number,
+  params?: DeleteIngredientParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/ingredients/${id}?${stringifiedParams}`
+    : `/api/ingredients/${id}`;
 };
 
 export const deleteIngredient = async (
   id: number,
+  params?: DeleteIngredientParams,
   options?: RequestInit,
 ): Promise<void> => {
-  return customFetch<void>(getDeleteIngredientUrl(id), {
+  return customFetch<void>(getDeleteIngredientUrl(id, params), {
     ...options,
     method: "DELETE",
   });
@@ -1359,14 +1531,14 @@ export const getDeleteIngredientMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof deleteIngredient>>,
     TError,
-    { id: number },
+    { id: number; params?: DeleteIngredientParams },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof deleteIngredient>>,
   TError,
-  { id: number },
+  { id: number; params?: DeleteIngredientParams },
   TContext
 > => {
   const mutationKey = ["deleteIngredient"];
@@ -1380,11 +1552,11 @@ export const getDeleteIngredientMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof deleteIngredient>>,
-    { id: number }
+    { id: number; params?: DeleteIngredientParams }
   > = (props) => {
-    const { id } = props ?? {};
+    const { id, params } = props ?? {};
 
-    return deleteIngredient(id, requestOptions);
+    return deleteIngredient(id, params, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -1406,14 +1578,14 @@ export const useDeleteIngredient = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof deleteIngredient>>,
     TError,
-    { id: number },
+    { id: number; params?: DeleteIngredientParams },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationResult<
   Awaited<ReturnType<typeof deleteIngredient>>,
   TError,
-  { id: number },
+  { id: number; params?: DeleteIngredientParams },
   TContext
 > => {
   return useMutation(getDeleteIngredientMutationOptions(options));
@@ -1422,21 +1594,40 @@ export const useDeleteIngredient = <
 /**
  * @summary Add an option to an ingredient
  */
-export const getCreateIngredientOptionUrl = (id: number) => {
-  return `/api/ingredients/${id}/options`;
+export const getCreateIngredientOptionUrl = (
+  id: number,
+  params?: CreateIngredientOptionParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/ingredients/${id}/options?${stringifiedParams}`
+    : `/api/ingredients/${id}/options`;
 };
 
 export const createIngredientOption = async (
   id: number,
   createIngredientOptionBody: CreateIngredientOptionBody,
+  params?: CreateIngredientOptionParams,
   options?: RequestInit,
 ): Promise<IngredientOption> => {
-  return customFetch<IngredientOption>(getCreateIngredientOptionUrl(id), {
-    ...options,
-    method: "POST",
-    headers: { "Content-Type": "application/json", ...options?.headers },
-    body: JSON.stringify(createIngredientOptionBody),
-  });
+  return customFetch<IngredientOption>(
+    getCreateIngredientOptionUrl(id, params),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(createIngredientOptionBody),
+    },
+  );
 };
 
 export const getCreateIngredientOptionMutationOptions = <
@@ -1446,14 +1637,22 @@ export const getCreateIngredientOptionMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof createIngredientOption>>,
     TError,
-    { id: number; data: BodyType<CreateIngredientOptionBody> },
+    {
+      id: number;
+      data: BodyType<CreateIngredientOptionBody>;
+      params?: CreateIngredientOptionParams;
+    },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof createIngredientOption>>,
   TError,
-  { id: number; data: BodyType<CreateIngredientOptionBody> },
+  {
+    id: number;
+    data: BodyType<CreateIngredientOptionBody>;
+    params?: CreateIngredientOptionParams;
+  },
   TContext
 > => {
   const mutationKey = ["createIngredientOption"];
@@ -1467,11 +1666,15 @@ export const getCreateIngredientOptionMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof createIngredientOption>>,
-    { id: number; data: BodyType<CreateIngredientOptionBody> }
+    {
+      id: number;
+      data: BodyType<CreateIngredientOptionBody>;
+      params?: CreateIngredientOptionParams;
+    }
   > = (props) => {
-    const { id, data } = props ?? {};
+    const { id, data, params } = props ?? {};
 
-    return createIngredientOption(id, data, requestOptions);
+    return createIngredientOption(id, data, params, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -1494,14 +1697,22 @@ export const useCreateIngredientOption = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof createIngredientOption>>,
     TError,
-    { id: number; data: BodyType<CreateIngredientOptionBody> },
+    {
+      id: number;
+      data: BodyType<CreateIngredientOptionBody>;
+      params?: CreateIngredientOptionParams;
+    },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationResult<
   Awaited<ReturnType<typeof createIngredientOption>>,
   TError,
-  { id: number; data: BodyType<CreateIngredientOptionBody> },
+  {
+    id: number;
+    data: BodyType<CreateIngredientOptionBody>;
+    params?: CreateIngredientOptionParams;
+  },
   TContext
 > => {
   return useMutation(getCreateIngredientOptionMutationOptions(options));
@@ -1510,18 +1721,35 @@ export const useCreateIngredientOption = <
 /**
  * @summary Update an ingredient option
  */
-export const getUpdateIngredientOptionUrl = (id: number, optionId: number) => {
-  return `/api/ingredients/${id}/options/${optionId}`;
+export const getUpdateIngredientOptionUrl = (
+  id: number,
+  optionId: number,
+  params?: UpdateIngredientOptionParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/ingredients/${id}/options/${optionId}?${stringifiedParams}`
+    : `/api/ingredients/${id}/options/${optionId}`;
 };
 
 export const updateIngredientOption = async (
   id: number,
   optionId: number,
   updateIngredientOptionBody: UpdateIngredientOptionBody,
+  params?: UpdateIngredientOptionParams,
   options?: RequestInit,
 ): Promise<IngredientOption> => {
   return customFetch<IngredientOption>(
-    getUpdateIngredientOptionUrl(id, optionId),
+    getUpdateIngredientOptionUrl(id, optionId, params),
     {
       ...options,
       method: "PATCH",
@@ -1542,6 +1770,7 @@ export const getUpdateIngredientOptionMutationOptions = <
       id: number;
       optionId: number;
       data: BodyType<UpdateIngredientOptionBody>;
+      params?: UpdateIngredientOptionParams;
     },
     TContext
   >;
@@ -1549,7 +1778,12 @@ export const getUpdateIngredientOptionMutationOptions = <
 }): UseMutationOptions<
   Awaited<ReturnType<typeof updateIngredientOption>>,
   TError,
-  { id: number; optionId: number; data: BodyType<UpdateIngredientOptionBody> },
+  {
+    id: number;
+    optionId: number;
+    data: BodyType<UpdateIngredientOptionBody>;
+    params?: UpdateIngredientOptionParams;
+  },
   TContext
 > => {
   const mutationKey = ["updateIngredientOption"];
@@ -1563,11 +1797,16 @@ export const getUpdateIngredientOptionMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof updateIngredientOption>>,
-    { id: number; optionId: number; data: BodyType<UpdateIngredientOptionBody> }
+    {
+      id: number;
+      optionId: number;
+      data: BodyType<UpdateIngredientOptionBody>;
+      params?: UpdateIngredientOptionParams;
+    }
   > = (props) => {
-    const { id, optionId, data } = props ?? {};
+    const { id, optionId, data, params } = props ?? {};
 
-    return updateIngredientOption(id, optionId, data, requestOptions);
+    return updateIngredientOption(id, optionId, data, params, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -1594,6 +1833,7 @@ export const useUpdateIngredientOption = <
       id: number;
       optionId: number;
       data: BodyType<UpdateIngredientOptionBody>;
+      params?: UpdateIngredientOptionParams;
     },
     TContext
   >;
@@ -1601,7 +1841,12 @@ export const useUpdateIngredientOption = <
 }): UseMutationResult<
   Awaited<ReturnType<typeof updateIngredientOption>>,
   TError,
-  { id: number; optionId: number; data: BodyType<UpdateIngredientOptionBody> },
+  {
+    id: number;
+    optionId: number;
+    data: BodyType<UpdateIngredientOptionBody>;
+    params?: UpdateIngredientOptionParams;
+  },
   TContext
 > => {
   return useMutation(getUpdateIngredientOptionMutationOptions(options));
@@ -1610,16 +1855,33 @@ export const useUpdateIngredientOption = <
 /**
  * @summary Remove an option from an ingredient
  */
-export const getDeleteIngredientOptionUrl = (id: number, optionId: number) => {
-  return `/api/ingredients/${id}/options/${optionId}`;
+export const getDeleteIngredientOptionUrl = (
+  id: number,
+  optionId: number,
+  params?: DeleteIngredientOptionParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/ingredients/${id}/options/${optionId}?${stringifiedParams}`
+    : `/api/ingredients/${id}/options/${optionId}`;
 };
 
 export const deleteIngredientOption = async (
   id: number,
   optionId: number,
+  params?: DeleteIngredientOptionParams,
   options?: RequestInit,
 ): Promise<void> => {
-  return customFetch<void>(getDeleteIngredientOptionUrl(id, optionId), {
+  return customFetch<void>(getDeleteIngredientOptionUrl(id, optionId, params), {
     ...options,
     method: "DELETE",
   });
@@ -1632,14 +1894,14 @@ export const getDeleteIngredientOptionMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof deleteIngredientOption>>,
     TError,
-    { id: number; optionId: number },
+    { id: number; optionId: number; params?: DeleteIngredientOptionParams },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof deleteIngredientOption>>,
   TError,
-  { id: number; optionId: number },
+  { id: number; optionId: number; params?: DeleteIngredientOptionParams },
   TContext
 > => {
   const mutationKey = ["deleteIngredientOption"];
@@ -1653,11 +1915,11 @@ export const getDeleteIngredientOptionMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof deleteIngredientOption>>,
-    { id: number; optionId: number }
+    { id: number; optionId: number; params?: DeleteIngredientOptionParams }
   > = (props) => {
-    const { id, optionId } = props ?? {};
+    const { id, optionId, params } = props ?? {};
 
-    return deleteIngredientOption(id, optionId, requestOptions);
+    return deleteIngredientOption(id, optionId, params, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -1679,14 +1941,14 @@ export const useDeleteIngredientOption = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof deleteIngredientOption>>,
     TError,
-    { id: number; optionId: number },
+    { id: number; optionId: number; params?: DeleteIngredientOptionParams },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationResult<
   Awaited<ReturnType<typeof deleteIngredientOption>>,
   TError,
-  { id: number; optionId: number },
+  { id: number; optionId: number; params?: DeleteIngredientOptionParams },
   TContext
 > => {
   return useMutation(getDeleteIngredientOptionMutationOptions(options));
@@ -1695,16 +1957,32 @@ export const useDeleteIngredientOption = <
 /**
  * @summary Restock an ingredient
  */
-export const getRestockIngredientUrl = (id: number) => {
-  return `/api/ingredients/${id}/restock`;
+export const getRestockIngredientUrl = (
+  id: number,
+  params?: RestockIngredientParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/ingredients/${id}/restock?${stringifiedParams}`
+    : `/api/ingredients/${id}/restock`;
 };
 
 export const restockIngredient = async (
   id: number,
   restockBody: RestockBody,
+  params?: RestockIngredientParams,
   options?: RequestInit,
 ): Promise<Ingredient> => {
-  return customFetch<Ingredient>(getRestockIngredientUrl(id), {
+  return customFetch<Ingredient>(getRestockIngredientUrl(id, params), {
     ...options,
     method: "POST",
     headers: { "Content-Type": "application/json", ...options?.headers },
@@ -1719,14 +1997,18 @@ export const getRestockIngredientMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof restockIngredient>>,
     TError,
-    { id: number; data: BodyType<RestockBody> },
+    {
+      id: number;
+      data: BodyType<RestockBody>;
+      params?: RestockIngredientParams;
+    },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof restockIngredient>>,
   TError,
-  { id: number; data: BodyType<RestockBody> },
+  { id: number; data: BodyType<RestockBody>; params?: RestockIngredientParams },
   TContext
 > => {
   const mutationKey = ["restockIngredient"];
@@ -1740,11 +2022,15 @@ export const getRestockIngredientMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof restockIngredient>>,
-    { id: number; data: BodyType<RestockBody> }
+    {
+      id: number;
+      data: BodyType<RestockBody>;
+      params?: RestockIngredientParams;
+    }
   > = (props) => {
-    const { id, data } = props ?? {};
+    const { id, data, params } = props ?? {};
 
-    return restockIngredient(id, data, requestOptions);
+    return restockIngredient(id, data, params, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -1766,14 +2052,18 @@ export const useRestockIngredient = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof restockIngredient>>,
     TError,
-    { id: number; data: BodyType<RestockBody> },
+    {
+      id: number;
+      data: BodyType<RestockBody>;
+      params?: RestockIngredientParams;
+    },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationResult<
   Awaited<ReturnType<typeof restockIngredient>>,
   TError,
-  { id: number; data: BodyType<RestockBody> },
+  { id: number; data: BodyType<RestockBody>; params?: RestockIngredientParams },
   TContext
 > => {
   return useMutation(getRestockIngredientMutationOptions(options));
@@ -1962,22 +2252,35 @@ export const useCreateOrder = <
 /**
  * @summary Get order detail
  */
-export const getGetOrderUrl = (id: number) => {
-  return `/api/orders/${id}`;
+export const getGetOrderUrl = (id: number, params?: GetOrderParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/orders/${id}?${stringifiedParams}`
+    : `/api/orders/${id}`;
 };
 
 export const getOrder = async (
   id: number,
+  params?: GetOrderParams,
   options?: RequestInit,
 ): Promise<OrderDetail> => {
-  return customFetch<OrderDetail>(getGetOrderUrl(id), {
+  return customFetch<OrderDetail>(getGetOrderUrl(id, params), {
     ...options,
     method: "GET",
   });
 };
 
-export const getGetOrderQueryKey = (id: number) => {
-  return [`/api/orders/${id}`] as const;
+export const getGetOrderQueryKey = (id: number, params?: GetOrderParams) => {
+  return [`/api/orders/${id}`, ...(params ? [params] : [])] as const;
 };
 
 export const getGetOrderQueryOptions = <
@@ -1985,6 +2288,7 @@ export const getGetOrderQueryOptions = <
   TError = ErrorType<void>,
 >(
   id: number,
+  params?: GetOrderParams,
   options?: {
     query?: UseQueryOptions<
       Awaited<ReturnType<typeof getOrder>>,
@@ -1996,11 +2300,11 @@ export const getGetOrderQueryOptions = <
 ) => {
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey = queryOptions?.queryKey ?? getGetOrderQueryKey(id);
+  const queryKey = queryOptions?.queryKey ?? getGetOrderQueryKey(id, params);
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof getOrder>>> = ({
     signal,
-  }) => getOrder(id, { signal, ...requestOptions });
+  }) => getOrder(id, params, { signal, ...requestOptions });
 
   return {
     queryKey,
@@ -2026,6 +2330,7 @@ export function useGetOrder<
   TError = ErrorType<void>,
 >(
   id: number,
+  params?: GetOrderParams,
   options?: {
     query?: UseQueryOptions<
       Awaited<ReturnType<typeof getOrder>>,
@@ -2035,7 +2340,7 @@ export function useGetOrder<
     request?: SecondParameter<typeof customFetch>;
   },
 ): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-  const queryOptions = getGetOrderQueryOptions(id, options);
+  const queryOptions = getGetOrderQueryOptions(id, params, options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;
@@ -2047,16 +2352,32 @@ export function useGetOrder<
 /**
  * @summary Advance order status (kitchen display)
  */
-export const getUpdateOrderStatusUrl = (id: number) => {
-  return `/api/orders/${id}/status`;
+export const getUpdateOrderStatusUrl = (
+  id: number,
+  params?: UpdateOrderStatusParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/orders/${id}/status?${stringifiedParams}`
+    : `/api/orders/${id}/status`;
 };
 
 export const updateOrderStatus = async (
   id: number,
   updateOrderStatusBody: UpdateOrderStatusBody,
+  params?: UpdateOrderStatusParams,
   options?: RequestInit,
 ): Promise<Order> => {
-  return customFetch<Order>(getUpdateOrderStatusUrl(id), {
+  return customFetch<Order>(getUpdateOrderStatusUrl(id, params), {
     ...options,
     method: "PATCH",
     headers: { "Content-Type": "application/json", ...options?.headers },
@@ -2071,14 +2392,22 @@ export const getUpdateOrderStatusMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof updateOrderStatus>>,
     TError,
-    { id: number; data: BodyType<UpdateOrderStatusBody> },
+    {
+      id: number;
+      data: BodyType<UpdateOrderStatusBody>;
+      params?: UpdateOrderStatusParams;
+    },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof updateOrderStatus>>,
   TError,
-  { id: number; data: BodyType<UpdateOrderStatusBody> },
+  {
+    id: number;
+    data: BodyType<UpdateOrderStatusBody>;
+    params?: UpdateOrderStatusParams;
+  },
   TContext
 > => {
   const mutationKey = ["updateOrderStatus"];
@@ -2092,11 +2421,15 @@ export const getUpdateOrderStatusMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof updateOrderStatus>>,
-    { id: number; data: BodyType<UpdateOrderStatusBody> }
+    {
+      id: number;
+      data: BodyType<UpdateOrderStatusBody>;
+      params?: UpdateOrderStatusParams;
+    }
   > = (props) => {
-    const { id, data } = props ?? {};
+    const { id, data, params } = props ?? {};
 
-    return updateOrderStatus(id, data, requestOptions);
+    return updateOrderStatus(id, data, params, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -2118,14 +2451,22 @@ export const useUpdateOrderStatus = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof updateOrderStatus>>,
     TError,
-    { id: number; data: BodyType<UpdateOrderStatusBody> },
+    {
+      id: number;
+      data: BodyType<UpdateOrderStatusBody>;
+      params?: UpdateOrderStatusParams;
+    },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationResult<
   Awaited<ReturnType<typeof updateOrderStatus>>,
   TError,
-  { id: number; data: BodyType<UpdateOrderStatusBody> },
+  {
+    id: number;
+    data: BodyType<UpdateOrderStatusBody>;
+    params?: UpdateOrderStatusParams;
+  },
   TContext
 > => {
   return useMutation(getUpdateOrderStatusMutationOptions(options));
@@ -2134,15 +2475,31 @@ export const useUpdateOrderStatus = <
 /**
  * @summary Mark a specific order item as ready
  */
-export const getMarkOrderItemReadyUrl = (id: number) => {
-  return `/api/order-items/${id}/ready`;
+export const getMarkOrderItemReadyUrl = (
+  id: number,
+  params?: MarkOrderItemReadyParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/order-items/${id}/ready?${stringifiedParams}`
+    : `/api/order-items/${id}/ready`;
 };
 
 export const markOrderItemReady = async (
   id: number,
+  params?: MarkOrderItemReadyParams,
   options?: RequestInit,
 ): Promise<Order> => {
-  return customFetch<Order>(getMarkOrderItemReadyUrl(id), {
+  return customFetch<Order>(getMarkOrderItemReadyUrl(id, params), {
     ...options,
     method: "PATCH",
   });
@@ -2155,14 +2512,14 @@ export const getMarkOrderItemReadyMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof markOrderItemReady>>,
     TError,
-    { id: number },
+    { id: number; params?: MarkOrderItemReadyParams },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof markOrderItemReady>>,
   TError,
-  { id: number },
+  { id: number; params?: MarkOrderItemReadyParams },
   TContext
 > => {
   const mutationKey = ["markOrderItemReady"];
@@ -2176,11 +2533,11 @@ export const getMarkOrderItemReadyMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof markOrderItemReady>>,
-    { id: number }
+    { id: number; params?: MarkOrderItemReadyParams }
   > = (props) => {
-    const { id } = props ?? {};
+    const { id, params } = props ?? {};
 
-    return markOrderItemReady(id, requestOptions);
+    return markOrderItemReady(id, params, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -2202,14 +2559,14 @@ export const useMarkOrderItemReady = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof markOrderItemReady>>,
     TError,
-    { id: number },
+    { id: number; params?: MarkOrderItemReadyParams },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationResult<
   Awaited<ReturnType<typeof markOrderItemReady>>,
   TError,
-  { id: number },
+  { id: number; params?: MarkOrderItemReadyParams },
   TContext
 > => {
   return useMutation(getMarkOrderItemReadyMutationOptions(options));
@@ -2799,16 +3156,29 @@ export const useCreateUser = <
 /**
  * @summary Update a user
  */
-export const getUpdateUserUrl = (id: number) => {
-  return `/api/users/${id}`;
+export const getUpdateUserUrl = (id: number, params?: UpdateUserParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/users/${id}?${stringifiedParams}`
+    : `/api/users/${id}`;
 };
 
 export const updateUser = async (
   id: number,
   updateUserBody: UpdateUserBody,
+  params?: UpdateUserParams,
   options?: RequestInit,
 ): Promise<UserDetail> => {
-  return customFetch<UserDetail>(getUpdateUserUrl(id), {
+  return customFetch<UserDetail>(getUpdateUserUrl(id, params), {
     ...options,
     method: "PATCH",
     headers: { "Content-Type": "application/json", ...options?.headers },
@@ -2823,14 +3193,14 @@ export const getUpdateUserMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof updateUser>>,
     TError,
-    { id: number; data: BodyType<UpdateUserBody> },
+    { id: number; data: BodyType<UpdateUserBody>; params?: UpdateUserParams },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof updateUser>>,
   TError,
-  { id: number; data: BodyType<UpdateUserBody> },
+  { id: number; data: BodyType<UpdateUserBody>; params?: UpdateUserParams },
   TContext
 > => {
   const mutationKey = ["updateUser"];
@@ -2844,11 +3214,11 @@ export const getUpdateUserMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof updateUser>>,
-    { id: number; data: BodyType<UpdateUserBody> }
+    { id: number; data: BodyType<UpdateUserBody>; params?: UpdateUserParams }
   > = (props) => {
-    const { id, data } = props ?? {};
+    const { id, data, params } = props ?? {};
 
-    return updateUser(id, data, requestOptions);
+    return updateUser(id, data, params, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -2870,14 +3240,14 @@ export const useUpdateUser = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof updateUser>>,
     TError,
-    { id: number; data: BodyType<UpdateUserBody> },
+    { id: number; data: BodyType<UpdateUserBody>; params?: UpdateUserParams },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationResult<
   Awaited<ReturnType<typeof updateUser>>,
   TError,
-  { id: number; data: BodyType<UpdateUserBody> },
+  { id: number; data: BodyType<UpdateUserBody>; params?: UpdateUserParams },
   TContext
 > => {
   return useMutation(getUpdateUserMutationOptions(options));
@@ -2886,15 +3256,28 @@ export const useUpdateUser = <
 /**
  * @summary Delete a user
  */
-export const getDeleteUserUrl = (id: number) => {
-  return `/api/users/${id}`;
+export const getDeleteUserUrl = (id: number, params?: DeleteUserParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/users/${id}?${stringifiedParams}`
+    : `/api/users/${id}`;
 };
 
 export const deleteUser = async (
   id: number,
+  params?: DeleteUserParams,
   options?: RequestInit,
 ): Promise<void> => {
-  return customFetch<void>(getDeleteUserUrl(id), {
+  return customFetch<void>(getDeleteUserUrl(id, params), {
     ...options,
     method: "DELETE",
   });
@@ -2907,14 +3290,14 @@ export const getDeleteUserMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof deleteUser>>,
     TError,
-    { id: number },
+    { id: number; params?: DeleteUserParams },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof deleteUser>>,
   TError,
-  { id: number },
+  { id: number; params?: DeleteUserParams },
   TContext
 > => {
   const mutationKey = ["deleteUser"];
@@ -2928,11 +3311,11 @@ export const getDeleteUserMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof deleteUser>>,
-    { id: number }
+    { id: number; params?: DeleteUserParams }
   > = (props) => {
-    const { id } = props ?? {};
+    const { id, params } = props ?? {};
 
-    return deleteUser(id, requestOptions);
+    return deleteUser(id, params, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -2954,14 +3337,14 @@ export const useDeleteUser = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof deleteUser>>,
     TError,
-    { id: number },
+    { id: number; params?: DeleteUserParams },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationResult<
   Awaited<ReturnType<typeof deleteUser>>,
   TError,
-  { id: number },
+  { id: number; params?: DeleteUserParams },
   TContext
 > => {
   return useMutation(getDeleteUserMutationOptions(options));
@@ -3677,16 +4060,32 @@ export const useCreateDiscount = <
 /**
  * @summary Update a discount
  */
-export const getUpdateDiscountUrl = (id: number) => {
-  return `/api/discounts/${id}`;
+export const getUpdateDiscountUrl = (
+  id: number,
+  params?: UpdateDiscountParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/discounts/${id}?${stringifiedParams}`
+    : `/api/discounts/${id}`;
 };
 
 export const updateDiscount = async (
   id: number,
   updateDiscountBody: UpdateDiscountBody,
+  params?: UpdateDiscountParams,
   options?: RequestInit,
 ): Promise<Discount> => {
-  return customFetch<Discount>(getUpdateDiscountUrl(id), {
+  return customFetch<Discount>(getUpdateDiscountUrl(id, params), {
     ...options,
     method: "PATCH",
     headers: { "Content-Type": "application/json", ...options?.headers },
@@ -3701,14 +4100,22 @@ export const getUpdateDiscountMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof updateDiscount>>,
     TError,
-    { id: number; data: BodyType<UpdateDiscountBody> },
+    {
+      id: number;
+      data: BodyType<UpdateDiscountBody>;
+      params?: UpdateDiscountParams;
+    },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof updateDiscount>>,
   TError,
-  { id: number; data: BodyType<UpdateDiscountBody> },
+  {
+    id: number;
+    data: BodyType<UpdateDiscountBody>;
+    params?: UpdateDiscountParams;
+  },
   TContext
 > => {
   const mutationKey = ["updateDiscount"];
@@ -3722,11 +4129,15 @@ export const getUpdateDiscountMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof updateDiscount>>,
-    { id: number; data: BodyType<UpdateDiscountBody> }
+    {
+      id: number;
+      data: BodyType<UpdateDiscountBody>;
+      params?: UpdateDiscountParams;
+    }
   > = (props) => {
-    const { id, data } = props ?? {};
+    const { id, data, params } = props ?? {};
 
-    return updateDiscount(id, data, requestOptions);
+    return updateDiscount(id, data, params, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -3748,14 +4159,22 @@ export const useUpdateDiscount = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof updateDiscount>>,
     TError,
-    { id: number; data: BodyType<UpdateDiscountBody> },
+    {
+      id: number;
+      data: BodyType<UpdateDiscountBody>;
+      params?: UpdateDiscountParams;
+    },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationResult<
   Awaited<ReturnType<typeof updateDiscount>>,
   TError,
-  { id: number; data: BodyType<UpdateDiscountBody> },
+  {
+    id: number;
+    data: BodyType<UpdateDiscountBody>;
+    params?: UpdateDiscountParams;
+  },
   TContext
 > => {
   return useMutation(getUpdateDiscountMutationOptions(options));
@@ -3764,15 +4183,31 @@ export const useUpdateDiscount = <
 /**
  * @summary Delete a discount
  */
-export const getDeleteDiscountUrl = (id: number) => {
-  return `/api/discounts/${id}`;
+export const getDeleteDiscountUrl = (
+  id: number,
+  params?: DeleteDiscountParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/discounts/${id}?${stringifiedParams}`
+    : `/api/discounts/${id}`;
 };
 
 export const deleteDiscount = async (
   id: number,
+  params?: DeleteDiscountParams,
   options?: RequestInit,
 ): Promise<void> => {
-  return customFetch<void>(getDeleteDiscountUrl(id), {
+  return customFetch<void>(getDeleteDiscountUrl(id, params), {
     ...options,
     method: "DELETE",
   });
@@ -3785,14 +4220,14 @@ export const getDeleteDiscountMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof deleteDiscount>>,
     TError,
-    { id: number },
+    { id: number; params?: DeleteDiscountParams },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof deleteDiscount>>,
   TError,
-  { id: number },
+  { id: number; params?: DeleteDiscountParams },
   TContext
 > => {
   const mutationKey = ["deleteDiscount"];
@@ -3806,11 +4241,11 @@ export const getDeleteDiscountMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof deleteDiscount>>,
-    { id: number }
+    { id: number; params?: DeleteDiscountParams }
   > = (props) => {
-    const { id } = props ?? {};
+    const { id, params } = props ?? {};
 
-    return deleteDiscount(id, requestOptions);
+    return deleteDiscount(id, params, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -3832,17 +4267,349 @@ export const useDeleteDiscount = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof deleteDiscount>>,
     TError,
-    { id: number },
+    { id: number; params?: DeleteDiscountParams },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationResult<
   Awaited<ReturnType<typeof deleteDiscount>>,
   TError,
-  { id: number },
+  { id: number; params?: DeleteDiscountParams },
   TContext
 > => {
   return useMutation(getDeleteDiscountMutationOptions(options));
+};
+
+/**
+ * @summary List all branches
+ */
+export const getListBranchesUrl = () => {
+  return `/api/admin/branches`;
+};
+
+export const listBranches = async (
+  options?: RequestInit,
+): Promise<Branch[]> => {
+  return customFetch<Branch[]>(getListBranchesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListBranchesQueryKey = () => {
+  return [`/api/admin/branches`] as const;
+};
+
+export const getListBranchesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listBranches>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listBranches>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListBranchesQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listBranches>>> = ({
+    signal,
+  }) => listBranches({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listBranches>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListBranchesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listBranches>>
+>;
+export type ListBranchesQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List all branches
+ */
+
+export function useListBranches<
+  TData = Awaited<ReturnType<typeof listBranches>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listBranches>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListBranchesQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Create a new branch
+ */
+export const getCreateBranchUrl = () => {
+  return `/api/admin/branches`;
+};
+
+export const createBranch = async (
+  createBranchBody: CreateBranchBody,
+  options?: RequestInit,
+): Promise<Branch> => {
+  return customFetch<Branch>(getCreateBranchUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createBranchBody),
+  });
+};
+
+export const getCreateBranchMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createBranch>>,
+    TError,
+    { data: BodyType<CreateBranchBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createBranch>>,
+  TError,
+  { data: BodyType<CreateBranchBody> },
+  TContext
+> => {
+  const mutationKey = ["createBranch"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createBranch>>,
+    { data: BodyType<CreateBranchBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createBranch(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateBranchMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createBranch>>
+>;
+export type CreateBranchMutationBody = BodyType<CreateBranchBody>;
+export type CreateBranchMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Create a new branch
+ */
+export const useCreateBranch = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createBranch>>,
+    TError,
+    { data: BodyType<CreateBranchBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createBranch>>,
+  TError,
+  { data: BodyType<CreateBranchBody> },
+  TContext
+> => {
+  return useMutation(getCreateBranchMutationOptions(options));
+};
+
+/**
+ * @summary Update a branch
+ */
+export const getUpdateBranchUrl = (id: number) => {
+  return `/api/admin/branches/${id}`;
+};
+
+export const updateBranch = async (
+  id: number,
+  updateBranchBody: UpdateBranchBody,
+  options?: RequestInit,
+): Promise<Branch> => {
+  return customFetch<Branch>(getUpdateBranchUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(updateBranchBody),
+  });
+};
+
+export const getUpdateBranchMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateBranch>>,
+    TError,
+    { id: number; data: BodyType<UpdateBranchBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateBranch>>,
+  TError,
+  { id: number; data: BodyType<UpdateBranchBody> },
+  TContext
+> => {
+  const mutationKey = ["updateBranch"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateBranch>>,
+    { id: number; data: BodyType<UpdateBranchBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateBranch(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateBranchMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateBranch>>
+>;
+export type UpdateBranchMutationBody = BodyType<UpdateBranchBody>;
+export type UpdateBranchMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Update a branch
+ */
+export const useUpdateBranch = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateBranch>>,
+    TError,
+    { id: number; data: BodyType<UpdateBranchBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateBranch>>,
+  TError,
+  { id: number; data: BodyType<UpdateBranchBody> },
+  TContext
+> => {
+  return useMutation(getUpdateBranchMutationOptions(options));
+};
+
+/**
+ * @summary Delete a branch
+ */
+export const getDeleteBranchUrl = (id: number) => {
+  return `/api/admin/branches/${id}`;
+};
+
+export const deleteBranch = async (
+  id: number,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getDeleteBranchUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteBranchMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteBranch>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteBranch>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["deleteBranch"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteBranch>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deleteBranch(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteBranchMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteBranch>>
+>;
+
+export type DeleteBranchMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Delete a branch
+ */
+export const useDeleteBranch = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteBranch>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteBranch>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getDeleteBranchMutationOptions(options));
 };
 
 /**

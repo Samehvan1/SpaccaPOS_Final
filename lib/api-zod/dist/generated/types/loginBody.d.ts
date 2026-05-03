@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 export interface LoginBody {
-    pin: string;
+    username: string;
+    password: string;
 }
 //# sourceMappingURL=loginBody.d.ts.map

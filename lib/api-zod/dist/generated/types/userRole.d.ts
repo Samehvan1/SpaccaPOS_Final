@@ -12,5 +12,6 @@ export declare const UserRole: {
     readonly frontdesk: "frontdesk";
     readonly cashier: "cashier";
     readonly pickup: "pickup";
+    readonly stockcontrol: "stockcontrol";
 };
 //# sourceMappingURL=userRole.d.ts.map

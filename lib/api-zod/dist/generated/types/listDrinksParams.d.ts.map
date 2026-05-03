@@ -1,1 +1,1 @@
-{"version":3,"file":"listDrinksParams.d.ts","sourceRoot":"","sources":["../../../src/generated/types/listDrinksParams.ts"],"names":[],"mappings":"AAAA;;;;;;GAMG;AAEH,MAAM,MAAM,gBAAgB,GAAG;IAC7B,QAAQ,CAAC,EAAE,MAAM,CAAC;IAClB,MAAM,CAAC,EAAE,OAAO,CAAC;CAClB,CAAC"}
+{"version":3,"file":"listDrinksParams.d.ts","sourceRoot":"","sources":["../../../src/generated/types/listDrinksParams.ts"],"names":[],"mappings":"AAAA;;;;;;GAMG;AAEH,MAAM,MAAM,gBAAgB,GAAG;IAC7B,QAAQ,CAAC,EAAE,MAAM,CAAC;IAClB,MAAM,CAAC,EAAE,OAAO,CAAC;IACjB,YAAY,CAAC,EAAE,OAAO,CAAC;CACxB,CAAC"}

@@ -1,9 +1,11 @@
-import { pgTable, serial, text, varchar, timestamp, boolean } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, varchar, timestamp, boolean, integer } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
+import { branchesTable } from "./branches";
 
 export const usersTable = pgTable("users", {
   id: serial("id").primaryKey(),
+  branchId: integer("branch_id").references(() => branchesTable.id), // Nullable for global admins
   name: text("name").notNull(),
   username: varchar("username", { length: 50 }).unique(),
   passwordHash: text("password_hash"),

@@ -16,6 +16,8 @@ export interface Ingredient {
     stockQuantity: number;
     lowStockThreshold: number;
     isActive: boolean;
+    linkedTypeCount?: number;
+    linkedProductCount?: number;
     createdAt: string;
     updatedAt: string;
 }

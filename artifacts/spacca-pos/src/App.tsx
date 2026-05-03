@@ -23,6 +23,7 @@ import ReportsPage from "@/pages/admin/reports";
 import CategoriesAdmin from "@/pages/admin/categories";
 import KitchenStationsAdmin from "@/pages/admin/kitchen-stations";
 import AdminUsers from "@/pages/admin/users";
+import BranchesAdmin from "@/pages/admin/branches";
 import DiscountsAdmin from "@/pages/admin/discounts";
 import ActivityLogs from "@/pages/admin/activity-logs";
 import PermissionsAdmin from "@/pages/admin/permissions";
@@ -258,6 +259,12 @@ function AppRoutes() {
       <Route path="/admin/cashier-performance">
         <MainLayout>
           <ProtectedRoute component={CashierPerformancePage} adminOnly={true} />
+        </MainLayout>
+      </Route>
+
+      <Route path="/admin/branches">
+        <MainLayout>
+          <ProtectedRoute component={BranchesAdmin} adminOnly={true} />
         </MainLayout>
       </Route>
 

@@ -48,9 +48,33 @@ export default function KioskPage() {
   const [step, setStep] = useState<"start" | "menu" | "checkout" | "success">("start");
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
   const [cart, setCart] = useState<any[]>([]);
+  const [selectedBranchId, setSelectedBranchId] = useState<number | null>(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const fromUrl = urlParams.get("branchId");
+    if (fromUrl) return parseInt(fromUrl);
+    const saved = localStorage.getItem("kiosk_branch_id");
+    return saved ? parseInt(saved) : null;
+  });
   const [orderNumber, setOrderNumber] = useState<string | null>(null);
 
-  const { data: drinks = [] } = useListDrinks({ active: true });
+  const { data: branches = [] } = useQuery<any[]>({
+    queryKey: ["branches"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/admin/branches`);
+      if (!res.ok) throw new Error("Failed to fetch branches");
+      return res.json();
+    },
+  });
+
+  useEffect(() => {
+    if (selectedBranchId) {
+      localStorage.setItem("kiosk_branch_id", selectedBranchId.toString());
+    }
+  }, [selectedBranchId]);
+
+  const selectedBranch = useMemo(() => branches.find(b => b.id === selectedBranchId), [branches, selectedBranchId]);
+
+  const { data: drinks = [] } = useListDrinks({ active: true, branchId: selectedBranchId || undefined });
   const { data: allCategories = [] } = useDrinkCategories();
 
   const categories = useMemo(() => allCategories.filter(c => c.isActive), [allCategories]);
@@ -67,6 +91,7 @@ export default function KioskPage() {
   const [isCustomizing, setIsCustomizing] = useState(false);
   const { data: drinkDetail, isLoading: isLoadingDrinkDetail } = useGetDrink(
     activeDrink?.id || 0,
+    { branchId: selectedBranchId || undefined },
     { query: { enabled: !!activeDrink } } as any
   );
 
@@ -159,7 +184,13 @@ export default function KioskPage() {
   
   useEffect(() => {
     if (activeDrink && currentSelectionsArray.length > 0) {
-      calculatePrice({ id: activeDrink.id, data: { selections: currentSelectionsArray } });
+      calculatePrice({ 
+        id: activeDrink.id, 
+        data: { 
+          branchId: selectedBranchId || undefined, 
+          selections: currentSelectionsArray 
+        } 
+      });
     }
   }, [activeDrink, currentSelectionsArray]);
 
@@ -264,6 +295,7 @@ export default function KioskPage() {
   const handleFinish = () => {
     createOrder({
       data: {
+        branchId: selectedBranchId || undefined,
         paymentMethod: "card", // Default to card for Kiosk
         items: cart.map(item => ({
           drinkId: item.drinkId,
@@ -282,22 +314,70 @@ export default function KioskPage() {
   };
 
   // --- Start Step ---
-  if (step === "start") {
+  if (step === "start" || !selectedBranchId) {
     return (
-      <div className="h-screen w-full bg-[#0a0a0a] flex flex-col items-center justify-center relative overflow-hidden" onClick={() => setStep("menu")}>
+      <div className="h-screen w-full bg-[#0a0a0a] flex flex-col items-center justify-center relative overflow-hidden">
         <div className="absolute inset-0 opacity-20 pointer-events-none bg-[url('https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&q=80&w=2070')] bg-cover bg-center" />
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#0a0a0a]/80 to-[#0a0a0a]" />
         
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="z-10 text-center space-y-6"
+          className="z-10 text-center space-y-8 w-full max-w-xl px-6"
         >
           <div className="w-24 h-24 bg-primary rounded-full flex items-center justify-center mx-auto mb-8 shadow-[0_0_50px_rgba(var(--primary),0.5)]">
             <Coffee className="h-12 w-12 text-primary-foreground" />
           </div>
-          <h1 className="text-6xl font-black text-white tracking-tighter uppercase italic">Spacca</h1>
-          <p className="text-xl text-white/60 font-medium tracking-[0.5em] uppercase">Touch to Order</p>
+          
+          <div className="space-y-2">
+            <h1 className="text-6xl font-black text-white tracking-tighter uppercase italic">Spacca</h1>
+            <p className="text-xl text-white/60 font-medium tracking-[0.5em] uppercase">Premium Coffee</p>
+          </div>
+
+          {!selectedBranchId ? (
+            <div className="space-y-6">
+              <h2 className="text-2xl font-bold text-white uppercase italic tracking-wider">Select Location</h2>
+              <div className="grid grid-cols-1 gap-4">
+                {branches.map(branch => (
+                  <Button 
+                    key={branch.id}
+                    variant="outline"
+                    className="h-20 rounded-[2rem] border-white/20 bg-white/5 hover:bg-primary hover:border-primary text-xl font-bold transition-all text-white"
+                    onClick={() => {
+                      setSelectedBranchId(branch.id);
+                      setStep("menu");
+                    }}
+                  >
+                    {branch.name}
+                  </Button>
+                ))}
+                {branches.length === 0 && (
+                  <div className="text-white/40 italic">Loading locations...</div>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-12">
+               <div className="space-y-2">
+                 <p className="text-white/40 uppercase tracking-[0.3em] font-black text-sm">Ordering from</p>
+                 <h2 className="text-3xl font-black text-primary italic uppercase">{selectedBranch?.name}</h2>
+               </div>
+               
+               <Button 
+                 className="w-full h-24 rounded-full text-2xl font-black uppercase tracking-[0.2em] shadow-2xl"
+                 onClick={() => setStep("menu")}
+               >
+                 Touch to Order
+               </Button>
+               
+               <button 
+                 onClick={() => setSelectedBranchId(null)}
+                 className="text-white/40 hover:text-white underline underline-offset-8 font-bold uppercase tracking-widest text-xs"
+               >
+                 Change Location
+               </button>
+            </div>
+          )}
         </motion.div>
       </div>
     );
@@ -311,7 +391,10 @@ export default function KioskPage() {
           <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
             <Coffee className="h-5 w-5 text-primary-foreground" />
           </div>
-          <span className="font-black text-xl tracking-tighter uppercase italic">Spacca</span>
+          <div className="flex flex-col">
+            <span className="font-black text-xl tracking-tighter uppercase italic leading-none">Spacca</span>
+            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{selectedBranch?.name}</span>
+          </div>
         </div>
         <div className="flex items-center gap-4">
           <Button variant="ghost" className="rounded-full font-bold uppercase tracking-widest text-xs">العربية</Button>
@@ -587,10 +670,14 @@ export default function KioskPage() {
             </ScrollArea>
 
             <div className="p-8 border-t space-y-6 bg-muted/20">
-              <div className="flex justify-between items-center px-4">
-                <span className="text-xl text-muted-foreground uppercase tracking-widest font-bold">Total Amount</span>
-                <span className="text-4xl font-black text-primary italic">{fmt(cartTotal)}</span>
-              </div>
+                <div className="flex flex-col">
+                  <span className="text-xs text-muted-foreground uppercase tracking-widest font-bold">Pick-up Location</span>
+                  <span className="text-lg font-black italic uppercase">{selectedBranch?.name}</span>
+                </div>
+                <div className="text-right">
+                  <span className="text-xs text-muted-foreground uppercase tracking-widest font-bold">Total Amount</span>
+                  <div className="text-4xl font-black text-primary italic">{fmt(cartTotal)}</div>
+                </div>
               <Button 
                 className="w-full h-24 rounded-[2rem] text-2xl font-black uppercase tracking-[0.2em] shadow-2xl"
                 onClick={handleFinish}

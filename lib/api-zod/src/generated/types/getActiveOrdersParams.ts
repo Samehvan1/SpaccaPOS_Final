@@ -9,4 +9,5 @@ import type { GetActiveOrdersStatus } from "./getActiveOrdersStatus";
 
 export type GetActiveOrdersParams = {
   status?: GetActiveOrdersStatus;
+  branchId?: number;
 };

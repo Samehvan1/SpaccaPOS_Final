@@ -32,7 +32,7 @@ export type CustomizationData = {
   customerSortOrder: number;
 };
 
-export async function calculateDrinkData(drinkId: number, selections: any[]) {
+export async function calculateDrinkData(drinkId: number, selections: any[], branchId: number | null = null) {
   const [drink] = await db.select().from(drinksTable).where(eq(drinksTable.id, drinkId));
   if (!drink) throw new Error("Drink not found");
 

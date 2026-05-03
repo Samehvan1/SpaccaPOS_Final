@@ -20,10 +20,18 @@ export const UserRole = {
   stockcontrol: "stockcontrol",
 } as const;
 
+export type UserBranch = {
+  id?: number;
+  name?: string;
+};
+
 export interface User {
   id: number;
   name: string;
   role: UserRole;
+  /** @nullable */
+  branchId?: number | null;
+  branch?: UserBranch;
 }
 
 export interface LoginBody {
@@ -35,27 +43,35 @@ export interface LoginResponse {
   user: User;
 }
 
-export type UserDetailRole =
-  (typeof UserDetailRole)[keyof typeof UserDetailRole];
-
-export const UserDetailRole = {
-  admin: "admin",
-  barista: "barista",
-  frontdesk: "frontdesk",
-  cashier: "cashier",
-  pickup: "pickup",
-  stockcontrol: "stockcontrol",
-} as const;
-
 export interface UserDetail {
   id: number;
   name: string;
   username: string;
-  role: UserDetailRole;
-  pin?: string;
+  role: string;
+  /** @nullable */
+  branchId?: number | null;
   isActive: boolean;
   createdAt?: string;
-  updatedAt?: string;
+}
+
+export interface Branch {
+  id: number;
+  name: string;
+  location?: string;
+  isActive?: boolean;
+  createdAt?: string;
+}
+
+export interface CreateBranchBody {
+  name: string;
+  location?: string;
+  isActive?: boolean;
+}
+
+export interface UpdateBranchBody {
+  name?: string;
+  location?: string;
+  isActive?: boolean;
 }
 
 export type CreateUserBodyRole =
@@ -75,6 +91,7 @@ export interface CreateUserBody {
   username: string;
   password: string;
   role: CreateUserBodyRole;
+  branchId?: number;
   pin?: string;
 }
 
@@ -87,7 +104,6 @@ export const UpdateUserBodyRole = {
   frontdesk: "frontdesk",
   cashier: "cashier",
   pickup: "pickup",
-  stockcontrol: "stockcontrol",
 } as const;
 
 export interface UpdateUserBody {
@@ -326,6 +342,7 @@ export type PriceCalculationBodySelectionsItem = {
 };
 
 export interface PriceCalculationBody {
+  branchId?: number;
   selections: PriceCalculationBodySelectionsItem[];
 }
 
@@ -491,6 +508,7 @@ export type CreateOrderBodyItemsItem = {
 };
 
 export interface CreateOrderBody {
+  branchId?: number;
   customerName?: string;
   paymentMethod: CreateOrderBodyPaymentMethod;
   amountTendered?: number;
@@ -700,11 +718,56 @@ export type ListDrinksParams = {
   category?: string;
   active?: boolean;
   includeSlots?: boolean;
+  branchId?: number;
+};
+
+export type GetDrinkParams = {
+  branchId?: number;
+};
+
+export type UpdateDrinkParams = {
+  branchId?: number;
+};
+
+export type DeleteDrinkParams = {
+  branchId?: number;
+};
+
+export type CalculateDrinkPriceParams = {
+  branchId?: number;
 };
 
 export type ListIngredientsParams = {
   type?: string;
   active?: boolean;
+};
+
+export type GetIngredientParams = {
+  branchId?: number;
+};
+
+export type UpdateIngredientParams = {
+  branchId?: number;
+};
+
+export type DeleteIngredientParams = {
+  branchId?: number;
+};
+
+export type CreateIngredientOptionParams = {
+  branchId?: number;
+};
+
+export type UpdateIngredientOptionParams = {
+  branchId?: number;
+};
+
+export type DeleteIngredientOptionParams = {
+  branchId?: number;
+};
+
+export type RestockIngredientParams = {
+  branchId?: number;
 };
 
 export type ListOrdersParams = {
@@ -713,6 +776,19 @@ export type ListOrdersParams = {
   endDate?: string;
   limit?: number;
   offset?: number;
+  branchId?: number;
+};
+
+export type GetOrderParams = {
+  branchId?: number;
+};
+
+export type UpdateOrderStatusParams = {
+  branchId?: number;
+};
+
+export type MarkOrderItemReadyParams = {
+  branchId?: number;
 };
 
 export type ListStockMovementsParams = {
@@ -723,6 +799,7 @@ export type ListStockMovementsParams = {
 
 export type GetActiveOrdersParams = {
   status?: GetActiveOrdersStatus;
+  branchId?: number;
 };
 
 export type GetActiveOrdersStatus =
@@ -734,6 +811,14 @@ export const GetActiveOrdersStatus = {
   in_progress: "in_progress",
   ready: "ready",
 } as const;
+
+export type UpdateUserParams = {
+  branchId?: number;
+};
+
+export type DeleteUserParams = {
+  branchId?: number;
+};
 
 export type ListActivityLogsParams = {
   userId?: number;
@@ -766,3 +851,11 @@ export const GetSettingsScope = {
   global: "global",
   user: "user",
 } as const;
+
+export type UpdateDiscountParams = {
+  branchId?: number;
+};
+
+export type DeleteDiscountParams = {
+  branchId?: number;
+};

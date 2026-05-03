@@ -5,15 +5,14 @@
  * Spacca POS API specification
  * OpenAPI spec version: 0.1.0
  */
-import type { UserDetailRole } from "./userDetailRole";
 
 export interface UserDetail {
   id: number;
   name: string;
   username: string;
-  role: UserDetailRole;
-  pin?: string;
+  role: string;
+  /** @nullable */
+  branchId?: number | null;
   isActive: boolean;
-  createdAt?: string;
-  updatedAt?: string;
+  createdAt?: Date;
 }

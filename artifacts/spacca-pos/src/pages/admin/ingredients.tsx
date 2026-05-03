@@ -18,6 +18,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { ArrowLeft, Plus, Search, Edit, Trash2, Link2, Star, StarOff, ChevronRight, Package, Tag, Layers, FlaskConical, Check, X, Droplet, Droplets, RefreshCw, CheckCircle2, ChevronsUpDown } from "lucide-react";
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 
 const INGREDIENT_TYPES = ["coffee", "milk", "syrup", "sauce", "sweetener", "topping", "base", "cup", "tea", "packing", "other"] as const;
 type IngredientType = typeof INGREDIENT_TYPES[number];
@@ -1048,7 +1049,11 @@ function VolumesTab() {
 function InventoryTab() {
   const [showInactive, setShowInactive] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const { data: ingredients, isLoading, refetch } = useListIngredients(showInactive ? {} : { active: true });
+  const { selectedBranchId } = useAuth();
+  const { data: ingredients, isLoading, refetch } = useListIngredients({ 
+    active: !showInactive,
+    branchId: selectedBranchId 
+  } as any);
   const [importing, setImporting] = useState(false);
   const { toast } = useToast();
 
@@ -2072,7 +2077,8 @@ function SlotTemplatesTab() {
 }
 
 export default function IngredientsAdmin() {
-  const { data: inventoryItems = [] } = useListIngredients();
+  const { selectedBranchId } = useAuth();
+  const { data: inventoryItems = [] } = useListIngredients({ branchId: selectedBranchId } as any);
 
   return (
     <div className="p-8 w-full flex flex-col gap-6 overflow-y-auto h-full">

@@ -1,8 +1,9 @@
-import { pgTable, serial, text, numeric, boolean, timestamp, integer } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, numeric, boolean, timestamp, integer, uniqueIndex, primaryKey } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import { branchesTable } from "./branches";
 
-// ── Inventory items (unchanged — used for stock tracking) ─────────────────
+// ── Inventory items (Master List — Global definitions) ─────────────────────
 export const ingredientsTable = pgTable("ingredients", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
@@ -12,12 +13,21 @@ export const ingredientsTable = pgTable("ingredients", {
   }).notNull(),
   unit: text("unit").notNull(),
   costPerUnit: numeric("cost_per_unit", { precision: 10, scale: 4 }).notNull(),
-  stockQuantity: numeric("stock_quantity", { precision: 12, scale: 4 }).notNull().default("0"),
-  lowStockThreshold: numeric("low_stock_threshold", { precision: 12, scale: 4 }).notNull().default("500"),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });
+
+// ── Branch-specific stock levels ──────────────────────────────────────────
+export const branchStockTable = pgTable("branch_stock", {
+  branchId: integer("branch_id").notNull().references(() => branchesTable.id, { onDelete: "cascade" }),
+  ingredientId: integer("ingredient_id").notNull().references(() => ingredientsTable.id, { onDelete: "cascade" }),
+  stockQuantity: numeric("stock_quantity", { precision: 12, scale: 4 }).notNull().default("0"),
+  lowStockThreshold: numeric("low_stock_threshold", { precision: 12, scale: 4 }).notNull().default("500"),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.branchId, table.ingredientId] }),
+}));
 
 export const ingredientOptionsTable = pgTable("ingredient_options", {
   id: serial("id").primaryKey(),
@@ -101,6 +111,7 @@ export const ingredientTypeVolumesTable = pgTable("ingredient_type_volumes", {
 
 // ── Zod / type exports ─────────────────────────────────────────────────────
 export const insertIngredientSchema = createInsertSchema(ingredientsTable).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertBranchStockSchema = createInsertSchema(branchStockTable).omit({ updatedAt: true });
 export const insertIngredientOptionSchema = createInsertSchema(ingredientOptionsTable).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertIngredientCategorySchema = createInsertSchema(ingredientCategoriesTable).omit({ id: true, createdAt: true });
 export const insertIngredientTypeSchema = createInsertSchema(ingredientTypesTable).omit({ id: true, createdAt: true });
@@ -108,8 +119,10 @@ export const insertIngredientVolumeSchema = createInsertSchema(ingredientVolumes
 export const insertIngredientTypeVolumeSchema = createInsertSchema(ingredientTypeVolumesTable).omit({ id: true });
 
 export type InsertIngredient = typeof ingredientsTable.$inferInsert;
+export type InsertBranchStock = typeof branchStockTable.$inferInsert;
 export type InsertIngredientOption = typeof ingredientOptionsTable.$inferInsert;
 export type Ingredient = typeof ingredientsTable.$inferSelect;
+export type BranchStock = typeof branchStockTable.$inferSelect;
 export type IngredientOption = typeof ingredientOptionsTable.$inferSelect;
 export type IngredientCategory = typeof ingredientCategoriesTable.$inferSelect;
 export type IngredientType = typeof ingredientTypesTable.$inferSelect;

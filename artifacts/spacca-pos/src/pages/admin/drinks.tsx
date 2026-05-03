@@ -14,11 +14,13 @@ import { ArrowLeft, Plus, Search, Edit, FlaskConical, Tag, Upload, X, ImageIcon,
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/use-auth";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "/api";
 
 function slugifyStation(name: string) {
   if (!name || name === "main" || name === "main-bar") return "hot-bar"; 
+  if (name === "cold") return "cold-bar";
   return name.toLowerCase().trim()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
@@ -70,9 +72,10 @@ function useDrinkCategories() {
 }
 
 export default function DrinksAdmin() {
+  const { selectedBranchId } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [showInactive, setShowInactive] = useState(false);
-  const { data: drinks, isLoading, refetch } = useListDrinks();
+  const { data: drinks, isLoading, refetch } = useListDrinks({ branchId: selectedBranchId } as any);
   const { data: categories = [] } = useDrinkCategories();
   const { data: stations = [] } = useKitchenStations();
   const { toast } = useToast();

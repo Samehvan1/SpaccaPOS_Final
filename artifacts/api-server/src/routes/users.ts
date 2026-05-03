@@ -11,7 +11,17 @@ const usersRouter: IRouter = Router();
 // GET /users
 usersRouter.get("/users", requirePermission("users:view"), async (req, res): Promise<void> => {
   try {
-    const allUsers = await db.select().from(usersTable);
+    const sessionUser = (req.session as any);
+    const isAdmin = sessionUser.role === "admin";
+    const sessionBranchId = sessionUser.branchId;
+
+    const targetBranchId = (isAdmin && req.query.branchId && req.query.branchId !== 'all') 
+      ? parseInt(req.query.branchId as string) 
+      : (isAdmin && req.query.branchId === 'all') ? null : sessionBranchId;
+
+    const allUsers = targetBranchId 
+      ? await db.select().from(usersTable).where(eq(usersTable.branchId, targetBranchId))
+      : await db.select().from(usersTable);
     res.json(allUsers.map(u => UserDetail.parse({
       ...u,
       username: u.username ?? `user_${u.id}`,
@@ -36,12 +46,14 @@ usersRouter.post("/users", requirePermission("users:create"), async (req, res): 
       return;
     }
 
+    const sessionBranchId = (req.session as any).branchId;
     const { password, ...userData } = parsed.data;
     const passwordHash = await bcrypt.hash(password, 10);
     const [newUser] = await db
       .insert(usersTable)
       .values({
         ...userData,
+        branchId: sessionBranchId,
         passwordHash,
       })
       .returning();

@@ -66,9 +66,10 @@ export default function AdminUsers() {
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("barista");
   const [isActive, setIsActive] = useState(true);
+  const [branchId, setBranchId] = useState<string>("__none__");
 
   const { data: users = [], isLoading } = useListUsers();
-  
+
   // Fetch dynamic roles for the select
   const { data: roles = [] } = useQuery({
     queryKey: ["roles"],
@@ -89,6 +90,16 @@ export default function AdminUsers() {
     }
   });
 
+  // Fetch branches
+  const { data: branches = [] } = useQuery({
+    queryKey: ["branches"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/branches");
+      if (!res.ok) throw new Error("Failed to load branches");
+      return res.json();
+    }
+  });
+
   const { mutate: createUser, isPending: isCreating } = useCreateUser();
   const { mutate: updateUser, isPending: isUpdating } = useUpdateUser();
   const { mutate: deleteUser } = useDeleteUser();
@@ -98,9 +109,11 @@ export default function AdminUsers() {
       setEditingUser(user);
       setName(user.name);
       setUsername(user.username || "");
-      setPassword(""); 
+      setPassword("");
       setRole(user.role);
       setIsActive(user.isActive !== false);
+      const bId = (user as any).branch?.id || (user as any).branchId;
+      setBranchId(bId ? String(bId) : "__none__");
     } else {
       setEditingUser(null);
       setName("");
@@ -108,6 +121,7 @@ export default function AdminUsers() {
       setPassword("");
       setRole("barista");
       setIsActive(true);
+      setBranchId("__none__");
     }
     setIsDialogOpen(true);
   };
@@ -156,7 +170,12 @@ export default function AdminUsers() {
       return;
     }
 
-    const payload: any = { name, username, role };
+    const payload: any = { 
+      name, 
+      username, 
+      role,
+      branchId: branchId === "__none__" ? null : parseInt(branchId)
+    };
     if (password) payload.password = password;
 
     if (editingUser) {
@@ -241,6 +260,7 @@ export default function AdminUsers() {
               <TableHead>User</TableHead>
               <TableHead>Username</TableHead>
               <TableHead>Role</TableHead>
+              <TableHead>Branch</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -264,6 +284,13 @@ export default function AdminUsers() {
                   <Badge variant="outline" className="px-3 py-1 font-semibold uppercase">
                     {user.role}
                   </Badge>
+                </TableCell>
+                <TableCell>
+                  <div className="text-sm">
+                    {(user as any).branch?.name || (
+                      <span className="text-muted-foreground italic">Global</span>
+                    )}
+                  </div>
                 </TableCell>
                 <TableCell>
                   {user.isActive !== false ? (
@@ -311,6 +338,18 @@ export default function AdminUsers() {
                 <SelectContent>
                   {roles.map((r: any) => (
                     <SelectItem key={r.key} value={r.key}>{r.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label>Assigned Branch</Label>
+              <Select value={branchId} onValueChange={setBranchId}>
+                <SelectTrigger><SelectValue placeholder="Select branch..." /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">All Branches (Admin/Global)</SelectItem>
+                  {branches.map((b: any) => (
+                    <SelectItem key={b.id} value={String(b.id)}>{b.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

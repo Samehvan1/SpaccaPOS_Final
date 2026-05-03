@@ -16,5 +16,7 @@ export interface UpdateDrinkBody {
     kitchenStation?: string;
     categoryId?: number;
     sortOrder?: number;
+    cupIngredientId?: number;
+    isCustomizable?: boolean;
 }
 //# sourceMappingURL=updateDrinkBody.d.ts.map

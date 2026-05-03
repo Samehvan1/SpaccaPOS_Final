@@ -5,6 +5,7 @@ import {
   useGetDrink,
   useCalculateDrinkPrice,
   useCreateOrder,
+  useListBranches,
   Drink,
 } from "@workspace/api-client-react";
 import { useSettings } from "@/hooks/use-settings";
@@ -76,11 +77,12 @@ function detectSubcategory(name: string): string {
 // Smart categorization disabled as per user request
 
 export default function PosTerminal() {
-  const { user } = useAuth();
+  const { user, selectedBranchId, setSelectedBranchId } = useAuth();
   const { toast } = useToast();
   const { allowNoStockSell } = useSettings();
 
-  const { data: drinks, isLoading: isLoadingDrinks } = useListDrinks({ active: true });
+  const { data: branches = [] } = useListBranches();
+  const { data: drinks, isLoading: isLoadingDrinks } = useListDrinks({ active: true, branchId: selectedBranchId || undefined });
   const { data: allCategories = [] } = useDrinkCategories();
 
   // Only show active categories that have the sort order from admin
@@ -142,6 +144,7 @@ export default function PosTerminal() {
   const [isCustomizing, setIsCustomizing] = useState(false);
   const { data: drinkDetail, isLoading: isLoadingDrinkDetail } = useGetDrink(
     activeDrink?.id || 0,
+    { branchId: selectedBranchId || undefined },
     { query: { enabled: !!activeDrink } } as any
   );
 
@@ -300,7 +303,13 @@ export default function PosTerminal() {
   useEffect(() => {
     if (activeDrink && currentSelectionsArray.length > 0) {
       calcRef.current(
-        { id: activeDrink.id, data: { selections: currentSelectionsArray } },
+        { 
+          id: activeDrink.id, 
+          data: { 
+            branchId: selectedBranchId || undefined,
+            selections: currentSelectionsArray 
+          } 
+        },
         { onError: () => { } }
       );
     }
@@ -485,6 +494,7 @@ export default function PosTerminal() {
     if (cart.length === 0) return;
     createOrder({
       data: {
+        branchId: selectedBranchId || undefined,
         customerName: customerName || undefined,
         paymentMethod,
         amountTendered: paymentMethod === "cash" && amountTendered ? parseFloat(amountTendered) : undefined,
@@ -1064,6 +1074,11 @@ export default function PosTerminal() {
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle className="text-2xl">Complete Order</DialogTitle>
+            <div className="flex items-center gap-2 mt-1">
+              <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 font-black tracking-widest text-[10px] uppercase">
+                Sending to: {branches.find(b => b.id === selectedBranchId)?.name || "Default Branch"}
+              </Badge>
+            </div>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
@@ -1174,6 +1189,48 @@ export default function PosTerminal() {
         </DialogContent>
       </Dialog>
 
+      {/* Anonymous Branch Picker Overlay */}
+      {!user && !selectedBranchId && (
+        <div className="fixed inset-0 z-[100] bg-background flex flex-col items-center justify-center p-6 text-center overflow-hidden">
+          {/* Animated Background Gradients */}
+          <div className="absolute inset-0 pointer-events-none overflow-hidden">
+            <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-primary/10 blur-[120px] rounded-full animate-pulse" />
+            <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-primary/5 blur-[100px] rounded-full animate-pulse delay-700" />
+          </div>
+
+          <div className="relative z-10 w-full max-w-lg space-y-10 animate-in fade-in zoom-in duration-700">
+            <div className="space-y-4">
+              <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-primary/10 border border-primary/20 shadow-xl mb-4 group hover:scale-110 transition-transform duration-500">
+                <Menu className="h-10 w-10 text-primary" />
+              </div>
+              <h1 className="text-5xl font-black tracking-tighter uppercase leading-none">
+                Welcome to <span className="text-primary">Spacca</span>
+              </h1>
+              <p className="text-muted-foreground font-medium tracking-wide">Select your location to view the menu and order</p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
+              {branches.map((branch) => (
+                <button
+                  key={branch.id}
+                  onClick={() => setSelectedBranchId(branch.id)}
+                  className="group relative flex flex-col items-center justify-center p-8 rounded-3xl border-2 border-primary/10 bg-card hover:border-primary hover:bg-primary/5 transition-all duration-300 shadow-lg hover:shadow-primary/20 active:scale-95"
+                >
+                  <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary mb-4 group-hover:scale-110 transition-transform">
+                    <Droplets className="h-6 w-6" />
+                  </div>
+                  <span className="text-xl font-black uppercase tracking-tight">{branch.name}</span>
+                  <div className="mt-2 h-1 w-0 bg-primary group-hover:w-full transition-all duration-500 rounded-full" />
+                </button>
+              ))}
+            </div>
+
+            <div className="pt-8 text-[10px] font-bold text-muted-foreground uppercase tracking-[0.3em] opacity-40">
+              Premium Digital Experience · v2.0
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import {
   db,
+  branchesTable,
   usersTable,
   ingredientsTable,
   ingredientOptionsTable,
@@ -20,32 +21,55 @@ export async function seedIfEmpty() {
 
   logger.info("Database is empty — seeding initial data...");
 
+  // ── Branches ──────────────────────────────────────────────────────────────
+  const [mainBranch] = await db.insert(branchesTable).values([
+    { name: "Main Branch", code: "MAIN", address: "123 Coffee St." }
+  ]).returning();
+
   // ── Users ──────────────────────────────────────────────────────────────────
-  const passwordHash = "$2a$10$7R8uE/Mv7y5zW3zX.P9OieV7pX4P3P3P3P3P3P3P3P3P3P3P3P3P"; // password123
+  const passwordHash = "$2b$10$nbgE.aj.RL2scpd02tJLtuHAgwBNIzguKSPStHc8/pmWeDwqbYTem"; // password123
   await db.insert(usersTable).values([
-    { name: "Admin User",  username: "admin",     passwordHash, role: "admin",     pin: "000000" },
-    { name: "Sarah",       username: "sarah",     passwordHash, role: "barista",   pin: "111111" },
-    { name: "James",       username: "james",     passwordHash, role: "barista",   pin: "222222" },
-    { name: "Spacca POS",  username: "spaccapos", passwordHash, role: "frontdesk", pin: "999999" },
+    { branchId: mainBranch.id, name: "Admin User",  username: "admin",     passwordHash, role: "admin",     pin: "000000" },
+    { branchId: mainBranch.id, name: "Sarah",       username: "sarah",     passwordHash, role: "barista",   pin: "111111" },
+    { branchId: mainBranch.id, name: "James",       username: "james",     passwordHash, role: "barista",   pin: "222222" },
+    { branchId: mainBranch.id, name: "Spacca POS",  username: "spaccapos", passwordHash, role: "frontdesk", pin: "999999" },
   ]);
 
   // ── Ingredients (inventory) ────────────────────────────────────────────────
   const [espresso, wholeMilk, oatMilk, almondMilk, vanillaSyrup, caramelSauce, chocSauce, hazelnutSyrup, sugarSyrup, whippedCream, coldBrew, matcha, milkType] =
     await db.insert(ingredientsTable).values([
-      { name: "Espresso Beans",        slug: "espresso-beans",        ingredientType: "coffee",    unit: "g",  costPerUnit: "0.5",   stockQuantity: "2000",  lowStockThreshold: "500"  },
-      { name: "Whole Milk",            slug: "whole-milk",            ingredientType: "milk",      unit: "ml", costPerUnit: "0.02",  stockQuantity: "4000",  lowStockThreshold: "1000" },
-      { name: "Oat Milk",              slug: "oat-milk",              ingredientType: "milk",      unit: "ml", costPerUnit: "0.04",  stockQuantity: "3000",  lowStockThreshold: "800"  },
-      { name: "Almond Milk",           slug: "almond-milk",           ingredientType: "milk",      unit: "ml", costPerUnit: "0.04",  stockQuantity: "2000",  lowStockThreshold: "500"  },
-      { name: "Vanilla Syrup",         slug: "vanilla-syrup",         ingredientType: "syrup",     unit: "ml", costPerUnit: "0.2",   stockQuantity: "1000",  lowStockThreshold: "200"  },
-      { name: "Caramel Sauce",         slug: "caramel-sauce",         ingredientType: "sauce",     unit: "ml", costPerUnit: "0.25",  stockQuantity: "800",   lowStockThreshold: "150"  },
-      { name: "Chocolate Sauce",       slug: "chocolate-sauce",       ingredientType: "sauce",     unit: "ml", costPerUnit: "0.2",   stockQuantity: "800",   lowStockThreshold: "150"  },
-      { name: "Hazelnut Syrup",        slug: "hazelnut-syrup",        ingredientType: "syrup",     unit: "ml", costPerUnit: "0.22",  stockQuantity: "600",   lowStockThreshold: "100"  },
-      { name: "Sugar Syrup",           slug: "sugar-syrup",           ingredientType: "sweetener", unit: "ml", costPerUnit: "0.1",   stockQuantity: "1500",  lowStockThreshold: "300"  },
-      { name: "Whipped Cream",         slug: "whipped-cream",         ingredientType: "topping",   unit: "g",  costPerUnit: "0.3",   stockQuantity: "500",   lowStockThreshold: "100"  },
-      { name: "Cold Brew Concentrate", slug: "cold-brew-concentrate", ingredientType: "coffee",    unit: "ml", costPerUnit: "0.4",   stockQuantity: "1500",  lowStockThreshold: "400"  },
-      { name: "Matcha Powder",         slug: "matcha-powder",         ingredientType: "base",      unit: "g",  costPerUnit: "1.8",   stockQuantity: "400",   lowStockThreshold: "100"  },
-      { name: "Milk Type",             slug: "milk-type",             ingredientType: "milk",      unit: "",   costPerUnit: "0",     stockQuantity: "9999",  lowStockThreshold: "0"    },
+      { name: "Espresso Beans",        slug: "espresso-beans",        ingredientType: "coffee",    unit: "g",  costPerUnit: "0.5"   },
+      { name: "Whole Milk",            slug: "whole-milk",            ingredientType: "milk",      unit: "ml", costPerUnit: "0.02"  },
+      { name: "Oat Milk",              slug: "oat-milk",              ingredientType: "milk",      unit: "ml", costPerUnit: "0.04"  },
+      { name: "Almond Milk",           slug: "almond-milk",           ingredientType: "milk",      unit: "ml", costPerUnit: "0.04"  },
+      { name: "Vanilla Syrup",         slug: "vanilla-syrup",         ingredientType: "syrup",     unit: "ml", costPerUnit: "0.2"   },
+      { name: "Caramel Sauce",         slug: "caramel-sauce",         ingredientType: "sauce",     unit: "ml", costPerUnit: "0.25"  },
+      { name: "Chocolate Sauce",       slug: "chocolate-sauce",       ingredientType: "sauce",     unit: "ml", costPerUnit: "0.2"   },
+      { name: "Hazelnut Syrup",        slug: "hazelnut-syrup",        ingredientType: "syrup",     unit: "ml", costPerUnit: "0.22"  },
+      { name: "Sugar Syrup",           slug: "sugar-syrup",           ingredientType: "sweetener", unit: "ml", costPerUnit: "0.1"   },
+      { name: "Whipped Cream",         slug: "whipped-cream",         ingredientType: "topping",   unit: "g",  costPerUnit: "0.3"   },
+      { name: "Cold Brew Concentrate", slug: "cold-brew-concentrate", ingredientType: "coffee",    unit: "ml", costPerUnit: "0.4"   },
+      { name: "Matcha Powder",         slug: "matcha-powder",         ingredientType: "base",      unit: "g",  costPerUnit: "1.8"   },
+      { name: "Milk Type",             slug: "milk-type",             ingredientType: "milk",      unit: "",   costPerUnit: "0"     },
     ]).returning();
+
+  // ── Branch Stock ──────────────────────────────────────────────────────────
+  const { branchStockTable } = await import("@workspace/db");
+  await db.insert(branchStockTable).values([
+    { branchId: mainBranch.id, ingredientId: espresso.id,      stockQuantity: "2000",  lowStockThreshold: "500"  },
+    { branchId: mainBranch.id, ingredientId: wholeMilk.id,     stockQuantity: "4000",  lowStockThreshold: "1000" },
+    { branchId: mainBranch.id, ingredientId: oatMilk.id,       stockQuantity: "3000",  lowStockThreshold: "800"  },
+    { branchId: mainBranch.id, ingredientId: almondMilk.id,    stockQuantity: "2000",  lowStockThreshold: "500"  },
+    { branchId: mainBranch.id, ingredientId: vanillaSyrup.id,  stockQuantity: "1000",  lowStockThreshold: "200"  },
+    { branchId: mainBranch.id, ingredientId: caramelSauce.id,  stockQuantity: "800",   lowStockThreshold: "150"  },
+    { branchId: mainBranch.id, ingredientId: chocSauce.id,     stockQuantity: "800",   lowStockThreshold: "150"  },
+    { branchId: mainBranch.id, ingredientId: hazelnutSyrup.id, stockQuantity: "600",   lowStockThreshold: "100"  },
+    { branchId: mainBranch.id, ingredientId: sugarSyrup.id,    stockQuantity: "1500",  lowStockThreshold: "300"  },
+    { branchId: mainBranch.id, ingredientId: whippedCream.id,  stockQuantity: "500",   lowStockThreshold: "100"  },
+    { branchId: mainBranch.id, ingredientId: coldBrew.id,      stockQuantity: "1500",  lowStockThreshold: "400"  },
+    { branchId: mainBranch.id, ingredientId: matcha.id,        stockQuantity: "400",   lowStockThreshold: "100"  },
+    { branchId: mainBranch.id, ingredientId: milkType.id,      stockQuantity: "9999",  lowStockThreshold: "0"    },
+  ]);
 
   // ── Ingredient Options (legacy system) ─────────────────────────────────────
   const opts = await db.insert(ingredientOptionsTable).values([
