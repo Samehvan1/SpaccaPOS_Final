@@ -296,12 +296,12 @@ export default function CashierPage() {
   const remainingOrders = sortedOrders.slice(1);
 
   return (
-    <div className="flex flex-col h-full bg-background overflow-hidden relative">
-      <div className="flex-1 overflow-y-auto">
+    <div className="flex flex-col h-full bg-background overflow-hidden relative min-h-0">
+      <div className="flex-1 flex flex-col min-h-0">
       <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-neon-cyan/5 blur-[120px] pointer-events-none rounded-full" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-neon-green/5 blur-[120px] pointer-events-none rounded-full" />
 
-      <Tabs defaultValue="approvals" className="flex-1 flex flex-col overflow-hidden">
+      <Tabs defaultValue="approvals" className="flex-1 flex flex-col overflow-hidden min-h-0">
         <div className="bg-background/40 backdrop-blur-md border-b border-white/5 px-6 h-16 shrink-0 flex items-center justify-between z-10">
           <div className="flex items-center gap-6">
             <h1 className="text-xl font-black tracking-tighter text-foreground uppercase">
@@ -341,8 +341,8 @@ export default function CashierPage() {
           </div>
         </div>
 
-        <TabsContent value="approvals" className="flex-1 flex flex-col overflow-hidden m-0 p-0">
-          <ScrollArea className="flex-1">
+        <TabsContent value="approvals" className="flex-1 flex flex-col overflow-hidden m-0 p-0 min-h-0">
+          <ScrollArea className="flex-1 h-full">
             <div className="max-w-[1600px] mx-auto p-8 space-y-10">
               {orders.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-[70vh] text-muted-foreground animate-in fade-in zoom-in duration-500">
@@ -482,7 +482,7 @@ export default function CashierPage() {
           </ScrollArea>
         </TabsContent>
 
-        <TabsContent value="recent" className="flex-1 flex flex-col overflow-hidden m-0 p-0">
+        <TabsContent value="recent" className="flex-1 flex flex-col overflow-hidden m-0 p-0 min-h-0">
           <div className="p-6 border-b border-white/5 bg-white/[0.01]">
             <div className="relative max-w-md mx-auto">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -559,7 +559,7 @@ export default function CashierPage() {
           </ScrollArea>
         </TabsContent>
 
-        <TabsContent value="terminal" className="flex-1 flex flex-col overflow-hidden m-0">
+        <TabsContent value="terminal" className="flex-1 flex flex-col overflow-hidden m-0 min-h-0">
           <PosTerminal />
         </TabsContent>
       </Tabs>
