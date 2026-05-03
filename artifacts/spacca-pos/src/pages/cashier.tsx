@@ -494,7 +494,7 @@ export default function CashierPage() {
               />
             </div>
           </div>
-          <ScrollArea className="flex-1">
+          <ScrollArea className="flex-1 h-full">
             <div className="max-w-4xl mx-auto p-6 space-y-4">
               {recentOrders.length === 0 ? (
                 <div className="text-center py-20">
