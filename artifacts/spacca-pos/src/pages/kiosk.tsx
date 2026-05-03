@@ -539,9 +539,15 @@ export default function KioskPage() {
                               onClick={() => {
                                 setSelections(prev => ({ ...prev, [slot.id]: id }));
                                 if (slot.slotStyle === "typed") {
+                                  // Clear old sub-selection first, then set the new default
                                   const availableVols = (opt.volumes ?? []).filter((v: any) => allowNoStockSell || v.isAvailable);
                                   const defVol = availableVols.find((v: any) => v.isDefault) ?? availableVols[availableVols.length - 1] ?? opt.volumes?.[0];
-                                  if (defVol) setSubSelections(prev => ({ ...prev, [slot.id]: defVol.id }));
+                                  setSubSelections(prev => {
+                                    const next = { ...prev };
+                                    delete next[slot.id]; // clear stale volume from previous type
+                                    if (defVol) next[slot.id] = defVol.id;
+                                    return next;
+                                  });
                                 } else if (opt.linkedIngredient?.options?.length) {
                                   const subOpts = opt.linkedIngredient.options;
                                   const availableSub = allowNoStockSell ? subOpts : subOpts.filter((so: any) => so.isAvailable);

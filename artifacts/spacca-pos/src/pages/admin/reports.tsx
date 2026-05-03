@@ -108,12 +108,10 @@ export default function ReportsPage() {
   };
 
   // Fetch drink details for defaults when a customized item is selected (modal)
-  const { data: drinkDetail, isLoading: loadingDrinkDetail } = useGetDrink(selectedCustomizedItem?.drinkId || 0, {
-    query: { 
-      enabled: !!selectedCustomizedItem?.drinkId,
-      branchId: selectedBranchId
-    } as any
-  });
+  const { data: drinkDetail, isLoading: loadingDrinkDetail } = useGetDrink(
+    selectedCustomizedItem?.drinkId || 0,
+    { enabled: !!selectedCustomizedItem?.drinkId } as any
+  );
 
   const defaultsMap = useMemo(() => buildDefaultsMap(drinkDetail?.slots as any[]), [drinkDetail]);
 
@@ -142,6 +140,7 @@ export default function ReportsPage() {
   const { data: reportOrders, isLoading: loadingReportOrders } = useListOrders({
     startDate: reportStartDate,
     endDate: reportEndDate,
+    status: "paid,completed,ready,in_progress", // Match summary by excluding cancelled/refunded
     limit: rowsPerPage,
     offset: (reportPage - 1) * rowsPerPage,
     branchId: selectedBranchId

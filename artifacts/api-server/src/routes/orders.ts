@@ -136,12 +136,22 @@ router.get("/orders", async (req, res): Promise<void> => {
   const limit = params.success && params.data.limit ? params.data.limit : 50;
   const offset = params.success && params.data.offset ? params.data.offset : 0;
 
-  const ordersRaw = conditions.length
-    ? await db.select().from(ordersTable).where(and(...conditions)).orderBy(desc(ordersTable.createdAt))
-    : await db.select().from(ordersTable).orderBy(desc(ordersTable.createdAt));
+  // If no status provided in reports/dashboard context, we usually want to exclude cancelled/refunded
+  // but for the general list, we allow everything unless filtered.
+  // However, we'll ensure the conditions are applied at the DB level.
+  
+  const query = db.select().from(ordersTable);
+  
+  if (conditions.length > 0) {
+    query.where(and(...conditions));
+  }
+  
+  const orders = await query
+    .orderBy(desc(ordersTable.createdAt))
+    .limit(limit)
+    .offset(offset);
 
-  const paginated = ordersRaw.slice(offset, offset + limit);
-  const orderIds = paginated.map((o) => o.id);
+  const orderIds = orders.map((o) => o.id);
 
   // Bulk fetch items and customizations
   const [items, baristas] = await Promise.all([
@@ -178,7 +188,7 @@ router.get("/orders", async (req, res): Promise<void> => {
 
   res.json(
     ListOrdersResponse.parse(
-      serializeDates(paginated.map((o) => ({
+      serializeDates(orders.map((o) => ({
         ...o,
         baristaName: baristaMap[o.baristaId] ?? "Unknown",
         subtotal: parseFloat(o.subtotal),

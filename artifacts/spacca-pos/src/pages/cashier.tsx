@@ -296,12 +296,11 @@ export default function CashierPage() {
   const remainingOrders = sortedOrders.slice(1);
 
   return (
-    <div className="flex flex-col h-full bg-background overflow-hidden relative min-h-0">
-      <div className="flex-1 flex flex-col min-h-0">
+    <div className="flex flex-col h-full bg-background overflow-hidden relative">
       <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-neon-cyan/5 blur-[120px] pointer-events-none rounded-full" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-neon-green/5 blur-[120px] pointer-events-none rounded-full" />
 
-      <Tabs defaultValue="approvals" className="flex-1 flex flex-col overflow-hidden min-h-0">
+      <Tabs defaultValue="approvals" className="flex flex-col h-full overflow-hidden">
         <div className="bg-background/40 backdrop-blur-md border-b border-white/5 px-6 h-16 shrink-0 flex items-center justify-between z-10">
           <div className="flex items-center gap-6">
             <h1 className="text-xl font-black tracking-tighter text-foreground uppercase">
@@ -341,9 +340,8 @@ export default function CashierPage() {
           </div>
         </div>
 
-        <TabsContent value="approvals" className="flex-1 flex flex-col overflow-hidden m-0 p-0 min-h-0">
-          <ScrollArea className="flex-1 h-full">
-            <div className="max-w-[1600px] mx-auto p-8 space-y-10">
+        <TabsContent value="approvals" className="h-[calc(100%-4rem)] overflow-y-auto m-0 p-0">
+            <div className="max-w-[1600px] mx-auto p-4 space-y-4">
               {orders.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-[70vh] text-muted-foreground animate-in fade-in zoom-in duration-500">
                   <div className="relative">
@@ -431,11 +429,11 @@ export default function CashierPage() {
                   )}
 
                   {remainingOrders.length > 0 && (
-                    <div className="space-y-6 pt-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                    <div className="space-y-3 pt-4 animate-in fade-in slide-in-from-bottom-4 duration-700">
                       <h2 className="text-sm font-black uppercase tracking-widest text-muted-foreground flex items-center gap-3">
                         <span className="w-8 h-[2px] bg-white/10" />Remaining orders ({remainingOrders.length})
                       </h2>
-                      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
                         {remainingOrders.map((order: any) => (
                           <Card key={order.id} className="glass-card border-neon-green/20 ring-1 ring-white/5 hover:border-neon-green/40 transition-all group rounded-3xl overflow-hidden shadow-2xl">
                             <CardHeader className="p-6 pb-4 border-b border-white/5 space-y-4">
@@ -479,11 +477,10 @@ export default function CashierPage() {
                 </>
               )}
             </div>
-          </ScrollArea>
         </TabsContent>
 
-        <TabsContent value="recent" className="flex-1 flex flex-col overflow-hidden m-0 p-0 min-h-0">
-          <div className="p-6 border-b border-white/5 bg-white/[0.01]">
+        <TabsContent value="recent" className="h-[calc(100%-4rem)] flex flex-col overflow-hidden m-0 p-0">
+          <div className="p-6 border-b border-white/5 bg-white/[0.01] shrink-0">
             <div className="relative max-w-md mx-auto">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input 
@@ -494,8 +491,8 @@ export default function CashierPage() {
               />
             </div>
           </div>
-          <ScrollArea className="flex-1 h-full">
-            <div className="max-w-4xl mx-auto p-6 space-y-4">
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <div className="max-w-4xl mx-auto p-4 space-y-2">
               {recentOrders.length === 0 ? (
                 <div className="text-center py-20">
                   <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-4">
@@ -556,14 +553,13 @@ export default function CashierPage() {
                 </Card>
               ))}
             </div>
-          </ScrollArea>
+          </div>
         </TabsContent>
 
-        <TabsContent value="terminal" className="flex-1 flex flex-col overflow-hidden m-0 min-h-0">
+        <TabsContent value="terminal" className="h-[calc(100%-4rem)] overflow-hidden m-0">
           <PosTerminal />
         </TabsContent>
       </Tabs>
-
       <Dialog open={isReceiptOpen} onOpenChange={setIsReceiptOpen}>
         <DialogContent className="sm:max-w-[380px] bg-[#0A0A0B] border-white/10 text-white">
           <DialogHeader>
@@ -732,8 +728,7 @@ export default function CashierPage() {
           <div className="py-4 space-y-6">
             <p className="text-sm text-muted-foreground font-medium">Select items that should be <span className="text-neon-green">returned to stock</span>. Unchecked items will be marked as <span className="text-red-400">Waste</span>.</p>
             
-            <ScrollArea className="max-h-[300px] pr-4">
-              <div className="space-y-3">
+            <div className="max-h-[55vh] overflow-y-auto pr-1 space-y-3">
                 {recentOrders.find(o => o.id === refundOrderId)?.items.map((item: any) => {
                   const isSelected = selectedRefundItems.has(item.id);
                   return (
@@ -768,8 +763,7 @@ export default function CashierPage() {
                     </div>
                   );
                 })}
-              </div>
-            </ScrollArea>
+            </div>
           </div>
           <DialogFooter>
             <Button 
@@ -782,7 +776,6 @@ export default function CashierPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      </div>
     </div>
   );
 }
