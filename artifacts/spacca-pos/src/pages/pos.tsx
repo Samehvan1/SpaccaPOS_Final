@@ -18,7 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
-import { Minus, Plus, ShoppingCart, Trash2, X, ChevronRight, Droplets, Search, Menu, RotateCcw, Ticket, Check, Loader2, Tag, User } from "lucide-react";
+import { Minus, Plus, ShoppingCart, Trash2, X, ChevronRight, Droplets, Search, Menu, RotateCcw, Ticket, Check, Loader2, Tag, User, Lock } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { fmt } from "@/lib/currency";
 import { CupSimulator, type CupLayer } from "@/components/cup-simulator";
@@ -448,7 +448,8 @@ export default function PosTerminal() {
   // Checkout
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [customerName, setCustomerName] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState<"cash" | "card" | "wallet">("card");
+  const [paymentMethod, setPaymentMethod] = useState<"cash" | "card" | "wallet" | "hospitality">("card");
+  const [adminPin, setAdminPin] = useState("");
   const [amountTendered, setAmountTendered] = useState("");
 
   const handleValidateDiscount = async () => {
@@ -498,6 +499,7 @@ export default function PosTerminal() {
         customerName: customerName || undefined,
         paymentMethod,
         amountTendered: paymentMethod === "cash" && amountTendered ? parseFloat(amountTendered) : undefined,
+        adminPin: paymentMethod === "hospitality" ? adminPin : undefined,
         discountCode: appliedDiscount?.code,
         items: cart.map(item => ({
           drinkId: item.drinkId,
@@ -1092,12 +1094,15 @@ export default function PosTerminal() {
             </div>
             <div className="grid gap-2">
               <Label>Payment Method</Label>
-              <div className="grid grid-cols-3 gap-2">
-                {(["card", "cash", "wallet"] as const).map(method => (
+              <div className="grid grid-cols-4 gap-2">
+                {["cash", "card", "wallet", "hospitality"].map(method => (
                   <Button
                     key={method}
                     variant={paymentMethod === method ? "default" : "outline"}
-                    onClick={() => setPaymentMethod(method)}
+                    onClick={() => {
+                      setPaymentMethod(method as any);
+                      if (method !== "hospitality") setAdminPin("");
+                    }}
                     className="capitalize"
                   >
                     {method}
@@ -1105,6 +1110,22 @@ export default function PosTerminal() {
                 ))}
               </div>
             </div>
+            {paymentMethod === "hospitality" && (
+              <div className="grid gap-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                <Label htmlFor="adminPin" className="text-pink-600 font-bold">Admin Authorization PIN</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-pink-400" />
+                  <Input
+                    id="adminPin"
+                    type="password"
+                    value={adminPin}
+                    onChange={e => setAdminPin(e.target.value)}
+                    placeholder="Enter Admin PIN"
+                    className="pl-9 border-pink-200 focus-visible:ring-pink-500"
+                  />
+                </div>
+              </div>
+            )}
             {paymentMethod === "cash" && (
               <div className="grid gap-2">
                 <Label htmlFor="amount">Amount Tendered</Label>

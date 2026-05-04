@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/componen
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Check, X, Loader2, Calculator, ClipboardList, User, ListChecks, CreditCard, Banknote, Wallet, Receipt, Printer, FileText, LogOut, Clock, ShoppingBag, TrendingUp, Lock, RotateCcw, Search, History } from "lucide-react";
+import { Check, X, Loader2, Calculator, ClipboardList, User, ListChecks, CreditCard, Banknote, Wallet, Receipt, Printer, FileText, LogOut, Clock, ShoppingBag, TrendingUp, Lock, RotateCcw, Search, History, Gift } from "lucide-react";
 import { fmt } from "@/lib/currency";
 import { printCustomerReceipt, printAgentReceipts } from "@/components/receipt-printer";
 import { useSettings } from "@/hooks/use-settings";
@@ -153,13 +153,14 @@ export default function CashierPage() {
   const [isReceiptOpen, setIsReceiptOpen] = useState(false);
   const [shiftSummary, setShiftSummary] = useState<any>(null);
   const [isSummaryOpen, setIsSummaryOpen] = useState(false);
-  const [refundOrderId, setRefundOrderId] = useState<number | null>(null);
-  const [isAdminAuthOpen, setIsAdminAuthOpen] = useState(false);
-  const [adminPin, setAdminPin] = useState("");
-  const [isRefunding, setIsRefunding] = useState(false);
   const [isRefundItemsOpen, setIsRefundItemsOpen] = useState(false);
   const [selectedRefundItems, setSelectedRefundItems] = useState<Set<number>>(new Set());
+  const [authAction, setAuthAction] = useState<{ type: 'refund' | 'hospitality', orderId: number } | null>(null);
+  const [adminPin, setAdminPin] = useState("");
+  const [isRefunding, setIsRefunding] = useState(false);
   const [recentSearch, setRecentSearch] = useState("");
+  // Local payment method overrides — never hit the API until Approve is clicked
+  const [localPaymentMethods, setLocalPaymentMethods] = useState<Map<number, string>>(new Map());
   const { session, loading: sessionLoading, endSession, refetch } = useCashierSession();
   const [now, setNow] = useState(Date.now());
 
@@ -187,11 +188,28 @@ export default function CashierPage() {
     printAgentReceipts(order);
   };
 
-  const handleRefundAuth = async () => {
-    if (!refundOrderId || !adminPin) return;
+  const handleAdminAuth = async () => {
+    if (!authAction || !adminPin) return;
     setIsRefunding(true);
     try {
-      // Verify PIN by calling a dummy or small check (or just wait for items dialog)
+      if (authAction.type === 'hospitality') {
+        // Verify the PIN, then store hospitality as the local payment method.
+        // The actual API update fires only when the cashier clicks Approve.
+        const res = await fetch(`${API_BASE}/auth/verify-pin`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ pin: adminPin }),
+          credentials: "include",
+        });
+        if (!res.ok) throw new Error((await res.json()).error ?? "Invalid Admin PIN");
+        // Store both the chosen method AND the verified PIN for later use on Approve
+        setLocalPaymentMethods(prev => new Map(prev).set(authAction.orderId, `hospitality:${adminPin}`));
+        toast({ title: "Hospitality Authorized", description: "Click Approve to finalize the hospitality order." });
+        setAuthAction(null);
+        setAdminPin("");
+        return;
+      }
+
       const res = await fetch(`${API_BASE}/auth/verify-pin`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -200,8 +218,9 @@ export default function CashierPage() {
       });
       if (!res.ok) throw new Error((await res.json()).error ?? "Verification failed");
       
-      setIsAdminAuthOpen(false);
-      setIsRefundItemsOpen(true);
+      if (authAction.type === 'refund') {
+        setIsRefundItemsOpen(true);
+      }
     } catch (e: any) {
       toast({ variant: "destructive", title: "Auth Failed", description: e.message });
       setAdminPin("");
@@ -211,10 +230,10 @@ export default function CashierPage() {
   };
 
   const handleFinalRefund = async () => {
-    if (!refundOrderId || !adminPin) return;
+    if (!authAction || authAction.type !== 'refund' || !adminPin) return;
     setIsRefunding(true);
     try {
-      const res = await fetch(`${API_BASE}/orders/${refundOrderId}/refund`, {
+      const res = await fetch(`${API_BASE}/orders/${authAction.orderId}/refund`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
@@ -227,7 +246,7 @@ export default function CashierPage() {
       toast({ title: "Order Refunded", description: "The order has been marked as refunded." });
       setIsRefundItemsOpen(false);
       setAdminPin("");
-      setRefundOrderId(null);
+      setAuthAction(null);
       setSelectedRefundItems(new Set());
       refetchRecent();
     } catch (e: any) {
@@ -237,13 +256,64 @@ export default function CashierPage() {
     }
   };
 
+  /**
+   * selectLocalPaymentMethod — updates client-side state only, no API call.
+   * For hospitality, triggers PIN dialog first.
+   */
+  const selectLocalPaymentMethod = (orderId: number, method: string) => {
+    if (method === 'hospitality') {
+      // Check if already authorized for this order
+      const existing = localPaymentMethods.get(orderId);
+      if (existing?.startsWith('hospitality:')) {
+        // Already authorized — deselect back to original order payment method
+        setLocalPaymentMethods(prev => { const m = new Map(prev); m.delete(orderId); return m; });
+        return;
+      }
+      setAuthAction({ type: 'hospitality', orderId });
+      return;
+    }
+    setLocalPaymentMethods(prev => {
+      const m = new Map(prev);
+      const current = orders.find((o: any) => o.id === orderId);
+      // If clicking the same non-hospitality method that is already saved/selected, deselect it
+      const selected = m.get(orderId) ?? current?.paymentMethod;
+      if (selected === method && !m.has(orderId)) {
+        // Already the original — nothing to do
+        return m;
+      }
+      m.set(orderId, method);
+      return m;
+    });
+  };
+
   const handleUpdateStatus = (orderId: any, status: string) => {
     const currentOrder = orders.find((o: any) => o.id === orderId);
+
+    // Resolve the payment method: local override takes priority
+    let rawLocal = localPaymentMethods.get(orderId);
+    let resolvedPaymentMethod: string | undefined = rawLocal;
+    let resolvedAdminPin: string | undefined = undefined;
+
+    if (rawLocal?.startsWith('hospitality:')) {
+      resolvedPaymentMethod = 'hospitality';
+      resolvedAdminPin = rawLocal.split(':')[1];
+    }
+
     updateStatus(
-      { id: orderId as any, data: { status: status as any, cashierId: session?.cashier?.id } as any },
+      { 
+        id: orderId as any, 
+        data: { 
+          status: status as any, 
+          cashierId: session?.cashier?.id,
+          ...(resolvedPaymentMethod ? { paymentMethod: resolvedPaymentMethod as any } : {}),
+          ...(resolvedAdminPin ? { adminPin: resolvedAdminPin } : {}),
+        } as any 
+      },
       {
         onSuccess: (data) => {
           queryClient.invalidateQueries({ queryKey: ["/api/dashboard/active-orders"] });
+          // Clear local override for this order on any successful status change
+          setLocalPaymentMethods(prev => { const m = new Map(prev); m.delete(orderId); return m; });
           if (status === "paid") {
             toast({ title: "Order Approved", description: `Order ${data.orderNumber} sent to KDS.` });
             const fullOrderData = { ...currentOrder, ...data, items: (data as any).items || currentOrder?.items || [] };
@@ -255,7 +325,10 @@ export default function CashierPage() {
             toast({ title: "Order Cancelled", description: `Order ${data.orderNumber} cancelled.` });
           }
         },
-        onError: () => toast({ variant: "destructive", title: "Error", description: "Failed to update order." }),
+        onError: (err: any) => {
+          const msg = err?.response?.data?.error ?? "Failed to update order.";
+          toast({ variant: "destructive", title: "Error", description: msg });
+        },
       }
     );
   };
@@ -380,13 +453,33 @@ export default function CashierPage() {
                                 </div>
                               </div>
                               <div className="pt-4 border-t border-white/5 flex flex-col md:flex-row gap-8 items-start">
-                                <div className="min-w-[140px]">
-                                  <label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-3 block">Payment</label>
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-8 h-8 rounded-lg bg-neon-green/10 flex items-center justify-center text-neon-green border border-neon-green/20">
-                                      <CreditCard className="h-4 w-4" />
-                                    </div>
-                                    <span className="text-sm font-black uppercase tracking-tight">{heroOrder.paymentMethod || "Pending"}</span>
+                                <div className="flex-1">
+                                  <label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-3 block">Payment Method</label>
+                                  <div className="flex flex-wrap gap-2">
+                                    {[
+                                      { id: "cash", icon: Banknote, color: "text-amber-500" },
+                                      { id: "card", icon: CreditCard, color: "text-purple-500" },
+                                      { id: "wallet", icon: Wallet, color: "text-neon-cyan" },
+                                      { id: "hospitality", icon: Gift, color: "text-pink-500" }
+                                    ].map((m) => {
+                                      const rawLocal = localPaymentMethods.get(heroOrder.id);
+                                      const effectiveMethod = rawLocal?.startsWith('hospitality:') ? 'hospitality' : (rawLocal ?? heroOrder.paymentMethod);
+                                      const isActive = effectiveMethod === m.id;
+                                      return (
+                                        <button
+                                          key={m.id}
+                                          onClick={() => selectLocalPaymentMethod(heroOrder.id, m.id)}
+                                          className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all ${
+                                            isActive 
+                                              ? "bg-white/10 border-white/20 ring-1 ring-white/10" 
+                                              : "bg-white/5 border-transparent opacity-40 hover:opacity-100"
+                                          }`}
+                                        >
+                                          <m.icon className={`h-4 w-4 ${m.color}`} />
+                                          <span className="text-[10px] font-black uppercase tracking-tight">{m.id === 'hospitality' && rawLocal?.startsWith('hospitality:') ? '✓ ' : ''}{m.id}</span>
+                                        </button>
+                                      );
+                                    })}
                                   </div>
                                 </div>
                                 <div className="hidden md:block w-[1px] h-12 bg-white/10 self-center" />
@@ -410,7 +503,9 @@ export default function CashierPage() {
                               >
                                 <Check className="h-12 w-12 group-hover:scale-125 transition-transform" />
                                 <span className="text-xl font-black tracking-tighter uppercase">APPROVE</span>
-                                <span className="text-xs font-bold opacity-60 uppercase tracking-widest">{fmt(heroOrder.total)}</span>
+                                <span className="text-xs font-bold opacity-60 uppercase tracking-widest">
+                                  {(() => { const r = localPaymentMethods.get(heroOrder.id); return r?.startsWith('hospitality:') ? 'HOSPITALITY' : fmt(heroOrder.total); })()}
+                                </span>
                               </Button>
                               <Button
                                 variant="outline"
@@ -444,7 +539,25 @@ export default function CashierPage() {
                                 </div>
                                 <div className="text-right">
                                   <div className="text-2xl font-black text-neon-green">{fmt(order.total)}</div>
-                                  <Badge variant="outline" className="mt-1 border-white/10 text-[10px] bg-white/5 uppercase">{order.paymentMethod}</Badge>
+                                  <div className="flex flex-wrap gap-1 justify-end mt-1">
+                                    {["cash", "card", "wallet", "hospitality"].map(m => {
+                                      const rawLocal = localPaymentMethods.get(order.id);
+                                      const effectiveMethod = rawLocal?.startsWith('hospitality:') ? 'hospitality' : (rawLocal ?? order.paymentMethod);
+                                      return (
+                                        <button 
+                                          key={m}
+                                          onClick={() => selectLocalPaymentMethod(order.id, m)}
+                                          className={`px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase border transition-all ${
+                                            effectiveMethod === m 
+                                              ? "border-neon-cyan/50 bg-neon-cyan/10 text-neon-cyan" 
+                                              : "border-white/10 bg-white/5 text-muted-foreground opacity-40 hover:opacity-100"
+                                          }`}
+                                        >
+                                          {m === 'hospitality' && rawLocal?.startsWith('hospitality:') ? '✓ ' : ''}{m}
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
                                 </div>
                               </div>
                             </CardHeader>
@@ -466,7 +579,8 @@ export default function CashierPage() {
                                 <X className="w-4 h-4 mr-2" /> Cancel
                               </Button>
                               <Button className="h-12 font-black text-xs uppercase tracking-widest bg-white/5 hover:bg-neon-green/20 hover:text-neon-green text-foreground transition-all rounded-xl border border-white/5 hover:border-neon-green/30" onClick={() => handleUpdateStatus(order.id, "paid")} disabled={isPending}>
-                                <Check className="w-4 h-4 mr-2" /> Approve
+                                <Check className="w-4 h-4 mr-2" />
+                                {(() => { const r = localPaymentMethods.get(order.id); return r?.startsWith('hospitality:') ? 'Hospitality ✓' : 'Approve'; })()}
                               </Button>
                             </CardFooter>
                           </Card>
@@ -543,7 +657,7 @@ export default function CashierPage() {
                           <Printer className="h-4 w-4" /> <span className="text-xs font-bold">Reprint</span>
                         </Button>
                         {order.status !== 'refunded' && (
-                          <Button variant="outline" size="sm" className="h-10 px-3 border-red-500/20 text-red-400 hover:bg-red-500/10 gap-2 rounded-xl" onClick={() => { setRefundOrderId(order.id); setIsAdminAuthOpen(true); }}>
+                          <Button variant="outline" size="sm" className="h-10 px-3 border-red-500/20 text-red-400 hover:bg-red-500/10 gap-2 rounded-xl" onClick={() => { setAuthAction({ type: 'refund', orderId: order.id }); }}>
                             <RotateCcw className="h-4 w-4" /> <span className="text-xs font-bold">Refund</span>
                           </Button>
                         )}
@@ -673,17 +787,19 @@ export default function CashierPage() {
       </Dialog>
 
       {/* Admin Auth for Refunds */}
-      <Dialog open={isAdminAuthOpen} onOpenChange={setIsAdminAuthOpen}>
+      <Dialog open={!!authAction && !isRefundItemsOpen} onOpenChange={(open) => !open && setAuthAction(null)}>
         <DialogContent className="sm:max-w-[400px] bg-[#0A0A0B] border-white/10 text-white">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-xl font-black uppercase tracking-tighter">
-              <RotateCcw className="h-6 w-6 text-red-500" />
-              Authorize Refund
+              {authAction?.type === 'refund' ? <RotateCcw className="h-6 w-6 text-red-500" /> : <Gift className="h-6 w-6 text-pink-500" />}
+              {authAction?.type === 'refund' ? 'Authorize Refund' : 'Authorize Hospitality'}
             </DialogTitle>
           </DialogHeader>
           <div className="py-6 space-y-6">
             <div className="text-center space-y-2">
-              <p className="text-sm text-muted-foreground">Admin or Supervisor PIN required to proceed with refund for Order <span className="text-neon-cyan">#{recentOrders.find(o => o.id === refundOrderId)?.orderNumber}</span></p>
+              <p className="text-sm text-muted-foreground">
+                Admin PIN required for {authAction?.type === 'refund' ? 'Refund' : 'Hospitality'} (Order <span className="text-neon-cyan">#{orders.find(o => o.id === authAction?.orderId)?.orderNumber || recentOrders.find(o => o.id === authAction?.orderId)?.orderNumber}</span>)
+              </p>
             </div>
             
             <div className="flex justify-center gap-3">
@@ -706,9 +822,11 @@ export default function CashierPage() {
           </div>
           <DialogFooter>
             <Button 
-              className="w-full h-14 text-base font-black uppercase tracking-widest rounded-2xl bg-red-500 hover:bg-red-600 text-white border-none shadow-lg shadow-red-500/20"
+              className={`w-full h-14 text-base font-black uppercase tracking-widest rounded-2xl border-none shadow-lg transition-all ${
+                authAction?.type === 'refund' ? 'bg-red-500 hover:bg-red-600 shadow-red-500/20' : 'bg-pink-500 hover:bg-pink-600 shadow-pink-500/20'
+              }`}
               disabled={adminPin.length < 4 || isRefunding}
-              onClick={handleRefundAuth}
+              onClick={handleAdminAuth}
             >
               {isRefunding ? <Loader2 className="h-5 w-5 animate-spin" /> : "Verify Admin PIN"}
             </Button>
@@ -729,7 +847,7 @@ export default function CashierPage() {
             <p className="text-sm text-muted-foreground font-medium">Select items that should be <span className="text-neon-green">returned to stock</span>. Unchecked items will be marked as <span className="text-red-400">Waste</span>.</p>
             
             <div className="max-h-[55vh] overflow-y-auto pr-1 space-y-3">
-                {recentOrders.find(o => o.id === refundOrderId)?.items.map((item: any) => {
+                {recentOrders.find(o => o.id === authAction?.orderId)?.items.map((item: any) => {
                   const isSelected = selectedRefundItems.has(item.id);
                   return (
                     <div 

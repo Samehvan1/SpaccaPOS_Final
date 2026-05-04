@@ -13,4 +13,5 @@ export const CreateOrderBodyPaymentMethod = {
   cash: "cash",
   card: "card",
   wallet: "wallet",
+  hospitality: "hospitality",
 } as const;

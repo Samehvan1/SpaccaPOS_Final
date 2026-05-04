@@ -16,5 +16,7 @@ export interface CreateOrderBody {
   notes?: string;
   discount?: number;
   discountCode?: string;
+  /** Required if paymentMethod is hospitality */
+  adminPin?: string;
   items: CreateOrderBodyItemsItem[];
 }

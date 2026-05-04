@@ -6,10 +6,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type OrderPaymentMethod =
-  (typeof OrderPaymentMethod)[keyof typeof OrderPaymentMethod];
+export type UpdateOrderStatusBodyPaymentMethod =
+  (typeof UpdateOrderStatusBodyPaymentMethod)[keyof typeof UpdateOrderStatusBodyPaymentMethod];
 
-export const OrderPaymentMethod = {
+export const UpdateOrderStatusBodyPaymentMethod = {
   cash: "cash",
   card: "card",
   wallet: "wallet",

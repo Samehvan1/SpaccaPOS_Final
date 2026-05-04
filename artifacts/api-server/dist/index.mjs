@@ -56180,7 +56180,7 @@ var init_orders = __esm({
       discountValue: numeric("discount_value", { precision: 8, scale: 2 }),
       discountType: text("discount_type", { enum: ["percentage", "fixed"] }),
       total: numeric("total", { precision: 8, scale: 2 }).notNull(),
-      paymentMethod: text("payment_method", { enum: ["cash", "card", "wallet"] }).notNull().default("cash"),
+      paymentMethod: text("payment_method", { enum: ["cash", "card", "wallet", "hospitality"] }).notNull().default("cash"),
       amountTendered: numeric("amount_tendered", { precision: 8, scale: 2 }),
       changeDue: numeric("change_due", { precision: 8, scale: 2 }),
       notes: text("notes"),
@@ -77913,7 +77913,7 @@ var ListOrdersResponseItem = objectType({
   discountValue: numberType().nullish(),
   discountType: enumType(["percentage", "fixed"]).nullish(),
   total: numberType(),
-  paymentMethod: enumType(["cash", "card", "wallet"]),
+  paymentMethod: enumType(["cash", "card", "wallet", "hospitality"]),
   amountTendered: numberType().nullable(),
   changeDue: numberType().nullable(),
   notes: stringType().nullable(),
@@ -77937,8 +77937,6 @@ var ListOrdersResponseItem = objectType({
         specialNotes: stringType().nullable(),
         status: enumType(["pending", "ready"]),
         readyAt: stringType().nullable(),
-        kitchenStation: stringType().optional(),
-        kitchenStationId: numberType().nullish(),
         customizations: arrayType(
           objectType({
             id: numberType(),
@@ -77962,11 +77960,12 @@ var ListOrdersResponse = arrayType(ListOrdersResponseItem);
 var CreateOrderBody = objectType({
   branchId: numberType().optional(),
   customerName: stringType().optional(),
-  paymentMethod: enumType(["cash", "card", "wallet"]),
+  paymentMethod: enumType(["cash", "card", "wallet", "hospitality"]),
   amountTendered: numberType().optional(),
   notes: stringType().optional(),
   discount: numberType().optional(),
   discountCode: stringType().optional(),
+  adminPin: stringType().optional().describe("Required if paymentMethod is hospitality"),
   items: arrayType(
     objectType({
       drinkId: numberType(),
@@ -78012,7 +78011,7 @@ var GetOrderResponse = objectType({
   discountValue: numberType().nullish(),
   discountType: enumType(["percentage", "fixed"]).nullish(),
   total: numberType(),
-  paymentMethod: enumType(["cash", "card", "wallet"]),
+  paymentMethod: enumType(["cash", "card", "wallet", "hospitality"]),
   amountTendered: numberType().nullable(),
   changeDue: numberType().nullable(),
   notes: stringType().nullable(),
@@ -78036,8 +78035,6 @@ var GetOrderResponse = objectType({
         specialNotes: stringType().nullable(),
         status: enumType(["pending", "ready"]),
         readyAt: stringType().nullable(),
-        kitchenStation: stringType().optional(),
-        kitchenStationId: numberType().nullish(),
         customizations: arrayType(
           objectType({
             id: numberType(),
@@ -78072,7 +78069,9 @@ var UpdateOrderStatusBody = objectType({
     "completed",
     "cancelled",
     "refunded"
-  ])
+  ]),
+  paymentMethod: enumType(["cash", "card", "wallet", "hospitality"]).optional(),
+  adminPin: stringType().optional().describe("Required if changing paymentMethod to hospitality")
 });
 var UpdateOrderStatusResponse = objectType({
   id: numberType(),
@@ -78095,7 +78094,7 @@ var UpdateOrderStatusResponse = objectType({
   discountValue: numberType().nullish(),
   discountType: enumType(["percentage", "fixed"]).nullish(),
   total: numberType(),
-  paymentMethod: enumType(["cash", "card", "wallet"]),
+  paymentMethod: enumType(["cash", "card", "wallet", "hospitality"]),
   amountTendered: numberType().nullable(),
   changeDue: numberType().nullable(),
   notes: stringType().nullable(),
@@ -78133,7 +78132,7 @@ var MarkOrderItemReadyResponse = objectType({
   discountValue: numberType().nullish(),
   discountType: enumType(["percentage", "fixed"]).nullish(),
   total: numberType(),
-  paymentMethod: enumType(["cash", "card", "wallet"]),
+  paymentMethod: enumType(["cash", "card", "wallet", "hospitality"]),
   amountTendered: numberType().nullable(),
   changeDue: numberType().nullable(),
   notes: stringType().nullable(),
@@ -78206,7 +78205,7 @@ var GetActiveOrdersResponseItem = objectType({
   discountValue: numberType().nullish(),
   discountType: enumType(["percentage", "fixed"]).nullish(),
   total: numberType(),
-  paymentMethod: enumType(["cash", "card", "wallet"]),
+  paymentMethod: enumType(["cash", "card", "wallet", "hospitality"]),
   amountTendered: numberType().nullable(),
   changeDue: numberType().nullable(),
   notes: stringType().nullable(),
@@ -78230,8 +78229,6 @@ var GetActiveOrdersResponseItem = objectType({
         specialNotes: stringType().nullable(),
         status: enumType(["pending", "ready"]),
         readyAt: stringType().nullable(),
-        kitchenStation: stringType().optional(),
-        kitchenStationId: numberType().nullish(),
         customizations: arrayType(
           objectType({
             id: numberType(),
@@ -81529,7 +81526,7 @@ router3.put("/drinks/:id/slots", requirePermission("admin:manage_drinks"), async
   globalCache.delete(`drink_default_price_${drinkId}`);
   res.json(serializeDates(detail));
 });
-router3.delete("/drinks/:id", async (req, res) => {
+router3.delete("/drinks/:id", requirePermission("admin:manage_drinks"), async (req, res) => {
   const params = DeleteDrinkParams2.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -81730,9 +81727,18 @@ router4.post("/ingredients/import-csv", requirePermission("admin:manage_ingredie
 router4.get("/ingredients", requirePermission("inventory:view"), async (req, res) => {
   const params = ListIngredientsQueryParams2.safeParse(req.query);
   const sessionUser = req.session;
-  const sessionBranchId = sessionUser.branchId;
+  const rawBranchId = req.query.branchId;
   const isAdmin = sessionUser.role === "admin";
-  const targetBranchId = isAdmin && req.query.branchId && req.query.branchId !== "all" ? parseInt(req.query.branchId) : isAdmin && req.query.branchId === "all" ? null : sessionBranchId;
+  const sessionBranchId = sessionUser.branchId;
+  let targetBranchId = sessionBranchId;
+  if (isAdmin) {
+    if (rawBranchId === "all") {
+      targetBranchId = null;
+    } else if (rawBranchId) {
+      targetBranchId = parseInt(rawBranchId);
+    }
+  }
+  console.log(`[Ingredients-Debug] User: ${sessionUser.username}, Role: ${sessionUser.role}, rawBranchId: ${rawBranchId}, targetBranchId: ${targetBranchId}`);
   let query = db.select({
     id: ingredientsTable.id,
     name: ingredientsTable.name,
@@ -81741,8 +81747,8 @@ router4.get("/ingredients", requirePermission("inventory:view"), async (req, res
     unit: ingredientsTable.unit,
     costPerUnit: ingredientsTable.costPerUnit,
     isActive: ingredientsTable.isActive,
-    stockQuantity: targetBranchId ? sql`COALESCE(${branchStockTable.stockQuantity}, '0')` : sql`(SELECT COALESCE(SUM(bs.stock_quantity), 0)::text FROM branch_stock bs WHERE bs.ingredient_id = ${ingredientsTable.id})`,
-    lowStockThreshold: targetBranchId ? sql`COALESCE(${branchStockTable.lowStockThreshold}, '500')` : sql`'500'`,
+    stockQuantity: targetBranchId !== null ? sql`COALESCE(${branchStockTable.stockQuantity}, '0')` : sql`(SELECT COALESCE(SUM(bs.stock_quantity), 0)::text FROM branch_stock bs WHERE bs.ingredient_id = ${ingredientsTable.id})`,
+    lowStockThreshold: targetBranchId !== null ? sql`COALESCE(${branchStockTable.lowStockThreshold}, '500')` : sql`'500'`,
     updatedAt: ingredientsTable.updatedAt
   }).from(ingredientsTable).leftJoin(
     branchStockTable,
@@ -82196,7 +82202,18 @@ router5.post("/orders", requirePermission("pos:create_order"), async (req, res) 
     res.status(400).json({ error: "No branch associated with session or request" });
     return;
   }
-  const { items: orderItems } = parsed.data;
+  const { items: orderItems, adminPin } = parsed.data;
+  if (parsed.data.paymentMethod === "hospitality") {
+    if (!adminPin) {
+      res.status(403).json({ error: "Admin PIN required for hospitality orders" });
+      return;
+    }
+    const [admin] = await db.select().from(usersTable).where(and(eq(usersTable.pin, adminPin), eq(usersTable.role, "admin"))).limit(1);
+    if (!admin) {
+      res.status(401).json({ error: "Invalid Admin PIN" });
+      return;
+    }
+  }
   const drinkIds = [...new Set(orderItems.map((i) => i.drinkId))];
   const allOptionIds = [
     ...new Set(
@@ -82270,7 +82287,15 @@ router5.post("/orders", requirePermission("pos:create_order"), async (req, res) 
       }
     }
   }
-  const total = subtotal - discountAmount;
+  let total = subtotal - discountAmount;
+  let discountIdToSave = discountId;
+  let discountCodeToSave = discountCode;
+  if (parsed.data.paymentMethod === "hospitality") {
+    discountAmount = subtotal;
+    total = 0;
+    discountIdToSave = null;
+    discountCodeToSave = "HOSPITALITY";
+  }
   const amountTendered = parsed.data.amountTendered ?? null;
   const changeDue = amountTendered != null ? amountTendered - total : null;
   const orderNumber = await generateOrderNumber(targetBranchId);
@@ -82283,8 +82308,8 @@ router5.post("/orders", requirePermission("pos:create_order"), async (req, res) 
       customerName: parsed.data.customerName ?? null,
       subtotal: String(subtotal),
       discount: String(discountAmount),
-      discountId,
-      discountCode,
+      discountId: discountIdToSave,
+      discountCode: discountCodeToSave,
       discountValue: discountValue != null ? String(discountValue) : null,
       discountType,
       total: String(total),
@@ -82449,6 +82474,28 @@ router5.patch("/orders/:id/status", async (req, res, next) => {
   }
   const updateData = { status: parsed.data.status };
   const now = /* @__PURE__ */ new Date();
+  if (parsed.data.paymentMethod) {
+    if (parsed.data.paymentMethod === "hospitality") {
+      const adminPin = parsed.data.adminPin;
+      if (!adminPin) {
+        res.status(403).json({ error: "Admin PIN required for hospitality authorization" });
+        return;
+      }
+      const [admin] = await db.select().from(usersTable).where(and(eq(usersTable.pin, adminPin), eq(usersTable.role, "admin"))).limit(1);
+      if (!admin) {
+        res.status(401).json({ error: "Invalid Admin PIN" });
+        return;
+      }
+      const [existingOrder] = await db.select().from(ordersTable).where(eq(ordersTable.id, params.data.id));
+      if (existingOrder) {
+        updateData.discount = String(existingOrder.subtotal);
+        updateData.total = "0";
+        updateData.discountCode = "HOSPITALITY";
+        updateData.discountId = null;
+      }
+    }
+    updateData.paymentMethod = parsed.data.paymentMethod;
+  }
   if (parsed.data.status === "paid") {
     const cashierId = req.body.cashierId ?? req.session.cashierId ?? null;
     if (cashierId) updateData.cashierId = cashierId;
@@ -83475,7 +83522,7 @@ router12.get("/catalog/predefined-slots/:id", async (req, res) => {
   const volumes = await db.select().from(predefinedSlotVolumesTable).where(eq(predefinedSlotVolumesTable.predefinedSlotId, id)).orderBy(predefinedSlotVolumesTable.sortOrder);
   res.json({ ...slot, typeOptions, volumes });
 });
-router12.post("/catalog/predefined-slots", async (req, res) => {
+router12.post("/catalog/predefined-slots", requirePermission("admin:manage_catalog"), async (req, res) => {
   const { name, slotLabel, isRequired, isDynamic, affectsCupSize, autoLoadCategoryId } = req.body;
   if (!name || !slotLabel) {
     res.status(400).json({ error: "name and slotLabel required" });
@@ -83519,7 +83566,7 @@ router12.post("/catalog/predefined-slots", async (req, res) => {
   }
   res.status(201).json(slot);
 });
-router12.patch("/catalog/predefined-slots/:id", async (req, res) => {
+router12.patch("/catalog/predefined-slots/:id", requirePermission("admin:manage_catalog"), async (req, res) => {
   const id = parseInt(req.params.id);
   const { name, slotLabel, isRequired, isDynamic, affectsCupSize, typeOptions, volumes } = req.body;
   const patch = {};
@@ -83569,7 +83616,7 @@ router12.get("/catalog/predefined-slots/:id/usage", async (req, res) => {
   }).from(drinkIngredientSlotsTable).innerJoin(drinksTable, eq(drinkIngredientSlotsTable.drinkId, drinksTable.id)).where(eq(drinkIngredientSlotsTable.predefinedSlotId, id));
   res.json(usage);
 });
-router12.delete("/catalog/predefined-slots/:id", async (req, res) => {
+router12.delete("/catalog/predefined-slots/:id", requirePermission("admin:manage_catalog"), async (req, res) => {
   const id = parseInt(req.params.id);
   try {
     await db.delete(predefinedSlotsTable).where(eq(predefinedSlotsTable.id, id));
@@ -83600,8 +83647,10 @@ usersRouter.get("/users", requirePermission("users:view"), async (req, res) => {
       ...u,
       username: u.username ?? `user_${u.id}`,
       isActive: u.isActive ?? true,
-      createdAt: u.createdAt?.toISOString(),
-      updatedAt: u.updatedAt?.toISOString()
+      createdAt: u.createdAt ? u.createdAt.toISOString() : (/* @__PURE__ */ new Date()).toISOString(),
+      updatedAt: u.updatedAt ? u.updatedAt.toISOString() : (/* @__PURE__ */ new Date()).toISOString(),
+      permissions: []
+      // We don't load all perms in the list for performance
     })));
     return;
   } catch (error40) {
@@ -83634,13 +83683,17 @@ usersRouter.post("/users", requirePermission("users:create"), async (req, res) =
       ...newUser,
       username: newUser.username ?? `user_${newUser.id}`,
       isActive: newUser.isActive ?? true,
-      createdAt: newUser.createdAt?.toISOString(),
-      updatedAt: newUser.updatedAt?.toISOString(),
+      createdAt: newUser.createdAt ? newUser.createdAt.toISOString() : (/* @__PURE__ */ new Date()).toISOString(),
+      updatedAt: newUser.updatedAt ? newUser.updatedAt.toISOString() : (/* @__PURE__ */ new Date()).toISOString(),
       permissions: perms
     }));
     return;
   } catch (error40) {
     console.error("POST /users error:", error40?.message || error40);
+    if (error40?.code === "23505" || error40?.message?.includes("unique constraint")) {
+      res.status(409).json({ error: "Username already exists" });
+      return;
+    }
     res.status(500).json({ error: "Failed to create user" });
     return;
   }
@@ -83672,8 +83725,8 @@ usersRouter.patch("/users/:id", requirePermission("users:update"), async (req, r
       ...updatedUser,
       username: updatedUser.username ?? `user_${updatedUser.id}`,
       isActive: updatedUser.isActive ?? true,
-      createdAt: updatedUser.createdAt?.toISOString(),
-      updatedAt: updatedUser.updatedAt?.toISOString(),
+      createdAt: updatedUser.createdAt ? updatedUser.createdAt.toISOString() : (/* @__PURE__ */ new Date()).toISOString(),
+      updatedAt: updatedUser.updatedAt ? updatedUser.updatedAt.toISOString() : (/* @__PURE__ */ new Date()).toISOString(),
       permissions: perms
     }));
     return;

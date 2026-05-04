@@ -224,7 +224,24 @@ router.post("/orders", requirePermission("pos:create_order"), async (req, res): 
     return;
   }
 
-  const { items: orderItems } = parsed.data;
+  const { items: orderItems, adminPin } = parsed.data;
+
+  // Hospitality requires admin authorization
+  if (parsed.data.paymentMethod === "hospitality") {
+    if (!adminPin) {
+      res.status(403).json({ error: "Admin PIN required for hospitality orders" });
+      return;
+    }
+    const [admin] = await db
+      .select()
+      .from(usersTable)
+      .where(and(eq(usersTable.pin, adminPin), eq(usersTable.role, "admin")))
+      .limit(1);
+    if (!admin) {
+      res.status(401).json({ error: "Invalid Admin PIN" });
+      return;
+    }
+  }
 
   // ── Batch-fetch all required data in parallel ──────────────────────────────
   const drinkIds = [...new Set(orderItems.map((i) => i.drinkId))];
@@ -333,7 +350,15 @@ router.post("/orders", requirePermission("pos:create_order"), async (req, res): 
     }
   }
 
-  const total = subtotal - discountAmount;
+  let total = subtotal - discountAmount;
+  let discountIdToSave = discountId;
+  let discountCodeToSave = discountCode;
+  if (parsed.data.paymentMethod === "hospitality") {
+    discountAmount = subtotal;
+    total = 0;
+    discountIdToSave = null;
+    discountCodeToSave = "HOSPITALITY";
+  }
   const amountTendered = parsed.data.amountTendered ?? null;
   const changeDue = amountTendered != null ? amountTendered - total : null;
 
@@ -348,8 +373,8 @@ router.post("/orders", requirePermission("pos:create_order"), async (req, res): 
       customerName: parsed.data.customerName ?? null,
       subtotal: String(subtotal),
       discount: String(discountAmount),
-      discountId,
-      discountCode,
+      discountId: discountIdToSave,
+      discountCode: discountCodeToSave,
       discountValue: discountValue != null ? String(discountValue) : null,
       discountType,
       total: String(total),
@@ -542,6 +567,37 @@ router.patch("/orders/:id/status", async (req, res, next): Promise<void> => {
   // Attach cashierId when approving — comes from the frontend cashier session
   const updateData: Record<string, unknown> = { status: parsed.data.status };
   const now = new Date();
+  
+  if (parsed.data.paymentMethod) {
+    if (parsed.data.paymentMethod === "hospitality") {
+      const adminPin = (parsed.data as any).adminPin;
+      if (!adminPin) {
+        res.status(403).json({ error: "Admin PIN required for hospitality authorization" });
+        return;
+      }
+      const [admin] = await db
+        .select()
+        .from(usersTable)
+        .where(and(eq(usersTable.pin, adminPin), eq(usersTable.role, "admin")))
+        .limit(1);
+      if (!admin) {
+        res.status(401).json({ error: "Invalid Admin PIN" });
+        return;
+      }
+
+      // If changed to hospitality, apply 100% discount
+      // Fetch current order to get subtotal
+      const [existingOrder] = await db.select().from(ordersTable).where(eq(ordersTable.id, params.data.id));
+      if (existingOrder) {
+        updateData.discount = String(existingOrder.subtotal);
+        updateData.total = "0";
+        updateData.discountCode = "HOSPITALITY";
+        updateData.discountId = null;
+      }
+    }
+    updateData.paymentMethod = parsed.data.paymentMethod;
+  }
+
   if (parsed.data.status === "paid") {
     const cashierId = (req.body as any).cashierId ?? (req.session as any).cashierId ?? null;
     if (cashierId) updateData.cashierId = cashierId;

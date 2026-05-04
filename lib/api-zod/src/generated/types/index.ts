@@ -94,6 +94,7 @@ export * from "./updateIngredientOptionBody";
 export * from "./updateIngredientOptionParams";
 export * from "./updateIngredientParams";
 export * from "./updateOrderStatusBody";
+export * from "./updateOrderStatusBodyPaymentMethod";
 export * from "./updateOrderStatusBodyStatus";
 export * from "./updateOrderStatusParams";
 export * from "./updateSettingsBody";

@@ -440,6 +440,7 @@ export const OrderPaymentMethod = {
   cash: "cash",
   card: "card",
   wallet: "wallet",
+  hospitality: "hospitality",
 } as const;
 
 export interface Order {
@@ -449,7 +450,7 @@ export interface Order {
   baristaName: string;
   status: OrderStatus;
   /** @nullable */
-  customerName: string | null;
+  customerName?: string | null;
   subtotal: number;
   discount: number;
   /** @nullable */
@@ -461,21 +462,23 @@ export interface Order {
   total: number;
   paymentMethod: OrderPaymentMethod;
   /** @nullable */
-  amountTendered: number | null;
+  amountTendered?: number | null;
   /** @nullable */
-  changeDue: number | null;
+  changeDue?: number | null;
   /** @nullable */
-  notes: string | null;
-  createdAt: string;
-  updatedAt: string;
+  notes?: string | null;
   /** @nullable */
-  paidAt: string | null;
+  createdAt?: string | null;
   /** @nullable */
-  readyAt: string | null;
+  updatedAt?: string | null;
   /** @nullable */
-  completedAt: string | null;
+  paidAt?: string | null;
   /** @nullable */
-  cancelledAt: string | null;
+  readyAt?: string | null;
+  /** @nullable */
+  completedAt?: string | null;
+  /** @nullable */
+  cancelledAt?: string | null;
 }
 
 export type OrderDetail = Order & {
@@ -489,6 +492,7 @@ export const CreateOrderBodyPaymentMethod = {
   cash: "cash",
   card: "card",
   wallet: "wallet",
+  hospitality: "hospitality",
 } as const;
 
 export type CreateOrderBodyItemsItemSelectionsItem = {
@@ -515,6 +519,8 @@ export interface CreateOrderBody {
   notes?: string;
   discount?: number;
   discountCode?: string;
+  /** Required if paymentMethod is hospitality */
+  adminPin?: string;
   items: CreateOrderBodyItemsItem[];
 }
 
@@ -531,8 +537,21 @@ export const UpdateOrderStatusBodyStatus = {
   refunded: "refunded",
 } as const;
 
+export type UpdateOrderStatusBodyPaymentMethod =
+  (typeof UpdateOrderStatusBodyPaymentMethod)[keyof typeof UpdateOrderStatusBodyPaymentMethod];
+
+export const UpdateOrderStatusBodyPaymentMethod = {
+  cash: "cash",
+  card: "card",
+  wallet: "wallet",
+  hospitality: "hospitality",
+} as const;
+
 export interface UpdateOrderStatusBody {
   status: UpdateOrderStatusBodyStatus;
+  paymentMethod?: UpdateOrderStatusBodyPaymentMethod;
+  /** Required if changing paymentMethod to hospitality */
+  adminPin?: string;
 }
 
 export type StockMovementMovementType =

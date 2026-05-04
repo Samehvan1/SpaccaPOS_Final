@@ -1807,7 +1807,7 @@ components:
           type: number
         paymentMethod:
           type: string
-          enum: [cash, card, wallet]
+          enum: [cash, card, wallet, hospitality]
         amountTendered:
           type: ["number", "null"]
         changeDue:
@@ -1815,9 +1815,9 @@ components:
         notes:
           type: ["string", "null"]
         createdAt:
-          type: string
+          type: ["string", "null"]
         updatedAt:
-          type: string
+          type: ["string", "null"]
         paidAt:
           type: ["string", "null"]
         readyAt:
@@ -1832,20 +1832,10 @@ components:
         - baristaId
         - baristaName
         - status
-        - customerName
         - subtotal
         - discount
         - total
         - paymentMethod
-        - amountTendered
-        - changeDue
-        - notes
-        - createdAt
-        - updatedAt
-        - paidAt
-        - readyAt
-        - completedAt
-        - cancelledAt
 
     OrderDetail:
       allOf:
@@ -1868,7 +1858,7 @@ components:
           type: string
         paymentMethod:
           type: string
-          enum: [cash, card, wallet]
+          enum: [cash, card, wallet, hospitality]
         amountTendered:
           type: number
         notes:
@@ -1877,6 +1867,9 @@ components:
           type: number
         discountCode:
           type: string
+        adminPin:
+          type: string
+          description: Required if paymentMethod is hospitality
         items:
           type: array
           items:
@@ -1920,6 +1913,12 @@ components:
         status:
           type: string
           enum: [pending, paid, in_progress, ready, completed, cancelled, refunded]
+        paymentMethod:
+          type: string
+          enum: [cash, card, wallet, hospitality]
+        adminPin:
+          type: string
+          description: Required if changing paymentMethod to hospitality
       required:
         - status
 
