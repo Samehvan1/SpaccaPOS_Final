@@ -17,11 +17,11 @@ import { useAuth } from "@/hooks/use-auth";
 
 export default function StockAdmin() {
   const { selectedBranchId } = useAuth();
-  const { data: movements, isLoading, refetch: refetchMovements } = useListStockMovements({ branchId: selectedBranchId } as any);
-  const { data: lowStock, refetch: refetchLowStock } = useGetLowStockIngredients({ branchId: selectedBranchId } as any);
+  const { data: movements, isLoading, refetch: refetchMovements } = useListStockMovements({ branchId: selectedBranchId === null ? 'all' : selectedBranchId } as any);
+  const { data: lowStock, refetch: refetchLowStock } = useGetLowStockIngredients({ branchId: selectedBranchId === null ? 'all' : selectedBranchId } as any);
   const { data: ingredients, refetch: refetchIngredients } = useListIngredients({ 
     active: true,
-    branchId: selectedBranchId 
+    branchId: selectedBranchId === null ? 'all' : selectedBranchId 
   } as any);
   const { toast } = useToast();
 
