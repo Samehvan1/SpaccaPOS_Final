@@ -8,6 +8,7 @@ import app from "./app";
 import { logger } from "./lib/logger";
 import { runMigrations } from "@workspace/db";
 import { seedIfEmpty } from "./lib/seed";
+import { syncPermissions } from "./lib/permissions-seed";
 import stockAuditsRouter from "./routes/stock-audits";
 import rolesRouter from "./routes/roles";
 
@@ -25,9 +26,10 @@ if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
 
-// Ensure migrations run before server starts accepting requests
+// Ensure migrations and permissions sync run before server starts accepting requests
 runMigrations()
   .then(() => seedIfEmpty())
+  .then(() => syncPermissions())
   .then(() => {
     app.listen(port, (err) => {
       if (err) {
