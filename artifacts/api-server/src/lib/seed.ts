@@ -31,7 +31,7 @@ export async function seedIfEmpty() {
   await db.insert(usersTable).values([
     { branchId: mainBranch.id, name: "Admin User",  username: "admin",     passwordHash, role: "admin",     pin: "000000" },
     { branchId: mainBranch.id, name: "Sarah",       username: "sarah",     passwordHash, role: "barista",   pin: "111111" },
-    { branchId: mainBranch.id, name: "James",       username: "james",     passwordHash, role: "barista",   pin: "222222" },
+    { branchId: mainBranch.id, name: "James",       username: "james",     passwordHash, role: "cashier",   pin: "222222" },
     { branchId: mainBranch.id, name: "Spacca POS",  username: "spaccapos", passwordHash, role: "frontdesk", pin: "999999" },
   ]);
 

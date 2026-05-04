@@ -1,5 +1,5 @@
 import { db, permissionsTable, rolesTable, rolePermissionsTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 
 const permissions = [
   // Dashboard & Admin Hub
@@ -16,8 +16,19 @@ const permissions = [
   
   // POS & Kitchen
   { key: "pos:view", name: "Access POS", description: "Open the Point of Sale terminal" },
+  { key: "pos:create_order", name: "Create Orders", description: "Place new orders in the system" },
   { key: "kitchen:view", name: "Access Kitchen", description: "View and manage the kitchen production queue" },
+  { key: "kitchen:mark_ready", name: "Mark Ready", description: "Mark order items as ready for pickup" },
   
+  // Cashier Operations
+  { key: "cashier:view", name: "Cashier View", description: "Access the cashier dashboard and order list" },
+  { key: "cashier:approve_order", name: "Approve Order", description: "Finalize and approve orders for payment" },
+  { key: "cashier:cancel_order", name: "Cancel Order", description: "Void or cancel pending orders" },
+  { key: "cashier:refund_order", name: "Refund Order", description: "Process refunds for completed orders" },
+  { key: "cashier:close_session", name: "Close Session", description: "End a cashier shift and close the session" },
+  { key: "cashier:view_reports", name: "View Cashier Reports", description: "View shift summaries and performance" },
+  { key: "pos:apply_discount", name: "Apply Discount", description: "Apply manual or coupon discounts to orders" },
+
   // Catalog & Inventory
   { key: "catalog:view", name: "View Catalog", description: "Browse drinks and categories" },
   { key: "catalog:manage", name: "Manage Catalog", description: "Create and edit drinks and categories" },
@@ -38,8 +49,20 @@ const permissions = [
 async function seed() {
   console.log("🌱 Seeding permissions...");
 
-  const allRoles = await db.select().from(rolesTable);
-  console.log("Found roles:", allRoles.map(r => r.key).join(", "));
+  // Ensure standard roles exist
+  const standardRoles = [
+    { key: "admin", name: "Administrator" },
+    { key: "cashier", name: "Cashier" },
+    { key: "barista", name: "Barista" },
+    { key: "finance", name: "Finance Manager" }
+  ];
+
+  for (const role of standardRoles) {
+    const [existing] = await db.select().from(rolesTable).where(eq(rolesTable.key, role.key)).limit(1);
+    if (!existing) {
+      await db.insert(rolesTable).values(role);
+    }
+  }
 
   for (const perm of permissions) {
     // Upsert permissions
@@ -53,41 +76,15 @@ async function seed() {
 
   console.log(`✅ ${permissions.length} permissions seeded.`);
 
-  // Auto-assign permissions to the "admin" role if it exists
-  const [adminRole] = await db.select().from(rolesTable).where(eq(rolesTable.key, "admin")).limit(1);
-  if (adminRole) {
-    console.log("🔗 Mapping all permissions to 'admin' role...");
-    for (const perm of permissions) {
-      const [existing] = await db
-        .select()
-        .from(rolePermissionsTable)
-        .where(
-          eq(rolePermissionsTable.roleKey, "admin") && 
-          eq(rolePermissionsTable.permissionKey, perm.key)
-        )
-        .limit(1);
-        
-      if (!existing) {
-        await db.insert(rolePermissionsTable).values({
-          roleKey: "admin",
-          permissionKey: perm.key
-        });
-      }
-    }
-  }
-
-  // Auto-assign permissions to the "finance" role if it exists
-  const [financeRole] = await db.select().from(rolesTable).where(eq(rolesTable.key, "finance")).limit(1);
-  if (financeRole) {
-    console.log("🔗 Mapping permissions to 'finance' role...");
-    const financePerms = ["pos:view", "kitchen:view", "admin:view", "reports:view", "inventory:view"];
-    for (const pKey of financePerms) {
+  const assignPermissions = async (roleKey: string, pKeys: string[]) => {
+    console.log(`🔗 Mapping permissions to '${roleKey}' role...`);
+    for (const pKey of pKeys) {
       const [existing] = await db
         .select()
         .from(rolePermissionsTable)
         .where(
           and(
-            eq(rolePermissionsTable.roleKey, "finance"),
+            eq(rolePermissionsTable.roleKey, roleKey),
             eq(rolePermissionsTable.permissionKey, pKey)
           )
         )
@@ -95,12 +92,47 @@ async function seed() {
         
       if (!existing) {
         await db.insert(rolePermissionsTable).values({
-          roleKey: "finance",
+          roleKey,
           permissionKey: pKey
         });
       }
     }
-  }
+  };
+
+  // 1. Admin: Everything
+  await assignPermissions("admin", permissions.map(p => p.key));
+
+  // 2. Cashier: Standard operations
+  await assignPermissions("cashier", [
+    "pos:view",
+    "pos:create_order",
+    "cashier:view",
+    "cashier:approve_order",
+    "cashier:cancel_order",
+    "cashier:refund_order",
+    "cashier:close_session",
+    "cashier:view_reports",
+    "pos:apply_discount",
+    "catalog:view",
+    "inventory:view"
+  ]);
+
+  // 3. Barista: Kitchen and stock
+  await assignPermissions("barista", [
+    "pos:view",
+    "kitchen:view",
+    "kitchen:mark_ready",
+    "catalog:view",
+    "inventory:view"
+  ]);
+
+  // 4. Finance: Reports and dashboard
+  await assignPermissions("finance", [
+    "admin:view",
+    "reports:view",
+    "inventory:view",
+    "cashier:view_reports"
+  ]);
 
   console.log("✨ Seeding complete.");
 }
@@ -109,3 +141,4 @@ seed().catch(err => {
   console.error("❌ Seeding failed:", err);
   process.exit(1);
 });
+
