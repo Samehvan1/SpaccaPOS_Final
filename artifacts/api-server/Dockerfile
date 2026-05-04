@@ -18,6 +18,7 @@ COPY artifacts/api-server/tsconfig.json ./artifacts/api-server/
 COPY artifacts/api-server/build.mjs ./artifacts/api-server/
 COPY artifacts/api-server/start.sh ./artifacts/api-server/
 COPY artifacts/api-server/src/ ./artifacts/api-server/src/
+COPY scripts/ ./scripts/
 COPY Inventory2026.csv ./Inventory2026.csv
 
 # Install dependencies
