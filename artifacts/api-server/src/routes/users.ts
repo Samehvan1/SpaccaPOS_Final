@@ -78,6 +78,13 @@ usersRouter.post("/users", requirePermission("users:create"), async (req, res): 
     return;
   } catch (error: any) {
     console.error("POST /users error:", error?.message || error);
+    
+    // Handle unique constraint violation (Postgres error code 23505)
+    if (error?.code === "23505" || error?.message?.includes("unique constraint")) {
+      res.status(409).json({ error: "Username already exists" });
+      return;
+    }
+
     res.status(500).json({ error: "Failed to create user" });
     return;
   }
