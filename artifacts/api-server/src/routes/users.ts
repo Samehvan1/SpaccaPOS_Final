@@ -27,8 +27,9 @@ usersRouter.get("/users", requirePermission("users:view"), async (req, res): Pro
       ...u,
       username: u.username ?? `user_${u.id}`,
       isActive: u.isActive ?? true,
-      createdAt: u.createdAt?.toISOString(),
-      updatedAt: u.updatedAt?.toISOString(),
+      createdAt: u.createdAt ? u.createdAt.toISOString() : new Date().toISOString(),
+      updatedAt: u.updatedAt ? u.updatedAt.toISOString() : new Date().toISOString(),
+      permissions: [], // We don't load all perms in the list for performance
     })));
     return;
   } catch (error: any) {
@@ -71,8 +72,8 @@ usersRouter.post("/users", requirePermission("users:create"), async (req, res): 
       ...newUser,
       username: newUser.username ?? `user_${newUser.id}`,
       isActive: newUser.isActive ?? true,
-      createdAt: newUser.createdAt?.toISOString(),
-      updatedAt: newUser.updatedAt?.toISOString(),
+      createdAt: newUser.createdAt ? newUser.createdAt.toISOString() : new Date().toISOString(),
+      updatedAt: newUser.updatedAt ? newUser.updatedAt.toISOString() : new Date().toISOString(),
       permissions: perms,
     }));
     return;
@@ -127,8 +128,8 @@ usersRouter.patch("/users/:id", requirePermission("users:update"), async (req, r
       ...updatedUser,
       username: updatedUser.username ?? `user_${updatedUser.id}`,
       isActive: updatedUser.isActive ?? true,
-      createdAt: updatedUser.createdAt?.toISOString(),
-      updatedAt: updatedUser.updatedAt?.toISOString(),
+      createdAt: updatedUser.createdAt ? updatedUser.createdAt.toISOString() : new Date().toISOString(),
+      updatedAt: updatedUser.updatedAt ? updatedUser.updatedAt.toISOString() : new Date().toISOString(),
       permissions: perms,
     }));
     return;
