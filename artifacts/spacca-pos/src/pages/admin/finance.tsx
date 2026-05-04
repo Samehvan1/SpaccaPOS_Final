@@ -13,11 +13,6 @@ export default function FinanceDashboard() {
   const { user, selectedBranchId } = useAuth();
   const [, setLocation] = useLocation();
 
-  if (user?.role !== "admin") {
-    setLocation("/pos");
-    return null;
-  }
-
   const { data: summary, isLoading: isLoadingSummary } = useGetDashboardSummary({ branchId: selectedBranchId } as any);
   const { data: categorySales, isLoading: isLoadingSales } = useGetSalesByCategory({ days: 7, branchId: selectedBranchId } as any);
   const { data: topDrinks, isLoading: isLoadingTop } = useGetTopDrinks({ limit: 5, branchId: selectedBranchId } as any);

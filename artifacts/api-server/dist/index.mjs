@@ -78502,8 +78502,16 @@ var ValidateDiscountResponse = objectType({
 // ../../lib/api-zod/src/index.ts
 var HealthCheckResponse2 = HealthCheckResponse;
 var BaristaLoginBody2 = BaristaLoginBody;
-var BaristaLoginResponse2 = BaristaLoginResponse;
-var GetMeResponse2 = GetMeResponse;
+var BaristaLoginResponse2 = BaristaLoginResponse.extend({
+  user: BaristaLoginResponse.shape.user.extend({
+    role: external_exports2.string(),
+    permissions: external_exports2.array(external_exports2.string())
+  })
+});
+var GetMeResponse2 = GetMeResponse.extend({
+  role: external_exports2.string(),
+  permissions: external_exports2.array(external_exports2.string())
+});
 var ListDrinksQueryParams2 = ListDrinksQueryParams;
 var CreateDrinkBody2 = CreateDrinkBody;
 var GetDrinkParams2 = GetDrinkParams;
@@ -78547,9 +78555,19 @@ var GetTopDrinksQueryParams2 = GetTopDrinksQueryParams;
 var GetTopDrinksResponse2 = GetTopDrinksResponse;
 var CreateDiscountBody2 = CreateDiscountBody;
 var UpdateDiscountBody2 = UpdateDiscountBody;
-var CreateUserBody2 = CreateUserBody;
-var UpdateUserBody2 = UpdateUserBody;
-var UserDetail = UpdateUserResponse;
+var CreateUserBody2 = CreateUserBody.extend({
+  role: external_exports2.string(),
+  branchId: external_exports2.number().nullable().optional()
+});
+var UpdateUserBody2 = UpdateUserBody.extend({
+  role: external_exports2.string().optional(),
+  branchId: external_exports2.number().nullable().optional()
+});
+var UserDetail = UpdateUserResponse.extend({
+  role: external_exports2.string(),
+  branchId: external_exports2.number().nullable().optional(),
+  permissions: external_exports2.array(external_exports2.string()).optional()
+});
 
 // src/routes/health.ts
 var router = (0, import_express.Router)();
@@ -80309,6 +80327,34 @@ var bcryptjs_default = {
   decodeBase64
 };
 
+// src/lib/permissions.ts
+init_src();
+init_drizzle_orm();
+async function resolveUserPermissions(userId, role) {
+  const normalizedRole = role.toLowerCase();
+  const rolePerms = await db.select({ key: rolePermissionsTable.permissionKey }).from(rolePermissionsTable).where(eq(rolePermissionsTable.roleKey, normalizedRole));
+  const userOverrides = await db.select().from(userPermissionsTable).where(eq(userPermissionsTable.userId, userId));
+  const granted = /* @__PURE__ */ new Set();
+  rolePerms.forEach((p) => granted.add(p.key));
+  userOverrides.forEach((o) => {
+    if (o.granted) {
+      granted.add(o.permissionKey);
+    } else {
+      granted.delete(o.permissionKey);
+    }
+  });
+  if (role === "admin") {
+    const allAvailable = await db.select({ key: permissionsTable.key }).from(permissionsTable);
+    allAvailable.forEach((p) => {
+      const isDenied = userOverrides.find((o) => o.permissionKey === p.key && !o.granted);
+      if (!isDenied) {
+        granted.add(p.key);
+      }
+    });
+  }
+  return Array.from(granted);
+}
+
 // src/routes/auth.ts
 var router2 = (0, import_express2.Router)();
 router2.post("/auth/login", async (req, res) => {
@@ -80344,11 +80390,13 @@ router2.post("/auth/login", async (req, res) => {
     entityId: result.user.id,
     details: { ip: req.ip, userAgent: req.get("user-agent") }
   });
+  const permissions = await resolveUserPermissions(result.user.id, result.user.role);
   const payload = BaristaLoginResponse2.parse({
     user: {
       id: result.user.id,
       name: result.user.name,
       role: result.user.role,
+      permissions,
       branchId: result.user.branchId,
       branch: result.user.branchId ? {
         id: result.user.branchId,
@@ -80384,11 +80432,13 @@ router2.get("/auth/me", async (req, res) => {
     res.status(401).json({ error: "Not authenticated" });
     return;
   }
+  const permissions = await resolveUserPermissions(result.user.id, result.user.role);
   res.json(
     GetMeResponse2.parse({
       id: result.user.id,
       name: result.user.name,
       role: result.user.role,
+      permissions,
       branchId: result.user.branchId,
       branch: result.user.branchId ? {
         id: result.user.branchId,
@@ -80446,6 +80496,64 @@ function serializeDates(obj) {
 
 // src/routes/drinks.ts
 init_cache2();
+
+// src/middleware/permissions.ts
+init_src();
+init_drizzle_orm();
+function requirePermission(permissionKey) {
+  return async (req, res, next) => {
+    const userId = req.session.userId;
+    if (!userId) {
+      res.status(401).json({ error: "Not authenticated" });
+      return;
+    }
+    if (!req.user) {
+      const [user2] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+      if (!user2) {
+        res.status(401).json({ error: "User not found" });
+        return;
+      }
+      req.user = user2;
+    }
+    const user = req.user;
+    const role = user.role;
+    if (role === "admin") {
+      const [denial] = await db.select().from(userPermissionsTable).where(
+        and(
+          eq(userPermissionsTable.userId, userId),
+          eq(userPermissionsTable.permissionKey, permissionKey),
+          eq(userPermissionsTable.granted, false)
+        )
+      ).limit(1);
+      if (!denial) return next();
+    }
+    const [userOverride] = await db.select().from(userPermissionsTable).where(
+      and(
+        eq(userPermissionsTable.userId, userId),
+        eq(userPermissionsTable.permissionKey, permissionKey)
+      )
+    ).limit(1);
+    if (userOverride) {
+      if (userOverride.granted) {
+        return next();
+      } else {
+        res.status(403).json({ error: "Insufficient permissions (denied at user level)" });
+        return;
+      }
+    }
+    const [rolePermission] = await db.select().from(rolePermissionsTable).where(
+      and(
+        eq(rolePermissionsTable.roleKey, role),
+        eq(rolePermissionsTable.permissionKey, permissionKey)
+      )
+    ).limit(1);
+    if (!rolePermission) {
+      res.status(403).json({ error: "Insufficient permissions" });
+      return;
+    }
+    next();
+  };
+}
 
 // src/lib/price-calculator.ts
 init_drizzle_orm();
@@ -81117,7 +81225,7 @@ router3.get("/drinks", async (req, res) => {
   );
   res.json(serializeDates(drinksWithDetails));
 });
-router3.post("/drinks", async (req, res) => {
+router3.post("/drinks", requirePermission("admin:manage_drinks"), async (req, res) => {
   const parsed = CreateDrinkBody2.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -81177,7 +81285,7 @@ router3.get("/drinks/:id", async (req, res) => {
   }
   res.json(serializeDates(detail));
 });
-router3.patch("/drinks/:id", async (req, res) => {
+router3.patch("/drinks/:id", requirePermission("admin:manage_drinks"), async (req, res) => {
   const params = UpdateDrinkParams2.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -81224,7 +81332,7 @@ router3.patch("/drinks/:id", async (req, res) => {
     categoryId: drink.categoryId ?? void 0
   })));
 });
-router3.post("/drinks/:id/image", upload.single("image"), async (req, res) => {
+router3.post("/drinks/:id/image", requirePermission("admin:manage_drinks"), upload.single("image"), async (req, res) => {
   const id = parseInt(req.params.id);
   if (isNaN(id)) {
     res.status(400).json({ error: "Invalid id" });
@@ -81244,7 +81352,7 @@ router3.post("/drinks/:id/image", upload.single("image"), async (req, res) => {
   }
   res.json({ imageUrl });
 });
-router3.put("/drinks/:id/slots", async (req, res) => {
+router3.put("/drinks/:id/slots", requirePermission("admin:manage_drinks"), async (req, res) => {
   const idParsed = GetDrinkParams2.safeParse(req.params);
   if (!idParsed.success) {
     res.status(400).json({ error: idParsed.error.message });
@@ -81527,7 +81635,7 @@ async function buildIngredientDetail(ingredientId, branchId) {
     }))
   };
 }
-router4.post("/ingredients/import-csv", async (req, res) => {
+router4.post("/ingredients/import-csv", requirePermission("admin:manage_ingredients"), async (req, res) => {
   try {
     const { pin } = req.body;
     if (!pin) {
@@ -81619,7 +81727,7 @@ router4.post("/ingredients/import-csv", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-router4.get("/ingredients", async (req, res) => {
+router4.get("/ingredients", requirePermission("inventory:view"), async (req, res) => {
   const params = ListIngredientsQueryParams2.safeParse(req.query);
   const sessionUser = req.session;
   const sessionBranchId = sessionUser.branchId;
@@ -81672,7 +81780,7 @@ router4.get("/ingredients", async (req, res) => {
     }))
   );
 });
-router4.post("/ingredients", async (req, res) => {
+router4.post("/ingredients", requirePermission("admin:manage_ingredients"), async (req, res) => {
   const parsed = CreateIngredientBody2.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -81708,7 +81816,7 @@ router4.post("/ingredients", async (req, res) => {
   );
   globalCache.clear();
 });
-router4.get("/ingredients/:id", async (req, res) => {
+router4.get("/ingredients/:id", requirePermission("inventory:view"), async (req, res) => {
   const params = GetIngredientParams2.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -81723,7 +81831,7 @@ router4.get("/ingredients/:id", async (req, res) => {
   }
   res.json(GetIngredientResponse2.parse(serializeDates(detail)));
 });
-router4.patch("/ingredients/:id", async (req, res) => {
+router4.patch("/ingredients/:id", requirePermission("admin:manage_ingredients"), async (req, res) => {
   const params = UpdateIngredientParams2.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -81777,7 +81885,7 @@ router4.patch("/ingredients/:id", async (req, res) => {
   );
   globalCache.clear();
 });
-router4.delete("/ingredients/:id", async (req, res) => {
+router4.delete("/ingredients/:id", requirePermission("admin:manage_ingredients"), async (req, res) => {
   const params = GetIngredientParams2.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -81799,7 +81907,7 @@ router4.delete("/ingredients/:id", async (req, res) => {
     res.status(400).json({ error: "Cannot delete ingredient because it is in use by historical orders." });
   }
 });
-router4.post("/ingredients/:id/options", async (req, res) => {
+router4.post("/ingredients/:id/options", requirePermission("admin:manage_ingredients"), async (req, res) => {
   const params = CreateIngredientOptionParams2.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -81829,7 +81937,7 @@ router4.post("/ingredients/:id/options", async (req, res) => {
   });
   globalCache.clear();
 });
-router4.patch("/ingredients/:id/options/:optionId", async (req, res) => {
+router4.patch("/ingredients/:id/options/:optionId", requirePermission("admin:manage_ingredients"), async (req, res) => {
   const params = UpdateIngredientOptionParams2.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -81864,7 +81972,7 @@ router4.patch("/ingredients/:id/options/:optionId", async (req, res) => {
   });
   globalCache.clear();
 });
-router4.delete("/ingredients/:id/options/:optionId", async (req, res) => {
+router4.delete("/ingredients/:id/options/:optionId", requirePermission("admin:manage_ingredients"), async (req, res) => {
   const params = DeleteIngredientOptionParams2.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -81883,7 +81991,7 @@ router4.delete("/ingredients/:id/options/:optionId", async (req, res) => {
   res.sendStatus(204);
   globalCache.clear();
 });
-router4.post("/ingredients/:id/restock", async (req, res) => {
+router4.post("/ingredients/:id/restock", requirePermission("inventory:adjust"), async (req, res) => {
   const params = GetIngredientParams2.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.format() });
@@ -82000,7 +82108,7 @@ async function buildOrderDetail(orderId) {
     }))
   };
 }
-router5.get("/orders", async (req, res) => {
+router5.get("/orders", requirePermission("cashier:view"), async (req, res) => {
   const params = ListOrdersQueryParams2.safeParse(req.query);
   const sessionUser = req.session;
   const isAdmin = sessionUser.role === "admin";
@@ -82074,7 +82182,7 @@ router5.get("/orders", async (req, res) => {
     )
   );
 });
-router5.post("/orders", async (req, res) => {
+router5.post("/orders", requirePermission("pos:create_order"), async (req, res) => {
   const parsed = CreateOrderBody2.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -82307,7 +82415,7 @@ router5.post("/orders", async (req, res) => {
     )
   );
 });
-router5.get("/orders/:id", async (req, res) => {
+router5.get("/orders/:id", requirePermission("pos:view"), async (req, res) => {
   const params = GetOrderParams2.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -82320,7 +82428,15 @@ router5.get("/orders/:id", async (req, res) => {
   }
   res.json(GetOrderResponse2.parse(serializeDates(detail)));
 });
-router5.patch("/orders/:id/status", async (req, res) => {
+router5.patch("/orders/:id/status", async (req, res, next) => {
+  const status = req.body.status;
+  let perm = "cashier:view";
+  if (status === "paid") perm = "cashier:approve_order";
+  if (status === "ready") perm = "kitchen:mark_ready";
+  if (status === "cancelled") perm = "cashier:cancel_order";
+  if (status === "completed") perm = "cashier:view";
+  return requirePermission(perm)(req, res, next);
+}, async (req, res) => {
   const params = UpdateOrderStatusParams2.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -82358,7 +82474,7 @@ router5.patch("/orders/:id/status", async (req, res) => {
   await logActivity(req, "UPDATE_ORDER_STATUS", "order", order.id, { status: order.status });
   res.json(UpdateOrderStatusResponse2.parse(serializeDates(detail)));
 });
-router5.patch("/order-items/:id/ready", async (req, res) => {
+router5.patch("/order-items/:id/ready", requirePermission("kitchen:mark_ready"), async (req, res) => {
   const itemId = parseInt(req.params.id);
   if (isNaN(itemId)) {
     res.status(400).json({ error: "Invalid item ID" });
@@ -82389,7 +82505,7 @@ router5.patch("/order-items/:id/ready", async (req, res) => {
   const detail = await buildOrderDetail(item.orderId);
   res.json(GetOrderResponse2.parse(serializeDates(detail)));
 });
-router5.post("/orders/:id/refund", async (req, res) => {
+router5.post("/orders/:id/refund", requirePermission("cashier:refund_order"), async (req, res) => {
   const { id } = req.params;
   const { adminPin, returnToStockItems } = req.body;
   if (!adminPin) {
@@ -82854,7 +82970,7 @@ router8.get("/catalog/categories", async (_req, res) => {
   const rows = await db.select().from(ingredientCategoriesTable).orderBy(asc(ingredientCategoriesTable.sortOrder), asc(ingredientCategoriesTable.name));
   res.json(rows);
 });
-router8.post("/catalog/categories", async (req, res) => {
+router8.post("/catalog/categories", requirePermission("admin:manage_catalog"), async (req, res) => {
   const { name, sortOrder } = req.body;
   if (!name) {
     res.status(400).json({ error: "name required" });
@@ -82864,7 +82980,7 @@ router8.post("/catalog/categories", async (req, res) => {
   globalCache.clear();
   res.status(201).json(row);
 });
-router8.patch("/catalog/categories/:id", async (req, res) => {
+router8.patch("/catalog/categories/:id", requirePermission("admin:manage_catalog"), async (req, res) => {
   const id = parseInt(req.params.id);
   const { name, sortOrder } = req.body;
   const [row] = await db.update(ingredientCategoriesTable).set({ ...name && { name }, ...sortOrder !== void 0 && { sortOrder } }).where(eq(ingredientCategoriesTable.id, id)).returning();
@@ -82875,7 +82991,7 @@ router8.patch("/catalog/categories/:id", async (req, res) => {
   globalCache.clear();
   res.json(row);
 });
-router8.delete("/catalog/categories/:id", async (req, res) => {
+router8.delete("/catalog/categories/:id", requirePermission("admin:manage_catalog"), async (req, res) => {
   const id = parseInt(req.params.id);
   try {
     await db.delete(ingredientCategoriesTable).where(eq(ingredientCategoriesTable.id, id));
@@ -82934,7 +83050,7 @@ router8.get("/catalog/types/:id", async (req, res) => {
     }))
   });
 });
-router8.post("/catalog/types", async (req, res) => {
+router8.post("/catalog/types", requirePermission("admin:manage_catalog"), async (req, res) => {
   const { categoryId, name, inventoryIngredientId, processedQty, producedQty, unit, isActive, affectsCupSize, sortOrder, color, extraCost, pricingMode } = req.body;
   if (!categoryId || !name) {
     res.status(400).json({ error: "categoryId and name required" });
@@ -82957,7 +83073,7 @@ router8.post("/catalog/types", async (req, res) => {
   globalCache.clear();
   res.status(201).json(row);
 });
-router8.patch("/catalog/types/:id", async (req, res) => {
+router8.patch("/catalog/types/:id", requirePermission("admin:manage_catalog"), async (req, res) => {
   const id = parseInt(req.params.id);
   const { categoryId, name, inventoryIngredientId, processedQty, producedQty, unit, isActive, affectsCupSize, sortOrder, color, extraCost, pricingMode } = req.body;
   const patch = {};
@@ -82990,7 +83106,7 @@ router8.patch("/catalog/types/:id", async (req, res) => {
     res.status(500).json({ error: err.message || "Failed to update ingredient type" });
   }
 });
-router8.delete("/catalog/types/:id", async (req, res) => {
+router8.delete("/catalog/types/:id", requirePermission("admin:manage_catalog"), async (req, res) => {
   const id = parseInt(req.params.id);
   try {
     await db.delete(ingredientTypesTable).where(eq(ingredientTypesTable.id, id));
@@ -83022,7 +83138,7 @@ router8.get("/catalog/types/:id/volumes", async (req, res) => {
   const volMap = new Map(volRows.flat().map((v) => [v.id, v]));
   res.json(typeVolumes.map((tv) => ({ ...tv, volume: volMap.get(tv.volumeId) ?? null })));
 });
-router8.post("/catalog/types/:id/volumes", async (req, res) => {
+router8.post("/catalog/types/:id/volumes", requirePermission("admin:manage_catalog"), async (req, res) => {
   const ingredientTypeId = parseInt(req.params.id);
   const { volumeId, processedQty, producedQty, unit, extraCost, isDefault, sortOrder } = req.body;
   if (!volumeId) {
@@ -83043,7 +83159,7 @@ router8.post("/catalog/types/:id/volumes", async (req, res) => {
   globalCache.clear();
   res.status(201).json(row);
 });
-router8.patch("/catalog/type-volumes/:id", async (req, res) => {
+router8.patch("/catalog/type-volumes/:id", requirePermission("admin:manage_catalog"), async (req, res) => {
   const id = parseInt(req.params.id);
   const { processedQty, producedQty, unit, extraCost, isDefault, sortOrder, isActive } = req.body;
   const patch = {};
@@ -83062,7 +83178,7 @@ router8.patch("/catalog/type-volumes/:id", async (req, res) => {
   globalCache.clear();
   res.json(row);
 });
-router8.delete("/catalog/type-volumes/:id", async (req, res) => {
+router8.delete("/catalog/type-volumes/:id", requirePermission("admin:manage_catalog"), async (req, res) => {
   await db.delete(ingredientTypeVolumesTable).where(eq(ingredientTypeVolumesTable.id, parseInt(req.params.id)));
   globalCache.clear();
   res.sendStatus(204);
@@ -83071,7 +83187,7 @@ router8.get("/catalog/volumes", async (_req, res) => {
   const rows = await db.select().from(ingredientVolumesTable).orderBy(asc(ingredientVolumesTable.sortOrder), asc(ingredientVolumesTable.name));
   res.json(rows);
 });
-router8.post("/catalog/volumes", async (req, res) => {
+router8.post("/catalog/volumes", requirePermission("admin:manage_catalog"), async (req, res) => {
   const { name, processedQty, producedQty, unit, sortOrder } = req.body;
   if (!name) {
     res.status(400).json({ error: "name required" });
@@ -83080,7 +83196,7 @@ router8.post("/catalog/volumes", async (req, res) => {
   const [row] = await db.insert(ingredientVolumesTable).values({ name, processedQty: processedQty ?? "0", producedQty: producedQty ?? "0", unit: unit ?? "ml", sortOrder: sortOrder ?? 0 }).returning();
   res.status(201).json(row);
 });
-router8.patch("/catalog/volumes/:id", async (req, res) => {
+router8.patch("/catalog/volumes/:id", requirePermission("admin:manage_catalog"), async (req, res) => {
   const id = parseInt(req.params.id);
   const { name, processedQty, producedQty, unit, sortOrder } = req.body;
   const patch = {};
@@ -83096,7 +83212,7 @@ router8.patch("/catalog/volumes/:id", async (req, res) => {
   }
   res.json(row);
 });
-router8.delete("/catalog/volumes/:id", async (req, res) => {
+router8.delete("/catalog/volumes/:id", requirePermission("admin:manage_catalog"), async (req, res) => {
   const id = parseInt(req.params.id);
   try {
     await db.delete(ingredientVolumesTable).where(eq(ingredientVolumesTable.id, id));
@@ -83129,7 +83245,7 @@ router8.get("/catalog/types/:id/overrides", async (req, res) => {
   }, []);
   res.json(grouped);
 });
-router8.post("/catalog/types/:id/sync", async (req, res) => {
+router8.post("/catalog/types/:id/sync", requirePermission("admin:manage_catalog"), async (req, res) => {
   const typeId = parseInt(req.params.id);
   const { drinkId } = req.body;
   if (!drinkId) {
@@ -83166,7 +83282,7 @@ router9.get("/drink-categories", async (_req, res) => {
   const categories = await db.select().from(drinkCategoriesTable).orderBy(asc(drinkCategoriesTable.sortOrder), asc(drinkCategoriesTable.name));
   res.json(categories);
 });
-router9.post("/drink-categories", async (req, res) => {
+router9.post("/drink-categories", requirePermission("admin:manage_categories"), async (req, res) => {
   const parsed = insertDrinkCategorySchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -83175,7 +83291,7 @@ router9.post("/drink-categories", async (req, res) => {
   const [category] = await db.insert(drinkCategoriesTable).values(parsed.data).returning();
   res.status(201).json(category);
 });
-router9.patch("/drink-categories/:id", async (req, res) => {
+router9.patch("/drink-categories/:id", requirePermission("admin:manage_categories"), async (req, res) => {
   const id = parseInt(req.params.id);
   if (isNaN(id)) {
     res.status(400).json({ error: "Invalid id" });
@@ -83196,7 +83312,7 @@ router9.patch("/drink-categories/:id", async (req, res) => {
   }
   res.json(category);
 });
-router9.delete("/drink-categories/:id", async (req, res) => {
+router9.delete("/drink-categories/:id", requirePermission("admin:manage_categories"), async (req, res) => {
   const id = parseInt(req.params.id);
   if (isNaN(id)) {
     res.status(400).json({ error: "Invalid id" });
@@ -83216,11 +83332,11 @@ var import_express10 = __toESM(require_express2(), 1);
 init_drizzle_orm();
 init_src();
 var router10 = (0, import_express10.Router)();
-router10.get("/kitchen-stations", async (_req, res) => {
+router10.get("/kitchen-stations", requirePermission("kitchen:view"), async (_req, res) => {
   const stations = await db.select().from(kitchenStationsTable).orderBy(asc(kitchenStationsTable.sortOrder), asc(kitchenStationsTable.name));
   res.json(stations);
 });
-router10.post("/kitchen-stations", async (req, res) => {
+router10.post("/kitchen-stations", requirePermission("admin:manage_stations"), async (req, res) => {
   const parsed = insertKitchenStationSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -83229,7 +83345,7 @@ router10.post("/kitchen-stations", async (req, res) => {
   const [station] = await db.insert(kitchenStationsTable).values(parsed.data).returning();
   res.status(201).json(station);
 });
-router10.patch("/kitchen-stations/:id", async (req, res) => {
+router10.patch("/kitchen-stations/:id", requirePermission("admin:manage_stations"), async (req, res) => {
   const id = parseInt(req.params.id);
   if (isNaN(id)) {
     res.status(400).json({ error: "Invalid id" });
@@ -83253,7 +83369,7 @@ router10.patch("/kitchen-stations/:id", async (req, res) => {
   }
   res.json(station);
 });
-router10.delete("/kitchen-stations/:id", async (req, res) => {
+router10.delete("/kitchen-stations/:id", requirePermission("admin:manage_stations"), async (req, res) => {
   const id = parseInt(req.params.id);
   if (isNaN(id)) {
     res.status(400).json({ error: "Invalid id" });
@@ -83472,66 +83588,6 @@ var predefined_slots_default = router12;
 var import_express13 = __toESM(require_express2(), 1);
 init_src();
 init_drizzle_orm();
-
-// src/middleware/permissions.ts
-init_src();
-init_drizzle_orm();
-function requirePermission(permissionKey) {
-  return async (req, res, next) => {
-    const userId = req.session.userId;
-    if (!userId) {
-      res.status(401).json({ error: "Not authenticated" });
-      return;
-    }
-    if (!req.user) {
-      const [user2] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
-      if (!user2) {
-        res.status(401).json({ error: "User not found" });
-        return;
-      }
-      req.user = user2;
-    }
-    const user = req.user;
-    const role = user.role;
-    if (role === "admin") {
-      const [denial] = await db.select().from(userPermissionsTable).where(
-        and(
-          eq(userPermissionsTable.userId, userId),
-          eq(userPermissionsTable.permissionKey, permissionKey),
-          eq(userPermissionsTable.granted, false)
-        )
-      ).limit(1);
-      if (!denial) return next();
-    }
-    const [userOverride] = await db.select().from(userPermissionsTable).where(
-      and(
-        eq(userPermissionsTable.userId, userId),
-        eq(userPermissionsTable.permissionKey, permissionKey)
-      )
-    ).limit(1);
-    if (userOverride) {
-      if (userOverride.granted) {
-        return next();
-      } else {
-        res.status(403).json({ error: "Insufficient permissions (denied at user level)" });
-        return;
-      }
-    }
-    const [rolePermission] = await db.select().from(rolePermissionsTable).where(
-      and(
-        eq(rolePermissionsTable.roleKey, role),
-        eq(rolePermissionsTable.permissionKey, permissionKey)
-      )
-    ).limit(1);
-    if (!rolePermission) {
-      res.status(403).json({ error: "Insufficient permissions" });
-      return;
-    }
-    next();
-  };
-}
-
-// src/routes/users.ts
 var usersRouter = (0, import_express13.Router)();
 usersRouter.get("/users", requirePermission("users:view"), async (req, res) => {
   try {
@@ -83573,12 +83629,14 @@ usersRouter.post("/users", requirePermission("users:create"), async (req, res) =
       throw new Error("User creation failed: no data returned");
     }
     await logActivity(req, "CREATE_USER", "user", newUser.id, { role: newUser.role, name: newUser.name });
+    const perms = await resolveUserPermissions(newUser.id, newUser.role);
     res.status(201).json(UserDetail.parse({
       ...newUser,
       username: newUser.username ?? `user_${newUser.id}`,
       isActive: newUser.isActive ?? true,
       createdAt: newUser.createdAt?.toISOString(),
-      updatedAt: newUser.updatedAt?.toISOString()
+      updatedAt: newUser.updatedAt?.toISOString(),
+      permissions: perms
     }));
     return;
   } catch (error40) {
@@ -83609,12 +83667,14 @@ usersRouter.patch("/users/:id", requirePermission("users:update"), async (req, r
       return;
     }
     await logActivity(req, "UPDATE_USER", "user", id, { role: updatedUser.role, name: updatedUser.name });
+    const perms = await resolveUserPermissions(updatedUser.id, updatedUser.role);
     res.json(UserDetail.parse({
       ...updatedUser,
       username: updatedUser.username ?? `user_${updatedUser.id}`,
       isActive: updatedUser.isActive ?? true,
       createdAt: updatedUser.createdAt?.toISOString(),
-      updatedAt: updatedUser.updatedAt?.toISOString()
+      updatedAt: updatedUser.updatedAt?.toISOString(),
+      permissions: perms
     }));
     return;
   } catch (error40) {
@@ -83684,7 +83744,7 @@ var import_express14 = __toESM(require_express2(), 1);
 init_drizzle_orm();
 init_src();
 var router13 = (0, import_express14.Router)();
-router13.get("/discounts", async (req, res) => {
+router13.get("/discounts", requirePermission("admin:manage_discounts"), async (req, res) => {
   const discounts = await db.select().from(discountsTable);
   res.json(
     discounts.map((d) => ({
@@ -83693,7 +83753,7 @@ router13.get("/discounts", async (req, res) => {
     }))
   );
 });
-router13.post("/discounts", async (req, res) => {
+router13.post("/discounts", requirePermission("admin:manage_discounts"), async (req, res) => {
   const parsed = CreateDiscountBody2.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -83710,7 +83770,7 @@ router13.post("/discounts", async (req, res) => {
     value: parseFloat(discount.value)
   });
 });
-router13.patch("/discounts/:id", async (req, res) => {
+router13.patch("/discounts/:id", requirePermission("admin:manage_discounts"), async (req, res) => {
   const id = parseInt(req.params.id);
   const parsed = UpdateDiscountBody2.safeParse(req.body);
   if (!parsed.success) {
@@ -83732,7 +83792,7 @@ router13.patch("/discounts/:id", async (req, res) => {
     value: parseFloat(discount.value)
   });
 });
-router13.delete("/discounts/:id", async (req, res) => {
+router13.delete("/discounts/:id", requirePermission("admin:manage_discounts"), async (req, res) => {
   const id = parseInt(req.params.id);
   const [deleted] = await db.delete(discountsTable).where(eq(discountsTable.id, id)).returning();
   if (!deleted) {
@@ -83741,7 +83801,7 @@ router13.delete("/discounts/:id", async (req, res) => {
   }
   res.sendStatus(204);
 });
-router13.get("/discounts/validate/:code", async (req, res) => {
+router13.get("/discounts/validate/:code", requirePermission("pos:apply_discount"), async (req, res) => {
   const [discount] = await db.select().from(discountsTable).where(eq(discountsTable.code, req.params.code));
   if (!discount || !discount.isActive) {
     res.status(404).json({ error: "Invalid or inactive discount code" });
@@ -84010,7 +84070,7 @@ router15.post("/cashier/login", async (req, res) => {
     });
   });
 });
-router15.post("/cashier/end-session", async (req, res) => {
+router15.post("/cashier/end-session", requirePermission("cashier:close_session"), async (req, res) => {
   const sessionId = req.session.cashierSessionId;
   if (!sessionId) {
     res.status(400).json({ error: "No active cashier session" });
@@ -84041,7 +84101,7 @@ router15.get("/cashier/active", async (req, res) => {
     startedAt: session2.startedAt
   });
 });
-router15.get("/cashier/performance/:cashierId", async (req, res) => {
+router15.get("/cashier/performance/:cashierId", requirePermission("cashier:view_reports"), async (req, res) => {
   const cashierId = parseInt(req.params.cashierId);
   if (isNaN(cashierId)) {
     res.status(400).json({ error: "Invalid cashierId" });
@@ -84078,7 +84138,7 @@ router15.get("/cashier/performance/:cashierId", async (req, res) => {
     avgOrderValue: completedOrders.length > 0 ? totalRevenue / completedOrders.length : 0
   });
 });
-router15.get("/cashier/sessions", async (req, res) => {
+router15.get("/cashier/sessions", requirePermission("cashier:view_reports"), async (req, res) => {
   const { cashierId, startDate, endDate } = req.query;
   const conditions = [];
   if (cashierId) conditions.push(eq(cashierSessionsTable.cashierId, parseInt(cashierId)));
@@ -84097,11 +84157,11 @@ router15.get("/cashier/sessions", async (req, res) => {
     cashierName: cashierMap.get(s.cashierId) ?? "Unknown"
   })));
 });
-router15.get("/cashier/list", async (_req, res) => {
+router15.get("/cashier/list", requirePermission("cashier:view"), async (_req, res) => {
   const cashiers = await db.select({ id: usersTable.id, name: usersTable.name, role: usersTable.role }).from(usersTable).where(inArray(usersTable.role, ["cashier", "admin"]));
   res.json(cashiers);
 });
-router15.get("/cashier/sessions/:id/performance", async (req, res) => {
+router15.get("/cashier/sessions/:id/performance", requirePermission("cashier:view_reports"), async (req, res) => {
   const sessionId = parseInt(req.params.id);
   if (isNaN(sessionId)) {
     res.status(400).json({ error: "Invalid sessionId" });
@@ -84235,7 +84295,7 @@ adminRouter.delete("/admin/permissions/:key", requirePermission("admin:manage_pe
     res.status(500).json({ error: "Failed to delete permission key" });
   }
 });
-adminRouter.post("/admin/backup", requirePermission("admin:manage_permissions"), async (req, res) => {
+adminRouter.post("/admin/backup", requirePermission("admin:backup"), async (req, res) => {
   try {
     const dbUrl = process.env.DATABASE_URL;
     if (!dbUrl) throw new Error("DATABASE_URL not set");
@@ -84458,7 +84518,7 @@ var import_express19 = __toESM(require_express2(), 1);
 init_src();
 init_drizzle_orm();
 var rolesRouter = (0, import_express19.Router)();
-rolesRouter.get("/", requirePermission("users:view"), async (req, res) => {
+rolesRouter.get("/", requirePermission("roles:view"), async (req, res) => {
   try {
     const allRoles = await db.select().from(rolesTable);
     res.json(allRoles);
@@ -84467,7 +84527,7 @@ rolesRouter.get("/", requirePermission("users:view"), async (req, res) => {
     res.status(500).json({ error: "Failed to list roles" });
   }
 });
-rolesRouter.post("/", requirePermission("users:create"), async (req, res) => {
+rolesRouter.post("/", requirePermission("roles:manage"), async (req, res) => {
   try {
     const { key, name, description, permissions } = req.body;
     if (!key || !name) {
@@ -84493,7 +84553,7 @@ rolesRouter.post("/", requirePermission("users:create"), async (req, res) => {
     res.status(500).json({ error: "Failed to create role" });
   }
 });
-rolesRouter.get("/:key/permissions", requirePermission("users:view"), async (req, res) => {
+rolesRouter.get("/:key/permissions", requirePermission("roles:view"), async (req, res) => {
   try {
     const key = req.params.key;
     const perms = await db.select().from(rolePermissionsTable).where(eq(rolePermissionsTable.roleKey, key));
@@ -84503,7 +84563,7 @@ rolesRouter.get("/:key/permissions", requirePermission("users:view"), async (req
     res.status(500).json({ error: "Failed to fetch role permissions" });
   }
 });
-rolesRouter.patch("/:key", requirePermission("users:update"), async (req, res) => {
+rolesRouter.patch("/:key", requirePermission("roles:manage"), async (req, res) => {
   try {
     const { name, description, permissions } = req.body;
     const key = req.params.key;
@@ -84533,7 +84593,7 @@ rolesRouter.patch("/:key", requirePermission("users:update"), async (req, res) =
     res.status(500).json({ error: "Failed to update role" });
   }
 });
-rolesRouter.delete("/:key", requirePermission("users:update"), async (req, res) => {
+rolesRouter.delete("/:key", requirePermission("roles:manage"), async (req, res) => {
   try {
     const key = req.params.key;
     const [deletedRole] = await db.transaction(async (tx) => {
@@ -84551,7 +84611,7 @@ rolesRouter.delete("/:key", requirePermission("users:update"), async (req, res) 
     res.status(500).json({ error: "Failed to delete role" });
   }
 });
-rolesRouter.get("/permissions/list", requirePermission("users:view"), async (req, res) => {
+rolesRouter.get("/permissions/list", requirePermission("roles:view"), async (req, res) => {
   try {
     const all = await db.select().from(permissionsTable);
     res.json(all);
@@ -84571,7 +84631,7 @@ router17.get("/", async (req, res) => {
   const branches = await db.select().from(branchesTable).orderBy(asc(branchesTable.name));
   res.json(branches);
 });
-router17.post("/", async (req, res) => {
+router17.post("/", requirePermission("admin:manage_branches"), async (req, res) => {
   const parsed = insertBranchSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -84580,7 +84640,7 @@ router17.post("/", async (req, res) => {
   const [branch] = await db.insert(branchesTable).values(parsed.data).returning();
   res.status(201).json(branch);
 });
-router17.patch("/:id", async (req, res) => {
+router17.patch("/:id", requirePermission("admin:manage_branches"), async (req, res) => {
   const id = parseInt(req.params.id);
   if (isNaN(id)) {
     res.status(400).json({ error: "Invalid id" });
@@ -84598,7 +84658,7 @@ router17.patch("/:id", async (req, res) => {
   }
   res.json(branch);
 });
-router17.delete("/:id", async (req, res) => {
+router17.delete("/:id", requirePermission("admin:manage_branches"), async (req, res) => {
   const id = parseInt(req.params.id);
   if (isNaN(id)) {
     res.status(400).json({ error: "Invalid id" });

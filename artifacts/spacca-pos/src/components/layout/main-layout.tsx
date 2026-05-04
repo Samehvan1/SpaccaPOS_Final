@@ -17,7 +17,7 @@ interface MainLayoutProps {
 }
 
 export function MainLayout({ children }: MainLayoutProps) {
-  const { user, logout, selectedBranchId, setSelectedBranchId } = useAuth();
+  const { user, logout, selectedBranchId, setSelectedBranchId, hasPermission } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { autoPrintCustomer, setAutoPrintCustomer, autoPrintAgent, setAutoPrintAgent } = useSettings();
   const isOnline = useOnlineStatus();
@@ -227,14 +227,11 @@ export function MainLayout({ children }: MainLayoutProps) {
 
   // ─── Front-desk kiosk layout ───────────────────────────────────────────────
   const navItems = [
-    { href: "/pos", label: "POS", icon: Coffee },
-    { href: "/kitchen", label: "Kitchen", icon: ChefHat },
-  ];
-
-  if (user?.role === "admin") {
-    navItems.push({ href: "/admin", label: "Admin", icon: LayoutDashboard });
-    navItems.push({ href: "/admin/stock-audits", label: "Stock Audits", icon: History });
-  }
+    { href: "/pos", label: "POS", icon: Coffee, permission: "pos:view" },
+    { href: "/kitchen", label: "Kitchen", icon: ChefHat, permission: "kitchen:view" },
+    { href: "/admin", label: "Admin", icon: LayoutDashboard, permission: "admin:view" },
+    { href: "/admin/stock-audits", label: "Stock Audits", icon: History, permission: "inventory:view" },
+  ].filter(item => hasPermission(item.permission));
 
   return (
     <div className="flex h-screen w-full bg-background overflow-hidden">
@@ -284,7 +281,7 @@ export function MainLayout({ children }: MainLayoutProps) {
             </div>
           </div>
 
-          {user?.role === "admin" && (
+          {(user?.role === "admin" || hasPermission("branches:manage")) && (
             <div className="px-2 pb-4 pt-2">
               <div className={`mb-3 p-2 rounded-lg border flex items-center gap-2 transition-all ${selectedBranchId ? 'bg-primary/5 border-primary/20' : 'bg-muted border-muted-foreground/10'}`}>
                 <div className={`h-2 w-2 rounded-full animate-pulse ${selectedBranchId ? 'bg-primary' : 'bg-slate-400'}`} />
@@ -326,7 +323,7 @@ export function MainLayout({ children }: MainLayoutProps) {
             )}
           </Button>
           
-          {user?.role === "admin" && (
+          {(user?.role === "admin" || hasPermission("settings:manage")) && (
             <>
               <Button
                 variant="ghost"

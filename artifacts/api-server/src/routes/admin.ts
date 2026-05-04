@@ -121,7 +121,7 @@ adminRouter.delete("/admin/permissions/:key", requirePermission("admin:manage_pe
 });
 
 // POST /admin/backup
-adminRouter.post("/admin/backup", requirePermission("admin:manage_permissions"), async (req, res) => {
+adminRouter.post("/admin/backup", requirePermission("admin:backup"), async (req, res) => {
   try {
     const dbUrl = process.env.DATABASE_URL;
     if (!dbUrl) throw new Error("DATABASE_URL not set");

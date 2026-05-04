@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { eq } from "drizzle-orm";
 import { db, discountsTable } from "@workspace/db";
 import { serializeDates } from "../lib/serialize";
+import { requirePermission } from "../middleware/permissions";
 import {
   Discount,
   CreateDiscountBody,
@@ -10,7 +11,7 @@ import {
 
 const router: IRouter = Router();
 
-router.get("/discounts", async (req, res): Promise<void> => {
+router.get("/discounts", requirePermission("admin:manage_discounts"), async (req, res): Promise<void> => {
   const discounts = await db.select().from(discountsTable);
   res.json(
     discounts.map((d) => ({
@@ -20,7 +21,7 @@ router.get("/discounts", async (req, res): Promise<void> => {
   );
 });
 
-router.post("/discounts", async (req, res): Promise<void> => {
+router.post("/discounts", requirePermission("admin:manage_discounts"), async (req, res): Promise<void> => {
   const parsed = CreateDiscountBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -43,8 +44,8 @@ router.post("/discounts", async (req, res): Promise<void> => {
   });
 });
 
-router.patch("/discounts/:id", async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id);
+router.patch("/discounts/:id", requirePermission("admin:manage_discounts"), async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id as string);
   const parsed = UpdateDiscountBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -74,8 +75,8 @@ router.patch("/discounts/:id", async (req, res): Promise<void> => {
   });
 });
 
-router.delete("/discounts/:id", async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id);
+router.delete("/discounts/:id", requirePermission("admin:manage_discounts"), async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id as string);
   const [deleted] = await db
     .delete(discountsTable)
     .where(eq(discountsTable.id, id))
@@ -89,11 +90,11 @@ router.delete("/discounts/:id", async (req, res): Promise<void> => {
   res.sendStatus(204);
 });
 
-router.get("/discounts/validate/:code", async (req, res): Promise<void> => {
+router.get("/discounts/validate/:code", requirePermission("pos:apply_discount"), async (req, res): Promise<void> => {
   const [discount] = await db
     .select()
     .from(discountsTable)
-    .where(eq(discountsTable.code, req.params.code));
+    .where(eq(discountsTable.code, req.params.code as string));
 
   if (!discount || !discount.isActive) {
     res.status(404).json({ error: "Invalid or inactive discount code" });

@@ -10,6 +10,7 @@ interface AuthContextType {
   refetchUser: () => void;
   selectedBranchId: number | null; // null means "All Branches"
   setSelectedBranchId: (id: number | null) => void;
+  hasPermission: (permission: string) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -58,6 +59,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     logoutMutation.mutate();
   };
 
+  const hasPermission = (permission: string) => {
+    if (!user) return false;
+    if (user.role === "admin") return true; // Admins have everything
+    return (user as any).permissions?.includes(permission) ?? false;
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -67,6 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         refetchUser: refetch,
         selectedBranchId,
         setSelectedBranchId,
+        hasPermission,
       }}
     >
       {children}

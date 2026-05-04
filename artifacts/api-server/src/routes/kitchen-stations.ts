@@ -1,11 +1,12 @@
 import { Router, type IRouter } from "express";
 import { eq, asc } from "drizzle-orm";
 import { db, kitchenStationsTable, insertKitchenStationSchema, drinksTable } from "@workspace/db";
+import { requirePermission } from "../middleware/permissions";
 
 const router: IRouter = Router();
 
 // GET /kitchen-stations
-router.get("/kitchen-stations", async (_req, res): Promise<void> => {
+router.get("/kitchen-stations", requirePermission("kitchen:view"), async (_req, res): Promise<void> => {
   const stations = await db
     .select()
     .from(kitchenStationsTable)
@@ -14,7 +15,7 @@ router.get("/kitchen-stations", async (_req, res): Promise<void> => {
 });
 
 // POST /kitchen-stations
-router.post("/kitchen-stations", async (req, res): Promise<void> => {
+router.post("/kitchen-stations", requirePermission("admin:manage_stations"), async (req, res): Promise<void> => {
   const parsed = insertKitchenStationSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -28,8 +29,8 @@ router.post("/kitchen-stations", async (req, res): Promise<void> => {
 });
 
 // PATCH /kitchen-stations/:id
-router.patch("/kitchen-stations/:id", async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id);
+router.patch("/kitchen-stations/:id", requirePermission("admin:manage_stations"), async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id as string);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
 
   const { name, sortOrder, isActive } = req.body as {
@@ -70,8 +71,8 @@ router.patch("/kitchen-stations/:id", async (req, res): Promise<void> => {
 });
 
 // DELETE /kitchen-stations/:id
-router.delete("/kitchen-stations/:id", async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id);
+router.delete("/kitchen-stations/:id", requirePermission("admin:manage_stations"), async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id as string);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
 
   const [station] = await db

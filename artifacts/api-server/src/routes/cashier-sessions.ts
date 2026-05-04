@@ -6,6 +6,7 @@ import { z } from "zod";
 const router: IRouter = Router();
 
 import bcrypt from "bcryptjs";
+import { requirePermission } from "../middleware/permissions";
 
 const CashierLoginBody = z.object({
   username: z.string().min(1),
@@ -96,7 +97,7 @@ router.post("/cashier/login", async (req, res): Promise<void> => {
 });
 
 // POST /cashier/end-session — end the current shift
-router.post("/cashier/end-session", async (req, res): Promise<void> => {
+router.post("/cashier/end-session", requirePermission("cashier:close_session"), async (req, res): Promise<void> => {
   const sessionId = (req.session as any).cashierSessionId as number | undefined;
   if (!sessionId) {
     res.status(400).json({ error: "No active cashier session" });
@@ -147,8 +148,8 @@ router.get("/cashier/active", async (req, res): Promise<void> => {
 });
 
 // GET /cashier/performance/:cashierId — stats for a specific cashier
-router.get("/cashier/performance/:cashierId", async (req, res): Promise<void> => {
-  const cashierId = parseInt(req.params.cashierId);
+router.get("/cashier/performance/:cashierId", requirePermission("cashier:view_reports"), async (req, res): Promise<void> => {
+  const cashierId = parseInt(req.params.cashierId as string);
   if (isNaN(cashierId)) {
     res.status(400).json({ error: "Invalid cashierId" });
     return;
@@ -198,7 +199,7 @@ router.get("/cashier/performance/:cashierId", async (req, res): Promise<void> =>
 });
 
 // GET /cashier/sessions — list all sessions (admin)
-router.get("/cashier/sessions", async (req, res): Promise<void> => {
+router.get("/cashier/sessions", requirePermission("cashier:view_reports"), async (req, res): Promise<void> => {
   const { cashierId, startDate, endDate } = req.query as {
     cashierId?: string;
     startDate?: string;
@@ -234,7 +235,7 @@ router.get("/cashier/sessions", async (req, res): Promise<void> => {
 });
 
 // GET /cashier/list — list all users with cashier/admin role
-router.get("/cashier/list", async (_req, res): Promise<void> => {
+router.get("/cashier/list", requirePermission("cashier:view"), async (_req, res): Promise<void> => {
   const cashiers = await db
     .select({ id: usersTable.id, name: usersTable.name, role: usersTable.role })
     .from(usersTable)
@@ -243,8 +244,8 @@ router.get("/cashier/list", async (_req, res): Promise<void> => {
 });
 
 // GET /cashier/sessions/:id/performance — stats for a specific session
-router.get("/cashier/sessions/:id/performance", async (req, res): Promise<void> => {
-  const sessionId = parseInt(req.params.id);
+router.get("/cashier/sessions/:id/performance", requirePermission("cashier:view_reports"), async (req, res): Promise<void> => {
+  const sessionId = parseInt(req.params.id as string);
   if (isNaN(sessionId)) {
     res.status(400).json({ error: "Invalid sessionId" });
     return;

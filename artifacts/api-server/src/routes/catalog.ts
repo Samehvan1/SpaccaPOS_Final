@@ -16,6 +16,7 @@ import {
   drinksTable,
 } from "@workspace/db";
 import { globalCache } from "../lib/cache";
+import { requirePermission } from "../middleware/permissions";
 
 const router: IRouter = Router();
 
@@ -26,7 +27,7 @@ router.get("/catalog/categories", async (_req, res): Promise<void> => {
   res.json(rows);
 });
 
-router.post("/catalog/categories", async (req, res): Promise<void> => {
+router.post("/catalog/categories", requirePermission("admin:manage_catalog"), async (req, res): Promise<void> => {
   const { name, sortOrder } = req.body;
   if (!name) { res.status(400).json({ error: "name required" }); return; }
   const [row] = await db.insert(ingredientCategoriesTable).values({ name, sortOrder: sortOrder ?? 0 }).returning();
@@ -34,8 +35,8 @@ router.post("/catalog/categories", async (req, res): Promise<void> => {
   res.status(201).json(row);
 });
 
-router.patch("/catalog/categories/:id", async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id);
+router.patch("/catalog/categories/:id", requirePermission("admin:manage_catalog"), async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id as string);
   const { name, sortOrder } = req.body;
   const [row] = await db.update(ingredientCategoriesTable).set({ ...(name && { name }), ...(sortOrder !== undefined && { sortOrder }) }).where(eq(ingredientCategoriesTable.id, id)).returning();
   if (!row) { res.status(404).json({ error: "Not found" }); return; }
@@ -43,8 +44,8 @@ router.patch("/catalog/categories/:id", async (req, res): Promise<void> => {
   res.json(row);
 });
 
-router.delete("/catalog/categories/:id", async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id);
+router.delete("/catalog/categories/:id", requirePermission("admin:manage_catalog"), async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id as string);
   try {
     await db.delete(ingredientCategoriesTable).where(eq(ingredientCategoriesTable.id, id));
     globalCache.clear();
@@ -91,7 +92,7 @@ router.get("/catalog/types", async (_req, res): Promise<void> => {
 });
 
 router.get("/catalog/types/:id", async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id);
+  const id = parseInt(req.params.id as string);
   const [type] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, id));
   if (!type) { res.status(404).json({ error: "Not found" }); return; }
 
@@ -118,7 +119,7 @@ router.get("/catalog/types/:id", async (req, res): Promise<void> => {
   });
 });
 
-router.post("/catalog/types", async (req, res): Promise<void> => {
+router.post("/catalog/types", requirePermission("admin:manage_catalog"), async (req, res): Promise<void> => {
   const { categoryId, name, inventoryIngredientId, processedQty, producedQty, unit, isActive, affectsCupSize, sortOrder, color, extraCost, pricingMode } = req.body;
   if (!categoryId || !name) { res.status(400).json({ error: "categoryId and name required" }); return; }
   const [row] = await db.insert(ingredientTypesTable).values({ 
@@ -139,8 +140,8 @@ router.post("/catalog/types", async (req, res): Promise<void> => {
   res.status(201).json(row);
 });
 
-router.patch("/catalog/types/:id", async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id);
+router.patch("/catalog/types/:id", requirePermission("admin:manage_catalog"), async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id as string);
   const { categoryId, name, inventoryIngredientId, processedQty, producedQty, unit, isActive, affectsCupSize, sortOrder, color, extraCost, pricingMode } = req.body;
   
   const patch: Record<string, unknown> = {};
@@ -173,8 +174,8 @@ router.patch("/catalog/types/:id", async (req, res): Promise<void> => {
   }
 });
 
-router.delete("/catalog/types/:id", async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id);
+router.delete("/catalog/types/:id", requirePermission("admin:manage_catalog"), async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id as string);
   try {
     await db.delete(ingredientTypesTable).where(eq(ingredientTypesTable.id, id));
     globalCache.clear();
@@ -197,7 +198,7 @@ router.get("/catalog/type-volumes", async (_req, res): Promise<void> => {
 });
 
 router.get("/catalog/types/:id/volumes", async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id);
+  const id = parseInt(req.params.id as string);
   const typeVolumes = await db.select().from(ingredientTypeVolumesTable)
     .where(eq(ingredientTypeVolumesTable.ingredientTypeId, id))
     .orderBy(asc(ingredientTypeVolumesTable.sortOrder), asc(ingredientTypeVolumesTable.id));
@@ -212,8 +213,8 @@ router.get("/catalog/types/:id/volumes", async (req, res): Promise<void> => {
   res.json(typeVolumes.map((tv) => ({ ...tv, volume: volMap.get(tv.volumeId) ?? null })));
 });
 
-router.post("/catalog/types/:id/volumes", async (req, res): Promise<void> => {
-  const ingredientTypeId = parseInt(req.params.id);
+router.post("/catalog/types/:id/volumes", requirePermission("admin:manage_catalog"), async (req, res): Promise<void> => {
+  const ingredientTypeId = parseInt(req.params.id as string);
   const { volumeId, processedQty, producedQty, unit, extraCost, isDefault, sortOrder } = req.body;
   if (!volumeId) { res.status(400).json({ error: "volumeId required" }); return; }
   const [row] = await db.insert(ingredientTypeVolumesTable).values({
@@ -230,8 +231,8 @@ router.post("/catalog/types/:id/volumes", async (req, res): Promise<void> => {
   res.status(201).json(row);
 });
 
-router.patch("/catalog/type-volumes/:id", async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id);
+router.patch("/catalog/type-volumes/:id", requirePermission("admin:manage_catalog"), async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id as string);
   const { processedQty, producedQty, unit, extraCost, isDefault, sortOrder, isActive } = req.body;
   const patch: Record<string, unknown> = {};
   if (processedQty !== undefined) patch.processedQty = processedQty;
@@ -247,8 +248,8 @@ router.patch("/catalog/type-volumes/:id", async (req, res): Promise<void> => {
   res.json(row);
 });
 
-router.delete("/catalog/type-volumes/:id", async (req, res): Promise<void> => {
-  await db.delete(ingredientTypeVolumesTable).where(eq(ingredientTypeVolumesTable.id, parseInt(req.params.id)));
+router.delete("/catalog/type-volumes/:id", requirePermission("admin:manage_catalog"), async (req, res): Promise<void> => {
+  await db.delete(ingredientTypeVolumesTable).where(eq(ingredientTypeVolumesTable.id, parseInt(req.params.id as string)));
   globalCache.clear();
   res.sendStatus(204);
 });
@@ -260,15 +261,15 @@ router.get("/catalog/volumes", async (_req, res): Promise<void> => {
   res.json(rows);
 });
 
-router.post("/catalog/volumes", async (req, res): Promise<void> => {
+router.post("/catalog/volumes", requirePermission("admin:manage_catalog"), async (req, res): Promise<void> => {
   const { name, processedQty, producedQty, unit, sortOrder } = req.body;
   if (!name) { res.status(400).json({ error: "name required" }); return; }
   const [row] = await db.insert(ingredientVolumesTable).values({ name, processedQty: processedQty ?? "0", producedQty: producedQty ?? "0", unit: unit ?? "ml", sortOrder: sortOrder ?? 0 }).returning();
   res.status(201).json(row);
 });
 
-router.patch("/catalog/volumes/:id", async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id);
+router.patch("/catalog/volumes/:id", requirePermission("admin:manage_catalog"), async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id as string);
   const { name, processedQty, producedQty, unit, sortOrder } = req.body;
   const patch: Record<string, unknown> = {};
   if (name !== undefined) patch.name = name;
@@ -281,8 +282,8 @@ router.patch("/catalog/volumes/:id", async (req, res): Promise<void> => {
   res.json(row);
 });
 
-router.delete("/catalog/volumes/:id", async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id);
+router.delete("/catalog/volumes/:id", requirePermission("admin:manage_catalog"), async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id as string);
   try {
     await db.delete(ingredientVolumesTable).where(eq(ingredientVolumesTable.id, id));
     res.sendStatus(204);
@@ -303,7 +304,7 @@ router.delete("/catalog/volumes/:id", async (req, res): Promise<void> => {
  * Overrides are records in drink_slot_volumes linked to type volumes of this type.
  */
 router.get("/catalog/types/:id/overrides", async (req, res): Promise<void> => {
-  const typeId = parseInt(req.params.id);
+  const typeId = parseInt(req.params.id as string);
   
   const overrides = await db.select({
     drinkId: drinksTable.id,
@@ -335,8 +336,8 @@ router.get("/catalog/types/:id/overrides", async (req, res): Promise<void> => {
 /**
  * Resets (deletes) overrides for a specific ingredient type on a specific drink.
  */
-router.post("/catalog/types/:id/sync", async (req, res): Promise<void> => {
-  const typeId = parseInt(req.params.id);
+router.post("/catalog/types/:id/sync", requirePermission("admin:manage_catalog"), async (req, res): Promise<void> => {
+  const typeId = parseInt(req.params.id as string);
   const { drinkId } = req.body;
   
   if (!drinkId) {

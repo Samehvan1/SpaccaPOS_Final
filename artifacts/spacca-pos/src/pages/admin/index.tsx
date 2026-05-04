@@ -4,13 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Coffee, Droplet, LayoutDashboard, LineChart, PackageSearch, BarChart2, Tag, ChefHat, Users, Ticket, UserCheck, History, Shield, Settings, Building2 } from "lucide-react";
 
 export default function AdminHub() {
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
   const [, setLocation] = useLocation();
-
-  if (user?.role !== "admin") {
-    setLocation("/pos");
-    return null;
-  }
 
   const modules = [
     {
@@ -131,9 +126,12 @@ export default function AdminHub() {
       icon: Building2,
       href: "/admin/branches",
       color: "text-blue-600",
-      bg: "bg-blue-600/10"
+      bg: "bg-blue-600/10",
+      permission: "branches:manage"
     }
   ];
+
+  const filteredModules = modules.filter(m => !m.permission || hasPermission(m.permission));
 
   return (
     <div className="p-8 w-full overflow-y-auto h-full">
@@ -146,7 +144,7 @@ export default function AdminHub() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {modules.map((mod) => {
+        {filteredModules.map((mod) => {
           const Icon = mod.icon;
           return (
             <Link key={mod.href} href={mod.href}>

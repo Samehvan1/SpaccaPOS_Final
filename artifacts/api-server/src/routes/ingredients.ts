@@ -6,6 +6,7 @@ import { db, ingredientsTable, branchStockTable, ingredientOptionsTable, stockMo
 import { serializeDates } from "../lib/serialize";
 import { globalCache } from "../lib/cache";
 import { logActivity } from "../lib/activity-logger";
+import { requirePermission } from "../middleware/permissions";
 import {
   ListIngredientsQueryParams,
   ListIngredientsResponse,
@@ -69,7 +70,7 @@ async function buildIngredientDetail(ingredientId: number, branchId?: number) {
   };
 }
 
-router.post("/ingredients/import-csv", async (req, res): Promise<void> => {
+router.post("/ingredients/import-csv", requirePermission("admin:manage_ingredients"), async (req, res): Promise<void> => {
   try {
     const { pin } = req.body;
     if (!pin) {
@@ -179,7 +180,7 @@ router.post("/ingredients/import-csv", async (req, res): Promise<void> => {
   }
 });
 
-router.get("/ingredients", async (req, res): Promise<void> => {
+router.get("/ingredients", requirePermission("inventory:view"), async (req, res): Promise<void> => {
   const params = ListIngredientsQueryParams.safeParse(req.query);
   const sessionUser = (req.session as any);
   const sessionBranchId = sessionUser.branchId;
@@ -252,7 +253,7 @@ router.get("/ingredients", async (req, res): Promise<void> => {
   );
 });
 
-router.post("/ingredients", async (req, res): Promise<void> => {
+router.post("/ingredients", requirePermission("admin:manage_ingredients"), async (req, res): Promise<void> => {
   const parsed = CreateIngredientBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -300,7 +301,7 @@ router.post("/ingredients", async (req, res): Promise<void> => {
   globalCache.clear();
 });
 
-router.get("/ingredients/:id", async (req, res): Promise<void> => {
+router.get("/ingredients/:id", requirePermission("inventory:view"), async (req, res): Promise<void> => {
   const params = GetIngredientParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -321,7 +322,7 @@ router.get("/ingredients/:id", async (req, res): Promise<void> => {
   res.json(GetIngredientResponse.parse(serializeDates(detail)));
 });
 
-router.patch("/ingredients/:id", async (req, res): Promise<void> => {
+router.patch("/ingredients/:id", requirePermission("admin:manage_ingredients"), async (req, res): Promise<void> => {
   const params = UpdateIngredientParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -391,7 +392,7 @@ router.patch("/ingredients/:id", async (req, res): Promise<void> => {
   globalCache.clear();
 });
 
-router.delete("/ingredients/:id", async (req, res): Promise<void> => {
+router.delete("/ingredients/:id", requirePermission("admin:manage_ingredients"), async (req, res): Promise<void> => {
   const params = GetIngredientParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -432,7 +433,7 @@ router.delete("/ingredients/:id", async (req, res): Promise<void> => {
   }
 });
 
-router.post("/ingredients/:id/options", async (req, res): Promise<void> => {
+router.post("/ingredients/:id/options", requirePermission("admin:manage_ingredients"), async (req, res): Promise<void> => {
   const params = CreateIngredientOptionParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -469,7 +470,7 @@ router.post("/ingredients/:id/options", async (req, res): Promise<void> => {
   globalCache.clear();
 });
 
-router.patch("/ingredients/:id/options/:optionId", async (req, res): Promise<void> => {
+router.patch("/ingredients/:id/options/:optionId", requirePermission("admin:manage_ingredients"), async (req, res): Promise<void> => {
   const params = UpdateIngredientOptionParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -514,7 +515,7 @@ router.patch("/ingredients/:id/options/:optionId", async (req, res): Promise<voi
   globalCache.clear();
 });
 
-router.delete("/ingredients/:id/options/:optionId", async (req, res): Promise<void> => {
+router.delete("/ingredients/:id/options/:optionId", requirePermission("admin:manage_ingredients"), async (req, res): Promise<void> => {
   const params = DeleteIngredientOptionParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -540,7 +541,7 @@ router.delete("/ingredients/:id/options/:optionId", async (req, res): Promise<vo
   globalCache.clear();
 });
 
-router.post("/ingredients/:id/restock", async (req, res): Promise<void> => {
+router.post("/ingredients/:id/restock", requirePermission("inventory:adjust"), async (req, res): Promise<void> => {
   const params = GetIngredientParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.format() });

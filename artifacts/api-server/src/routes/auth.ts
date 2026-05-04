@@ -4,6 +4,7 @@ import { db, usersTable, activityLogsTable, branchesTable } from "@workspace/db"
 import { logActivity } from "../lib/activity-logger";
 import { BaristaLoginBody, BaristaLoginResponse, GetMeResponse } from "@workspace/api-zod";
 import bcrypt from "bcryptjs";
+import { resolveUserPermissions } from "../lib/permissions";
 
 const router: IRouter = Router();
 
@@ -54,11 +55,14 @@ router.post("/auth/login", async (req, res): Promise<void> => {
     details: { ip: req.ip, userAgent: req.get("user-agent") },
   });
 
+  const permissions = await resolveUserPermissions(result.user.id, result.user.role);
+
   const payload = BaristaLoginResponse.parse({
     user: {
       id: result.user.id,
       name: result.user.name,
       role: result.user.role,
+      permissions,
       branchId: result.user.branchId,
       branch: result.user.branchId ? {
         id: result.user.branchId,
@@ -106,11 +110,14 @@ router.get("/auth/me", async (req, res): Promise<void> => {
     return;
   }
 
+  const permissions = await resolveUserPermissions(result.user.id, result.user.role);
+
   res.json(
     GetMeResponse.parse({
       id: result.user.id,
       name: result.user.name,
       role: result.user.role,
+      permissions,
       branchId: result.user.branchId,
       branch: result.user.branchId ? {
         id: result.user.branchId,

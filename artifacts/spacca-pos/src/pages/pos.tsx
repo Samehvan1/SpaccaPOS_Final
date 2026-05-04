@@ -81,7 +81,7 @@ export default function PosTerminal() {
   const { toast } = useToast();
   const { allowNoStockSell } = useSettings();
 
-  const { data: branches = [] } = useListBranches();
+  const { data: branches = [], isLoading: isLoadingBranches } = useListBranches();
   const { data: drinks, isLoading: isLoadingDrinks } = useListDrinks({ active: true, branchId: selectedBranchId || undefined });
   const { data: allCategories = [] } = useDrinkCategories();
 
@@ -1210,19 +1210,31 @@ export default function PosTerminal() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
-              {branches.map((branch) => (
-                <button
-                  key={branch.id}
-                  onClick={() => setSelectedBranchId(branch.id)}
-                  className="group relative flex flex-col items-center justify-center p-8 rounded-3xl border-2 border-primary/10 bg-card hover:border-primary hover:bg-primary/5 transition-all duration-300 shadow-lg hover:shadow-primary/20 active:scale-95"
-                >
-                  <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary mb-4 group-hover:scale-110 transition-transform">
-                    <Droplets className="h-6 w-6" />
-                  </div>
-                  <span className="text-xl font-black uppercase tracking-tight">{branch.name}</span>
-                  <div className="mt-2 h-1 w-0 bg-primary group-hover:w-full transition-all duration-500 rounded-full" />
-                </button>
-              ))}
+              {isLoadingBranches ? (
+                <>
+                  <div className="h-32 rounded-3xl bg-muted animate-pulse border-2 border-primary/5" />
+                  <div className="h-32 rounded-3xl bg-muted animate-pulse border-2 border-primary/5" />
+                </>
+              ) : branches.length > 0 ? (
+                branches.map((branch) => (
+                  <button
+                    key={branch.id}
+                    onClick={() => setSelectedBranchId(branch.id)}
+                    className="group relative flex flex-col items-center justify-center p-8 rounded-3xl border-2 border-primary/10 bg-card hover:border-primary hover:bg-primary/5 transition-all duration-300 shadow-lg hover:shadow-primary/20 active:scale-95"
+                  >
+                    <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary mb-4 group-hover:scale-110 transition-transform">
+                      <Droplets className="h-6 w-6" />
+                    </div>
+                    <span className="text-xl font-black uppercase tracking-tight">{branch.name}</span>
+                    <div className="mt-2 h-1 w-0 bg-primary group-hover:w-full transition-all duration-500 rounded-full" />
+                  </button>
+                ))
+              ) : (
+                <div className="col-span-full p-8 rounded-3xl border-2 border-dashed border-muted-foreground/20 bg-muted/5">
+                  <p className="text-muted-foreground font-bold uppercase tracking-widest text-xs">No active locations found</p>
+                  <p className="text-[10px] text-muted-foreground/60 mt-1">Please check server connection or database seed</p>
+                </div>
+              )}
             </div>
 
             <div className="pt-8 text-[10px] font-bold text-muted-foreground uppercase tracking-[0.3em] opacity-40">

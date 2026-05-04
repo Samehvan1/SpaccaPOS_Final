@@ -80,14 +80,14 @@ function getDefaultRoute(role: string): any {
 
 function ProtectedRoute({ 
   component: Component, 
-  adminOnly = false,
-  allowedRoles
+  permission,
+  allowedRoles // Keep for backward compat if needed, but prioritize permission
 }: { 
   component: React.ComponentType, 
-  adminOnly?: boolean,
+  permission?: string,
   allowedRoles?: string[]
 }) {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, hasPermission } = useAuth();
   const [location] = useLocation();
 
   if (isLoading) {
@@ -98,16 +98,13 @@ function ProtectedRoute({
     return <Redirect to={`/login?from=${encodeURIComponent(location)}`} />;
   }
 
-  // Admin always has access to everything
-  if ((user.role as string) === "admin") {
-    return <Component />;
-  }
-
-  if (adminOnly && (user.role as string) !== "admin") {
+  // If a specific permission is required, check it
+  if (permission && !hasPermission(permission)) {
     return <Redirect to={getDefaultRoute(user.role)} />;
   }
 
-  if (allowedRoles && !allowedRoles.includes(user.role)) {
+  // Fallback for allowedRoles if permission is not provided
+  if (!permission && allowedRoles && !allowedRoles.includes(user.role)) {
     return <Redirect to={getDefaultRoute(user.role)} />;
   }
 
@@ -170,7 +167,7 @@ function AppRoutes() {
         <MainLayout>
           <ProtectedRoute 
             component={KitchenDisplay} 
-            allowedRoles={["barista"]} 
+            permission="kitchen:view" 
           />
         </MainLayout>
       </Route>
@@ -183,105 +180,105 @@ function AppRoutes() {
         <MainLayout>
           <ProtectedRoute 
             component={PickupPage} 
-            allowedRoles={["pickup"]} 
+            permission="orders:pickup" 
           />
         </MainLayout>
       </Route>
 
       <Route path="/admin">
         <MainLayout>
-          <ProtectedRoute component={AdminHub} adminOnly={true} />
+          <ProtectedRoute component={AdminHub} permission="admin:view" />
         </MainLayout>
       </Route>
 
       <Route path="/admin/finance">
         <MainLayout>
-          <ProtectedRoute component={FinanceDashboard} adminOnly={true} />
+          <ProtectedRoute component={FinanceDashboard} permission="reports:view" />
         </MainLayout>
       </Route>
 
       <Route path="/admin/drinks">
         <MainLayout>
-          <ProtectedRoute component={DrinksAdmin} adminOnly={true} />
+          <ProtectedRoute component={DrinksAdmin} permission="catalog:view" />
         </MainLayout>
       </Route>
 
       <Route path="/admin/drinks/:id/recipe">
         <MainLayout>
-          <ProtectedRoute component={DrinkRecipe} adminOnly={true} />
+          <ProtectedRoute component={DrinkRecipe} permission="catalog:manage" />
         </MainLayout>
       </Route>
 
       <Route path="/admin/categories">
         <MainLayout>
-          <ProtectedRoute component={CategoriesAdmin} adminOnly={true} />
+          <ProtectedRoute component={CategoriesAdmin} permission="catalog:view" />
         </MainLayout>
       </Route>
       <Route path="/admin/kitchen-stations">
         <MainLayout>
-          <ProtectedRoute component={KitchenStationsAdmin} adminOnly={true} />
+          <ProtectedRoute component={KitchenStationsAdmin} permission="admin:view" />
         </MainLayout>
       </Route>
 
       <Route path="/admin/ingredients">
         <MainLayout>
-          <ProtectedRoute component={IngredientsAdmin} adminOnly={true} />
+          <ProtectedRoute component={IngredientsAdmin} permission="inventory:view" />
         </MainLayout>
       </Route>
 
       <Route path="/admin/stock">
         <MainLayout>
-          <ProtectedRoute component={StockAdmin} adminOnly={true} />
+          <ProtectedRoute component={StockAdmin} permission="inventory:view" />
         </MainLayout>
       </Route>
       <Route path="/admin/stock-audits">
         <MainLayout>
-          <ProtectedRoute component={StockAuditReviewPage} adminOnly={true} />
+          <ProtectedRoute component={StockAuditReviewPage} permission="inventory:manage" />
         </MainLayout>
       </Route>
 
       <Route path="/admin/reports">
         <MainLayout>
-          <ProtectedRoute component={ReportsPage} adminOnly={true} />
+          <ProtectedRoute component={ReportsPage} permission="reports:view" />
         </MainLayout>
       </Route>
       <Route path="/admin/discounts">
         <MainLayout>
-          <ProtectedRoute component={DiscountsAdmin} adminOnly={true} />
+          <ProtectedRoute component={DiscountsAdmin} permission="discounts:view" />
         </MainLayout>
       </Route>
       <Route path="/admin/users">
         <MainLayout>
-          <ProtectedRoute component={AdminUsers} adminOnly={true} />
+          <ProtectedRoute component={AdminUsers} permission="users:view" />
         </MainLayout>
       </Route>
 
       <Route path="/admin/cashier-performance">
         <MainLayout>
-          <ProtectedRoute component={CashierPerformancePage} adminOnly={true} />
+          <ProtectedRoute component={CashierPerformancePage} permission="reports:view" />
         </MainLayout>
       </Route>
 
       <Route path="/admin/branches">
         <MainLayout>
-          <ProtectedRoute component={BranchesAdmin} adminOnly={true} />
+          <ProtectedRoute component={BranchesAdmin} permission="branches:manage" />
         </MainLayout>
       </Route>
 
       <Route path="/admin/activity-logs">
         <MainLayout>
-          <ProtectedRoute component={ActivityLogs} adminOnly={true} />
+          <ProtectedRoute component={ActivityLogs} permission="admin:view" />
         </MainLayout>
       </Route>
 
       <Route path="/admin/permissions">
         <MainLayout>
-          <ProtectedRoute component={PermissionsAdmin} adminOnly={true} />
+          <ProtectedRoute component={PermissionsAdmin} permission="roles:manage" />
         </MainLayout>
       </Route>
       <Route path="/admin/settings">
         <MainLayout>
-          <ProtectedRoute component={SystemSettingsAdmin} adminOnly={true} />
+          <ProtectedRoute component={SystemSettingsAdmin} permission="settings:manage" />
         </MainLayout>
       </Route>
 
@@ -298,7 +295,7 @@ function AppRoutes() {
       </Route>
       <Route path="/stock-control">
         <MainLayout>
-          <ProtectedRoute component={StockControlPage} allowedRoles={["stockcontrol"]} />
+          <ProtectedRoute component={StockControlPage} permission="inventory:view" />
         </MainLayout>
       </Route>
 

@@ -16,6 +16,7 @@ COPY lib/ ./lib/
 COPY artifacts/api-server/package.json ./artifacts/api-server/
 COPY artifacts/api-server/tsconfig.json ./artifacts/api-server/
 COPY artifacts/api-server/build.mjs ./artifacts/api-server/
+COPY artifacts/api-server/start.sh ./artifacts/api-server/
 COPY artifacts/api-server/src/ ./artifacts/api-server/src/
 COPY Inventory2026.csv ./Inventory2026.csv
 
@@ -37,13 +38,12 @@ WORKDIR /app
 # Copy the bundled output from the builder
 COPY --from=builder /app/artifacts/api-server/dist ./artifacts/api-server/dist
 COPY --from=builder /app/artifacts/api-server/package.json ./package.json
+COPY --from=builder /app/artifacts/api-server/start.sh ./start.sh
 COPY --from=builder /app/Inventory2026.csv ./Inventory2026.csv
 
-# Some dependencies might be externalized in build.mjs (like sharp or pg-native)
-# But looking at build.mjs, most are standard. 
-# If any external dependencies are needed, install them here.
-# Since we are using standard postgres (pg), it's bundled.
+# Ensure start.sh is executable
+RUN chmod +x ./start.sh
 
 EXPOSE 8080
 
-CMD ["node", "./artifacts/api-server/dist/index.mjs"]
+CMD ["./start.sh"]

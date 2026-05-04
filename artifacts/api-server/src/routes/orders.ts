@@ -3,6 +3,7 @@ import { eq, and, inArray, gte, lte, sql, desc } from "drizzle-orm";
 import { serializeDates } from "../lib/serialize";
 import { broadcastEvent } from "../lib/sse";
 import { logActivity } from "../lib/activity-logger";
+import { requirePermission } from "../middleware/permissions";
 import { calculateDrinkData } from "../lib/price-calculator";
 import {
   db,
@@ -105,7 +106,7 @@ async function buildOrderDetail(orderId: number) {
   };
 }
 
-router.get("/orders", async (req, res): Promise<void> => {
+router.get("/orders", requirePermission("cashier:view"), async (req, res): Promise<void> => {
   const params = ListOrdersQueryParams.safeParse(req.query);
   const sessionUser = (req.session as any);
   const isAdmin = sessionUser.role === "admin";
@@ -206,7 +207,7 @@ router.get("/orders", async (req, res): Promise<void> => {
   );
 });
 
-router.post("/orders", async (req, res): Promise<void> => {
+router.post("/orders", requirePermission("pos:create_order"), async (req, res): Promise<void> => {
   const parsed = CreateOrderBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -499,7 +500,7 @@ router.post("/orders", async (req, res): Promise<void> => {
   );
 });
 
-router.get("/orders/:id", async (req, res): Promise<void> => {
+router.get("/orders/:id", requirePermission("pos:view"), async (req, res): Promise<void> => {
   const params = GetOrderParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -515,7 +516,17 @@ router.get("/orders/:id", async (req, res): Promise<void> => {
   res.json(GetOrderResponse.parse(serializeDates(detail)));
 });
 
-router.patch("/orders/:id/status", async (req, res): Promise<void> => {
+router.patch("/orders/:id/status", async (req, res, next): Promise<void> => {
+  // Granular check inside the route because status varies
+  const status = req.body.status;
+  let perm = "cashier:view";
+  if (status === "paid") perm = "cashier:approve_order";
+  if (status === "ready") perm = "kitchen:mark_ready";
+  if (status === "cancelled") perm = "cashier:cancel_order";
+  if (status === "completed") perm = "cashier:view";
+
+  return requirePermission(perm)(req, res, next);
+}, async (req, res): Promise<void> => {
   const params = UpdateOrderStatusParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -565,8 +576,8 @@ router.patch("/orders/:id/status", async (req, res): Promise<void> => {
   res.json(UpdateOrderStatusResponse.parse(serializeDates(detail)));
 });
 
-router.patch("/order-items/:id/ready", async (req, res): Promise<void> => {
-  const itemId = parseInt(req.params.id);
+router.patch("/order-items/:id/ready", requirePermission("kitchen:mark_ready"), async (req, res): Promise<void> => {
+  const itemId = parseInt(req.params.id as string);
   if (isNaN(itemId)) {
     res.status(400).json({ error: "Invalid item ID" });
     return;
@@ -622,7 +633,7 @@ router.patch("/order-items/:id/ready", async (req, res): Promise<void> => {
   res.json(GetOrderResponse.parse(serializeDates(detail)));
 });
 
-router.post("/orders/:id/refund", async (req, res): Promise<void> => {
+router.post("/orders/:id/refund", requirePermission("cashier:refund_order"), async (req, res): Promise<void> => {
   const { id } = req.params;
   const { adminPin, returnToStockItems } = req.body as { adminPin: string; returnToStockItems?: number[] };
 
@@ -641,7 +652,7 @@ router.post("/orders/:id/refund", async (req, res): Promise<void> => {
     return;
   }
 
-  const orderId = parseInt(id);
+  const orderId = parseInt(id as string);
   const [order] = await db.select().from(ordersTable).where(eq(ordersTable.id, orderId)).limit(1);
   if (!order) {
     res.status(404).json({ error: "Order not found" });

@@ -7,7 +7,7 @@ import { logActivity } from "../lib/activity-logger";
 const rolesRouter: IRouter = Router();
 
 // GET /roles
-rolesRouter.get("/", requirePermission("users:view"), async (req, res): Promise<void> => {
+rolesRouter.get("/", requirePermission("roles:view"), async (req, res): Promise<void> => {
   try {
     const allRoles = await db.select().from(rolesTable);
     res.json(allRoles);
@@ -18,7 +18,7 @@ rolesRouter.get("/", requirePermission("users:view"), async (req, res): Promise<
 });
 
 // POST /roles
-rolesRouter.post("/", requirePermission("users:create"), async (req, res): Promise<void> => {
+rolesRouter.post("/", requirePermission("roles:manage"), async (req, res): Promise<void> => {
   try {
     const { key, name, description, permissions } = req.body;
 
@@ -50,7 +50,7 @@ rolesRouter.post("/", requirePermission("users:create"), async (req, res): Promi
 });
 
 // GET /roles/:key/permissions
-rolesRouter.get("/:key/permissions", requirePermission("users:view"), async (req, res): Promise<void> => {
+rolesRouter.get("/:key/permissions", requirePermission("roles:view"), async (req, res): Promise<void> => {
   try {
     const key = req.params.key as string;
     const perms = await db
@@ -65,7 +65,7 @@ rolesRouter.get("/:key/permissions", requirePermission("users:view"), async (req
 });
 
 // PATCH /roles/:key
-rolesRouter.patch("/:key", requirePermission("users:update"), async (req, res): Promise<void> => {
+rolesRouter.patch("/:key", requirePermission("roles:manage"), async (req, res): Promise<void> => {
   try {
     const { name, description, permissions } = req.body;
     const key = req.params.key as string;
@@ -105,7 +105,7 @@ rolesRouter.patch("/:key", requirePermission("users:update"), async (req, res): 
 });
 
 // DELETE /roles/:key
-rolesRouter.delete("/:key", requirePermission("users:update"), async (req, res): Promise<void> => {
+rolesRouter.delete("/:key", requirePermission("roles:manage"), async (req, res): Promise<void> => {
   try {
     const key = req.params.key as string;
     
@@ -128,7 +128,7 @@ rolesRouter.delete("/:key", requirePermission("users:update"), async (req, res):
 });
 
 // GET /permissions
-rolesRouter.get("/permissions/list", requirePermission("users:view"), async (req, res): Promise<void> => {
+rolesRouter.get("/permissions/list", requirePermission("roles:view"), async (req, res): Promise<void> => {
   try {
     const all = await db.select().from(permissionsTable);
     res.json(all);

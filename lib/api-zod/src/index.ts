@@ -12,10 +12,18 @@ export type HealthCheckResponse = Infer<typeof api.HealthCheckResponse>;
 // Auth
 export const BaristaLoginBody = api.BaristaLoginBody;
 export type BaristaLoginBody = Infer<typeof api.BaristaLoginBody>;
-export const BaristaLoginResponse = api.BaristaLoginResponse;
-export type BaristaLoginResponse = Infer<typeof api.BaristaLoginResponse>;
-export const GetMeResponse = api.GetMeResponse;
-export type GetMeResponse = Infer<typeof api.GetMeResponse>;
+export const BaristaLoginResponse = api.BaristaLoginResponse.extend({
+  user: api.BaristaLoginResponse.shape.user.extend({
+    role: z.string(),
+    permissions: z.array(z.string()),
+  }),
+});
+export type BaristaLoginResponse = Infer<typeof BaristaLoginResponse>;
+export const GetMeResponse = api.GetMeResponse.extend({
+  role: z.string(),
+  permissions: z.array(z.string()),
+});
+export type GetMeResponse = Infer<typeof GetMeResponse>;
 
 // Drinks
 export const ListDrinksQueryParams = api.ListDrinksQueryParams;
@@ -211,12 +219,24 @@ export const UpdateDiscountBody = api.UpdateDiscountBody;
 export type UpdateDiscountBody = Infer<typeof api.UpdateDiscountBody>;
 
 // Users
-export const CreateUserBody = api.CreateUserBody;
-export type CreateUserBody = Infer<typeof api.CreateUserBody>;
-export const UpdateUserBody = api.UpdateUserBody;
-export type UpdateUserBody = Infer<typeof api.UpdateUserBody>;
-export const UserDetail = api.UpdateUserResponse; // This has all fields
-export type UserDetail = Infer<typeof api.UpdateUserResponse>;
+export const CreateUserBody = api.CreateUserBody.extend({
+  role: z.string(),
+  branchId: z.number().nullable().optional(),
+});
+export type CreateUserBody = Infer<typeof CreateUserBody>;
+
+export const UpdateUserBody = api.UpdateUserBody.extend({
+  role: z.string().optional(),
+  branchId: z.number().nullable().optional(),
+});
+export type UpdateUserBody = Infer<typeof UpdateUserBody>;
+
+export const UserDetail = api.UpdateUserResponse.extend({
+  role: z.string(),
+  branchId: z.number().nullable().optional(),
+  permissions: z.array(z.string()).optional(),
+}); // This has all fields
+export type UserDetail = Infer<typeof UserDetail>;
 
 // Admin
 export const ActivityLog = api.ListActivityLogsResponseItem;

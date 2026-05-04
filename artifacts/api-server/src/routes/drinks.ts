@@ -23,6 +23,7 @@ import {
 } from "@workspace/db";
 import { serializeDates } from "../lib/serialize";
 import { globalCache } from "../lib/cache";
+import { requirePermission } from "../middleware/permissions";
 
 // ── Image upload: store in <cwd>/uploads/ ────────────────────────────────────
 const uploadsDir = path.join(process.cwd(), "uploads");
@@ -450,7 +451,7 @@ router.get("/drinks", async (req, res): Promise<void> => {
   res.json(serializeDates(drinksWithDetails));
 });
 
-router.post("/drinks", async (req, res): Promise<void> => {
+router.post("/drinks", requirePermission("admin:manage_drinks"), async (req, res): Promise<void> => {
   const parsed = CreateDrinkBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -531,7 +532,7 @@ router.get("/drinks/:id", async (req, res): Promise<void> => {
   res.json(serializeDates(detail));
 });
 
-router.patch("/drinks/:id", async (req, res): Promise<void> => {
+router.patch("/drinks/:id", requirePermission("admin:manage_drinks"), async (req, res): Promise<void> => {
   const params = UpdateDrinkParams.safeParse(req.params);
   if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
 
@@ -582,7 +583,7 @@ router.patch("/drinks/:id", async (req, res): Promise<void> => {
 });
 
 // POST /drinks/:id/image — upload a drink image
-router.post("/drinks/:id/image", upload.single("image"), async (req, res): Promise<void> => {
+router.post("/drinks/:id/image", requirePermission("admin:manage_drinks"), upload.single("image"), async (req, res): Promise<void> => {
   const id = parseInt(req.params.id as string);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
 
@@ -607,7 +608,7 @@ router.post("/drinks/:id/image", upload.single("image"), async (req, res): Promi
 
 // PUT /drinks/:id/slots — replace all ingredient slots for a drink
 // Supports both old-style (ingredientId) and new-style (ingredientTypeId + slotVolumes) slots
-router.put("/drinks/:id/slots", async (req, res): Promise<void> => {
+router.put("/drinks/:id/slots", requirePermission("admin:manage_drinks"), async (req, res): Promise<void> => {
   const idParsed = GetDrinkParams.safeParse(req.params);
   if (!idParsed.success) { res.status(400).json({ error: idParsed.error.message }); return; }
   const drinkId = idParsed.data.id;

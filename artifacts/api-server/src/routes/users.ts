@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { db, usersTable, userPermissionsTable, permissionsTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import { CreateUserBody, UpdateUserBody, UserDetail } from "@workspace/api-zod";
+import { resolveUserPermissions } from "../lib/permissions";
 import bcrypt from "bcryptjs";
 import { requirePermission } from "../middleware/permissions";
 import { logActivity } from "../lib/activity-logger";
@@ -64,12 +65,15 @@ usersRouter.post("/users", requirePermission("users:create"), async (req, res): 
 
     await logActivity(req, "CREATE_USER", "user", newUser.id, { role: newUser.role, name: newUser.name });
 
+    const perms = await resolveUserPermissions(newUser.id, newUser.role);
+
     res.status(201).json(UserDetail.parse({
       ...newUser,
       username: newUser.username ?? `user_${newUser.id}`,
       isActive: newUser.isActive ?? true,
       createdAt: newUser.createdAt?.toISOString(),
       updatedAt: newUser.updatedAt?.toISOString(),
+      permissions: perms,
     }));
     return;
   } catch (error: any) {
@@ -110,12 +114,15 @@ usersRouter.patch("/users/:id", requirePermission("users:update"), async (req, r
 
     await logActivity(req, "UPDATE_USER", "user", id, { role: updatedUser.role, name: updatedUser.name });
 
+    const perms = await resolveUserPermissions(updatedUser.id, updatedUser.role);
+
     res.json(UserDetail.parse({
       ...updatedUser,
       username: updatedUser.username ?? `user_${updatedUser.id}`,
       isActive: updatedUser.isActive ?? true,
       createdAt: updatedUser.createdAt?.toISOString(),
       updatedAt: updatedUser.updatedAt?.toISOString(),
+      permissions: perms,
     }));
     return;
   } catch (error: any) {

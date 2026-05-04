@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import { eq, asc } from "drizzle-orm";
 import { db, branchesTable, insertBranchSchema } from "@workspace/db";
+import { requirePermission } from "../middleware/permissions";
 
 const router: IRouter = Router();
 
@@ -14,7 +15,7 @@ router.get("/", async (req, res): Promise<void> => {
 });
 
 // POST /branches
-router.post("/", async (req, res): Promise<void> => {
+router.post("/", requirePermission("admin:manage_branches"), async (req, res): Promise<void> => {
   const parsed = insertBranchSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -28,8 +29,8 @@ router.post("/", async (req, res): Promise<void> => {
 });
 
 // PATCH /branches/:id
-router.patch("/:id", async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id);
+router.patch("/:id", requirePermission("admin:manage_branches"), async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id as string);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
 
   const parsed = insertBranchSchema.partial().safeParse(req.body);
@@ -49,8 +50,8 @@ router.patch("/:id", async (req, res): Promise<void> => {
 });
 
 // DELETE /branches/:id
-router.delete("/:id", async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id);
+router.delete("/:id", requirePermission("admin:manage_branches"), async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id as string);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
 
   const [branch] = await db

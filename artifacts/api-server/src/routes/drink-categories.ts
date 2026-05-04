@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { eq, asc } from "drizzle-orm";
 import { db, drinkCategoriesTable, drinksTable } from "@workspace/db";
 import { insertDrinkCategorySchema } from "@workspace/db";
+import { requirePermission } from "../middleware/permissions";
 
 const router: IRouter = Router();
 
@@ -15,7 +16,7 @@ router.get("/drink-categories", async (_req, res): Promise<void> => {
 });
 
 // POST /drink-categories — create
-router.post("/drink-categories", async (req, res): Promise<void> => {
+router.post("/drink-categories", requirePermission("admin:manage_categories"), async (req, res): Promise<void> => {
   const parsed = insertDrinkCategorySchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -29,8 +30,8 @@ router.post("/drink-categories", async (req, res): Promise<void> => {
 });
 
 // PATCH /drink-categories/:id — update
-router.patch("/drink-categories/:id", async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id);
+router.patch("/drink-categories/:id", requirePermission("admin:manage_categories"), async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id as string);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
 
   const { name, sortOrder, isActive } = req.body as {
@@ -63,8 +64,8 @@ router.patch("/drink-categories/:id", async (req, res): Promise<void> => {
 });
 
 // DELETE /drink-categories/:id — delete
-router.delete("/drink-categories/:id", async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id);
+router.delete("/drink-categories/:id", requirePermission("admin:manage_categories"), async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id as string);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
 
   const [category] = await db

@@ -21,7 +21,10 @@ async function buildAll() {
 
 
   await esbuild({
-    entryPoints: [path.resolve(artifactDir, "src/index.ts")],
+    entryPoints: {
+      index: path.resolve(artifactDir, "src/index.ts"),
+      seed_permissions: path.resolve(artifactDir, "../../scripts/seed_permissions.ts")
+    },
     platform: "node",
     bundle: true,
     format: "esm",
