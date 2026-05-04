@@ -207,7 +207,7 @@ router.get("/orders", requirePermission("cashier:view"), async (req, res): Promi
   );
 });
 
-router.post("/orders", requirePermission("pos:create_order"), async (req, res): Promise<void> => {
+router.post("/orders", async (req, res): Promise<void> => {
   const parsed = CreateOrderBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });

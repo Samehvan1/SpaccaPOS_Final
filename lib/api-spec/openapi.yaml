@@ -1916,6 +1916,9 @@ components:
         paymentMethod:
           type: string
           enum: [cash, card, wallet, hospitality]
+        cashierId:
+          type: integer
+          description: The ID of the cashier approving the order
         adminPin:
           type: string
           description: Required if changing paymentMethod to hospitality

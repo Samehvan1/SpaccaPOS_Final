@@ -287,10 +287,15 @@ export default function CashierPage() {
   };
 
   const handleUpdateStatus = (orderId: any, status: string) => {
-    const currentOrder = orders.find((o: any) => o.id === orderId);
+    const id = Number(orderId);
+    if (isNaN(id)) {
+      toast({ variant: "destructive", title: "Error", description: "Invalid Order ID" });
+      return;
+    }
+    const currentOrder = orders.find((o: any) => o.id === id);
 
     // Resolve the payment method: local override takes priority
-    let rawLocal = localPaymentMethods.get(orderId);
+    let rawLocal = localPaymentMethods.get(id);
     let resolvedPaymentMethod: string | undefined = rawLocal;
     let resolvedAdminPin: string | undefined = undefined;
 
@@ -299,35 +304,41 @@ export default function CashierPage() {
       resolvedAdminPin = rawLocal.split(':')[1];
     }
 
+    const payload = { 
+      status: status as any, 
+      cashierId: session?.cashier?.id,
+      ...(resolvedPaymentMethod ? { paymentMethod: resolvedPaymentMethod as any } : {}),
+      ...(resolvedAdminPin ? { adminPin: resolvedAdminPin } : {}),
+    };
+
+    console.log(`[Cashier] Updating order ${id} to ${status}`, payload);
+
     updateStatus(
-      { 
-        id: orderId as any, 
-        data: { 
-          status: status as any, 
-          cashierId: session?.cashier?.id,
-          ...(resolvedPaymentMethod ? { paymentMethod: resolvedPaymentMethod as any } : {}),
-          ...(resolvedAdminPin ? { adminPin: resolvedAdminPin } : {}),
-        } as any 
-      },
+      { id, data: payload as any },
       {
         onSuccess: (data) => {
+          console.log(`[Cashier] Update success:`, data);
           queryClient.invalidateQueries({ queryKey: ["/api/dashboard/active-orders"] });
-          // Clear local override for this order on any successful status change
-          setLocalPaymentMethods(prev => { const m = new Map(prev); m.delete(orderId); return m; });
+          setLocalPaymentMethods(prev => { const m = new Map(prev); m.delete(id); return m; });
           if (status === "paid") {
-            toast({ title: "Order Approved", description: `Order ${data.orderNumber} sent to KDS.` });
+            toast({ title: "Order Approved", description: `Order ${data.orderNumber || currentOrder?.orderNumber} approved.` });
             const fullOrderData = { ...currentOrder, ...data, items: (data as any).items || currentOrder?.items || [] };
             setCompletedOrder(fullOrderData);
             setIsReceiptOpen(true);
             if (autoPrintCustomer) printCustomerReceipt(fullOrderData as any);
             if (autoPrintAgent) printAgentReceipts(fullOrderData as any);
           } else if (status === "cancelled") {
-            toast({ title: "Order Cancelled", description: `Order ${data.orderNumber} cancelled.` });
+            toast({ title: "Order Cancelled", description: `Order ${data.orderNumber || currentOrder?.orderNumber} cancelled.` });
           }
         },
         onError: (err: any) => {
-          const msg = err?.response?.data?.error ?? "Failed to update order.";
-          toast({ variant: "destructive", title: "Error", description: msg });
+          console.error(`[Cashier] Update failed:`, err);
+          const msg = err?.response?.data?.error || err?.response?.data?.message || err?.message || "Failed to update order.";
+          toast({ 
+            variant: "destructive", 
+            title: "Update Failed", 
+            description: `${msg}${err?.response?.status ? ` (Status: ${err.response.status})` : ""}` 
+          });
         },
       }
     );

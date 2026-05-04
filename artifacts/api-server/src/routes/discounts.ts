@@ -90,7 +90,7 @@ router.delete("/discounts/:id", requirePermission("admin:manage_discounts"), asy
   res.sendStatus(204);
 });
 
-router.get("/discounts/validate/:code", requirePermission("pos:apply_discount"), async (req, res): Promise<void> => {
+router.get("/discounts/validate/:code", async (req, res): Promise<void> => {
   const [discount] = await db
     .select()
     .from(discountsTable)
