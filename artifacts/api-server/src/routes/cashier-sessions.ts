@@ -79,8 +79,12 @@ router.post("/cashier/login", async (req, res): Promise<void> => {
   }
 
   // Store session in express session
-  (req.session as any).cashierSessionId = session.id;
-  (req.session as any).cashierId = user.id;
+  const sess = req.session as any;
+  sess.cashierSessionId = session.id;
+  sess.cashierId = user.id;
+  sess.userId = user.id; // Unify with standard auth
+  sess.role = user.role;
+  sess.branchId = user.branchId;
 
 
   req.session.save((err) => {

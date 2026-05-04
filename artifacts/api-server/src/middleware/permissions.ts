@@ -4,7 +4,8 @@ import { eq, and, or } from "drizzle-orm";
 
 export function requirePermission(permissionKey: string) {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const userId = (req.session as any).userId;
+    const session = req.session as any;
+    const userId = session.userId ?? session.cashierId;
 
     if (!userId) {
       res.status(401).json({ error: "Not authenticated" });
@@ -75,10 +76,16 @@ export function requirePermission(permissionKey: string) {
       .limit(1);
 
     if (!rolePermission) {
-      res.status(403).json({ error: "Insufficient permissions" });
+      console.log(`[Permission] DENIED: User ${userId} (Role: ${role}) lacks '${permissionKey}'`);
+      res.status(403).json({ 
+        error: `Insufficient permissions: '${permissionKey}' required`,
+        role,
+        permission: permissionKey
+      });
       return;
     }
 
+    console.log(`[Permission] GRANTED: User ${userId} (Role: ${role}) for '${permissionKey}'`);
     next();
   };
 }

@@ -547,7 +547,9 @@ router.patch("/orders/:id/status", async (req, res, next): Promise<void> => {
   let perm = "cashier:view";
   if (status === "paid") perm = "cashier:approve_order";
   if (status === "ready") perm = "kitchen:mark_ready";
+  if (status === "in_progress") perm = "kitchen:view";
   if (status === "cancelled") perm = "cashier:cancel_order";
+  if (status === "refunded") perm = "cashier:refund_order";
   if (status === "completed") perm = "cashier:view";
 
   return requirePermission(perm)(req, res, next);

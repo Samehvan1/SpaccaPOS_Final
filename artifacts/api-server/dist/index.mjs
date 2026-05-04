@@ -77906,7 +77906,7 @@ var ListOrdersResponseItem = objectType({
     "cancelled",
     "refunded"
   ]),
-  customerName: stringType().nullable(),
+  customerName: stringType().nullish(),
   subtotal: numberType(),
   discount: numberType(),
   discountId: numberType().nullish(),
@@ -77914,15 +77914,15 @@ var ListOrdersResponseItem = objectType({
   discountType: enumType(["percentage", "fixed"]).nullish(),
   total: numberType(),
   paymentMethod: enumType(["cash", "card", "wallet", "hospitality"]),
-  amountTendered: numberType().nullable(),
-  changeDue: numberType().nullable(),
-  notes: stringType().nullable(),
-  createdAt: stringType(),
-  updatedAt: stringType(),
-  paidAt: stringType().nullable(),
-  readyAt: stringType().nullable(),
-  completedAt: stringType().nullable(),
-  cancelledAt: stringType().nullable()
+  amountTendered: numberType().nullish(),
+  changeDue: numberType().nullish(),
+  notes: stringType().nullish(),
+  createdAt: stringType().nullish(),
+  updatedAt: stringType().nullish(),
+  paidAt: stringType().nullish(),
+  readyAt: stringType().nullish(),
+  completedAt: stringType().nullish(),
+  cancelledAt: stringType().nullish()
 }).and(
   objectType({
     items: arrayType(
@@ -78004,7 +78004,7 @@ var GetOrderResponse = objectType({
     "cancelled",
     "refunded"
   ]),
-  customerName: stringType().nullable(),
+  customerName: stringType().nullish(),
   subtotal: numberType(),
   discount: numberType(),
   discountId: numberType().nullish(),
@@ -78012,15 +78012,15 @@ var GetOrderResponse = objectType({
   discountType: enumType(["percentage", "fixed"]).nullish(),
   total: numberType(),
   paymentMethod: enumType(["cash", "card", "wallet", "hospitality"]),
-  amountTendered: numberType().nullable(),
-  changeDue: numberType().nullable(),
-  notes: stringType().nullable(),
-  createdAt: stringType(),
-  updatedAt: stringType(),
-  paidAt: stringType().nullable(),
-  readyAt: stringType().nullable(),
-  completedAt: stringType().nullable(),
-  cancelledAt: stringType().nullable()
+  amountTendered: numberType().nullish(),
+  changeDue: numberType().nullish(),
+  notes: stringType().nullish(),
+  createdAt: stringType().nullish(),
+  updatedAt: stringType().nullish(),
+  paidAt: stringType().nullish(),
+  readyAt: stringType().nullish(),
+  completedAt: stringType().nullish(),
+  cancelledAt: stringType().nullish()
 }).and(
   objectType({
     items: arrayType(
@@ -78071,6 +78071,7 @@ var UpdateOrderStatusBody = objectType({
     "refunded"
   ]),
   paymentMethod: enumType(["cash", "card", "wallet", "hospitality"]).optional(),
+  cashierId: numberType().optional().describe("The ID of the cashier approving the order"),
   adminPin: stringType().optional().describe("Required if changing paymentMethod to hospitality")
 });
 var UpdateOrderStatusResponse = objectType({
@@ -78087,7 +78088,7 @@ var UpdateOrderStatusResponse = objectType({
     "cancelled",
     "refunded"
   ]),
-  customerName: stringType().nullable(),
+  customerName: stringType().nullish(),
   subtotal: numberType(),
   discount: numberType(),
   discountId: numberType().nullish(),
@@ -78095,15 +78096,15 @@ var UpdateOrderStatusResponse = objectType({
   discountType: enumType(["percentage", "fixed"]).nullish(),
   total: numberType(),
   paymentMethod: enumType(["cash", "card", "wallet", "hospitality"]),
-  amountTendered: numberType().nullable(),
-  changeDue: numberType().nullable(),
-  notes: stringType().nullable(),
-  createdAt: stringType(),
-  updatedAt: stringType(),
-  paidAt: stringType().nullable(),
-  readyAt: stringType().nullable(),
-  completedAt: stringType().nullable(),
-  cancelledAt: stringType().nullable()
+  amountTendered: numberType().nullish(),
+  changeDue: numberType().nullish(),
+  notes: stringType().nullish(),
+  createdAt: stringType().nullish(),
+  updatedAt: stringType().nullish(),
+  paidAt: stringType().nullish(),
+  readyAt: stringType().nullish(),
+  completedAt: stringType().nullish(),
+  cancelledAt: stringType().nullish()
 });
 var MarkOrderItemReadyParams = objectType({
   id: coerce.number()
@@ -78125,7 +78126,7 @@ var MarkOrderItemReadyResponse = objectType({
     "cancelled",
     "refunded"
   ]),
-  customerName: stringType().nullable(),
+  customerName: stringType().nullish(),
   subtotal: numberType(),
   discount: numberType(),
   discountId: numberType().nullish(),
@@ -78133,15 +78134,15 @@ var MarkOrderItemReadyResponse = objectType({
   discountType: enumType(["percentage", "fixed"]).nullish(),
   total: numberType(),
   paymentMethod: enumType(["cash", "card", "wallet", "hospitality"]),
-  amountTendered: numberType().nullable(),
-  changeDue: numberType().nullable(),
-  notes: stringType().nullable(),
-  createdAt: stringType(),
-  updatedAt: stringType(),
-  paidAt: stringType().nullable(),
-  readyAt: stringType().nullable(),
-  completedAt: stringType().nullable(),
-  cancelledAt: stringType().nullable()
+  amountTendered: numberType().nullish(),
+  changeDue: numberType().nullish(),
+  notes: stringType().nullish(),
+  createdAt: stringType().nullish(),
+  updatedAt: stringType().nullish(),
+  paidAt: stringType().nullish(),
+  readyAt: stringType().nullish(),
+  completedAt: stringType().nullish(),
+  cancelledAt: stringType().nullish()
 });
 var ListStockMovementsQueryParams = objectType({
   ingredientId: coerce.number().optional(),
@@ -78198,7 +78199,7 @@ var GetActiveOrdersResponseItem = objectType({
     "cancelled",
     "refunded"
   ]),
-  customerName: stringType().nullable(),
+  customerName: stringType().nullish(),
   subtotal: numberType(),
   discount: numberType(),
   discountId: numberType().nullish(),
@@ -78206,15 +78207,15 @@ var GetActiveOrdersResponseItem = objectType({
   discountType: enumType(["percentage", "fixed"]).nullish(),
   total: numberType(),
   paymentMethod: enumType(["cash", "card", "wallet", "hospitality"]),
-  amountTendered: numberType().nullable(),
-  changeDue: numberType().nullable(),
-  notes: stringType().nullable(),
-  createdAt: stringType(),
-  updatedAt: stringType(),
-  paidAt: stringType().nullable(),
-  readyAt: stringType().nullable(),
-  completedAt: stringType().nullable(),
-  cancelledAt: stringType().nullable()
+  amountTendered: numberType().nullish(),
+  changeDue: numberType().nullish(),
+  notes: stringType().nullish(),
+  createdAt: stringType().nullish(),
+  updatedAt: stringType().nullish(),
+  paidAt: stringType().nullish(),
+  readyAt: stringType().nullish(),
+  completedAt: stringType().nullish(),
+  cancelledAt: stringType().nullish()
 }).and(
   objectType({
     items: arrayType(
@@ -82188,7 +82189,7 @@ router5.get("/orders", requirePermission("cashier:view"), async (req, res) => {
     )
   );
 });
-router5.post("/orders", requirePermission("pos:create_order"), async (req, res) => {
+router5.post("/orders", async (req, res) => {
   const parsed = CreateOrderBody2.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -83854,7 +83855,7 @@ router13.delete("/discounts/:id", requirePermission("admin:manage_discounts"), a
   }
   res.sendStatus(204);
 });
-router13.get("/discounts/validate/:code", requirePermission("pos:apply_discount"), async (req, res) => {
+router13.get("/discounts/validate/:code", async (req, res) => {
   const [discount] = await db.select().from(discountsTable).where(eq(discountsTable.code, req.params.code));
   if (!discount || !discount.isActive) {
     res.status(404).json({ error: "Invalid or inactive discount code" });
@@ -84847,7 +84848,7 @@ async function seedIfEmpty() {
   await db.insert(usersTable).values([
     { branchId: mainBranch.id, name: "Admin User", username: "admin", passwordHash, role: "admin", pin: "000000" },
     { branchId: mainBranch.id, name: "Sarah", username: "sarah", passwordHash, role: "barista", pin: "111111" },
-    { branchId: mainBranch.id, name: "James", username: "james", passwordHash, role: "barista", pin: "222222" },
+    { branchId: mainBranch.id, name: "James", username: "james", passwordHash, role: "cashier", pin: "222222" },
     { branchId: mainBranch.id, name: "Spacca POS", username: "spaccapos", passwordHash, role: "frontdesk", pin: "999999" }
   ]);
   const [espresso, wholeMilk, oatMilk, almondMilk, vanillaSyrup, caramelSauce, chocSauce, hazelnutSyrup, sugarSyrup, whippedCream, coldBrew, matcha, milkType] = await db.insert(ingredientsTable).values([
@@ -85108,6 +85109,113 @@ async function seedIfEmpty() {
   logger.info("Seed complete \u2014 4 users, 13 ingredients, 5 catalog categories, 9 types, 16 volumes, 13 drinks, 3 discounts inserted.");
 }
 
+// src/lib/permissions-seed.ts
+init_src();
+init_drizzle_orm();
+var APP_PERMISSIONS = [
+  // Dashboard & Admin Hub
+  { key: "admin:view", name: "View Admin Hub", description: "Access the administrative dashboard" },
+  // Users & Roles
+  { key: "users:view", name: "View Users", description: "List and view user details" },
+  { key: "users:create", name: "Create Users", description: "Add new staff members" },
+  { key: "users:update", name: "Update Users", description: "Edit staff details and permissions" },
+  { key: "users:delete", name: "Delete Users", description: "Remove staff members" },
+  { key: "roles:view", name: "View Roles", description: "List and view role details" },
+  { key: "roles:manage", name: "Manage Roles", description: "Create, update and delete roles" },
+  // POS & Kitchen
+  { key: "pos:view", name: "Access POS", description: "Open the Point of Sale terminal" },
+  { key: "pos:create_order", name: "Create Orders", description: "Place new orders in the system" },
+  { key: "kitchen:view", name: "Access Kitchen", description: "View and manage the kitchen production queue" },
+  { key: "kitchen:mark_ready", name: "Mark Ready", description: "Mark order items as ready for pickup" },
+  // Cashier Operations
+  { key: "cashier:view", name: "Cashier View", description: "Access the cashier dashboard and order list" },
+  { key: "cashier:approve_order", name: "Approve Order", description: "Finalize and approve orders for payment" },
+  { key: "cashier:cancel_order", name: "Cancel Order", description: "Void or cancel pending orders" },
+  { key: "cashier:refund_order", name: "Refund Order", description: "Process refunds for completed orders" },
+  { key: "cashier:close_session", name: "Close Session", description: "End a cashier shift and close the session" },
+  { key: "cashier:view_reports", name: "View Cashier Reports", description: "View shift summaries and performance" },
+  { key: "pos:apply_discount", name: "Apply Discount", description: "Apply manual or coupon discounts to orders" },
+  // Catalog & Inventory
+  { key: "catalog:view", name: "View Catalog", description: "Browse drinks and categories" },
+  { key: "catalog:manage", name: "Manage Catalog", description: "Create and edit drinks and categories" },
+  { key: "inventory:view", name: "View Inventory", description: "Check stock levels and ingredients" },
+  { key: "inventory:manage", name: "Manage Inventory", description: "Update stock levels and restock" },
+  // Finance & Reports
+  { key: "reports:view", name: "View Reports", description: "Access sales and performance reports" },
+  { key: "discounts:view", name: "View Discounts", description: "View active discount codes" },
+  { key: "discounts:manage", name: "Manage Discounts", description: "Create and edit discount codes" },
+  // Settings & Infrastructure
+  { key: "branches:manage", name: "Manage Branches", description: "Add and edit branch locations" },
+  { key: "settings:manage", name: "Manage Settings", description: "Change system-wide configurations" }
+];
+var standardRoles = [
+  { key: "admin", name: "Administrator" },
+  { key: "cashier", name: "Cashier" },
+  { key: "barista", name: "Barista" },
+  { key: "finance", name: "Finance Manager" }
+];
+async function syncPermissions() {
+  logger.info("Syncing system permissions...");
+  for (const role of standardRoles) {
+    const [existing] = await db.select().from(rolesTable).where(eq(rolesTable.key, role.key)).limit(1);
+    if (!existing) {
+      await db.insert(rolesTable).values(role);
+    }
+  }
+  for (const perm of APP_PERMISSIONS) {
+    const [existing] = await db.select().from(permissionsTable).where(eq(permissionsTable.key, perm.key)).limit(1);
+    if (existing) {
+      await db.update(permissionsTable).set(perm).where(eq(permissionsTable.key, perm.key));
+    } else {
+      await db.insert(permissionsTable).values(perm);
+    }
+  }
+  const assignPermissions = async (roleKey, pKeys) => {
+    for (const pKey of pKeys) {
+      const [existing] = await db.select().from(rolePermissionsTable).where(
+        and(
+          eq(rolePermissionsTable.roleKey, roleKey),
+          eq(rolePermissionsTable.permissionKey, pKey)
+        )
+      ).limit(1);
+      if (!existing) {
+        await db.insert(rolePermissionsTable).values({
+          roleKey,
+          permissionKey: pKey
+        });
+      }
+    }
+  };
+  await assignPermissions("admin", APP_PERMISSIONS.map((p) => p.key));
+  await assignPermissions("cashier", [
+    "pos:view",
+    "pos:create_order",
+    "cashier:view",
+    "cashier:approve_order",
+    "cashier:cancel_order",
+    "cashier:refund_order",
+    "cashier:close_session",
+    "cashier:view_reports",
+    "pos:apply_discount",
+    "catalog:view",
+    "inventory:view"
+  ]);
+  await assignPermissions("barista", [
+    "pos:view",
+    "kitchen:view",
+    "kitchen:mark_ready",
+    "catalog:view",
+    "inventory:view"
+  ]);
+  await assignPermissions("finance", [
+    "admin:view",
+    "reports:view",
+    "inventory:view",
+    "cashier:view_reports"
+  ]);
+  logger.info("Permissions sync complete.");
+}
+
 // src/index.ts
 var rawPort = process.env["PORT"];
 if (!rawPort) {
@@ -85119,7 +85227,7 @@ var port = Number(rawPort);
 if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
-runMigrations().then(() => seedIfEmpty()).then(() => {
+runMigrations().then(() => seedIfEmpty()).then(() => syncPermissions()).then(() => {
   app_default.listen(port, (err) => {
     if (err) {
       logger.error({ err }, "Error listening on port");
