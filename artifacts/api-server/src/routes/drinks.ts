@@ -814,7 +814,7 @@ router.put("/drinks/:id/slots", requirePermission("admin:manage_drinks"), async 
   res.json(serializeDates(detail));
 });
 
-router.delete("/drinks/:id", async (req, res): Promise<void> => {
+router.delete("/drinks/:id", requirePermission("admin:manage_drinks"), async (req, res): Promise<void> => {
   const params = DeleteDrinkParams.safeParse(req.params);
   if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
   

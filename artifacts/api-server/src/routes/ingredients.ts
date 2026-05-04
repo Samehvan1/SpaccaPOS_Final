@@ -183,12 +183,20 @@ router.post("/ingredients/import-csv", requirePermission("admin:manage_ingredien
 router.get("/ingredients", requirePermission("inventory:view"), async (req, res): Promise<void> => {
   const params = ListIngredientsQueryParams.safeParse(req.query);
   const sessionUser = (req.session as any);
-  const sessionBranchId = sessionUser.branchId;
+  const rawBranchId = req.query.branchId;
   const isAdmin = sessionUser.role === "admin";
+  const sessionBranchId = sessionUser.branchId;
 
-  const targetBranchId = (isAdmin && req.query.branchId && req.query.branchId !== 'all') 
-    ? parseInt(req.query.branchId as string) 
-    : (isAdmin && req.query.branchId === 'all') ? null : sessionBranchId;
+  let targetBranchId: number | null = sessionBranchId;
+  if (isAdmin) {
+    if (rawBranchId === 'all') {
+      targetBranchId = null;
+    } else if (rawBranchId) {
+      targetBranchId = parseInt(rawBranchId as string);
+    }
+  }
+
+  console.log(`[Ingredients-Debug] User: ${sessionUser.username}, Role: ${sessionUser.role}, rawBranchId: ${rawBranchId}, targetBranchId: ${targetBranchId}`);
 
   let query = db
     .select({
@@ -199,10 +207,10 @@ router.get("/ingredients", requirePermission("inventory:view"), async (req, res)
       unit: ingredientsTable.unit,
       costPerUnit: ingredientsTable.costPerUnit,
       isActive: ingredientsTable.isActive,
-      stockQuantity: targetBranchId 
+      stockQuantity: targetBranchId !== null 
         ? sql<string>`COALESCE(${branchStockTable.stockQuantity}, '0')` 
         : sql<string>`(SELECT COALESCE(SUM(bs.stock_quantity), 0)::text FROM branch_stock bs WHERE bs.ingredient_id = ${ingredientsTable.id})`,
-      lowStockThreshold: targetBranchId 
+      lowStockThreshold: targetBranchId !== null 
         ? sql<string>`COALESCE(${branchStockTable.lowStockThreshold}, '500')` 
         : sql<string>`'500'`,
       updatedAt: ingredientsTable.updatedAt,

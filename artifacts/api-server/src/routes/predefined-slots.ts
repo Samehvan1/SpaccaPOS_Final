@@ -12,6 +12,7 @@ import {
   drinksTable,
   drinkIngredientSlotsTable,
 } from "@workspace/db";
+import { requirePermission } from "../middleware/permissions";
 
 const router: IRouter = Router();
 
@@ -36,7 +37,7 @@ router.get("/catalog/predefined-slots", async (_req, res): Promise<void> => {
 
 // Get single template
 router.get("/catalog/predefined-slots/:id", async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id);
+  const id = parseInt(req.params.id as string);
   const [slot] = await db.select().from(predefinedSlotsTable).where(eq(predefinedSlotsTable.id, id));
   if (!slot) { res.status(404).json({ error: "Not found" }); return; }
   
@@ -52,7 +53,7 @@ router.get("/catalog/predefined-slots/:id", async (req, res): Promise<void> => {
 });
 
 // Create template
-router.post("/catalog/predefined-slots", async (req, res): Promise<void> => {
+router.post("/catalog/predefined-slots", requirePermission("admin:manage_catalog"), async (req, res): Promise<void> => {
   const { name, slotLabel, isRequired, isDynamic, affectsCupSize, autoLoadCategoryId } = req.body;
   if (!name || !slotLabel) { res.status(400).json({ error: "name and slotLabel required" }); return; }
   
@@ -98,8 +99,8 @@ router.post("/catalog/predefined-slots", async (req, res): Promise<void> => {
 });
 
 // Update template
-router.patch("/catalog/predefined-slots/:id", async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id);
+router.patch("/catalog/predefined-slots/:id", requirePermission("admin:manage_catalog"), async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id as string);
   const { name, slotLabel, isRequired, isDynamic, affectsCupSize, typeOptions, volumes } = req.body;
   
   const patch: any = {};
@@ -149,7 +150,7 @@ router.patch("/catalog/predefined-slots/:id", async (req, res): Promise<void> =>
 
 // Get template usage
 router.get("/catalog/predefined-slots/:id/usage", async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id);
+  const id = parseInt(req.params.id as string);
   
   const usage = await db.select({
     drinkId: drinksTable.id,
@@ -164,8 +165,8 @@ router.get("/catalog/predefined-slots/:id/usage", async (req, res): Promise<void
 });
 
 // Delete template
-router.delete("/catalog/predefined-slots/:id", async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id);
+router.delete("/catalog/predefined-slots/:id", requirePermission("admin:manage_catalog"), async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id as string);
   try {
     await db.delete(predefinedSlotsTable).where(eq(predefinedSlotsTable.id, id));
     res.sendStatus(204);
