@@ -33,8 +33,10 @@ export type ListDrinksResponseItem = Infer<typeof api.ListDrinksResponseItem>;
 export const ListDrinksResponse = api.ListDrinksResponse;
 export type ListDrinksResponse = Infer<typeof api.ListDrinksResponse>;
 
-export const CreateDrinkBody = api.CreateDrinkBody;
-export type CreateDrinkBody = Infer<typeof api.CreateDrinkBody>;
+export const CreateDrinkBody = api.CreateDrinkBody.extend({
+  kitchenStationId: z.number().nullish(),
+});
+export type CreateDrinkBody = Infer<typeof CreateDrinkBody>;
 export const GetDrinkParams = api.GetDrinkParams;
 export type GetDrinkParams = Infer<typeof api.GetDrinkParams>;
 export const GetDrinkResponse = api.GetDrinkResponse;
@@ -42,8 +44,10 @@ export type GetDrinkResponse = Infer<typeof api.GetDrinkResponse>;
 
 export const UpdateDrinkParams = api.UpdateDrinkParams;
 export type UpdateDrinkParams = Infer<typeof api.UpdateDrinkParams>;
-export const UpdateDrinkBody = api.UpdateDrinkBody;
-export type UpdateDrinkBody = Infer<typeof api.UpdateDrinkBody>;
+export const UpdateDrinkBody = api.UpdateDrinkBody.extend({
+  kitchenStationId: z.number().nullish(),
+});
+export type UpdateDrinkBody = Infer<typeof UpdateDrinkBody>;
 export const UpdateDrinkResponse = api.UpdateDrinkResponse;
 export type UpdateDrinkResponse = Infer<typeof api.UpdateDrinkResponse>;
 
@@ -169,12 +173,14 @@ export const GetDashboardSummaryResponse = api.GetDashboardSummaryResponse;
 export type GetDashboardSummaryResponse = Infer<
   typeof api.GetDashboardSummaryResponse
 >;
-export const GetActiveOrdersResponseItem = api.GetActiveOrdersResponseItem;
+export const GetActiveOrdersResponseItem = api.GetActiveOrdersResponseItem.and(z.object({
+  items: z.array(z.any()) // Allow extra fields in items like kitchenStationId
+}));
 export type GetActiveOrdersResponseItem = Infer<
-  typeof api.GetActiveOrdersResponseItem
+  typeof GetActiveOrdersResponseItem
 >;
-export const GetActiveOrdersResponse = api.GetActiveOrdersResponse;
-export type GetActiveOrdersResponse = Infer<typeof api.GetActiveOrdersResponse>;
+export const GetActiveOrdersResponse = z.array(GetActiveOrdersResponseItem);
+export type GetActiveOrdersResponse = Infer<typeof GetActiveOrdersResponse>;
 
 export const GetLowStockIngredientsResponseItem =
   api.GetLowStockIngredientsResponseItem;

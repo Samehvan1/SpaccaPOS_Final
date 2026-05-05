@@ -167,7 +167,6 @@ router.get("/dashboard/active-orders", async (req, res): Promise<void> => {
       lineTotal: parseFloat(i.lineTotal),
       customizations: customizationsByItemId[i.id] ?? [],
     });
-    console.log(`[KDS-Debug] Item: ${i.drinkName}, Station: ${i.kitchenStation}`);
     return acc;
   }, {} as Record<number, any[]>);
 

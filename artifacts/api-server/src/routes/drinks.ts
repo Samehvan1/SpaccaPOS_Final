@@ -483,6 +483,7 @@ router.post("/drinks", requirePermission("admin:manage_drinks"), async (req, res
       isActive: drinkData.isActive ?? true,
       prepTimeSeconds: drinkData.prepTimeSeconds ?? 180,
       kitchenStation: drinkData.kitchenStation?.toLowerCase().replace(/\s+/g, '-') ?? "main",
+      kitchenStationId: (drinkData as any).kitchenStationId ?? null,
     })
     .returning();
 
@@ -566,6 +567,9 @@ router.patch("/drinks/:id", requirePermission("admin:manage_drinks"), async (req
   if (parsed.data.prepTimeSeconds !== undefined) updateData.prepTimeSeconds = parsed.data.prepTimeSeconds;
   if (parsed.data.kitchenStation !== undefined) {
     updateData.kitchenStation = parsed.data.kitchenStation.toLowerCase().replace(/\s+/g, '-');
+  }
+  if ((parsed.data as any).kitchenStationId !== undefined) {
+    updateData.kitchenStationId = (parsed.data as any).kitchenStationId;
   }
 
   const [drink] = await db.update(drinksTable).set(updateData).where(eq(drinksTable.id, params.data.id)).returning();

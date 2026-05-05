@@ -15,8 +15,7 @@ import { useAuth } from "@/hooks/use-auth";
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "/api";
 
 function slugifyStation(name: string) {
-  if (!name || name === "main" || name === "main-bar") return "hot-bar"; // Map defaults to Hot Bar
-  if (name === "cold") return "cold-bar";
+  if (!name) return "";
   return name.toLowerCase().trim()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
@@ -89,24 +88,38 @@ export default function KitchenDisplay() {
 
   const knownStationValues = new Set(allStations.map(s => s.value).filter(v => v !== "all"));
 
-  // Simple exact station matching
+  // Improved station matching with robust name/ID fallback and debug logging
   const stationMatches = (item: any, targetValue: string) => {
     if (targetValue === "all") return true;
     if (!item) return false;
     
-    // 1. Try ID matching first (robust)
-    if (item.kitchenStationId && item.kitchenStationId.toString() === targetValue) {
-      return true;
+    const itemId = item.kitchenStationId?.toString();
+    const itemSlug = slugifyStation(item.kitchenStation);
+    
+    // 1. Try exact ID matching (modern robust way)
+    if (itemId) {
+      const matched = String(itemId) === String(targetValue);
+      // If we have an ID, we should be VERY strict. 
+      // If the ID doesn't match the target, it shouldn't match at all.
+      return matched;
     }
     
-    // 2. Fallback to slug matching for legacy data
-    const iSlug = slugifyStation(item.kitchenStation);
-    const matched = iSlug === targetValue || targetValue.includes(iSlug) || iSlug.includes(targetValue);
+    // 2. Resolve target station name from ID for legacy fallback
+    const targetStation = stations.find(s => s.id.toString() === targetValue);
+    if (!targetStation) return false;
     
-    if (matched) {
-       // console.log(`[KDS-Match] Item: ${item.kitchenStation} (${iSlug}) vs Tab: ${targetValue} => ${matched}`);
-    }
-    return matched;
+    const targetSlug = slugifyStation(targetStation.name);
+
+    // 3. Exact slug match
+    if (itemSlug === targetSlug) return true;
+
+    // 4. Default fallback: 'main' or empty items go to 'Hot Bar', 'Main Bar', or 'Barista'
+    // only if they don't have a specific station ID assigned.
+    const isDefaultItem = !itemSlug || itemSlug === "main";
+    const isDefaultStation = targetSlug === "hot-bar" || targetSlug === "main-bar" || targetSlug === "barista" || targetValue === stations[0]?.id.toString();
+    
+    const isMatched = isDefaultItem && isDefaultStation;
+    return isMatched;
   };
 
   // Filter orders by station
@@ -313,7 +326,10 @@ export default function KitchenDisplay() {
                                   !isThisStation && activeStation !== "all" && (
                                     <div className="text-[10px] font-black text-neon-cyan/40 uppercase tracking-widest mt-2 flex items-center gap-2 italic">
                                       <div className="w-1.5 h-1.5 rounded-full bg-neon-cyan/40 animate-pulse" />
-                                      In production at {stationLabel(slugifyStation(item.kitchenStation))}
+                                      In production at {
+                                        stations.find(s => slugifyStation(s.name) === slugifyStation(item.kitchenStation))?.name ?? 
+                                        stationLabel(item.kitchenStation)
+                                      }
                                     </div>
                                   )
                               )}

@@ -78525,10 +78525,14 @@ var GetMeResponse2 = GetMeResponse.extend({
   permissions: external_exports2.array(external_exports2.string())
 });
 var ListDrinksQueryParams2 = ListDrinksQueryParams;
-var CreateDrinkBody2 = CreateDrinkBody;
+var CreateDrinkBody2 = CreateDrinkBody.extend({
+  kitchenStationId: external_exports2.number().nullish()
+});
 var GetDrinkParams2 = GetDrinkParams;
 var UpdateDrinkParams2 = UpdateDrinkParams;
-var UpdateDrinkBody2 = UpdateDrinkBody;
+var UpdateDrinkBody2 = UpdateDrinkBody.extend({
+  kitchenStationId: external_exports2.number().nullish()
+});
 var UpdateDrinkResponse2 = UpdateDrinkResponse;
 var DeleteDrinkParams2 = DeleteDrinkParams;
 var CalculateDrinkPriceParams2 = CalculateDrinkPriceParams;
@@ -78559,7 +78563,11 @@ var ListStockMovementsQueryParams2 = ListStockMovementsQueryParams;
 var ListStockMovementsResponse2 = ListStockMovementsResponse;
 var CreateStockAdjustmentBody2 = CreateStockAdjustmentBody;
 var GetDashboardSummaryResponse2 = GetDashboardSummaryResponse;
-var GetActiveOrdersResponse2 = GetActiveOrdersResponse;
+var GetActiveOrdersResponseItem2 = GetActiveOrdersResponseItem.and(external_exports2.object({
+  items: external_exports2.array(external_exports2.any())
+  // Allow extra fields in items like kitchenStationId
+}));
+var GetActiveOrdersResponse2 = external_exports2.array(GetActiveOrdersResponseItem2);
 var GetLowStockIngredientsResponse2 = GetLowStockIngredientsResponse;
 var GetSalesByCategoryQueryParams2 = GetSalesByCategoryQueryParams;
 var GetSalesByCategoryResponse2 = GetSalesByCategoryResponse;
@@ -81267,7 +81275,8 @@ router3.post("/drinks", requirePermission("admin:manage_drinks"), async (req, re
     imageUrl: drinkData.imageUrl ?? null,
     isActive: drinkData.isActive ?? true,
     prepTimeSeconds: drinkData.prepTimeSeconds ?? 180,
-    kitchenStation: drinkData.kitchenStation?.toLowerCase().replace(/\s+/g, "-") ?? "main"
+    kitchenStation: drinkData.kitchenStation?.toLowerCase().replace(/\s+/g, "-") ?? "main",
+    kitchenStationId: drinkData.kitchenStationId ?? null
   }).returning();
   if (slotDefs && slotDefs.length > 0) {
     await db.insert(drinkIngredientSlotsTable).values(
@@ -81337,6 +81346,9 @@ router3.patch("/drinks/:id", requirePermission("admin:manage_drinks"), async (re
   if (parsed.data.prepTimeSeconds !== void 0) updateData.prepTimeSeconds = parsed.data.prepTimeSeconds;
   if (parsed.data.kitchenStation !== void 0) {
     updateData.kitchenStation = parsed.data.kitchenStation.toLowerCase().replace(/\s+/g, "-");
+  }
+  if (parsed.data.kitchenStationId !== void 0) {
+    updateData.kitchenStationId = parsed.data.kitchenStationId;
   }
   const [drink] = await db.update(drinksTable).set(updateData).where(eq(drinksTable.id, params.data.id)).returning();
   if (!drink) {
@@ -82847,7 +82859,7 @@ router7.get("/dashboard/active-orders", async (req, res) => {
       lineTotal: parseFloat(i.lineTotal),
       customizations: customizationsByItemId[i.id] ?? []
     });
-    console.log(`[KDS-Debug] Item: ${i.drinkName}, Station: ${i.kitchenStation}`);
+    console.log(`[KDS-Server-Debug] Order: ${i.orderId}, Item: ${i.drinkName}, Station: ${i.kitchenStation}, StationID: ${i.kitchenStationId}`);
     return acc;
   }, {});
   const ordersWithDetails = activeOrders.map((order) => ({
