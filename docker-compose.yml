@@ -26,6 +26,7 @@ services:
       - db
     volumes:
       - ./artifacts/api-server/uploads:/app/uploads
+      - ./backups:/app/backups
 
   frontend:
     build:

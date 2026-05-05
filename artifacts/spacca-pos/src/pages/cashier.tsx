@@ -650,7 +650,7 @@ export default function CashierPage() {
                       </div>
                       <div>
                         <div className="font-bold">{order.customerName || "Walk-in Guest"}</div>
-                        <div className="text-[10px] text-muted-foreground uppercase tracking-widest">{new Date(order.createdAt).toLocaleTimeString()} · {order.paymentMethod}</div>
+                        <div className="text-[10px] text-muted-foreground uppercase tracking-widest">{order.createdAt ? new Date(order.createdAt).toLocaleTimeString() : 'N/A'} · {order.paymentMethod}</div>
                       </div>
                     </div>
                     <div className="flex items-center gap-6">

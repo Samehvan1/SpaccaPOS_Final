@@ -80500,7 +80500,8 @@ init_src();
 init_drizzle_orm();
 function requirePermission(permissionKey) {
   return async (req, res, next) => {
-    const userId = req.session.userId;
+    const session2 = req.session;
+    const userId = session2.userId ?? session2.cashierId;
     if (!userId) {
       res.status(401).json({ error: "Not authenticated" });
       return;
@@ -80546,9 +80547,15 @@ function requirePermission(permissionKey) {
       )
     ).limit(1);
     if (!rolePermission) {
-      res.status(403).json({ error: "Insufficient permissions" });
+      console.log(`[Permission] DENIED: User ${userId} (Role: ${role}) lacks '${permissionKey}'`);
+      res.status(403).json({
+        error: `Insufficient permissions: '${permissionKey}' required`,
+        role,
+        permission: permissionKey
+      });
       return;
     }
+    console.log(`[Permission] GRANTED: User ${userId} (Role: ${role}) for '${permissionKey}'`);
     next();
   };
 }
@@ -82459,7 +82466,9 @@ router5.patch("/orders/:id/status", async (req, res, next) => {
   let perm = "cashier:view";
   if (status === "paid") perm = "cashier:approve_order";
   if (status === "ready") perm = "kitchen:mark_ready";
+  if (status === "in_progress") perm = "kitchen:view";
   if (status === "cancelled") perm = "cashier:cancel_order";
+  if (status === "refunded") perm = "cashier:refund_order";
   if (status === "completed") perm = "cashier:view";
   return requirePermission(perm)(req, res, next);
 }, async (req, res) => {
@@ -84110,8 +84119,12 @@ router15.post("/cashier/login", async (req, res) => {
   } else {
     await db.update(cashierSessionsTable).set({ ipAddress, userAgent }).where(eq(cashierSessionsTable.id, session2.id));
   }
-  req.session.cashierSessionId = session2.id;
-  req.session.cashierId = user.id;
+  const sess = req.session;
+  sess.cashierSessionId = session2.id;
+  sess.cashierId = user.id;
+  sess.userId = user.id;
+  sess.role = user.role;
+  sess.branchId = user.branchId;
   req.session.save((err) => {
     if (err) {
       res.status(500).json({ error: "Session error" });
