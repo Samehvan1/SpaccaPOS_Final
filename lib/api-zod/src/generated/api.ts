@@ -312,6 +312,7 @@ export const ListIngredientsResponseItem = zod.object({
   unit: zod.string(),
   costPerUnit: zod.number(),
   stockQuantity: zod.number(),
+  startupQuantity: zod.number().optional(),
   lowStockThreshold: zod.number(),
   isActive: zod.boolean(),
   linkedTypeCount: zod.number().optional(),
@@ -342,6 +343,7 @@ export const CreateIngredientBody = zod.object({
   unit: zod.string(),
   costPerUnit: zod.number(),
   stockQuantity: zod.number().optional(),
+  startupQuantity: zod.number().optional(),
   lowStockThreshold: zod.number().optional(),
   isActive: zod.boolean().optional(),
 });
@@ -378,6 +380,7 @@ export const GetIngredientResponse = zod
     unit: zod.string(),
     costPerUnit: zod.number(),
     stockQuantity: zod.number(),
+    startupQuantity: zod.number().optional(),
     lowStockThreshold: zod.number(),
     isActive: zod.boolean(),
     linkedTypeCount: zod.number().optional(),
@@ -435,6 +438,7 @@ export const UpdateIngredientBody = zod.object({
   unit: zod.string().optional(),
   costPerUnit: zod.number().optional(),
   stockQuantity: zod.number().optional(),
+  startupQuantity: zod.number().optional(),
   lowStockThreshold: zod.number().optional(),
   isActive: zod.boolean().optional(),
 });
@@ -898,6 +902,8 @@ export const MarkOrderItemReadyResponse = zod.object({
  */
 export const ListStockMovementsQueryParams = zod.object({
   ingredientId: zod.coerce.number().optional(),
+  startDate: zod.coerce.date().optional(),
+  endDate: zod.coerce.date().optional(),
   limit: zod.coerce.number().optional(),
   offset: zod.coerce.number().optional(),
 });

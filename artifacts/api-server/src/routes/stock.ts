@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, and, inArray } from "drizzle-orm";
+import { eq, and, inArray, sql, gte, lte, desc } from "drizzle-orm";
 import { serializeDates } from "../lib/serialize";
 import {
   db,
@@ -32,17 +32,27 @@ router.get("/stock/movements", async (req, res): Promise<void> => {
     conditions.push(eq(stockMovementsTable.branchId, targetBranchId));
   }
 
-  if (params.success && params.data.ingredientId) {
-    conditions.push(eq(stockMovementsTable.ingredientId, params.data.ingredientId));
+  if (params.success) {
+    if (params.data.ingredientId) {
+      conditions.push(eq(stockMovementsTable.ingredientId, params.data.ingredientId));
+    }
+    if (params.data.startDate) {
+      conditions.push(gte(stockMovementsTable.createdAt, params.data.startDate));
+    }
+    if (params.data.endDate) {
+      conditions.push(lte(stockMovementsTable.createdAt, params.data.endDate));
+    }
   }
 
-  const movements = conditions.length
-    ? await db.select().from(stockMovementsTable).where(and(...conditions)).orderBy(stockMovementsTable.createdAt)
-    : await db.select().from(stockMovementsTable).orderBy(stockMovementsTable.createdAt);
+  const movements = await db
+    .select()
+    .from(stockMovementsTable)
+    .where(conditions.length ? and(...conditions) : undefined)
+    .orderBy(desc(stockMovementsTable.createdAt));
 
   const limit = params.success && params.data.limit ? params.data.limit : 100;
   const offset = params.success && params.data.offset ? params.data.offset : 0;
-  const paginated = movements.slice(offset, offset + limit).reverse();
+  const paginated = movements.slice(offset, offset + limit);
 
   const allIngredients = await db.select().from(ingredientsTable);
   const allUsers = await db.select().from(usersTable);
@@ -55,8 +65,8 @@ router.get("/stock/movements", async (req, res): Promise<void> => {
         ...m,
         ingredientName: ingredientMap[m.ingredientId] ?? "Unknown",
         createdByName: userMap[m.createdBy] ?? "Unknown",
-        quantity: parseFloat(m.quantity),
-        quantityAfter: parseFloat(m.quantityAfter),
+        quantity: parseFloat(String(m.quantity || "0")) || 0,
+        quantityAfter: parseFloat(String(m.quantityAfter || "0")) || 0,
         orderId: m.orderId ?? null,
       })))
     )

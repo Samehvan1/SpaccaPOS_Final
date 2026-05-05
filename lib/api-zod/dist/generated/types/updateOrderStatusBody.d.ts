@@ -5,8 +5,14 @@
  * Spacca POS API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { UpdateOrderStatusBodyPaymentMethod } from "./updateOrderStatusBodyPaymentMethod";
 import type { UpdateOrderStatusBodyStatus } from "./updateOrderStatusBodyStatus";
 export interface UpdateOrderStatusBody {
     status: UpdateOrderStatusBodyStatus;
+    paymentMethod?: UpdateOrderStatusBodyPaymentMethod;
+    /** The ID of the cashier approving the order */
+    cashierId?: number;
+    /** Required if changing paymentMethod to hospitality */
+    adminPin?: string;
 }
 //# sourceMappingURL=updateOrderStatusBody.d.ts.map

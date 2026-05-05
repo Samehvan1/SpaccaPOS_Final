@@ -8,12 +8,15 @@
 import type { CreateOrderBodyItemsItem } from "./createOrderBodyItemsItem";
 import type { CreateOrderBodyPaymentMethod } from "./createOrderBodyPaymentMethod";
 export interface CreateOrderBody {
+    branchId?: number;
     customerName?: string;
     paymentMethod: CreateOrderBodyPaymentMethod;
     amountTendered?: number;
     notes?: string;
     discount?: number;
     discountCode?: string;
+    /** Required if paymentMethod is hospitality */
+    adminPin?: string;
     items: CreateOrderBodyItemsItem[];
 }
 //# sourceMappingURL=createOrderBody.d.ts.map

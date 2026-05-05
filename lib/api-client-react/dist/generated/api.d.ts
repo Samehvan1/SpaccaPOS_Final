@@ -1,5 +1,5 @@
 import type { QueryKey, UseMutationOptions, UseMutationResult, UseQueryOptions, UseQueryResult } from "@tanstack/react-query";
-import type { ActivityLog, CategorySales, CreateDiscountBody, CreateDrinkBody, CreateIngredientBody, CreateIngredientOptionBody, CreateOrderBody, CreateUserBody, DashboardSummary, Discount, Drink, DrinkDetail, GetActiveOrdersParams, GetSalesByCategoryParams, GetSettingsParams, GetTopDrinksParams, HealthStatus, Ingredient, IngredientDetail, IngredientOption, ListActivityLogsParams, ListDrinksParams, ListIngredientsParams, ListOrdersParams, ListStockMovementsParams, LoginBody, LoginResponse, Order, OrderDetail, Permission, PriceBreakdown, PriceCalculationBody, RestockBody, Setting, StockAdjustmentBody, StockMovement, TopDrink, UpdateDiscountBody, UpdateDrinkBody, UpdateIngredientBody, UpdateIngredientOptionBody, UpdateOrderStatusBody, UpdateSettingsBody, UpdateUserBody, User, UserDetail } from "./api.schemas";
+import type { ActivityLog, Branch, CalculateDrinkPriceParams, CategorySales, CreateBranchBody, CreateDiscountBody, CreateDrinkBody, CreateIngredientBody, CreateIngredientOptionBody, CreateIngredientOptionParams, CreateOrderBody, CreateUserBody, DashboardSummary, DeleteDiscountParams, DeleteDrinkParams, DeleteIngredientOptionParams, DeleteIngredientParams, DeleteUserParams, Discount, Drink, DrinkDetail, GetActiveOrdersParams, GetDrinkParams, GetIngredientParams, GetOrderParams, GetSalesByCategoryParams, GetSettingsParams, GetTopDrinksParams, HealthStatus, Ingredient, IngredientDetail, IngredientOption, ListActivityLogsParams, ListDrinksParams, ListIngredientsParams, ListOrdersParams, ListStockMovementsParams, LoginBody, LoginResponse, MarkOrderItemReadyParams, Order, OrderDetail, Permission, PriceBreakdown, PriceCalculationBody, RestockBody, RestockIngredientParams, Setting, StockAdjustmentBody, StockMovement, TopDrink, UpdateBranchBody, UpdateDiscountBody, UpdateDiscountParams, UpdateDrinkBody, UpdateDrinkParams, UpdateIngredientBody, UpdateIngredientOptionBody, UpdateIngredientOptionParams, UpdateIngredientParams, UpdateOrderStatusBody, UpdateOrderStatusParams, UpdateSettingsBody, UpdateUserBody, UpdateUserParams, User, UserDetail } from "./api.schemas";
 import { customFetch } from "../custom-fetch";
 import type { ErrorType, BodyType } from "../custom-fetch";
 type AwaitedInput<T> = PromiseLike<T> | T;
@@ -149,10 +149,10 @@ export declare const useCreateDrink: <TError = ErrorType<unknown>, TContext = un
 /**
  * @summary Get a drink with its ingredient slots
  */
-export declare const getGetDrinkUrl: (id: number) => string;
-export declare const getDrink: (id: number, options?: RequestInit) => Promise<DrinkDetail>;
-export declare const getGetDrinkQueryKey: (id: number) => readonly [`/api/drinks/${number}`];
-export declare const getGetDrinkQueryOptions: <TData = Awaited<ReturnType<typeof getDrink>>, TError = ErrorType<void>>(id: number, options?: {
+export declare const getGetDrinkUrl: (id: number, params?: GetDrinkParams) => string;
+export declare const getDrink: (id: number, params?: GetDrinkParams, options?: RequestInit) => Promise<DrinkDetail>;
+export declare const getGetDrinkQueryKey: (id: number, params?: GetDrinkParams) => readonly [`/api/drinks/${number}`, ...GetDrinkParams[]];
+export declare const getGetDrinkQueryOptions: <TData = Awaited<ReturnType<typeof getDrink>>, TError = ErrorType<void>>(id: number, params?: GetDrinkParams, options?: {
     query?: UseQueryOptions<Awaited<ReturnType<typeof getDrink>>, TError, TData>;
     request?: SecondParameter<typeof customFetch>;
 }) => UseQueryOptions<Awaited<ReturnType<typeof getDrink>>, TError, TData> & {
@@ -163,7 +163,7 @@ export type GetDrinkQueryError = ErrorType<void>;
 /**
  * @summary Get a drink with its ingredient slots
  */
-export declare function useGetDrink<TData = Awaited<ReturnType<typeof getDrink>>, TError = ErrorType<void>>(id: number, options?: {
+export declare function useGetDrink<TData = Awaited<ReturnType<typeof getDrink>>, TError = ErrorType<void>>(id: number, params?: GetDrinkParams, options?: {
     query?: UseQueryOptions<Awaited<ReturnType<typeof getDrink>>, TError, TData>;
     request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & {
@@ -172,17 +172,19 @@ export declare function useGetDrink<TData = Awaited<ReturnType<typeof getDrink>>
 /**
  * @summary Update a drink
  */
-export declare const getUpdateDrinkUrl: (id: number) => string;
-export declare const updateDrink: (id: number, updateDrinkBody: UpdateDrinkBody, options?: RequestInit) => Promise<Drink>;
+export declare const getUpdateDrinkUrl: (id: number, params?: UpdateDrinkParams) => string;
+export declare const updateDrink: (id: number, updateDrinkBody: UpdateDrinkBody, params?: UpdateDrinkParams, options?: RequestInit) => Promise<Drink>;
 export declare const getUpdateDrinkMutationOptions: <TError = ErrorType<unknown>, TContext = unknown>(options?: {
     mutation?: UseMutationOptions<Awaited<ReturnType<typeof updateDrink>>, TError, {
         id: number;
         data: BodyType<UpdateDrinkBody>;
+        params?: UpdateDrinkParams;
     }, TContext>;
     request?: SecondParameter<typeof customFetch>;
 }) => UseMutationOptions<Awaited<ReturnType<typeof updateDrink>>, TError, {
     id: number;
     data: BodyType<UpdateDrinkBody>;
+    params?: UpdateDrinkParams;
 }, TContext>;
 export type UpdateDrinkMutationResult = NonNullable<Awaited<ReturnType<typeof updateDrink>>>;
 export type UpdateDrinkMutationBody = BodyType<UpdateDrinkBody>;
@@ -194,24 +196,28 @@ export declare const useUpdateDrink: <TError = ErrorType<unknown>, TContext = un
     mutation?: UseMutationOptions<Awaited<ReturnType<typeof updateDrink>>, TError, {
         id: number;
         data: BodyType<UpdateDrinkBody>;
+        params?: UpdateDrinkParams;
     }, TContext>;
     request?: SecondParameter<typeof customFetch>;
 }) => UseMutationResult<Awaited<ReturnType<typeof updateDrink>>, TError, {
     id: number;
     data: BodyType<UpdateDrinkBody>;
+    params?: UpdateDrinkParams;
 }, TContext>;
 /**
  * @summary Delete a drink
  */
-export declare const getDeleteDrinkUrl: (id: number) => string;
-export declare const deleteDrink: (id: number, options?: RequestInit) => Promise<void>;
+export declare const getDeleteDrinkUrl: (id: number, params?: DeleteDrinkParams) => string;
+export declare const deleteDrink: (id: number, params?: DeleteDrinkParams, options?: RequestInit) => Promise<void>;
 export declare const getDeleteDrinkMutationOptions: <TError = ErrorType<unknown>, TContext = unknown>(options?: {
     mutation?: UseMutationOptions<Awaited<ReturnType<typeof deleteDrink>>, TError, {
         id: number;
+        params?: DeleteDrinkParams;
     }, TContext>;
     request?: SecondParameter<typeof customFetch>;
 }) => UseMutationOptions<Awaited<ReturnType<typeof deleteDrink>>, TError, {
     id: number;
+    params?: DeleteDrinkParams;
 }, TContext>;
 export type DeleteDrinkMutationResult = NonNullable<Awaited<ReturnType<typeof deleteDrink>>>;
 export type DeleteDrinkMutationError = ErrorType<unknown>;
@@ -221,25 +227,29 @@ export type DeleteDrinkMutationError = ErrorType<unknown>;
 export declare const useDeleteDrink: <TError = ErrorType<unknown>, TContext = unknown>(options?: {
     mutation?: UseMutationOptions<Awaited<ReturnType<typeof deleteDrink>>, TError, {
         id: number;
+        params?: DeleteDrinkParams;
     }, TContext>;
     request?: SecondParameter<typeof customFetch>;
 }) => UseMutationResult<Awaited<ReturnType<typeof deleteDrink>>, TError, {
     id: number;
+    params?: DeleteDrinkParams;
 }, TContext>;
 /**
  * @summary Calculate price with customizations (side-effect free)
  */
-export declare const getCalculateDrinkPriceUrl: (id: number) => string;
-export declare const calculateDrinkPrice: (id: number, priceCalculationBody: PriceCalculationBody, options?: RequestInit) => Promise<PriceBreakdown>;
+export declare const getCalculateDrinkPriceUrl: (id: number, params?: CalculateDrinkPriceParams) => string;
+export declare const calculateDrinkPrice: (id: number, priceCalculationBody: PriceCalculationBody, params?: CalculateDrinkPriceParams, options?: RequestInit) => Promise<PriceBreakdown>;
 export declare const getCalculateDrinkPriceMutationOptions: <TError = ErrorType<unknown>, TContext = unknown>(options?: {
     mutation?: UseMutationOptions<Awaited<ReturnType<typeof calculateDrinkPrice>>, TError, {
         id: number;
         data: BodyType<PriceCalculationBody>;
+        params?: CalculateDrinkPriceParams;
     }, TContext>;
     request?: SecondParameter<typeof customFetch>;
 }) => UseMutationOptions<Awaited<ReturnType<typeof calculateDrinkPrice>>, TError, {
     id: number;
     data: BodyType<PriceCalculationBody>;
+    params?: CalculateDrinkPriceParams;
 }, TContext>;
 export type CalculateDrinkPriceMutationResult = NonNullable<Awaited<ReturnType<typeof calculateDrinkPrice>>>;
 export type CalculateDrinkPriceMutationBody = BodyType<PriceCalculationBody>;
@@ -251,11 +261,13 @@ export declare const useCalculateDrinkPrice: <TError = ErrorType<unknown>, TCont
     mutation?: UseMutationOptions<Awaited<ReturnType<typeof calculateDrinkPrice>>, TError, {
         id: number;
         data: BodyType<PriceCalculationBody>;
+        params?: CalculateDrinkPriceParams;
     }, TContext>;
     request?: SecondParameter<typeof customFetch>;
 }) => UseMutationResult<Awaited<ReturnType<typeof calculateDrinkPrice>>, TError, {
     id: number;
     data: BodyType<PriceCalculationBody>;
+    params?: CalculateDrinkPriceParams;
 }, TContext>;
 /**
  * @summary List all ingredients
@@ -328,10 +340,10 @@ export declare const useImportInventoryCsv: <TError = ErrorType<void>, TContext 
 /**
  * @summary Get ingredient with options
  */
-export declare const getGetIngredientUrl: (id: number) => string;
-export declare const getIngredient: (id: number, options?: RequestInit) => Promise<IngredientDetail>;
-export declare const getGetIngredientQueryKey: (id: number) => readonly [`/api/ingredients/${number}`];
-export declare const getGetIngredientQueryOptions: <TData = Awaited<ReturnType<typeof getIngredient>>, TError = ErrorType<void>>(id: number, options?: {
+export declare const getGetIngredientUrl: (id: number, params?: GetIngredientParams) => string;
+export declare const getIngredient: (id: number, params?: GetIngredientParams, options?: RequestInit) => Promise<IngredientDetail>;
+export declare const getGetIngredientQueryKey: (id: number, params?: GetIngredientParams) => readonly [`/api/ingredients/${number}`, ...GetIngredientParams[]];
+export declare const getGetIngredientQueryOptions: <TData = Awaited<ReturnType<typeof getIngredient>>, TError = ErrorType<void>>(id: number, params?: GetIngredientParams, options?: {
     query?: UseQueryOptions<Awaited<ReturnType<typeof getIngredient>>, TError, TData>;
     request?: SecondParameter<typeof customFetch>;
 }) => UseQueryOptions<Awaited<ReturnType<typeof getIngredient>>, TError, TData> & {
@@ -342,7 +354,7 @@ export type GetIngredientQueryError = ErrorType<void>;
 /**
  * @summary Get ingredient with options
  */
-export declare function useGetIngredient<TData = Awaited<ReturnType<typeof getIngredient>>, TError = ErrorType<void>>(id: number, options?: {
+export declare function useGetIngredient<TData = Awaited<ReturnType<typeof getIngredient>>, TError = ErrorType<void>>(id: number, params?: GetIngredientParams, options?: {
     query?: UseQueryOptions<Awaited<ReturnType<typeof getIngredient>>, TError, TData>;
     request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & {
@@ -351,17 +363,19 @@ export declare function useGetIngredient<TData = Awaited<ReturnType<typeof getIn
 /**
  * @summary Update an ingredient
  */
-export declare const getUpdateIngredientUrl: (id: number) => string;
-export declare const updateIngredient: (id: number, updateIngredientBody: UpdateIngredientBody, options?: RequestInit) => Promise<Ingredient>;
+export declare const getUpdateIngredientUrl: (id: number, params?: UpdateIngredientParams) => string;
+export declare const updateIngredient: (id: number, updateIngredientBody: UpdateIngredientBody, params?: UpdateIngredientParams, options?: RequestInit) => Promise<Ingredient>;
 export declare const getUpdateIngredientMutationOptions: <TError = ErrorType<unknown>, TContext = unknown>(options?: {
     mutation?: UseMutationOptions<Awaited<ReturnType<typeof updateIngredient>>, TError, {
         id: number;
         data: BodyType<UpdateIngredientBody>;
+        params?: UpdateIngredientParams;
     }, TContext>;
     request?: SecondParameter<typeof customFetch>;
 }) => UseMutationOptions<Awaited<ReturnType<typeof updateIngredient>>, TError, {
     id: number;
     data: BodyType<UpdateIngredientBody>;
+    params?: UpdateIngredientParams;
 }, TContext>;
 export type UpdateIngredientMutationResult = NonNullable<Awaited<ReturnType<typeof updateIngredient>>>;
 export type UpdateIngredientMutationBody = BodyType<UpdateIngredientBody>;
@@ -373,24 +387,28 @@ export declare const useUpdateIngredient: <TError = ErrorType<unknown>, TContext
     mutation?: UseMutationOptions<Awaited<ReturnType<typeof updateIngredient>>, TError, {
         id: number;
         data: BodyType<UpdateIngredientBody>;
+        params?: UpdateIngredientParams;
     }, TContext>;
     request?: SecondParameter<typeof customFetch>;
 }) => UseMutationResult<Awaited<ReturnType<typeof updateIngredient>>, TError, {
     id: number;
     data: BodyType<UpdateIngredientBody>;
+    params?: UpdateIngredientParams;
 }, TContext>;
 /**
  * @summary Delete an ingredient
  */
-export declare const getDeleteIngredientUrl: (id: number) => string;
-export declare const deleteIngredient: (id: number, options?: RequestInit) => Promise<void>;
+export declare const getDeleteIngredientUrl: (id: number, params?: DeleteIngredientParams) => string;
+export declare const deleteIngredient: (id: number, params?: DeleteIngredientParams, options?: RequestInit) => Promise<void>;
 export declare const getDeleteIngredientMutationOptions: <TError = ErrorType<void>, TContext = unknown>(options?: {
     mutation?: UseMutationOptions<Awaited<ReturnType<typeof deleteIngredient>>, TError, {
         id: number;
+        params?: DeleteIngredientParams;
     }, TContext>;
     request?: SecondParameter<typeof customFetch>;
 }) => UseMutationOptions<Awaited<ReturnType<typeof deleteIngredient>>, TError, {
     id: number;
+    params?: DeleteIngredientParams;
 }, TContext>;
 export type DeleteIngredientMutationResult = NonNullable<Awaited<ReturnType<typeof deleteIngredient>>>;
 export type DeleteIngredientMutationError = ErrorType<void>;
@@ -400,25 +418,29 @@ export type DeleteIngredientMutationError = ErrorType<void>;
 export declare const useDeleteIngredient: <TError = ErrorType<void>, TContext = unknown>(options?: {
     mutation?: UseMutationOptions<Awaited<ReturnType<typeof deleteIngredient>>, TError, {
         id: number;
+        params?: DeleteIngredientParams;
     }, TContext>;
     request?: SecondParameter<typeof customFetch>;
 }) => UseMutationResult<Awaited<ReturnType<typeof deleteIngredient>>, TError, {
     id: number;
+    params?: DeleteIngredientParams;
 }, TContext>;
 /**
  * @summary Add an option to an ingredient
  */
-export declare const getCreateIngredientOptionUrl: (id: number) => string;
-export declare const createIngredientOption: (id: number, createIngredientOptionBody: CreateIngredientOptionBody, options?: RequestInit) => Promise<IngredientOption>;
+export declare const getCreateIngredientOptionUrl: (id: number, params?: CreateIngredientOptionParams) => string;
+export declare const createIngredientOption: (id: number, createIngredientOptionBody: CreateIngredientOptionBody, params?: CreateIngredientOptionParams, options?: RequestInit) => Promise<IngredientOption>;
 export declare const getCreateIngredientOptionMutationOptions: <TError = ErrorType<unknown>, TContext = unknown>(options?: {
     mutation?: UseMutationOptions<Awaited<ReturnType<typeof createIngredientOption>>, TError, {
         id: number;
         data: BodyType<CreateIngredientOptionBody>;
+        params?: CreateIngredientOptionParams;
     }, TContext>;
     request?: SecondParameter<typeof customFetch>;
 }) => UseMutationOptions<Awaited<ReturnType<typeof createIngredientOption>>, TError, {
     id: number;
     data: BodyType<CreateIngredientOptionBody>;
+    params?: CreateIngredientOptionParams;
 }, TContext>;
 export type CreateIngredientOptionMutationResult = NonNullable<Awaited<ReturnType<typeof createIngredientOption>>>;
 export type CreateIngredientOptionMutationBody = BodyType<CreateIngredientOptionBody>;
@@ -430,28 +452,32 @@ export declare const useCreateIngredientOption: <TError = ErrorType<unknown>, TC
     mutation?: UseMutationOptions<Awaited<ReturnType<typeof createIngredientOption>>, TError, {
         id: number;
         data: BodyType<CreateIngredientOptionBody>;
+        params?: CreateIngredientOptionParams;
     }, TContext>;
     request?: SecondParameter<typeof customFetch>;
 }) => UseMutationResult<Awaited<ReturnType<typeof createIngredientOption>>, TError, {
     id: number;
     data: BodyType<CreateIngredientOptionBody>;
+    params?: CreateIngredientOptionParams;
 }, TContext>;
 /**
  * @summary Update an ingredient option
  */
-export declare const getUpdateIngredientOptionUrl: (id: number, optionId: number) => string;
-export declare const updateIngredientOption: (id: number, optionId: number, updateIngredientOptionBody: UpdateIngredientOptionBody, options?: RequestInit) => Promise<IngredientOption>;
+export declare const getUpdateIngredientOptionUrl: (id: number, optionId: number, params?: UpdateIngredientOptionParams) => string;
+export declare const updateIngredientOption: (id: number, optionId: number, updateIngredientOptionBody: UpdateIngredientOptionBody, params?: UpdateIngredientOptionParams, options?: RequestInit) => Promise<IngredientOption>;
 export declare const getUpdateIngredientOptionMutationOptions: <TError = ErrorType<unknown>, TContext = unknown>(options?: {
     mutation?: UseMutationOptions<Awaited<ReturnType<typeof updateIngredientOption>>, TError, {
         id: number;
         optionId: number;
         data: BodyType<UpdateIngredientOptionBody>;
+        params?: UpdateIngredientOptionParams;
     }, TContext>;
     request?: SecondParameter<typeof customFetch>;
 }) => UseMutationOptions<Awaited<ReturnType<typeof updateIngredientOption>>, TError, {
     id: number;
     optionId: number;
     data: BodyType<UpdateIngredientOptionBody>;
+    params?: UpdateIngredientOptionParams;
 }, TContext>;
 export type UpdateIngredientOptionMutationResult = NonNullable<Awaited<ReturnType<typeof updateIngredientOption>>>;
 export type UpdateIngredientOptionMutationBody = BodyType<UpdateIngredientOptionBody>;
@@ -464,27 +490,31 @@ export declare const useUpdateIngredientOption: <TError = ErrorType<unknown>, TC
         id: number;
         optionId: number;
         data: BodyType<UpdateIngredientOptionBody>;
+        params?: UpdateIngredientOptionParams;
     }, TContext>;
     request?: SecondParameter<typeof customFetch>;
 }) => UseMutationResult<Awaited<ReturnType<typeof updateIngredientOption>>, TError, {
     id: number;
     optionId: number;
     data: BodyType<UpdateIngredientOptionBody>;
+    params?: UpdateIngredientOptionParams;
 }, TContext>;
 /**
  * @summary Remove an option from an ingredient
  */
-export declare const getDeleteIngredientOptionUrl: (id: number, optionId: number) => string;
-export declare const deleteIngredientOption: (id: number, optionId: number, options?: RequestInit) => Promise<void>;
+export declare const getDeleteIngredientOptionUrl: (id: number, optionId: number, params?: DeleteIngredientOptionParams) => string;
+export declare const deleteIngredientOption: (id: number, optionId: number, params?: DeleteIngredientOptionParams, options?: RequestInit) => Promise<void>;
 export declare const getDeleteIngredientOptionMutationOptions: <TError = ErrorType<unknown>, TContext = unknown>(options?: {
     mutation?: UseMutationOptions<Awaited<ReturnType<typeof deleteIngredientOption>>, TError, {
         id: number;
         optionId: number;
+        params?: DeleteIngredientOptionParams;
     }, TContext>;
     request?: SecondParameter<typeof customFetch>;
 }) => UseMutationOptions<Awaited<ReturnType<typeof deleteIngredientOption>>, TError, {
     id: number;
     optionId: number;
+    params?: DeleteIngredientOptionParams;
 }, TContext>;
 export type DeleteIngredientOptionMutationResult = NonNullable<Awaited<ReturnType<typeof deleteIngredientOption>>>;
 export type DeleteIngredientOptionMutationError = ErrorType<unknown>;
@@ -495,26 +525,30 @@ export declare const useDeleteIngredientOption: <TError = ErrorType<unknown>, TC
     mutation?: UseMutationOptions<Awaited<ReturnType<typeof deleteIngredientOption>>, TError, {
         id: number;
         optionId: number;
+        params?: DeleteIngredientOptionParams;
     }, TContext>;
     request?: SecondParameter<typeof customFetch>;
 }) => UseMutationResult<Awaited<ReturnType<typeof deleteIngredientOption>>, TError, {
     id: number;
     optionId: number;
+    params?: DeleteIngredientOptionParams;
 }, TContext>;
 /**
  * @summary Restock an ingredient
  */
-export declare const getRestockIngredientUrl: (id: number) => string;
-export declare const restockIngredient: (id: number, restockBody: RestockBody, options?: RequestInit) => Promise<Ingredient>;
+export declare const getRestockIngredientUrl: (id: number, params?: RestockIngredientParams) => string;
+export declare const restockIngredient: (id: number, restockBody: RestockBody, params?: RestockIngredientParams, options?: RequestInit) => Promise<Ingredient>;
 export declare const getRestockIngredientMutationOptions: <TError = ErrorType<unknown>, TContext = unknown>(options?: {
     mutation?: UseMutationOptions<Awaited<ReturnType<typeof restockIngredient>>, TError, {
         id: number;
         data: BodyType<RestockBody>;
+        params?: RestockIngredientParams;
     }, TContext>;
     request?: SecondParameter<typeof customFetch>;
 }) => UseMutationOptions<Awaited<ReturnType<typeof restockIngredient>>, TError, {
     id: number;
     data: BodyType<RestockBody>;
+    params?: RestockIngredientParams;
 }, TContext>;
 export type RestockIngredientMutationResult = NonNullable<Awaited<ReturnType<typeof restockIngredient>>>;
 export type RestockIngredientMutationBody = BodyType<RestockBody>;
@@ -526,11 +560,13 @@ export declare const useRestockIngredient: <TError = ErrorType<unknown>, TContex
     mutation?: UseMutationOptions<Awaited<ReturnType<typeof restockIngredient>>, TError, {
         id: number;
         data: BodyType<RestockBody>;
+        params?: RestockIngredientParams;
     }, TContext>;
     request?: SecondParameter<typeof customFetch>;
 }) => UseMutationResult<Awaited<ReturnType<typeof restockIngredient>>, TError, {
     id: number;
     data: BodyType<RestockBody>;
+    params?: RestockIngredientParams;
 }, TContext>;
 /**
  * @summary List orders
@@ -585,10 +621,10 @@ export declare const useCreateOrder: <TError = ErrorType<void>, TContext = unkno
 /**
  * @summary Get order detail
  */
-export declare const getGetOrderUrl: (id: number) => string;
-export declare const getOrder: (id: number, options?: RequestInit) => Promise<OrderDetail>;
-export declare const getGetOrderQueryKey: (id: number) => readonly [`/api/orders/${number}`];
-export declare const getGetOrderQueryOptions: <TData = Awaited<ReturnType<typeof getOrder>>, TError = ErrorType<void>>(id: number, options?: {
+export declare const getGetOrderUrl: (id: number, params?: GetOrderParams) => string;
+export declare const getOrder: (id: number, params?: GetOrderParams, options?: RequestInit) => Promise<OrderDetail>;
+export declare const getGetOrderQueryKey: (id: number, params?: GetOrderParams) => readonly [`/api/orders/${number}`, ...GetOrderParams[]];
+export declare const getGetOrderQueryOptions: <TData = Awaited<ReturnType<typeof getOrder>>, TError = ErrorType<void>>(id: number, params?: GetOrderParams, options?: {
     query?: UseQueryOptions<Awaited<ReturnType<typeof getOrder>>, TError, TData>;
     request?: SecondParameter<typeof customFetch>;
 }) => UseQueryOptions<Awaited<ReturnType<typeof getOrder>>, TError, TData> & {
@@ -599,7 +635,7 @@ export type GetOrderQueryError = ErrorType<void>;
 /**
  * @summary Get order detail
  */
-export declare function useGetOrder<TData = Awaited<ReturnType<typeof getOrder>>, TError = ErrorType<void>>(id: number, options?: {
+export declare function useGetOrder<TData = Awaited<ReturnType<typeof getOrder>>, TError = ErrorType<void>>(id: number, params?: GetOrderParams, options?: {
     query?: UseQueryOptions<Awaited<ReturnType<typeof getOrder>>, TError, TData>;
     request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & {
@@ -608,17 +644,19 @@ export declare function useGetOrder<TData = Awaited<ReturnType<typeof getOrder>>
 /**
  * @summary Advance order status (kitchen display)
  */
-export declare const getUpdateOrderStatusUrl: (id: number) => string;
-export declare const updateOrderStatus: (id: number, updateOrderStatusBody: UpdateOrderStatusBody, options?: RequestInit) => Promise<Order>;
+export declare const getUpdateOrderStatusUrl: (id: number, params?: UpdateOrderStatusParams) => string;
+export declare const updateOrderStatus: (id: number, updateOrderStatusBody: UpdateOrderStatusBody, params?: UpdateOrderStatusParams, options?: RequestInit) => Promise<Order>;
 export declare const getUpdateOrderStatusMutationOptions: <TError = ErrorType<unknown>, TContext = unknown>(options?: {
     mutation?: UseMutationOptions<Awaited<ReturnType<typeof updateOrderStatus>>, TError, {
         id: number;
         data: BodyType<UpdateOrderStatusBody>;
+        params?: UpdateOrderStatusParams;
     }, TContext>;
     request?: SecondParameter<typeof customFetch>;
 }) => UseMutationOptions<Awaited<ReturnType<typeof updateOrderStatus>>, TError, {
     id: number;
     data: BodyType<UpdateOrderStatusBody>;
+    params?: UpdateOrderStatusParams;
 }, TContext>;
 export type UpdateOrderStatusMutationResult = NonNullable<Awaited<ReturnType<typeof updateOrderStatus>>>;
 export type UpdateOrderStatusMutationBody = BodyType<UpdateOrderStatusBody>;
@@ -630,24 +668,28 @@ export declare const useUpdateOrderStatus: <TError = ErrorType<unknown>, TContex
     mutation?: UseMutationOptions<Awaited<ReturnType<typeof updateOrderStatus>>, TError, {
         id: number;
         data: BodyType<UpdateOrderStatusBody>;
+        params?: UpdateOrderStatusParams;
     }, TContext>;
     request?: SecondParameter<typeof customFetch>;
 }) => UseMutationResult<Awaited<ReturnType<typeof updateOrderStatus>>, TError, {
     id: number;
     data: BodyType<UpdateOrderStatusBody>;
+    params?: UpdateOrderStatusParams;
 }, TContext>;
 /**
  * @summary Mark a specific order item as ready
  */
-export declare const getMarkOrderItemReadyUrl: (id: number) => string;
-export declare const markOrderItemReady: (id: number, options?: RequestInit) => Promise<Order>;
+export declare const getMarkOrderItemReadyUrl: (id: number, params?: MarkOrderItemReadyParams) => string;
+export declare const markOrderItemReady: (id: number, params?: MarkOrderItemReadyParams, options?: RequestInit) => Promise<Order>;
 export declare const getMarkOrderItemReadyMutationOptions: <TError = ErrorType<unknown>, TContext = unknown>(options?: {
     mutation?: UseMutationOptions<Awaited<ReturnType<typeof markOrderItemReady>>, TError, {
         id: number;
+        params?: MarkOrderItemReadyParams;
     }, TContext>;
     request?: SecondParameter<typeof customFetch>;
 }) => UseMutationOptions<Awaited<ReturnType<typeof markOrderItemReady>>, TError, {
     id: number;
+    params?: MarkOrderItemReadyParams;
 }, TContext>;
 export type MarkOrderItemReadyMutationResult = NonNullable<Awaited<ReturnType<typeof markOrderItemReady>>>;
 export type MarkOrderItemReadyMutationError = ErrorType<unknown>;
@@ -657,10 +699,12 @@ export type MarkOrderItemReadyMutationError = ErrorType<unknown>;
 export declare const useMarkOrderItemReady: <TError = ErrorType<unknown>, TContext = unknown>(options?: {
     mutation?: UseMutationOptions<Awaited<ReturnType<typeof markOrderItemReady>>, TError, {
         id: number;
+        params?: MarkOrderItemReadyParams;
     }, TContext>;
     request?: SecondParameter<typeof customFetch>;
 }) => UseMutationResult<Awaited<ReturnType<typeof markOrderItemReady>>, TError, {
     id: number;
+    params?: MarkOrderItemReadyParams;
 }, TContext>;
 /**
  * @summary List stock movements ledger
@@ -834,17 +878,19 @@ export declare const useCreateUser: <TError = ErrorType<unknown>, TContext = unk
 /**
  * @summary Update a user
  */
-export declare const getUpdateUserUrl: (id: number) => string;
-export declare const updateUser: (id: number, updateUserBody: UpdateUserBody, options?: RequestInit) => Promise<UserDetail>;
+export declare const getUpdateUserUrl: (id: number, params?: UpdateUserParams) => string;
+export declare const updateUser: (id: number, updateUserBody: UpdateUserBody, params?: UpdateUserParams, options?: RequestInit) => Promise<UserDetail>;
 export declare const getUpdateUserMutationOptions: <TError = ErrorType<unknown>, TContext = unknown>(options?: {
     mutation?: UseMutationOptions<Awaited<ReturnType<typeof updateUser>>, TError, {
         id: number;
         data: BodyType<UpdateUserBody>;
+        params?: UpdateUserParams;
     }, TContext>;
     request?: SecondParameter<typeof customFetch>;
 }) => UseMutationOptions<Awaited<ReturnType<typeof updateUser>>, TError, {
     id: number;
     data: BodyType<UpdateUserBody>;
+    params?: UpdateUserParams;
 }, TContext>;
 export type UpdateUserMutationResult = NonNullable<Awaited<ReturnType<typeof updateUser>>>;
 export type UpdateUserMutationBody = BodyType<UpdateUserBody>;
@@ -856,24 +902,28 @@ export declare const useUpdateUser: <TError = ErrorType<unknown>, TContext = unk
     mutation?: UseMutationOptions<Awaited<ReturnType<typeof updateUser>>, TError, {
         id: number;
         data: BodyType<UpdateUserBody>;
+        params?: UpdateUserParams;
     }, TContext>;
     request?: SecondParameter<typeof customFetch>;
 }) => UseMutationResult<Awaited<ReturnType<typeof updateUser>>, TError, {
     id: number;
     data: BodyType<UpdateUserBody>;
+    params?: UpdateUserParams;
 }, TContext>;
 /**
  * @summary Delete a user
  */
-export declare const getDeleteUserUrl: (id: number) => string;
-export declare const deleteUser: (id: number, options?: RequestInit) => Promise<void>;
+export declare const getDeleteUserUrl: (id: number, params?: DeleteUserParams) => string;
+export declare const deleteUser: (id: number, params?: DeleteUserParams, options?: RequestInit) => Promise<void>;
 export declare const getDeleteUserMutationOptions: <TError = ErrorType<unknown>, TContext = unknown>(options?: {
     mutation?: UseMutationOptions<Awaited<ReturnType<typeof deleteUser>>, TError, {
         id: number;
+        params?: DeleteUserParams;
     }, TContext>;
     request?: SecondParameter<typeof customFetch>;
 }) => UseMutationOptions<Awaited<ReturnType<typeof deleteUser>>, TError, {
     id: number;
+    params?: DeleteUserParams;
 }, TContext>;
 export type DeleteUserMutationResult = NonNullable<Awaited<ReturnType<typeof deleteUser>>>;
 export type DeleteUserMutationError = ErrorType<unknown>;
@@ -883,10 +933,12 @@ export type DeleteUserMutationError = ErrorType<unknown>;
 export declare const useDeleteUser: <TError = ErrorType<unknown>, TContext = unknown>(options?: {
     mutation?: UseMutationOptions<Awaited<ReturnType<typeof deleteUser>>, TError, {
         id: number;
+        params?: DeleteUserParams;
     }, TContext>;
     request?: SecondParameter<typeof customFetch>;
 }) => UseMutationResult<Awaited<ReturnType<typeof deleteUser>>, TError, {
     id: number;
+    params?: DeleteUserParams;
 }, TContext>;
 /**
  * @summary List activity logs
@@ -1083,17 +1135,19 @@ export declare const useCreateDiscount: <TError = ErrorType<unknown>, TContext =
 /**
  * @summary Update a discount
  */
-export declare const getUpdateDiscountUrl: (id: number) => string;
-export declare const updateDiscount: (id: number, updateDiscountBody: UpdateDiscountBody, options?: RequestInit) => Promise<Discount>;
+export declare const getUpdateDiscountUrl: (id: number, params?: UpdateDiscountParams) => string;
+export declare const updateDiscount: (id: number, updateDiscountBody: UpdateDiscountBody, params?: UpdateDiscountParams, options?: RequestInit) => Promise<Discount>;
 export declare const getUpdateDiscountMutationOptions: <TError = ErrorType<unknown>, TContext = unknown>(options?: {
     mutation?: UseMutationOptions<Awaited<ReturnType<typeof updateDiscount>>, TError, {
         id: number;
         data: BodyType<UpdateDiscountBody>;
+        params?: UpdateDiscountParams;
     }, TContext>;
     request?: SecondParameter<typeof customFetch>;
 }) => UseMutationOptions<Awaited<ReturnType<typeof updateDiscount>>, TError, {
     id: number;
     data: BodyType<UpdateDiscountBody>;
+    params?: UpdateDiscountParams;
 }, TContext>;
 export type UpdateDiscountMutationResult = NonNullable<Awaited<ReturnType<typeof updateDiscount>>>;
 export type UpdateDiscountMutationBody = BodyType<UpdateDiscountBody>;
@@ -1105,24 +1159,28 @@ export declare const useUpdateDiscount: <TError = ErrorType<unknown>, TContext =
     mutation?: UseMutationOptions<Awaited<ReturnType<typeof updateDiscount>>, TError, {
         id: number;
         data: BodyType<UpdateDiscountBody>;
+        params?: UpdateDiscountParams;
     }, TContext>;
     request?: SecondParameter<typeof customFetch>;
 }) => UseMutationResult<Awaited<ReturnType<typeof updateDiscount>>, TError, {
     id: number;
     data: BodyType<UpdateDiscountBody>;
+    params?: UpdateDiscountParams;
 }, TContext>;
 /**
  * @summary Delete a discount
  */
-export declare const getDeleteDiscountUrl: (id: number) => string;
-export declare const deleteDiscount: (id: number, options?: RequestInit) => Promise<void>;
+export declare const getDeleteDiscountUrl: (id: number, params?: DeleteDiscountParams) => string;
+export declare const deleteDiscount: (id: number, params?: DeleteDiscountParams, options?: RequestInit) => Promise<void>;
 export declare const getDeleteDiscountMutationOptions: <TError = ErrorType<unknown>, TContext = unknown>(options?: {
     mutation?: UseMutationOptions<Awaited<ReturnType<typeof deleteDiscount>>, TError, {
         id: number;
+        params?: DeleteDiscountParams;
     }, TContext>;
     request?: SecondParameter<typeof customFetch>;
 }) => UseMutationOptions<Awaited<ReturnType<typeof deleteDiscount>>, TError, {
     id: number;
+    params?: DeleteDiscountParams;
 }, TContext>;
 export type DeleteDiscountMutationResult = NonNullable<Awaited<ReturnType<typeof deleteDiscount>>>;
 export type DeleteDiscountMutationError = ErrorType<unknown>;
@@ -1132,9 +1190,118 @@ export type DeleteDiscountMutationError = ErrorType<unknown>;
 export declare const useDeleteDiscount: <TError = ErrorType<unknown>, TContext = unknown>(options?: {
     mutation?: UseMutationOptions<Awaited<ReturnType<typeof deleteDiscount>>, TError, {
         id: number;
+        params?: DeleteDiscountParams;
     }, TContext>;
     request?: SecondParameter<typeof customFetch>;
 }) => UseMutationResult<Awaited<ReturnType<typeof deleteDiscount>>, TError, {
+    id: number;
+    params?: DeleteDiscountParams;
+}, TContext>;
+/**
+ * @summary List all branches
+ */
+export declare const getListBranchesUrl: () => string;
+export declare const listBranches: (options?: RequestInit) => Promise<Branch[]>;
+export declare const getListBranchesQueryKey: () => readonly ["/api/admin/branches"];
+export declare const getListBranchesQueryOptions: <TData = Awaited<ReturnType<typeof listBranches>>, TError = ErrorType<unknown>>(options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof listBranches>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseQueryOptions<Awaited<ReturnType<typeof listBranches>>, TError, TData> & {
+    queryKey: QueryKey;
+};
+export type ListBranchesQueryResult = NonNullable<Awaited<ReturnType<typeof listBranches>>>;
+export type ListBranchesQueryError = ErrorType<unknown>;
+/**
+ * @summary List all branches
+ */
+export declare function useListBranches<TData = Awaited<ReturnType<typeof listBranches>>, TError = ErrorType<unknown>>(options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof listBranches>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+};
+/**
+ * @summary Create a new branch
+ */
+export declare const getCreateBranchUrl: () => string;
+export declare const createBranch: (createBranchBody: CreateBranchBody, options?: RequestInit) => Promise<Branch>;
+export declare const getCreateBranchMutationOptions: <TError = ErrorType<unknown>, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof createBranch>>, TError, {
+        data: BodyType<CreateBranchBody>;
+    }, TContext>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseMutationOptions<Awaited<ReturnType<typeof createBranch>>, TError, {
+    data: BodyType<CreateBranchBody>;
+}, TContext>;
+export type CreateBranchMutationResult = NonNullable<Awaited<ReturnType<typeof createBranch>>>;
+export type CreateBranchMutationBody = BodyType<CreateBranchBody>;
+export type CreateBranchMutationError = ErrorType<unknown>;
+/**
+ * @summary Create a new branch
+ */
+export declare const useCreateBranch: <TError = ErrorType<unknown>, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof createBranch>>, TError, {
+        data: BodyType<CreateBranchBody>;
+    }, TContext>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseMutationResult<Awaited<ReturnType<typeof createBranch>>, TError, {
+    data: BodyType<CreateBranchBody>;
+}, TContext>;
+/**
+ * @summary Update a branch
+ */
+export declare const getUpdateBranchUrl: (id: number) => string;
+export declare const updateBranch: (id: number, updateBranchBody: UpdateBranchBody, options?: RequestInit) => Promise<Branch>;
+export declare const getUpdateBranchMutationOptions: <TError = ErrorType<unknown>, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof updateBranch>>, TError, {
+        id: number;
+        data: BodyType<UpdateBranchBody>;
+    }, TContext>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseMutationOptions<Awaited<ReturnType<typeof updateBranch>>, TError, {
+    id: number;
+    data: BodyType<UpdateBranchBody>;
+}, TContext>;
+export type UpdateBranchMutationResult = NonNullable<Awaited<ReturnType<typeof updateBranch>>>;
+export type UpdateBranchMutationBody = BodyType<UpdateBranchBody>;
+export type UpdateBranchMutationError = ErrorType<unknown>;
+/**
+ * @summary Update a branch
+ */
+export declare const useUpdateBranch: <TError = ErrorType<unknown>, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof updateBranch>>, TError, {
+        id: number;
+        data: BodyType<UpdateBranchBody>;
+    }, TContext>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseMutationResult<Awaited<ReturnType<typeof updateBranch>>, TError, {
+    id: number;
+    data: BodyType<UpdateBranchBody>;
+}, TContext>;
+/**
+ * @summary Delete a branch
+ */
+export declare const getDeleteBranchUrl: (id: number) => string;
+export declare const deleteBranch: (id: number, options?: RequestInit) => Promise<void>;
+export declare const getDeleteBranchMutationOptions: <TError = ErrorType<unknown>, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof deleteBranch>>, TError, {
+        id: number;
+    }, TContext>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseMutationOptions<Awaited<ReturnType<typeof deleteBranch>>, TError, {
+    id: number;
+}, TContext>;
+export type DeleteBranchMutationResult = NonNullable<Awaited<ReturnType<typeof deleteBranch>>>;
+export type DeleteBranchMutationError = ErrorType<unknown>;
+/**
+ * @summary Delete a branch
+ */
+export declare const useDeleteBranch: <TError = ErrorType<unknown>, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof deleteBranch>>, TError, {
+        id: number;
+    }, TContext>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseMutationResult<Awaited<ReturnType<typeof deleteBranch>>, TError, {
     id: number;
 }, TContext>;
 /**

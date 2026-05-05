@@ -23,6 +23,7 @@ export const branchStockTable = pgTable("branch_stock", {
   branchId: integer("branch_id").notNull().references(() => branchesTable.id, { onDelete: "cascade" }),
   ingredientId: integer("ingredient_id").notNull().references(() => ingredientsTable.id, { onDelete: "cascade" }),
   stockQuantity: numeric("stock_quantity", { precision: 12, scale: 4 }).notNull().default("0"),
+  startupQuantity: numeric("startup_quantity", { precision: 12, scale: 4 }).notNull().default("0"),
   lowStockThreshold: numeric("low_stock_threshold", { precision: 12, scale: 4 }).notNull().default("500"),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 }, (table) => ({

@@ -25,7 +25,7 @@ type IngredientType = typeof INGREDIENT_TYPES[number];
 
 type Ingredient = {
   id: number; name: string; ingredientType: IngredientType; unit: string;
-  costPerUnit: number; stockQuantity: number; lowStockThreshold: number; isActive: boolean;
+  costPerUnit: number; stockQuantity: number; startupQuantity: number; lowStockThreshold: number; isActive: boolean;
   linkedTypeCount?: number; linkedProductCount?: number;
 };
 type IngredientOption = {
@@ -1064,6 +1064,7 @@ function InventoryTab() {
   const [unit, setUnit] = useState("g");
   const [cost, setCost] = useState("");
   const [lowThreshold, setLowThreshold] = useState("0");
+  const [startupQuantity, setStartupQuantity] = useState("0");
   const [isActive, setIsActive] = useState(true);
 
   const [options, setOptions] = useState<IngredientOption[]>([]);
@@ -1098,7 +1099,7 @@ function InventoryTab() {
     },
   });
 
-  const resetForm = () => { setName(""); setType("coffee"); setUnit("g"); setCost(""); setLowThreshold("0"); setIsActive(true); setEditId(null); setOptions([]); setShowAddOption(false); resetNewOption(); };
+  const resetForm = () => { setName(""); setType("coffee"); setUnit("g"); setCost(""); setLowThreshold("0"); setStartupQuantity("0"); setIsActive(true); setEditId(null); setOptions([]); setShowAddOption(false); resetNewOption(); };
   const resetNewOption = () => { setNewOptLabel(""); setNewOptExtraCost("0"); setNewOptLinkedId("none"); setNewOptProcessedQty("1"); setNewOptProducedQty("1"); setNewOptProducedUnit(""); setNewOptIsDefault(false); };
 
   const loadOptions = async (id: number) => {
@@ -1113,16 +1114,18 @@ function InventoryTab() {
   const openAdd = () => { resetForm(); setMode("add"); };
   const openEdit = (ing: Ingredient) => {
     setEditId(ing.id); setName(ing.name); setType(ing.ingredientType); setUnit(ing.unit);
-    setCost(String(ing.costPerUnit)); setLowThreshold(String(ing.lowStockThreshold)); setIsActive(ing.isActive);
+    setCost(String(ing.costPerUnit)); setLowThreshold(String(ing.lowStockThreshold)); 
+    setStartupQuantity(String(ing.startupQuantity ?? 0));
+    setIsActive(ing.isActive);
     setMode("edit"); loadOptions(ing.id);
   };
 
   const handleSave = () => {
     if (!name || !cost) return;
     if (mode === "add") {
-      createIngredient({ data: { name, ingredientType: type, unit, costPerUnit: parseFloat(cost) } });
+      createIngredient({ data: { name, ingredientType: type, unit, costPerUnit: parseFloat(cost), startupQuantity: parseFloat(startupQuantity) } });
     } else if (mode === "edit" && editId !== null) {
-      updateIngredient({ id: editId, data: { name, ingredientType: type, unit, costPerUnit: parseFloat(cost), lowStockThreshold: parseFloat(lowThreshold), isActive } });
+      updateIngredient({ id: editId, data: { name, ingredientType: type, unit, costPerUnit: parseFloat(cost), lowStockThreshold: parseFloat(lowThreshold), startupQuantity: parseFloat(startupQuantity), isActive } });
     }
   };
 
@@ -1248,6 +1251,7 @@ function InventoryTab() {
                   <TableHead>Name</TableHead>
                   <TableHead>Type</TableHead>
                   <TableHead>Stock</TableHead>
+                  <TableHead>Startup</TableHead>
                   <TableHead>Low Alert</TableHead>
                   <TableHead>Cost/Unit</TableHead>
                   <TableHead className="text-center">Types</TableHead>
@@ -1270,6 +1274,9 @@ function InventoryTab() {
                         <div className={`font-medium ${ing.stockQuantity <= ing.lowStockThreshold ? "text-destructive" : ""}`}>
                           {ing.stockQuantity} {ing.unit}
                         </div>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground font-medium">
+                        {ing.startupQuantity ?? 0} {ing.unit}
                       </TableCell>
                       <TableCell className="text-muted-foreground">{ing.lowStockThreshold} {ing.unit}</TableCell>
                       <TableCell>{fmt(ing.costPerUnit, 4)}</TableCell>
@@ -1327,6 +1334,13 @@ function InventoryTab() {
                   <Input id="i-low" type="number" step="0.01" value={lowThreshold} onChange={e => setLowThreshold(e.target.value)} />
                 </div>
               )}
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="i-startup">Startup Stock (Opening)</Label>
+                <Input id="i-startup" type="number" step="0.01" value={startupQuantity} onChange={e => setStartupQuantity(e.target.value)} />
+                <p className="text-[10px] text-muted-foreground italic">Quantities you started the business with.</p>
+              </div>
             </div>
             {mode === "edit" && (
               <div className="flex items-center gap-3 pt-1">

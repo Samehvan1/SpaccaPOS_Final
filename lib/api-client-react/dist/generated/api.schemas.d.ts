@@ -17,10 +17,17 @@ export declare const UserRole: {
     readonly pickup: "pickup";
     readonly stockcontrol: "stockcontrol";
 };
+export type UserBranch = {
+    id?: number;
+    name?: string;
+};
 export interface User {
     id: number;
     name: string;
     role: UserRole;
+    /** @nullable */
+    branchId?: number | null;
+    branch?: UserBranch;
 }
 export interface LoginBody {
     username: string;
@@ -29,24 +36,32 @@ export interface LoginBody {
 export interface LoginResponse {
     user: User;
 }
-export type UserDetailRole = (typeof UserDetailRole)[keyof typeof UserDetailRole];
-export declare const UserDetailRole: {
-    readonly admin: "admin";
-    readonly barista: "barista";
-    readonly frontdesk: "frontdesk";
-    readonly cashier: "cashier";
-    readonly pickup: "pickup";
-    readonly stockcontrol: "stockcontrol";
-};
 export interface UserDetail {
     id: number;
     name: string;
     username: string;
-    role: UserDetailRole;
-    pin?: string;
+    role: string;
+    /** @nullable */
+    branchId?: number | null;
     isActive: boolean;
     createdAt?: string;
-    updatedAt?: string;
+}
+export interface Branch {
+    id: number;
+    name: string;
+    location?: string;
+    isActive?: boolean;
+    createdAt?: string;
+}
+export interface CreateBranchBody {
+    name: string;
+    location?: string;
+    isActive?: boolean;
+}
+export interface UpdateBranchBody {
+    name?: string;
+    location?: string;
+    isActive?: boolean;
 }
 export type CreateUserBodyRole = (typeof CreateUserBodyRole)[keyof typeof CreateUserBodyRole];
 export declare const CreateUserBodyRole: {
@@ -62,6 +77,7 @@ export interface CreateUserBody {
     username: string;
     password: string;
     role: CreateUserBodyRole;
+    branchId?: number;
     pin?: string;
 }
 export type UpdateUserBodyRole = (typeof UpdateUserBodyRole)[keyof typeof UpdateUserBodyRole];
@@ -71,7 +87,6 @@ export declare const UpdateUserBodyRole: {
     readonly frontdesk: "frontdesk";
     readonly cashier: "cashier";
     readonly pickup: "pickup";
-    readonly stockcontrol: "stockcontrol";
 };
 export interface UpdateUserBody {
     name?: string;
@@ -103,6 +118,7 @@ export interface Ingredient {
     unit: string;
     costPerUnit: number;
     stockQuantity: number;
+    startupQuantity: number;
     lowStockThreshold: number;
     isActive: boolean;
     linkedTypeCount?: number;
@@ -146,6 +162,7 @@ export interface CreateIngredientBody {
     unit: string;
     costPerUnit: number;
     stockQuantity?: number;
+    startupQuantity?: number;
     lowStockThreshold?: number;
     isActive?: boolean;
 }
@@ -169,6 +186,7 @@ export interface UpdateIngredientBody {
     unit?: string;
     costPerUnit?: number;
     stockQuantity?: number;
+    startupQuantity?: number;
     lowStockThreshold?: number;
     isActive?: boolean;
 }
@@ -285,6 +303,7 @@ export type PriceCalculationBodySelectionsItem = {
     typeVolumeId?: number;
 };
 export interface PriceCalculationBody {
+    branchId?: number;
     selections: PriceCalculationBodySelectionsItem[];
 }
 export interface PriceBreakdownExtrasItem {
@@ -365,6 +384,7 @@ export declare const OrderPaymentMethod: {
     readonly cash: "cash";
     readonly card: "card";
     readonly wallet: "wallet";
+    readonly hospitality: "hospitality";
 };
 export interface Order {
     id: number;
@@ -373,7 +393,7 @@ export interface Order {
     baristaName: string;
     status: OrderStatus;
     /** @nullable */
-    customerName: string | null;
+    customerName?: string | null;
     subtotal: number;
     discount: number;
     /** @nullable */
@@ -385,21 +405,23 @@ export interface Order {
     total: number;
     paymentMethod: OrderPaymentMethod;
     /** @nullable */
-    amountTendered: number | null;
+    amountTendered?: number | null;
     /** @nullable */
-    changeDue: number | null;
+    changeDue?: number | null;
     /** @nullable */
-    notes: string | null;
-    createdAt: string;
-    updatedAt: string;
+    notes?: string | null;
     /** @nullable */
-    paidAt: string | null;
+    createdAt?: string | null;
     /** @nullable */
-    readyAt: string | null;
+    updatedAt?: string | null;
     /** @nullable */
-    completedAt: string | null;
+    paidAt?: string | null;
     /** @nullable */
-    cancelledAt: string | null;
+    readyAt?: string | null;
+    /** @nullable */
+    completedAt?: string | null;
+    /** @nullable */
+    cancelledAt?: string | null;
 }
 export type OrderDetail = Order & {
     items: OrderItem[];
@@ -409,6 +431,7 @@ export declare const CreateOrderBodyPaymentMethod: {
     readonly cash: "cash";
     readonly card: "card";
     readonly wallet: "wallet";
+    readonly hospitality: "hospitality";
 };
 export type CreateOrderBodyItemsItemSelectionsItem = {
     ingredientId?: number;
@@ -425,12 +448,15 @@ export type CreateOrderBodyItemsItem = {
     selections: CreateOrderBodyItemsItemSelectionsItem[];
 };
 export interface CreateOrderBody {
+    branchId?: number;
     customerName?: string;
     paymentMethod: CreateOrderBodyPaymentMethod;
     amountTendered?: number;
     notes?: string;
     discount?: number;
     discountCode?: string;
+    /** Required if paymentMethod is hospitality */
+    adminPin?: string;
     items: CreateOrderBodyItemsItem[];
 }
 export type UpdateOrderStatusBodyStatus = (typeof UpdateOrderStatusBodyStatus)[keyof typeof UpdateOrderStatusBodyStatus];
@@ -443,8 +469,20 @@ export declare const UpdateOrderStatusBodyStatus: {
     readonly cancelled: "cancelled";
     readonly refunded: "refunded";
 };
+export type UpdateOrderStatusBodyPaymentMethod = (typeof UpdateOrderStatusBodyPaymentMethod)[keyof typeof UpdateOrderStatusBodyPaymentMethod];
+export declare const UpdateOrderStatusBodyPaymentMethod: {
+    readonly cash: "cash";
+    readonly card: "card";
+    readonly wallet: "wallet";
+    readonly hospitality: "hospitality";
+};
 export interface UpdateOrderStatusBody {
     status: UpdateOrderStatusBodyStatus;
+    paymentMethod?: UpdateOrderStatusBodyPaymentMethod;
+    /** The ID of the cashier approving the order */
+    cashierId?: number;
+    /** Required if changing paymentMethod to hospitality */
+    adminPin?: string;
 }
 export type StockMovementMovementType = (typeof StockMovementMovementType)[keyof typeof StockMovementMovementType];
 export declare const StockMovementMovementType: {
@@ -597,10 +635,44 @@ export type ListDrinksParams = {
     category?: string;
     active?: boolean;
     includeSlots?: boolean;
+    branchId?: number;
+};
+export type GetDrinkParams = {
+    branchId?: number;
+};
+export type UpdateDrinkParams = {
+    branchId?: number;
+};
+export type DeleteDrinkParams = {
+    branchId?: number;
+};
+export type CalculateDrinkPriceParams = {
+    branchId?: number;
 };
 export type ListIngredientsParams = {
     type?: string;
     active?: boolean;
+};
+export type GetIngredientParams = {
+    branchId?: number;
+};
+export type UpdateIngredientParams = {
+    branchId?: number;
+};
+export type DeleteIngredientParams = {
+    branchId?: number;
+};
+export type CreateIngredientOptionParams = {
+    branchId?: number;
+};
+export type UpdateIngredientOptionParams = {
+    branchId?: number;
+};
+export type DeleteIngredientOptionParams = {
+    branchId?: number;
+};
+export type RestockIngredientParams = {
+    branchId?: number;
 };
 export type ListOrdersParams = {
     status?: string;
@@ -608,6 +680,16 @@ export type ListOrdersParams = {
     endDate?: string;
     limit?: number;
     offset?: number;
+    branchId?: number;
+};
+export type GetOrderParams = {
+    branchId?: number;
+};
+export type UpdateOrderStatusParams = {
+    branchId?: number;
+};
+export type MarkOrderItemReadyParams = {
+    branchId?: number;
 };
 export type ListStockMovementsParams = {
     ingredientId?: number;
@@ -616,6 +698,7 @@ export type ListStockMovementsParams = {
 };
 export type GetActiveOrdersParams = {
     status?: GetActiveOrdersStatus;
+    branchId?: number;
 };
 export type GetActiveOrdersStatus = (typeof GetActiveOrdersStatus)[keyof typeof GetActiveOrdersStatus];
 export declare const GetActiveOrdersStatus: {
@@ -623,6 +706,12 @@ export declare const GetActiveOrdersStatus: {
     readonly paid: "paid";
     readonly in_progress: "in_progress";
     readonly ready: "ready";
+};
+export type UpdateUserParams = {
+    branchId?: number;
+};
+export type DeleteUserParams = {
+    branchId?: number;
 };
 export type ListActivityLogsParams = {
     userId?: number;
@@ -648,5 +737,11 @@ export type GetSettingsScope = (typeof GetSettingsScope)[keyof typeof GetSetting
 export declare const GetSettingsScope: {
     readonly global: "global";
     readonly user: "user";
+};
+export type UpdateDiscountParams = {
+    branchId?: number;
+};
+export type DeleteDiscountParams = {
+    branchId?: number;
 };
 //# sourceMappingURL=api.schemas.d.ts.map

@@ -9,5 +9,6 @@ export type ListDrinksParams = {
     category?: string;
     active?: boolean;
     includeSlots?: boolean;
+    branchId?: number;
 };
 //# sourceMappingURL=listDrinksParams.d.ts.map

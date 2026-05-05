@@ -28,11 +28,11 @@ var __export = (target, all) => {
   for (var name in all)
     __defProp(target, name, { get: all[name], enumerable: true });
 };
-var __copyProps = (to, from, except2, desc2) => {
+var __copyProps = (to, from, except2, desc3) => {
   if (from && typeof from === "object" || typeof from === "function") {
     for (let key of __getOwnPropNames(from))
       if (!__hasOwnProp.call(to, key) && key !== except2)
-        __defProp(to, key, { get: () => from[key], enumerable: !(desc2 = __getOwnPropDesc(from, key)) || desc2.enumerable });
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc3 = __getOwnPropDesc(from, key)) || desc3.enumerable });
   }
   return to;
 };
@@ -1082,8 +1082,8 @@ var require_depd = __commonJS({
       return deprecate;
     }
     function eehaslisteners(emitter, type) {
-      var count = typeof emitter.listenerCount !== "function" ? emitter.listeners(type).length : emitter.listenerCount(type);
-      return count > 0;
+      var count2 = typeof emitter.listenerCount !== "function" ? emitter.listeners(type).length : emitter.listenerCount(type);
+      return count2 > 0;
     }
     function isignored(namespace) {
       if (process.noDeprecation) {
@@ -1673,10 +1673,10 @@ var require_http_errors = __commonJS({
       return ServerError;
     }
     function nameFunc(func, name) {
-      var desc2 = Object.getOwnPropertyDescriptor(func, "name");
-      if (desc2 && desc2.configurable) {
-        desc2.value = name;
-        Object.defineProperty(func, "name", desc2);
+      var desc3 = Object.getOwnPropertyDescriptor(func, "name");
+      if (desc3 && desc3.configurable) {
+        desc3.value = name;
+        Object.defineProperty(func, "name", desc3);
       }
     }
     function populateConstructorExports(exports2, codes, HttpError) {
@@ -17121,14 +17121,14 @@ var require_get = __commonJS({
         throw e;
       }
     }
-    var desc2 = !!hasProtoAccessor && gOPD && gOPD(
+    var desc3 = !!hasProtoAccessor && gOPD && gOPD(
       Object.prototype,
       /** @type {keyof typeof Object.prototype} */
       "__proto__"
     );
     var $Object = Object;
     var $getPrototypeOf = $Object.getPrototypeOf;
-    module.exports = desc2 && typeof desc2.get === "function" ? callBind([desc2.get]) : typeof $getPrototypeOf === "function" ? (
+    module.exports = desc3 && typeof desc3.get === "function" ? callBind([desc3.get]) : typeof $getPrototypeOf === "function" ? (
       /** @type {import('./get')} */
       function getDunder(value) {
         return $getPrototypeOf(value == null ? value : $Object(value));
@@ -17478,10 +17478,10 @@ var require_get_intrinsic = __commonJS({
             return void undefined2;
           }
           if ($gOPD && i + 1 >= parts.length) {
-            var desc2 = $gOPD(value, part);
-            isOwn = !!desc2;
-            if (isOwn && "get" in desc2 && !("originalValue" in desc2.get)) {
-              value = desc2.get;
+            var desc3 = $gOPD(value, part);
+            isOwn = !!desc3;
+            if (isOwn && "get" in desc3 && !("originalValue" in desc3.get)) {
+              value = desc3.get;
             } else {
               value = value[part];
             }
@@ -18653,14 +18653,14 @@ var require_urlencoded = __commonJS({
       };
     }
     function parameterCount(body, limit) {
-      let count = 0;
+      let count2 = 0;
       let index2 = -1;
       do {
-        count++;
-        if (count > limit) return void 0;
+        count2++;
+        if (count2 > limit) return void 0;
         index2 = body.indexOf("&", index2 + 1);
       } while (index2 !== -1);
-      return count;
+      return count2;
     }
   }
 });
@@ -20807,27 +20807,27 @@ var require_router = __commonJS({
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var methods = METHODS.map((method) => method.toLowerCase());
-    module.exports = Router22;
+    module.exports = Router23;
     module.exports.Route = Route;
-    function Router22(options) {
-      if (!(this instanceof Router22)) {
-        return new Router22(options);
+    function Router23(options) {
+      if (!(this instanceof Router23)) {
+        return new Router23(options);
       }
       const opts = options || {};
-      function router19(req, res, next) {
-        router19.handle(req, res, next);
+      function router20(req, res, next) {
+        router20.handle(req, res, next);
       }
-      Object.setPrototypeOf(router19, this);
-      router19.caseSensitive = opts.caseSensitive;
-      router19.mergeParams = opts.mergeParams;
-      router19.params = {};
-      router19.strict = opts.strict;
-      router19.stack = [];
-      return router19;
+      Object.setPrototypeOf(router20, this);
+      router20.caseSensitive = opts.caseSensitive;
+      router20.mergeParams = opts.mergeParams;
+      router20.params = {};
+      router20.strict = opts.strict;
+      router20.stack = [];
+      return router20;
     }
-    Router22.prototype = function() {
+    Router23.prototype = function() {
     };
-    Router22.prototype.param = function param(name, fn) {
+    Router23.prototype.param = function param(name, fn) {
       if (!name) {
         throw new TypeError("argument name is required");
       }
@@ -20847,7 +20847,7 @@ var require_router = __commonJS({
       params.push(fn);
       return this;
     };
-    Router22.prototype.handle = function handle(req, res, callback) {
+    Router23.prototype.handle = function handle(req, res, callback) {
       if (!callback) {
         throw new TypeError("argument callback is required");
       }
@@ -20974,7 +20974,7 @@ var require_router = __commonJS({
         }
       }
     };
-    Router22.prototype.use = function use(handler) {
+    Router23.prototype.use = function use(handler) {
       let offset = 0;
       let path6 = "/";
       if (typeof handler !== "function") {
@@ -21007,7 +21007,7 @@ var require_router = __commonJS({
       }
       return this;
     };
-    Router22.prototype.route = function route(path6) {
+    Router23.prototype.route = function route(path6) {
       const route2 = new Route(path6);
       const layer = new Layer(path6, {
         sensitive: this.caseSensitive,
@@ -21022,7 +21022,7 @@ var require_router = __commonJS({
       return route2;
     };
     methods.concat("all").forEach(function(method) {
-      Router22.prototype[method] = function(path6) {
+      Router23.prototype[method] = function(path6) {
         const route = this.route(path6);
         route[method].apply(route, slice.call(arguments, 1));
         return this;
@@ -21205,13 +21205,13 @@ var require_application = __commonJS({
     var compileTrust = require_utils3().compileTrust;
     var resolve2 = __require("node:path").resolve;
     var once = require_once();
-    var Router22 = require_router();
+    var Router23 = require_router();
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var app2 = exports = module.exports = {};
     var trustProxyDefaultSymbol = "@@symbol:trust_proxy_default";
     app2.init = function init() {
-      var router19 = null;
+      var router20 = null;
       this.cache = /* @__PURE__ */ Object.create(null);
       this.engines = /* @__PURE__ */ Object.create(null);
       this.settings = /* @__PURE__ */ Object.create(null);
@@ -21220,13 +21220,13 @@ var require_application = __commonJS({
         configurable: true,
         enumerable: true,
         get: function getrouter() {
-          if (router19 === null) {
-            router19 = new Router22({
+          if (router20 === null) {
+            router20 = new Router23({
               caseSensitive: this.enabled("case sensitive routing"),
               strict: this.enabled("strict routing")
             });
           }
-          return router19;
+          return router20;
         }
       });
     };
@@ -21297,15 +21297,15 @@ var require_application = __commonJS({
       if (fns.length === 0) {
         throw new TypeError("app.use() requires a middleware function");
       }
-      var router19 = this.router;
+      var router20 = this.router;
       fns.forEach(function(fn2) {
         if (!fn2 || !fn2.handle || !fn2.set) {
-          return router19.use(path6, fn2);
+          return router20.use(path6, fn2);
         }
         debug(".use app under %s", path6);
         fn2.mountpath = path6;
         fn2.parent = this;
-        router19.use(path6, function mounted_app(req, res, next) {
+        router20.use(path6, function mounted_app(req, res, next) {
           var orig = req.app;
           fn2.handle(req, res, function(err) {
             Object.setPrototypeOf(req, orig.request);
@@ -21859,13 +21859,13 @@ var require_mediaType = __commonJS({
       return spec.q > 0;
     }
     function quoteCount(string4) {
-      var count = 0;
+      var count2 = 0;
       var index2 = 0;
       while ((index2 = string4.indexOf('"', index2)) !== -1) {
-        count++;
+        count2++;
         index2++;
       }
-      return count;
+      return count2;
     }
     function splitKeyValuePair(str) {
       var index2 = str.indexOf("=");
@@ -23124,8 +23124,8 @@ var require_send = __commonJS({
       }
     }
     function hasListeners(emitter, type) {
-      var count = typeof emitter.listenerCount !== "function" ? emitter.listeners(type).length : emitter.listenerCount(type);
-      return count > 0;
+      var count2 = typeof emitter.listenerCount !== "function" ? emitter.listeners(type).length : emitter.listenerCount(type);
+      return count2 > 0;
     }
     function normalizeList(val, name) {
       var list = [].concat(val || []);
@@ -23832,7 +23832,7 @@ var require_express = __commonJS({
     var EventEmitter = __require("node:events").EventEmitter;
     var mixin = require_merge_descriptors();
     var proto = require_application();
-    var Router22 = require_router();
+    var Router23 = require_router();
     var req = require_request();
     var res = require_response();
     exports = module.exports = createApplication;
@@ -23854,8 +23854,8 @@ var require_express = __commonJS({
     exports.application = proto;
     exports.request = req;
     exports.response = res;
-    exports.Route = Router22.Route;
-    exports.Router = Router22;
+    exports.Route = Router23.Route;
+    exports.Router = Router23;
     exports.json = bodyParser.json;
     exports.raw = bodyParser.raw;
     exports.static = require_serve_static();
@@ -30881,11 +30881,11 @@ var require_binaryParsers = __commonJS({
         var array2 = [];
         var i2;
         if (dimension.length > 1) {
-          var count = dimension.shift();
-          for (i2 = 0; i2 < count; i2++) {
+          var count2 = dimension.shift();
+          for (i2 = 0; i2 < count2; i2++) {
             array2[i2] = parse3(dimension, elementType2);
           }
-          dimension.unshift(count);
+          dimension.unshift(count2);
         } else {
           for (i2 = 0; i2 < dimension[0]; i2++) {
             array2[i2] = parseElement(elementType2);
@@ -32079,12 +32079,12 @@ var require_result = __commonJS({
         }
         const row = {};
         for (let i = 0; i < fieldDescriptions.length; i++) {
-          const desc2 = fieldDescriptions[i];
-          row[desc2.name] = null;
+          const desc3 = fieldDescriptions[i];
+          row[desc3.name] = null;
           if (this._types) {
-            this._parsers[i] = this._types.getTypeParser(desc2.dataTypeID, desc2.format || "text");
+            this._parsers[i] = this._types.getTypeParser(desc3.dataTypeID, desc3.format || "text");
           } else {
-            this._parsers[i] = types3.getTypeParser(desc2.dataTypeID, desc2.format || "text");
+            this._parsers[i] = types3.getTypeParser(desc3.dataTypeID, desc3.format || "text");
           }
         }
         this._prebuiltEmptyResultObject = { ...row };
@@ -36340,10 +36340,10 @@ var init_subquery = __esm({
     init_entity();
     Subquery = class {
       static [entityKind] = "Subquery";
-      constructor(sql3, fields, alias, isWith = false, usedTables = []) {
+      constructor(sql4, fields, alias, isWith = false, usedTables = []) {
         this._ = {
           brand: "Subquery",
-          sql: sql3,
+          sql: sql4,
           selectedFields: fields,
           alias,
           isWith,
@@ -39756,8 +39756,15 @@ var init_relations = __esm({
 });
 
 // ../../node_modules/.pnpm/drizzle-orm@0.45.1_@types+pg@8.18.0_pg@8.20.0/node_modules/drizzle-orm/sql/functions/aggregate.js
+function count(expression) {
+  return sql`count(${expression || sql.raw("*")})`.mapWith(Number);
+}
+function sum(expression) {
+  return sql`sum(${expression})`.mapWith(String);
+}
 var init_aggregate = __esm({
   "../../node_modules/.pnpm/drizzle-orm@0.45.1_@types+pg@8.18.0_pg@8.20.0/node_modules/drizzle-orm/sql/functions/aggregate.js"() {
+    init_sql();
   }
 });
 
@@ -42949,10 +42956,10 @@ var init_raw = __esm({
     init_entity();
     init_query_promise();
     PgRaw = class extends QueryPromise {
-      constructor(execute, sql3, query, mapBatchResult) {
+      constructor(execute, sql4, query, mapBatchResult) {
         super();
         this.execute = execute;
-        this.sql = sql3;
+        this.sql = sql4;
         this.query = query;
         this.mapBatchResult = mapBatchResult;
       }
@@ -43272,8 +43279,8 @@ var init_db = __esm({
 });
 
 // ../../node_modules/.pnpm/drizzle-orm@0.45.1_@types+pg@8.18.0_pg@8.20.0/node_modules/drizzle-orm/cache/core/cache.js
-async function hashQuery(sql3, params) {
-  const dataToHash = `${sql3}-${JSON.stringify(params)}`;
+async function hashQuery(sql4, params) {
+  const dataToHash = `${sql4}-${JSON.stringify(params)}`;
   const encoder = new TextEncoder();
   const data = encoder.encode(dataToHash);
   const hashBuffer = await crypto.subtle.digest("SHA-256", data);
@@ -47353,8 +47360,8 @@ var init_az = __esm({
 });
 
 // ../../node_modules/.pnpm/zod@3.25.76/node_modules/zod/v4/locales/be.js
-function getBelarusianPlural(count, one, few, many) {
-  const absCount = Math.abs(count);
+function getBelarusianPlural(count2, one, few, many) {
+  const absCount = Math.abs(count2);
   const lastDigit = absCount % 10;
   const lastTwoDigits = absCount % 100;
   if (lastTwoDigits >= 11 && lastTwoDigits <= 19) {
@@ -50655,8 +50662,8 @@ var init_pt = __esm({
 });
 
 // ../../node_modules/.pnpm/zod@3.25.76/node_modules/zod/v4/locales/ru.js
-function getRussianPlural(count, one, few, many) {
-  const absCount = Math.abs(count);
+function getRussianPlural(count2, one, few, many) {
+  const absCount = Math.abs(count2);
   const lastDigit = absCount % 10;
   const lastTwoDigits = absCount % 100;
   if (lastTwoDigits >= 11 && lastTwoDigits <= 19) {
@@ -55906,6 +55913,7 @@ var init_ingredients = __esm({
       branchId: integer("branch_id").notNull().references(() => branchesTable.id, { onDelete: "cascade" }),
       ingredientId: integer("ingredient_id").notNull().references(() => ingredientsTable.id, { onDelete: "cascade" }),
       stockQuantity: numeric("stock_quantity", { precision: 12, scale: 4 }).notNull().default("0"),
+      startupQuantity: numeric("startup_quantity", { precision: 12, scale: 4 }).notNull().default("0"),
       lowStockThreshold: numeric("low_stock_threshold", { precision: 12, scale: 4 }).notNull().default("500"),
       updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => /* @__PURE__ */ new Date())
     }, (table) => ({
@@ -70588,13 +70596,13 @@ var require_stream_writable = __commonJS({
         var buffer = new Array(l);
         var holder = state.corkedRequestsFree;
         holder.entry = entry;
-        var count = 0;
+        var count2 = 0;
         var allBuffers = true;
         while (entry) {
-          buffer[count] = entry;
+          buffer[count2] = entry;
           if (!entry.isBuf) allBuffers = false;
           entry = entry.next;
-          count += 1;
+          count2 += 1;
         }
         buffer.allBuffers = allBuffers;
         doWrite(stream, state, true, state.length, buffer, "", holder.finish);
@@ -72537,16 +72545,16 @@ var require_typedarray = __commonJS({
     })()) {
       defineProp = Object.defineProperty;
     } else {
-      defineProp = function(o, p, desc2) {
+      defineProp = function(o, p, desc3) {
         if (!o === Object(o)) throw new TypeError("Object.defineProperty called on non-object");
-        if (ECMAScript.HasProperty(desc2, "get") && Object.prototype.__defineGetter__) {
-          Object.prototype.__defineGetter__.call(o, p, desc2.get);
+        if (ECMAScript.HasProperty(desc3, "get") && Object.prototype.__defineGetter__) {
+          Object.prototype.__defineGetter__.call(o, p, desc3.get);
         }
-        if (ECMAScript.HasProperty(desc2, "set") && Object.prototype.__defineSetter__) {
-          Object.prototype.__defineSetter__.call(o, p, desc2.set);
+        if (ECMAScript.HasProperty(desc3, "set") && Object.prototype.__defineSetter__) {
+          Object.prototype.__defineSetter__.call(o, p, desc3.set);
         }
-        if (ECMAScript.HasProperty(desc2, "value")) {
-          o[p] = desc2.value;
+        if (ECMAScript.HasProperty(desc3, "value")) {
+          o[p] = desc3.value;
         }
         return o;
       };
@@ -73357,7 +73365,7 @@ import fs6 from "fs";
 import { exec as exec2 } from "child_process";
 
 // src/app.ts
-var import_express22 = __toESM(require_express2(), 1);
+var import_express23 = __toESM(require_express2(), 1);
 var import_cors = __toESM(require_lib3(), 1);
 var import_pino_http = __toESM(require_logger(), 1);
 var import_express_session = __toESM(require_express_session(), 1);
@@ -73365,7 +73373,7 @@ var import_connect_pg_simple = __toESM(require_connect_pg_simple(), 1);
 init_src();
 
 // src/routes/index.ts
-var import_express21 = __toESM(require_express2(), 1);
+var import_express22 = __toESM(require_express2(), 1);
 
 // src/routes/health.ts
 var import_express = __toESM(require_express2(), 1);
@@ -77656,6 +77664,7 @@ var ListIngredientsResponseItem = objectType({
   unit: stringType(),
   costPerUnit: numberType(),
   stockQuantity: numberType(),
+  startupQuantity: numberType().optional(),
   lowStockThreshold: numberType(),
   isActive: booleanType(),
   linkedTypeCount: numberType().optional(),
@@ -77682,6 +77691,7 @@ var CreateIngredientBody = objectType({
   unit: stringType(),
   costPerUnit: numberType(),
   stockQuantity: numberType().optional(),
+  startupQuantity: numberType().optional(),
   lowStockThreshold: numberType().optional(),
   isActive: booleanType().optional()
 });
@@ -77711,6 +77721,7 @@ var GetIngredientResponse = objectType({
   unit: stringType(),
   costPerUnit: numberType(),
   stockQuantity: numberType(),
+  startupQuantity: numberType().optional(),
   lowStockThreshold: numberType(),
   isActive: booleanType(),
   linkedTypeCount: numberType().optional(),
@@ -77759,6 +77770,7 @@ var UpdateIngredientBody = objectType({
   unit: stringType().optional(),
   costPerUnit: numberType().optional(),
   stockQuantity: numberType().optional(),
+  startupQuantity: numberType().optional(),
   lowStockThreshold: numberType().optional(),
   isActive: booleanType().optional()
 });
@@ -78146,6 +78158,8 @@ var MarkOrderItemReadyResponse = objectType({
 });
 var ListStockMovementsQueryParams = objectType({
   ingredientId: coerce.number().optional(),
+  startDate: coerce.date().optional(),
+  endDate: coerce.date().optional(),
   limit: coerce.number().optional(),
   offset: coerce.number().optional()
 });
@@ -81619,11 +81633,15 @@ function slugify(text2) {
 async function buildIngredientDetail(ingredientId, branchId) {
   const [ingredient] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, ingredientId));
   if (!ingredient) return null;
-  let stockInfo = { stockQuantity: "0", lowStockThreshold: "0" };
+  let stockInfo = { stockQuantity: "0", lowStockThreshold: "0", startupQuantity: "0" };
   if (branchId) {
     const [stock] = await db.select().from(branchStockTable).where(and(eq(branchStockTable.ingredientId, ingredientId), eq(branchStockTable.branchId, branchId)));
     if (stock) {
-      stockInfo = { stockQuantity: stock.stockQuantity, lowStockThreshold: stock.lowStockThreshold };
+      stockInfo = {
+        stockQuantity: stock.stockQuantity,
+        lowStockThreshold: stock.lowStockThreshold,
+        startupQuantity: stock.startupQuantity || "0"
+      };
     }
   }
   const options = await db.select().from(ingredientOptionsTable).where(eq(ingredientOptionsTable.ingredientId, ingredientId)).orderBy(ingredientOptionsTable.sortOrder);
@@ -81631,6 +81649,7 @@ async function buildIngredientDetail(ingredientId, branchId) {
     ...ingredient,
     costPerUnit: parseFloat(ingredient.costPerUnit),
     stockQuantity: parseFloat(stockInfo.stockQuantity),
+    startupQuantity: parseFloat(stockInfo.startupQuantity),
     lowStockThreshold: parseFloat(stockInfo.lowStockThreshold),
     options: options.map((o) => ({
       ...o,
@@ -81733,66 +81752,73 @@ router4.post("/ingredients/import-csv", requirePermission("admin:manage_ingredie
   }
 });
 router4.get("/ingredients", requirePermission("inventory:view"), async (req, res) => {
-  const params = ListIngredientsQueryParams2.safeParse(req.query);
-  const sessionUser = req.session;
-  const rawBranchId = req.query.branchId;
-  const isAdmin = sessionUser.role === "admin";
-  const sessionBranchId = sessionUser.branchId;
-  let targetBranchId = sessionBranchId;
-  if (isAdmin) {
-    if (rawBranchId === "all") {
-      targetBranchId = null;
-    } else if (rawBranchId) {
-      targetBranchId = parseInt(rawBranchId);
+  try {
+    const params = ListIngredientsQueryParams2.safeParse(req.query);
+    const sessionUser = req.session;
+    const rawBranchId = req.query.branchId;
+    const isAdmin = sessionUser.role === "admin";
+    const sessionBranchId = sessionUser.branchId;
+    let targetBranchId = sessionBranchId;
+    if (isAdmin) {
+      if (rawBranchId === "all") {
+        targetBranchId = null;
+      } else if (rawBranchId) {
+        targetBranchId = parseInt(rawBranchId);
+      }
     }
+    console.log(`[Ingredients-Debug] User: ${sessionUser.username}, Role: ${sessionUser.role}, rawBranchId: ${rawBranchId}, targetBranchId: ${targetBranchId}`);
+    let query = db.select({
+      id: ingredientsTable.id,
+      name: ingredientsTable.name,
+      slug: ingredientsTable.slug,
+      ingredientType: ingredientsTable.ingredientType,
+      unit: ingredientsTable.unit,
+      costPerUnit: ingredientsTable.costPerUnit,
+      isActive: ingredientsTable.isActive,
+      stockQuantity: targetBranchId !== null ? sql`COALESCE(${branchStockTable.stockQuantity}, '0')` : sql`(SELECT COALESCE(SUM(bs.stock_quantity), 0)::text FROM branch_stock bs WHERE bs.ingredient_id = ${ingredientsTable.id})`,
+      lowStockThreshold: targetBranchId !== null ? sql`COALESCE(${branchStockTable.lowStockThreshold}, '500')` : sql`'500'`,
+      startupQuantity: targetBranchId !== null ? sql`COALESCE(${branchStockTable.startupQuantity}, '0')` : sql`'0'`,
+      updatedAt: ingredientsTable.updatedAt
+    }).from(ingredientsTable).leftJoin(
+      branchStockTable,
+      and(
+        eq(branchStockTable.ingredientId, ingredientsTable.id),
+        targetBranchId ? eq(branchStockTable.branchId, targetBranchId) : sql`1=0`
+      )
+    );
+    const conditions = [];
+    if (params.success && params.data.active !== void 0) {
+      conditions.push(eq(ingredientsTable.isActive, params.data.active));
+    }
+    if (params.success && params.data.type) {
+      conditions.push(eq(ingredientsTable.ingredientType, params.data.type));
+    }
+    const ingredientRows = conditions.length ? await query.where(and(...conditions)) : await query;
+    const [typeLinks, optionLinks, drinkLinks] = await Promise.all([
+      db.select({ id: ingredientTypesTable.inventoryIngredientId, count: sql`count(*)` }).from(ingredientTypesTable).groupBy(ingredientTypesTable.inventoryIngredientId),
+      db.select({ id: ingredientOptionsTable.linkedIngredientId, count: sql`count(*)` }).from(ingredientOptionsTable).groupBy(ingredientOptionsTable.linkedIngredientId),
+      db.select({ id: drinksTable.cupIngredientId, count: sql`count(*)` }).from(drinksTable).groupBy(drinksTable.cupIngredientId)
+    ]);
+    const typeCountMap = new Map(typeLinks.map((l) => [l.id, Number(l.count)]));
+    const optionCountMap = new Map(optionLinks.map((l) => [l.id, Number(l.count)]));
+    const drinkCountMap = new Map(drinkLinks.map((l) => [l.id, Number(l.count)]));
+    res.json(
+      serializeDates(ingredientRows.map((i) => {
+        return {
+          ...i,
+          costPerUnit: parseFloat(String(i.costPerUnit || "0")) || 0,
+          stockQuantity: parseFloat(String(i.stockQuantity || "0")) || 0,
+          startupQuantity: parseFloat(String(i.startupQuantity || "0")) || 0,
+          lowStockThreshold: parseFloat(String(i.lowStockThreshold || "0")) || 0,
+          linkedTypeCount: (typeCountMap.get(i.id) || 0) + (optionCountMap.get(i.id) || 0),
+          linkedProductCount: drinkCountMap.get(i.id) || 0
+        };
+      }))
+    );
+  } catch (err) {
+    console.error("[Ingredients API Error]:", err);
+    res.status(500).json({ error: "Failed to load ingredients data" });
   }
-  console.log(`[Ingredients-Debug] User: ${sessionUser.username}, Role: ${sessionUser.role}, rawBranchId: ${rawBranchId}, targetBranchId: ${targetBranchId}`);
-  let query = db.select({
-    id: ingredientsTable.id,
-    name: ingredientsTable.name,
-    slug: ingredientsTable.slug,
-    ingredientType: ingredientsTable.ingredientType,
-    unit: ingredientsTable.unit,
-    costPerUnit: ingredientsTable.costPerUnit,
-    isActive: ingredientsTable.isActive,
-    stockQuantity: targetBranchId !== null ? sql`COALESCE(${branchStockTable.stockQuantity}, '0')` : sql`(SELECT COALESCE(SUM(bs.stock_quantity), 0)::text FROM branch_stock bs WHERE bs.ingredient_id = ${ingredientsTable.id})`,
-    lowStockThreshold: targetBranchId !== null ? sql`COALESCE(${branchStockTable.lowStockThreshold}, '500')` : sql`'500'`,
-    updatedAt: ingredientsTable.updatedAt
-  }).from(ingredientsTable).leftJoin(
-    branchStockTable,
-    and(
-      eq(branchStockTable.ingredientId, ingredientsTable.id),
-      targetBranchId ? eq(branchStockTable.branchId, targetBranchId) : sql`1=0`
-    )
-  );
-  const conditions = [];
-  if (params.success && params.data.active !== void 0) {
-    conditions.push(eq(ingredientsTable.isActive, params.data.active));
-  }
-  if (params.success && params.data.type) {
-    conditions.push(eq(ingredientsTable.ingredientType, params.data.type));
-  }
-  const ingredients = conditions.length ? await query.where(and(...conditions)) : await query;
-  const [typeLinks, optionLinks, drinkLinks] = await Promise.all([
-    db.select({ id: ingredientTypesTable.inventoryIngredientId, count: sql`count(*)` }).from(ingredientTypesTable).groupBy(ingredientTypesTable.inventoryIngredientId),
-    db.select({ id: ingredientOptionsTable.linkedIngredientId, count: sql`count(*)` }).from(ingredientOptionsTable).groupBy(ingredientOptionsTable.linkedIngredientId),
-    db.select({ id: drinksTable.cupIngredientId, count: sql`count(*)` }).from(drinksTable).groupBy(drinksTable.cupIngredientId)
-  ]);
-  const typeCountMap = new Map(typeLinks.map((l) => [l.id, Number(l.count)]));
-  const optionCountMap = new Map(optionLinks.map((l) => [l.id, Number(l.count)]));
-  const drinkCountMap = new Map(drinkLinks.map((l) => [l.id, Number(l.count)]));
-  res.json(
-    serializeDates(ingredients.map((i) => {
-      return {
-        ...i,
-        costPerUnit: parseFloat(i.costPerUnit),
-        stockQuantity: parseFloat(i.stockQuantity),
-        lowStockThreshold: parseFloat(i.lowStockThreshold),
-        linkedTypeCount: (typeCountMap.get(i.id) || 0) + (optionCountMap.get(i.id) || 0),
-        linkedProductCount: drinkCountMap.get(i.id) || 0
-      };
-    }))
-  );
 });
 router4.post("/ingredients", requirePermission("admin:manage_ingredients"), async (req, res) => {
   const parsed = CreateIngredientBody2.safeParse(req.body);
@@ -81818,6 +81844,7 @@ router4.post("/ingredients", requirePermission("admin:manage_ingredients"), asyn
     branchId: sessionBranchId,
     ingredientId: ingredient.id,
     stockQuantity: String(parsed.data.stockQuantity ?? 0),
+    startupQuantity: String(parsed.data.startupQuantity ?? 0),
     lowStockThreshold: String(parsed.data.lowStockThreshold ?? 500)
   }).returning();
   res.status(201).json(
@@ -81825,6 +81852,7 @@ router4.post("/ingredients", requirePermission("admin:manage_ingredients"), asyn
       ...ingredient,
       costPerUnit: parseFloat(ingredient.costPerUnit),
       stockQuantity: parseFloat(stock.stockQuantity),
+      startupQuantity: parseFloat(stock.startupQuantity || "0"),
       lowStockThreshold: parseFloat(stock.lowStockThreshold)
     }))
   );
@@ -81868,6 +81896,7 @@ router4.patch("/ingredients/:id", requirePermission("admin:manage_ingredients"),
   if (parsed.data.costPerUnit !== void 0) updateData.costPerUnit = String(parsed.data.costPerUnit);
   if (parsed.data.isActive !== void 0) updateData.isActive = parsed.data.isActive;
   if (parsed.data.stockQuantity !== void 0) stockUpdateData.stockQuantity = String(parsed.data.stockQuantity);
+  if (parsed.data.startupQuantity !== void 0) stockUpdateData.startupQuantity = String(parsed.data.startupQuantity);
   if (parsed.data.lowStockThreshold !== void 0) stockUpdateData.lowStockThreshold = String(parsed.data.lowStockThreshold);
   const [ingredient] = Object.keys(updateData).length > 0 ? await db.update(ingredientsTable).set(updateData).where(eq(ingredientsTable.id, params.data.id)).returning() : await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, params.data.id));
   if (!ingredient) {
@@ -81880,6 +81909,7 @@ router4.patch("/ingredients/:id", requirePermission("admin:manage_ingredients"),
       branchId: sessionBranchId,
       ingredientId: params.data.id,
       stockQuantity: stockUpdateData.stockQuantity || "0",
+      startupQuantity: stockUpdateData.startupQuantity || "0",
       lowStockThreshold: stockUpdateData.lowStockThreshold || "500"
     }).onConflictDoUpdate({
       target: [branchStockTable.branchId, branchStockTable.ingredientId],
@@ -81894,6 +81924,7 @@ router4.patch("/ingredients/:id", requirePermission("admin:manage_ingredients"),
       ...ingredient,
       costPerUnit: parseFloat(ingredient.costPerUnit),
       stockQuantity: parseFloat(stock?.stockQuantity || "0"),
+      startupQuantity: parseFloat(stock?.startupQuantity || "0"),
       lowStockThreshold: parseFloat(stock?.lowStockThreshold || "500")
     }))
   );
@@ -82055,6 +82086,7 @@ router4.post("/ingredients/:id/restock", requirePermission("inventory:adjust"), 
       ...ingredient,
       costPerUnit: parseFloat(ingredient.costPerUnit),
       stockQuantity: parseFloat(updatedStock.stockQuantity),
+      startupQuantity: parseFloat(updatedStock.startupQuantity || "0"),
       lowStockThreshold: parseFloat(updatedStock.lowStockThreshold)
     }))
   );
@@ -82631,13 +82663,21 @@ router6.get("/stock/movements", async (req, res) => {
   if (targetBranchId) {
     conditions.push(eq(stockMovementsTable.branchId, targetBranchId));
   }
-  if (params.success && params.data.ingredientId) {
-    conditions.push(eq(stockMovementsTable.ingredientId, params.data.ingredientId));
+  if (params.success) {
+    if (params.data.ingredientId) {
+      conditions.push(eq(stockMovementsTable.ingredientId, params.data.ingredientId));
+    }
+    if (params.data.startDate) {
+      conditions.push(gte(stockMovementsTable.createdAt, params.data.startDate));
+    }
+    if (params.data.endDate) {
+      conditions.push(lte(stockMovementsTable.createdAt, params.data.endDate));
+    }
   }
-  const movements = conditions.length ? await db.select().from(stockMovementsTable).where(and(...conditions)).orderBy(stockMovementsTable.createdAt) : await db.select().from(stockMovementsTable).orderBy(stockMovementsTable.createdAt);
+  const movements = await db.select().from(stockMovementsTable).where(conditions.length ? and(...conditions) : void 0).orderBy(desc(stockMovementsTable.createdAt));
   const limit = params.success && params.data.limit ? params.data.limit : 100;
   const offset = params.success && params.data.offset ? params.data.offset : 0;
-  const paginated = movements.slice(offset, offset + limit).reverse();
+  const paginated = movements.slice(offset, offset + limit);
   const allIngredients = await db.select().from(ingredientsTable);
   const allUsers = await db.select().from(usersTable);
   const ingredientMap = Object.fromEntries(allIngredients.map((i) => [i.id, i.name]));
@@ -82648,8 +82688,8 @@ router6.get("/stock/movements", async (req, res) => {
         ...m,
         ingredientName: ingredientMap[m.ingredientId] ?? "Unknown",
         createdByName: userMap[m.createdBy] ?? "Unknown",
-        quantity: parseFloat(m.quantity),
-        quantityAfter: parseFloat(m.quantityAfter),
+        quantity: parseFloat(String(m.quantity || "0")) || 0,
+        quantityAfter: parseFloat(String(m.quantityAfter || "0")) || 0,
         orderId: m.orderId ?? null
       })))
     )
@@ -82733,13 +82773,13 @@ router7.get("/dashboard/summary", async (req, res) => {
   const todayOrders = await db.select().from(ordersTable).where(and(...orderConditions));
   const todayCashOrders = todayOrders.filter((o) => o.paymentMethod === "cash");
   const todayCardOrders = todayOrders.filter((o) => o.paymentMethod === "card");
-  const todayRevenue = todayOrders.reduce((sum, o) => sum + parseFloat(o.total), 0);
-  const todayCashRevenue = todayCashOrders.reduce((sum, o) => sum + parseFloat(o.total), 0);
-  const todayCardRevenue = todayCardOrders.reduce((sum, o) => sum + parseFloat(o.total), 0);
+  const todayRevenue = todayOrders.reduce((sum2, o) => sum2 + (parseFloat(o.total) || 0), 0);
+  const todayCashRevenue = todayCashOrders.reduce((sum2, o) => sum2 + (parseFloat(o.total) || 0), 0);
+  const todayCardRevenue = todayCardOrders.reduce((sum2, o) => sum2 + (parseFloat(o.total) || 0), 0);
   const todayItems = await db.select().from(orderItemsTable).where(
     inArray(orderItemsTable.orderId, todayOrders.map((o) => o.id).concat([-1]))
   );
-  const todayDrinks = todayItems.reduce((sum, i) => sum + i.quantity, 0);
+  const todayDrinks = todayItems.reduce((sum2, i) => sum2 + i.quantity, 0);
   const avgOrderValue = todayOrders.length > 0 ? todayRevenue / todayOrders.length : 0;
   const pendingOrders = todayOrders.filter(
     (o) => o.status === "pending" || o.status === "in_progress"
@@ -83003,12 +83043,12 @@ router7.get("/dashboard/sales-by-day", async (req, res) => {
     if (!dailyStats[dateStr]) {
       dailyStats[dateStr] = { date: dateStr, orders: 0, revenue: 0, net: 0, tax: 0, discount: 0 };
     }
-    const subtotal = parseFloat(o.subtotal);
+    const subtotal = parseFloat(o.subtotal) || 0;
     const net = subtotal / 1.14;
     const tax = subtotal - net;
-    const discount = parseFloat(o.discount);
+    const discount = parseFloat(o.discount) || 0;
     dailyStats[dateStr].orders += 1;
-    dailyStats[dateStr].revenue += parseFloat(o.total);
+    dailyStats[dateStr].revenue += parseFloat(o.total) || 0;
     dailyStats[dateStr].net += net;
     dailyStats[dateStr].tax += tax;
     dailyStats[dateStr].discount += discount;
@@ -84190,10 +84230,10 @@ router15.get("/cashier/performance/:cashierId", requirePermission("cashier:view_
     createdAt: ordersTable.createdAt
   }).from(ordersTable).where(and(...conditions));
   const completedOrders = orders.filter((o) => o.status === "completed" || o.status === "paid" || o.status === "ready" || o.status === "in_progress");
-  const totalRevenue = completedOrders.reduce((sum, o) => sum + parseFloat(o.total), 0);
-  const cashRevenue = completedOrders.filter((o) => o.paymentMethod === "cash").reduce((sum, o) => sum + parseFloat(o.total), 0);
-  const cardRevenue = completedOrders.filter((o) => o.paymentMethod === "card").reduce((sum, o) => sum + parseFloat(o.total), 0);
-  const walletRevenue = completedOrders.filter((o) => o.paymentMethod === "wallet").reduce((sum, o) => sum + parseFloat(o.total), 0);
+  const totalRevenue = completedOrders.reduce((sum2, o) => sum2 + parseFloat(o.total), 0);
+  const cashRevenue = completedOrders.filter((o) => o.paymentMethod === "cash").reduce((sum2, o) => sum2 + parseFloat(o.total), 0);
+  const cardRevenue = completedOrders.filter((o) => o.paymentMethod === "card").reduce((sum2, o) => sum2 + parseFloat(o.total), 0);
+  const walletRevenue = completedOrders.filter((o) => o.paymentMethod === "wallet").reduce((sum2, o) => sum2 + parseFloat(o.total), 0);
   const [cashier] = await db.select({ id: usersTable.id, name: usersTable.name }).from(usersTable).where(eq(usersTable.id, cashierId));
   res.json({
     cashier: cashier ?? null,
@@ -84251,10 +84291,10 @@ router15.get("/cashier/sessions/:id/performance", requirePermission("cashier:vie
     lte(sql`COALESCE(${ordersTable.paidAt}, ${ordersTable.createdAt})`, end)
   ));
   const completedOrders = orders.filter((o) => ["completed", "paid", "ready", "in_progress"].includes(o.status));
-  const totalRevenue = completedOrders.reduce((sum, o) => sum + parseFloat(o.total), 0);
-  const cashRevenue = completedOrders.filter((o) => o.paymentMethod === "cash").reduce((sum, o) => sum + parseFloat(o.total), 0);
-  const cardRevenue = completedOrders.filter((o) => o.paymentMethod === "card").reduce((sum, o) => sum + parseFloat(o.total), 0);
-  const walletRevenue = completedOrders.filter((o) => o.paymentMethod === "wallet").reduce((sum, o) => sum + parseFloat(o.total), 0);
+  const totalRevenue = completedOrders.reduce((sum2, o) => sum2 + parseFloat(o.total), 0);
+  const cashRevenue = completedOrders.filter((o) => o.paymentMethod === "cash").reduce((sum2, o) => sum2 + parseFloat(o.total), 0);
+  const cardRevenue = completedOrders.filter((o) => o.paymentMethod === "card").reduce((sum2, o) => sum2 + parseFloat(o.total), 0);
+  const walletRevenue = completedOrders.filter((o) => o.paymentMethod === "wallet").reduce((sum2, o) => sum2 + parseFloat(o.total), 0);
   const [cashier] = await db.select({ name: usersTable.name }).from(usersTable).where(eq(usersTable.id, session2.cashierId));
   res.json({
     cashierName: cashier?.name ?? "Unknown",
@@ -84740,31 +84780,264 @@ router17.delete("/:id", requirePermission("admin:manage_branches"), async (req, 
 });
 var branches_default = router17;
 
+// src/routes/finance.ts
+var import_express21 = __toESM(require_express2(), 1);
+init_drizzle_orm();
+init_src();
+var router18 = (0, import_express21.Router)();
+router18.get("/finance/inventory-usage", requirePermission("reports:view"), async (req, res) => {
+  const { startDate, endDate, branchId } = req.query;
+  const targetBranchId = branchId && branchId !== "all" ? parseInt(branchId) : null;
+  const start = startDate ? new Date(startDate) : new Date((/* @__PURE__ */ new Date()).setDate((/* @__PURE__ */ new Date()).getDate() - 30));
+  const end = endDate ? new Date(endDate) : /* @__PURE__ */ new Date();
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+    res.status(400).json({ error: "Invalid date format" });
+    return;
+  }
+  const ingredients = await db.select().from(ingredientsTable);
+  const usageQuery = db.select({
+    ingredientId: orderItemCustomizationsTable.ingredientId,
+    totalConsumed: sum(orderItemCustomizationsTable.consumedQty),
+    usageCount: count(orderItemCustomizationsTable.id)
+  }).from(orderItemCustomizationsTable).innerJoin(orderItemsTable, eq(orderItemCustomizationsTable.orderItemId, orderItemsTable.id)).innerJoin(ordersTable, eq(orderItemsTable.orderId, ordersTable.id)).where(and(
+    gte(ordersTable.createdAt, start),
+    lte(ordersTable.createdAt, end),
+    eq(ordersTable.status, "completed"),
+    targetBranchId ? eq(ordersTable.branchId, targetBranchId) : void 0
+  )).groupBy(orderItemCustomizationsTable.ingredientId);
+  const usageData = await usageQuery;
+  const usageMap = new Map(usageData.map((u) => [u.ingredientId, u]));
+  const stockQuery = db.select({
+    ingredientId: branchStockTable.ingredientId,
+    stockQuantity: sum(branchStockTable.stockQuantity),
+    startupQuantity: sum(branchStockTable.startupQuantity)
+  }).from(branchStockTable).where(targetBranchId ? eq(branchStockTable.branchId, targetBranchId) : void 0).groupBy(branchStockTable.ingredientId);
+  const stockData = await stockQuery;
+  const stockMap = new Map(stockData.map((s) => [s.ingredientId, s]));
+  const report = ingredients.map((ing) => {
+    const usage = usageMap.get(ing.id);
+    const stock = stockMap.get(ing.id);
+    return {
+      id: ing.id,
+      name: ing.name,
+      unit: ing.unit,
+      costPerUnit: parseFloat(String(ing.costPerUnit || "0")) || 0,
+      totalConsumed: usage ? parseFloat(String(usage.totalConsumed || "0")) || 0 : 0,
+      usageCount: usage ? Number(usage.usageCount) || 0 : 0,
+      currentStock: stock ? parseFloat(String(stock.stockQuantity || "0")) || 0 : 0,
+      startupQuantity: stock ? parseFloat(String(stock.startupQuantity || "0")) || 0 : 0
+    };
+  });
+  res.json(report);
+});
+router18.get("/finance/pl-report", requirePermission("reports:view"), async (req, res) => {
+  const { startDate, endDate, branchId } = req.query;
+  const targetBranchId = branchId && branchId !== "all" ? parseInt(branchId) : null;
+  const start = startDate ? new Date(startDate) : new Date((/* @__PURE__ */ new Date()).setDate((/* @__PURE__ */ new Date()).getDate() - 30));
+  const end = endDate ? new Date(endDate) : /* @__PURE__ */ new Date();
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+    res.status(400).json({ error: "Invalid date format" });
+    return;
+  }
+  const drinkSales = await db.select({
+    drinkId: orderItemsTable.drinkId,
+    drinkName: sql`MAX(${orderItemsTable.drinkName})`,
+    category: sql`MAX(${drinksTable.category})`,
+    totalOrders: count(orderItemsTable.id),
+    totalRevenue: sum(orderItemsTable.lineTotal)
+  }).from(orderItemsTable).innerJoin(ordersTable, eq(orderItemsTable.orderId, ordersTable.id)).innerJoin(drinksTable, eq(orderItemsTable.drinkId, drinksTable.id)).where(and(
+    gte(ordersTable.createdAt, start),
+    lte(ordersTable.createdAt, end),
+    eq(ordersTable.status, "completed"),
+    targetBranchId ? eq(ordersTable.branchId, targetBranchId) : void 0
+  )).groupBy(orderItemsTable.drinkId);
+  const ingredientUsage = await db.select({
+    drinkId: orderItemsTable.drinkId,
+    totalCost: sql`SUM(${orderItemCustomizationsTable.consumedQty} * ${ingredientsTable.costPerUnit})`
+  }).from(orderItemCustomizationsTable).innerJoin(orderItemsTable, eq(orderItemCustomizationsTable.orderItemId, orderItemsTable.id)).innerJoin(ordersTable, eq(orderItemsTable.orderId, ordersTable.id)).innerJoin(ingredientsTable, eq(orderItemCustomizationsTable.ingredientId, ingredientsTable.id)).where(and(
+    gte(ordersTable.createdAt, start),
+    lte(ordersTable.createdAt, end),
+    eq(ordersTable.status, "completed"),
+    targetBranchId ? eq(ordersTable.branchId, targetBranchId) : void 0
+  )).groupBy(orderItemsTable.drinkId);
+  const costMap = new Map(ingredientUsage.map((c) => [c.drinkId, parseFloat(String(c.totalCost || "0")) || 0]));
+  const report = drinkSales.map((s) => {
+    const revenue = parseFloat(String(s.totalRevenue || "0")) || 0;
+    const cost = costMap.get(s.drinkId) || 0;
+    const profit = revenue - cost;
+    const margin = revenue > 0 ? profit / revenue * 100 : 0;
+    return {
+      drinkId: s.drinkId,
+      name: s.drinkName,
+      category: s.category,
+      totalOrders: Number(s.totalOrders),
+      revenue,
+      cost,
+      profit,
+      margin
+    };
+  });
+  res.json(report);
+});
+router18.get("/finance/ingredient-recipes", requirePermission("reports:view"), async (req, res) => {
+  const ingredients = await db.select().from(ingredientsTable);
+  const [
+    slots,
+    typeOptions,
+    slotVolumes,
+    types3,
+    predefinedTypeOptions,
+    predefinedVolumes,
+    allDrinks,
+    typeVolumes,
+    baseVolumes
+  ] = await Promise.all([
+    db.select().from(drinkIngredientSlotsTable),
+    db.select().from(drinkSlotTypeOptionsTable),
+    db.select().from(drinkSlotVolumesTable),
+    db.select().from(ingredientTypesTable),
+    db.select().from(predefinedSlotTypeOptionsTable),
+    db.select().from(predefinedSlotVolumesTable),
+    db.select().from(drinksTable),
+    db.select().from(ingredientTypeVolumesTable),
+    db.select().from(ingredientVolumesTable)
+  ]);
+  const drinkMap = new Map(allDrinks.map((d) => [d.id, d]));
+  const typeMap = new Map(types3.map((t) => [t.id, t]));
+  const typeVolMap = new Map(typeVolumes.map((tv) => [tv.id, tv]));
+  const baseVolMap = new Map(baseVolumes.map((bv) => [bv.id, bv]));
+  const getEffectiveQty = (slotId, ingredientTypeId, predefinedSlotId = null) => {
+    const type = typeMap.get(ingredientTypeId);
+    if (!type) return 0;
+    if (slotId) {
+      const dsv = slotVolumes.find((sv) => sv.slotId === slotId && sv.isDefault);
+      if (dsv) {
+        if (dsv.processedQty !== null && dsv.processedQty !== void 0) return parseFloat(String(dsv.processedQty));
+        const itv = typeVolMap.get(dsv.typeVolumeId);
+        if (itv) {
+          if (itv.processedQty !== null && itv.processedQty !== void 0) return parseFloat(String(itv.processedQty));
+          const bv = baseVolMap.get(itv.volumeId);
+          if (bv) return parseFloat(String(bv.processedQty));
+        }
+      }
+      const dsto = typeOptions.find((to) => to.slotId === slotId && to.isDefault && to.ingredientTypeId === ingredientTypeId);
+      if (dsto && dsto.processedQty !== null && dsto.processedQty !== void 0) return parseFloat(String(dsto.processedQty));
+    }
+    if (predefinedSlotId) {
+      const psv = predefinedVolumes.find((pv) => pv.predefinedSlotId === predefinedSlotId && pv.isDefault);
+      if (psv) {
+        if (psv.processedQty !== null && psv.processedQty !== void 0) return parseFloat(String(psv.processedQty));
+        const itv = typeVolMap.get(psv.typeVolumeId);
+        if (itv) {
+          if (itv.processedQty !== null && itv.processedQty !== void 0) return parseFloat(String(itv.processedQty));
+          const bv = baseVolMap.get(itv.volumeId);
+          if (bv) return parseFloat(String(bv.processedQty));
+        }
+      }
+      const psto = predefinedTypeOptions.find((pto) => pto.predefinedSlotId === predefinedSlotId && pto.isDefault && pto.ingredientTypeId === ingredientTypeId);
+      if (psto && psto.processedQty !== null && psto.processedQty !== void 0) return parseFloat(String(psto.processedQty));
+    }
+    return parseFloat(String(type.processedQty || "0"));
+  };
+  const report = ingredients.map((ing) => {
+    const usage = [];
+    for (const slot of slots) {
+      if (slot.ingredientId === ing.id) {
+        usage.push({
+          drinkId: slot.drinkId,
+          drinkName: drinkMap.get(slot.drinkId)?.name || "Unknown",
+          slotLabel: slot.slotLabel,
+          quantity: 1,
+          // Default for legacy if no options
+          unit: ing.unit
+        });
+      }
+    }
+    const linkedTypes = types3.filter((t) => t.inventoryIngredientId === ing.id);
+    const linkedTypeIds = new Set(linkedTypes.map((t) => t.id));
+    for (const slot of slots) {
+      if (slot.ingredientTypeId && linkedTypeIds.has(slot.ingredientTypeId)) {
+        usage.push({
+          drinkId: slot.drinkId,
+          drinkName: drinkMap.get(slot.drinkId)?.name || "Unknown",
+          slotLabel: slot.slotLabel,
+          quantity: getEffectiveQty(slot.id, slot.ingredientTypeId),
+          unit: typeMap.get(slot.ingredientTypeId)?.unit || "unit"
+        });
+      }
+      const options = typeOptions.filter((to) => to.slotId === slot.id && to.isDefault && linkedTypeIds.has(to.ingredientTypeId));
+      for (const opt of options) {
+        usage.push({
+          drinkId: slot.drinkId,
+          drinkName: drinkMap.get(slot.drinkId)?.name || "Unknown",
+          slotLabel: slot.slotLabel,
+          quantity: getEffectiveQty(slot.id, opt.ingredientTypeId),
+          unit: typeMap.get(opt.ingredientTypeId)?.unit || "unit"
+        });
+      }
+      if (slot.predefinedSlotId) {
+        const pOpts = predefinedTypeOptions.filter((pto) => pto.predefinedSlotId === slot.predefinedSlotId && pto.isDefault && linkedTypeIds.has(pto.ingredientTypeId));
+        for (const pOpt of pOpts) {
+          usage.push({
+            drinkId: slot.drinkId,
+            drinkName: drinkMap.get(slot.drinkId)?.name || "Unknown",
+            slotLabel: slot.slotLabel,
+            quantity: getEffectiveQty(null, pOpt.ingredientTypeId, slot.predefinedSlotId),
+            unit: typeMap.get(pOpt.ingredientTypeId)?.unit || "unit"
+          });
+        }
+      }
+    }
+    for (const drink of allDrinks) {
+      if (drink.cupIngredientId === ing.id) {
+        usage.push({
+          drinkId: drink.id,
+          drinkName: drink.name,
+          slotLabel: "Cup",
+          quantity: 1,
+          unit: "pcs"
+        });
+      }
+    }
+    const totalRecipeQty = usage.reduce((acc, u) => acc + u.quantity, 0);
+    return {
+      id: ing.id,
+      name: ing.name,
+      unit: ing.unit,
+      drinks: usage,
+      totalRecipeQty
+    };
+  });
+  res.json(report);
+});
+var finance_default = router18;
+
 // src/routes/index.ts
 init_sse();
-var router18 = (0, import_express21.Router)();
-router18.get("/health-test", (req, res) => res.send("OK"));
-router18.use("/admin/branches", branches_default);
-router18.use(health_default);
-router18.use(auth_default);
-router18.use(drinks_default);
-router18.use(ingredients_default);
-router18.use(orders_default);
-router18.use(stock_default);
-router18.use(dashboard_default);
-router18.use(catalog_default);
-router18.use(drink_categories_default);
-router18.use(kitchen_stations_default);
-router18.use(settings_default);
-router18.use(predefined_slots_default);
-router18.use(users_default);
-router18.use(discounts_default);
-router18.use(customers_default);
-router18.use(cashier_sessions_default);
-router18.use(admin_default);
-router18.use(stock_audits_default);
-router18.use("/roles", roles_default);
-router18.get("/events", (req, res) => {
+var router19 = (0, import_express22.Router)();
+router19.get("/health-test", (req, res) => res.send("OK"));
+router19.use("/admin/branches", branches_default);
+router19.use(health_default);
+router19.use(auth_default);
+router19.use(drinks_default);
+router19.use(ingredients_default);
+router19.use(orders_default);
+router19.use(stock_default);
+router19.use(dashboard_default);
+router19.use(catalog_default);
+router19.use(drink_categories_default);
+router19.use(kitchen_stations_default);
+router19.use(settings_default);
+router19.use(predefined_slots_default);
+router19.use(users_default);
+router19.use(discounts_default);
+router19.use(customers_default);
+router19.use(cashier_sessions_default);
+router19.use(admin_default);
+router19.use(stock_audits_default);
+router19.use("/roles", roles_default);
+router19.use(finance_default);
+router19.get("/events", (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache, no-transform");
   res.setHeader("X-Accel-Buffering", "no");
@@ -84773,7 +85046,7 @@ router18.get("/events", (req, res) => {
   res.write("event: connected\ndata: {}\n\n");
   addSseClient(res);
 });
-var routes_default = router18;
+var routes_default = router19;
 
 // src/lib/logger.ts
 var import_pino = __toESM(require_pino(), 1);
@@ -84795,7 +85068,7 @@ var logger = (0, import_pino.default)({
 
 // src/app.ts
 var PostgresStore = (0, import_connect_pg_simple.default)(import_express_session.default);
-var app = (0, import_express22.default)();
+var app = (0, import_express23.default)();
 app.set("json replacer", (_key2, value) => {
   if (value instanceof Date) return value.toISOString();
   return value;
@@ -84821,8 +85094,8 @@ app.use(
 );
 app.set("trust proxy", 1);
 app.use((0, import_cors.default)({ credentials: true, origin: true }));
-app.use(import_express22.default.json());
-app.use(import_express22.default.urlencoded({ extended: true }));
+app.use(import_express23.default.json());
+app.use(import_express23.default.urlencoded({ extended: true }));
 app.use(
   (0, import_express_session.default)({
     store: new PostgresStore({
@@ -84840,7 +85113,7 @@ app.use(
     }
   })
 );
-app.use("/uploads", import_express22.default.static("uploads"));
+app.use("/uploads", import_express23.default.static("uploads"));
 app.use("/api", routes_default);
 var app_default = app;
 
@@ -84851,8 +85124,8 @@ init_src();
 init_src();
 init_drizzle_orm();
 async function seedIfEmpty() {
-  const [{ count }] = await db.select({ count: sql`count(*)::int` }).from(usersTable);
-  if (count > 0) return;
+  const [{ count: count2 }] = await db.select({ count: sql`count(*)::int` }).from(usersTable);
+  if (count2 > 0) return;
   logger.info("Database is empty \u2014 seeding initial data...");
   const [mainBranch] = await db.insert(branchesTable).values([
     { name: "Main Branch", code: "MAIN", address: "123 Coffee St." }

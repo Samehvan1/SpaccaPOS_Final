@@ -4,13 +4,28 @@ import { useAuth } from "@/hooks/use-auth";
 import { useTheme } from "@/hooks/use-theme";
 import { useSettings } from "@/hooks/use-settings";
 import { useOrderEvents } from "@/hooks/use-order-events";
-import { Coffee, ChefHat, LayoutDashboard, LogOut, Sun, Moon, Printer, Wifi, WifiOff, Download, RefreshCw, ClipboardCheck, History } from "lucide-react";
+import { Coffee, ChefHat, LayoutDashboard, LogOut, Sun, Moon, Printer, Wifi, WifiOff, Download, RefreshCw, ClipboardCheck, History, TrendingUp, ChevronDown, ChevronRight, User, Settings, PieChart, BarChart3, PackageSearch } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useOnlineStatus } from "@/hooks/use-online-status";
 import { usePWAInstall } from "@/hooks/use-pwa-install";
 import { useQuery } from "@tanstack/react-query";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuPortal,
+  DropdownMenuSubContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+} from "@/components/ui/dropdown-menu";
+import { useState } from "react";
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -226,12 +241,33 @@ export function MainLayout({ children }: MainLayoutProps) {
   }
 
   // ─── Front-desk kiosk layout ───────────────────────────────────────────────
+  const [expandedMenus, setExpandedMenus] = useState<string[]>(["finance"]);
+
   const navItems = [
     { href: "/pos", label: "POS", icon: Coffee, permission: "pos:view" },
     { href: "/kitchen", label: "Kitchen", icon: ChefHat, permission: "kitchen:view" },
     { href: "/admin", label: "Admin", icon: LayoutDashboard, permission: "admin:view" },
+    { 
+      href: "/admin/finance", 
+      label: "Finance", 
+      icon: TrendingUp, 
+      permission: "reports:view",
+      children: [
+        { href: "/admin/finance", label: "Dashboard" },
+        { href: "/admin/finance/stock-movement", label: "Stock Movement" },
+        { href: "/admin/finance/sales", label: "Sales Analysis" },
+        { href: "/admin/finance/usage", label: "Inventory Usage" },
+        { href: "/admin/finance/pl", label: "P&L Reports" },
+      ]
+    },
     { href: "/admin/stock-audits", label: "Stock Audits", icon: History, permission: "inventory:view" },
   ].filter(item => hasPermission(item.permission));
+
+  const toggleMenu = (label: string) => {
+    setExpandedMenus(prev => 
+      prev.includes(label) ? prev.filter(l => l !== label) : [...prev, label]
+    );
+  };
 
   return (
     <div className="flex h-screen w-full bg-background overflow-hidden">
@@ -248,20 +284,59 @@ export function MainLayout({ children }: MainLayoutProps) {
             <nav className="space-y-2 px-2 md:px-4 py-2">
               {navItems.map((item) => {
                 const Icon = item.icon;
-                const isActive = location.startsWith(item.href);
+                const isActive = location === item.href || (item.children && location.startsWith(item.href));
+                const isExpanded = expandedMenus.includes(item.label);
+                
                 return (
-                  <Link key={item.href} href={item.href}>
-                    <div
-                      className={`flex items-center gap-3 px-3 py-3 rounded-md cursor-pointer transition-colors ${
-                        isActive
-                          ? "bg-primary text-primary-foreground font-medium shadow-sm"
-                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                      }`}
-                    >
-                      <Icon className="h-5 w-5 shrink-0" />
-                      <span className="hidden md:inline">{item.label}</span>
-                    </div>
-                  </Link>
+                  <div key={item.label} className="flex flex-col gap-1">
+                    {item.children ? (
+                      <div
+                        onClick={() => toggleMenu(item.label)}
+                        className={`flex items-center justify-between gap-3 px-3 py-3 rounded-md cursor-pointer transition-colors ${
+                          isActive && !isExpanded
+                            ? "bg-primary text-primary-foreground font-medium shadow-sm"
+                            : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <Icon className="h-5 w-5 shrink-0" />
+                          <span className="hidden md:inline">{item.label}</span>
+                        </div>
+                        <div className="hidden md:block">
+                          {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                        </div>
+                      </div>
+                    ) : (
+                      <Link href={item.href}>
+                        <div
+                          className={`flex items-center gap-3 px-3 py-3 rounded-md cursor-pointer transition-colors ${
+                            isActive
+                              ? "bg-primary text-primary-foreground font-medium shadow-sm"
+                              : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                          }`}
+                        >
+                          <Icon className="h-5 w-5 shrink-0" />
+                          <span className="hidden md:inline">{item.label}</span>
+                        </div>
+                      </Link>
+                    )}
+                    
+                    {item.children && isExpanded && (
+                      <div className="ml-4 md:ml-9 flex flex-col gap-1 border-l pl-2 mt-1">
+                        {item.children.map(child => (
+                          <Link key={child.href} href={child.href}>
+                            <div className={`px-3 py-2 rounded-md text-sm cursor-pointer transition-colors ${
+                              location === child.href 
+                                ? "bg-primary/10 text-primary font-bold" 
+                                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                            }`}>
+                              {child.label}
+                            </div>
+                          </Link>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 );
               })}
             </nav>
@@ -269,103 +344,102 @@ export function MainLayout({ children }: MainLayoutProps) {
         </div>
 
         <div className="p-4 w-full border-t space-y-2">
-          <div className="hidden md:block mb-2 px-2">
-            <div className="text-sm font-medium">{user.name}</div>
-            <div className="text-xs text-muted-foreground capitalize flex items-center gap-1.5">
-              {user?.role}
-              {(user as any).branch?.name && (
-                <span className="bg-primary/10 text-primary px-1.5 py-0.5 rounded text-[10px] font-bold">
-                  {(user as any).branch?.name}
-                </span>
-              )}
-            </div>
-          </div>
-
-          {(user?.role === "admin" || hasPermission("branches:manage")) && (
-            <div className="px-2 pb-4 pt-2">
-              <div className={`mb-3 p-2 rounded-lg border flex items-center gap-2 transition-all ${selectedBranchId ? 'bg-primary/5 border-primary/20' : 'bg-muted border-muted-foreground/10'}`}>
-                <div className={`h-2 w-2 rounded-full animate-pulse ${selectedBranchId ? 'bg-primary' : 'bg-slate-400'}`} />
-                <div className="text-[10px] font-bold uppercase tracking-wider truncate">
-                  {selectedBranchId ? (branches?.find(b => b.id === selectedBranchId)?.name || 'Branch View') : 'Global View'}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="w-full justify-start gap-3 px-3 py-6 h-auto hover:bg-muted transition-all">
+                <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                  <User className="h-5 w-5 text-primary" />
                 </div>
-              </div>
-              <label className="text-[10px] uppercase font-bold text-muted-foreground ml-1 mb-1 block tracking-wider">
-                Switch Context
-              </label>
-              <select
-                className="w-full bg-muted border-none rounded-md text-xs p-2 focus:ring-1 focus:ring-primary outline-none transition-all cursor-pointer hover:bg-muted/80"
-                value={selectedBranchId ?? "all"}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setSelectedBranchId(val === "all" ? null : parseInt(val));
-                }}
-              >
-                <option value="all">All Branches (Global)</option>
-                {branches?.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          <Button
-            variant="ghost"
-            className="w-full justify-center md:justify-start gap-2 text-muted-foreground hover:text-foreground"
-            onClick={toggleTheme}
-            title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-          >
-            {theme === "dark" ? (
-              <><Sun className="h-5 w-5" /><span className="hidden md:inline">Light Mode</span></>
-            ) : (
-              <><Moon className="h-5 w-5" /><span className="hidden md:inline">Dark Mode</span></>
-            )}
-          </Button>
-          
-          {(user?.role === "admin" || hasPermission("settings:manage")) && (
-            <>
-              <Button
-                variant="ghost"
-                className={`w-full justify-center md:justify-start gap-2 ${autoPrintCustomer ? "text-primary bg-primary/5" : "text-muted-foreground"} hover:text-foreground transition-all`}
-                onClick={() => setAutoPrintCustomer(!autoPrintCustomer)}
-              >
-                <Printer className="h-5 w-5" />
-                <span className="hidden md:inline">Print Customer: {autoPrintCustomer ? "ON" : "OFF"}</span>
+                <div className="hidden md:flex flex-col items-start overflow-hidden">
+                  <div className="text-sm font-bold truncate w-full">{user.name}</div>
+                  <div className="text-[10px] text-muted-foreground uppercase font-black tracking-tighter">
+                    {user.role} • {selectedBranchId ? (branches?.find(b => b.id === selectedBranchId)?.name || 'Branch') : 'Global'}
+                  </div>
+                </div>
+                <ChevronDown className="h-4 w-4 ml-auto hidden md:block text-muted-foreground" />
               </Button>
-              <Button
-                variant="ghost"
-                className={`w-full justify-center md:justify-start gap-2 ${autoPrintAgent ? "text-primary bg-primary/5" : "text-muted-foreground"} hover:text-foreground transition-all`}
-                onClick={() => setAutoPrintAgent(!autoPrintAgent)}
-              >
-                <Printer className="h-5 w-5 text-orange-500/80" />
-                <span className="hidden md:inline">Print Agent: {autoPrintAgent ? "ON" : "OFF"}</span>
-              </Button>
-            </>
-          )}
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56" side="right" sideOffset={10}>
+              <DropdownMenuLabel>My Account</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              
+              <DropdownMenuItem onClick={toggleTheme} className="cursor-pointer">
+                {theme === "dark" ? <Sun className="mr-2 h-4 w-4" /> : <Moon className="mr-2 h-4 w-4" />}
+                <span>{theme === "dark" ? "Light Mode" : "Dark Mode"}</span>
+              </DropdownMenuItem>
+              
+              <DropdownMenuItem onClick={() => window.location.reload()} className="cursor-pointer">
+                <RefreshCw className="mr-2 h-4 w-4" />
+                <span>Refresh App</span>
+              </DropdownMenuItem>
+              
+              {(user?.role === "admin" || branches.length > 1) && (
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger className="cursor-pointer">
+                    <LayoutDashboard className="mr-2 h-4 w-4" />
+                    <span>Switch Branch</span>
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuPortal>
+                    <DropdownMenuSubContent className="max-h-[300px] overflow-y-auto">
+                      <DropdownMenuLabel>Available Branches</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuRadioGroup value={String(selectedBranchId || "global")} onValueChange={(v) => setSelectedBranchId(v === "global" ? null : parseInt(v))}>
+                        <DropdownMenuRadioItem value="global" className="cursor-pointer">
+                          Global View
+                        </DropdownMenuRadioItem>
+                        {branches.map(b => (
+                          <DropdownMenuRadioItem key={b.id} value={String(b.id)} className="cursor-pointer">
+                            {b.name}
+                          </DropdownMenuRadioItem>
+                        ))}
+                      </DropdownMenuRadioGroup>
+                    </DropdownMenuSubContent>
+                  </DropdownMenuPortal>
+                </DropdownMenuSub>
+              )}
 
-          <Button
-            variant="ghost"
-            className="w-full justify-center md:justify-start gap-2 text-muted-foreground hover:text-foreground"
-            onClick={() => window.location.reload()}
-            title="Refresh App"
-          >
-            <RefreshCw className="h-5 w-5" />
-            <span className="hidden md:inline">Refresh App</span>
-          </Button>
-
-          <Button
-            variant="ghost"
-            className="w-full justify-center md:justify-start gap-2 text-muted-foreground hover:text-foreground"
-            onClick={() => { logout(); setLocation("/login"); }}
-          >
-            <LogOut className="h-5 w-5" />
-            <span className="hidden md:inline">Logout</span>
-          </Button>
+              {(user?.role === "admin" || hasPermission("settings:manage")) && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuLabel className="text-[10px] uppercase text-muted-foreground">Printing</DropdownMenuLabel>
+                  <DropdownMenuItem 
+                    onClick={(e) => { e.preventDefault(); setAutoPrintCustomer(!autoPrintCustomer); }}
+                    className="cursor-pointer flex items-center justify-between"
+                  >
+                    <div className="flex items-center">
+                      <Printer className="mr-2 h-4 w-4" />
+                      <span>Customer Receipt</span>
+                    </div>
+                    <Badge variant={autoPrintCustomer ? "default" : "outline"} className="text-[8px] h-4">
+                      {autoPrintCustomer ? "ON" : "OFF"}
+                    </Badge>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    onClick={(e) => { e.preventDefault(); setAutoPrintAgent(!autoPrintAgent); }}
+                    className="cursor-pointer flex items-center justify-between"
+                  >
+                    <div className="flex items-center">
+                      <Printer className="mr-2 h-4 w-4 text-orange-500" />
+                      <span>Agent Receipt</span>
+                    </div>
+                    <Badge variant={autoPrintAgent ? "default" : "outline"} className="text-[8px] h-4">
+                      {autoPrintAgent ? "ON" : "OFF"}
+                    </Badge>
+                  </DropdownMenuItem>
+                </>
+              )}
+              
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => { logout(); setLocation("/login"); }} className="cursor-pointer text-destructive focus:text-destructive">
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Logout</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </aside>
 
-      <main className="flex-1 flex flex-col h-full overflow-hidden relative">
+      <main className="flex-1 flex flex-col h-full overflow-y-auto relative">
         {children}
       </main>
     </div>

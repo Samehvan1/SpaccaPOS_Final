@@ -11,5 +11,6 @@ export type ListOrdersParams = {
     endDate?: Date;
     limit?: number;
     offset?: number;
+    branchId?: number;
 };
 //# sourceMappingURL=listOrdersParams.d.ts.map

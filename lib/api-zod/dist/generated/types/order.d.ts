@@ -15,7 +15,7 @@ export interface Order {
     baristaName: string;
     status: OrderStatus;
     /** @nullable */
-    customerName: string | null;
+    customerName?: string | null;
     subtotal: number;
     discount: number;
     /** @nullable */
@@ -27,20 +27,22 @@ export interface Order {
     total: number;
     paymentMethod: OrderPaymentMethod;
     /** @nullable */
-    amountTendered: number | null;
+    amountTendered?: number | null;
     /** @nullable */
-    changeDue: number | null;
+    changeDue?: number | null;
     /** @nullable */
-    notes: string | null;
-    createdAt: string;
-    updatedAt: string;
+    notes?: string | null;
     /** @nullable */
-    paidAt: string | null;
+    createdAt?: string | null;
     /** @nullable */
-    readyAt: string | null;
+    updatedAt?: string | null;
     /** @nullable */
-    completedAt: string | null;
+    paidAt?: string | null;
     /** @nullable */
-    cancelledAt: string | null;
+    readyAt?: string | null;
+    /** @nullable */
+    completedAt?: string | null;
+    /** @nullable */
+    cancelledAt?: string | null;
 }
 //# sourceMappingURL=order.d.ts.map

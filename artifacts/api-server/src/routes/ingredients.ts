@@ -39,14 +39,18 @@ async function buildIngredientDetail(ingredientId: number, branchId?: number) {
   const [ingredient] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, ingredientId));
   if (!ingredient) return null;
 
-  let stockInfo = { stockQuantity: "0", lowStockThreshold: "0" };
+  let stockInfo = { stockQuantity: "0", lowStockThreshold: "0", startupQuantity: "0" };
   if (branchId) {
     const [stock] = await db
       .select()
       .from(branchStockTable)
       .where(and(eq(branchStockTable.ingredientId, ingredientId), eq(branchStockTable.branchId, branchId)));
     if (stock) {
-      stockInfo = { stockQuantity: stock.stockQuantity, lowStockThreshold: stock.lowStockThreshold };
+      stockInfo = { 
+        stockQuantity: stock.stockQuantity, 
+        lowStockThreshold: stock.lowStockThreshold,
+        startupQuantity: stock.startupQuantity || "0"
+      };
     }
   }
 
@@ -60,6 +64,7 @@ async function buildIngredientDetail(ingredientId: number, branchId?: number) {
     ...ingredient,
     costPerUnit: parseFloat(ingredient.costPerUnit),
     stockQuantity: parseFloat(stockInfo.stockQuantity),
+    startupQuantity: parseFloat(stockInfo.startupQuantity),
     lowStockThreshold: parseFloat(stockInfo.lowStockThreshold),
     options: options.map((o) => ({
       ...o,
@@ -181,84 +186,93 @@ router.post("/ingredients/import-csv", requirePermission("admin:manage_ingredien
 });
 
 router.get("/ingredients", requirePermission("inventory:view"), async (req, res): Promise<void> => {
-  const params = ListIngredientsQueryParams.safeParse(req.query);
-  const sessionUser = (req.session as any);
-  const rawBranchId = req.query.branchId;
-  const isAdmin = sessionUser.role === "admin";
-  const sessionBranchId = sessionUser.branchId;
+  try {
+    const params = ListIngredientsQueryParams.safeParse(req.query);
+    const sessionUser = (req.session as any);
+    const rawBranchId = req.query.branchId;
+    const isAdmin = sessionUser.role === "admin";
+    const sessionBranchId = sessionUser.branchId;
 
-  let targetBranchId: number | null = sessionBranchId;
-  if (isAdmin) {
-    if (rawBranchId === 'all') {
-      targetBranchId = null;
-    } else if (rawBranchId) {
-      targetBranchId = parseInt(rawBranchId as string);
+    let targetBranchId: number | null = sessionBranchId;
+    if (isAdmin) {
+      if (rawBranchId === 'all') {
+        targetBranchId = null;
+      } else if (rawBranchId) {
+        targetBranchId = parseInt(rawBranchId as string);
+      }
     }
-  }
 
-  console.log(`[Ingredients-Debug] User: ${sessionUser.username}, Role: ${sessionUser.role}, rawBranchId: ${rawBranchId}, targetBranchId: ${targetBranchId}`);
+    console.log(`[Ingredients-Debug] User: ${sessionUser.username}, Role: ${sessionUser.role}, rawBranchId: ${rawBranchId}, targetBranchId: ${targetBranchId}`);
 
-  let query = db
-    .select({
-      id: ingredientsTable.id,
-      name: ingredientsTable.name,
-      slug: ingredientsTable.slug,
-      ingredientType: ingredientsTable.ingredientType,
-      unit: ingredientsTable.unit,
-      costPerUnit: ingredientsTable.costPerUnit,
-      isActive: ingredientsTable.isActive,
-      stockQuantity: targetBranchId !== null 
-        ? sql<string>`COALESCE(${branchStockTable.stockQuantity}, '0')` 
-        : sql<string>`(SELECT COALESCE(SUM(bs.stock_quantity), 0)::text FROM branch_stock bs WHERE bs.ingredient_id = ${ingredientsTable.id})`,
-      lowStockThreshold: targetBranchId !== null 
-        ? sql<string>`COALESCE(${branchStockTable.lowStockThreshold}, '500')` 
-        : sql<string>`'500'`,
-      updatedAt: ingredientsTable.updatedAt,
-    })
-    .from(ingredientsTable)
-    .leftJoin(
-      branchStockTable,
-      and(
-        eq(branchStockTable.ingredientId, ingredientsTable.id),
-        targetBranchId ? eq(branchStockTable.branchId, targetBranchId) : sql`1=0`
-      )
+    let query = db
+      .select({
+        id: ingredientsTable.id,
+        name: ingredientsTable.name,
+        slug: ingredientsTable.slug,
+        ingredientType: ingredientsTable.ingredientType,
+        unit: ingredientsTable.unit,
+        costPerUnit: ingredientsTable.costPerUnit,
+        isActive: ingredientsTable.isActive,
+        stockQuantity: targetBranchId !== null 
+          ? sql<string>`COALESCE(${branchStockTable.stockQuantity}, '0')` 
+          : sql<string>`(SELECT COALESCE(SUM(bs.stock_quantity), 0)::text FROM branch_stock bs WHERE bs.ingredient_id = ${ingredientsTable.id})`,
+        lowStockThreshold: targetBranchId !== null 
+          ? sql<string>`COALESCE(${branchStockTable.lowStockThreshold}, '500')` 
+          : sql<string>`'500'`,
+        startupQuantity: targetBranchId !== null
+          ? sql<string>`COALESCE(${branchStockTable.startupQuantity}, '0')`
+          : sql<string>`'0'`,
+        updatedAt: ingredientsTable.updatedAt,
+      })
+      .from(ingredientsTable)
+      .leftJoin(
+        branchStockTable,
+        and(
+          eq(branchStockTable.ingredientId, ingredientsTable.id),
+          targetBranchId ? eq(branchStockTable.branchId, targetBranchId) : sql`1=0`
+        )
+      );
+
+    const conditions = [];
+    if (params.success && params.data.active !== undefined) {
+      conditions.push(eq(ingredientsTable.isActive, params.data.active));
+    }
+    if (params.success && params.data.type) {
+      conditions.push(eq(ingredientsTable.ingredientType, params.data.type as any));
+    }
+
+    const ingredientRows = conditions.length 
+      ? await query.where(and(...conditions))
+      : await query;
+
+    // Get counts of links
+    const [typeLinks, optionLinks, drinkLinks] = await Promise.all([
+      db.select({ id: ingredientTypesTable.inventoryIngredientId, count: sql<number>`count(*)` }).from(ingredientTypesTable).groupBy(ingredientTypesTable.inventoryIngredientId),
+      db.select({ id: ingredientOptionsTable.linkedIngredientId, count: sql<number>`count(*)` }).from(ingredientOptionsTable).groupBy(ingredientOptionsTable.linkedIngredientId),
+      db.select({ id: drinksTable.cupIngredientId, count: sql<number>`count(*)` }).from(drinksTable).groupBy(drinksTable.cupIngredientId),
+    ]);
+
+    const typeCountMap = new Map(typeLinks.map(l => [l.id, Number(l.count)]));
+    const optionCountMap = new Map(optionLinks.map(l => [l.id, Number(l.count)]));
+    const drinkCountMap = new Map(drinkLinks.map(l => [l.id, Number(l.count)]));
+
+    res.json(
+      serializeDates(ingredientRows.map((i) => {
+        return {
+          ...i,
+          costPerUnit: parseFloat(String(i.costPerUnit || "0")) || 0,
+          stockQuantity: parseFloat(String(i.stockQuantity || "0")) || 0,
+          startupQuantity: parseFloat(String((i as any).startupQuantity || "0")) || 0,
+          lowStockThreshold: parseFloat(String(i.lowStockThreshold || "0")) || 0,
+          linkedTypeCount: (typeCountMap.get(i.id) || 0) + (optionCountMap.get(i.id) || 0),
+          linkedProductCount: drinkCountMap.get(i.id) || 0,
+        };
+      }))
     );
-
-  const conditions = [];
-  if (params.success && params.data.active !== undefined) {
-    conditions.push(eq(ingredientsTable.isActive, params.data.active));
+  } catch (err: any) {
+    console.error("[Ingredients API Error]:", err);
+    res.status(500).json({ error: "Failed to load ingredients data" });
   }
-  if (params.success && params.data.type) {
-    conditions.push(eq(ingredientsTable.ingredientType, params.data.type as any));
-  }
-
-  const ingredients = conditions.length 
-    ? await query.where(and(...conditions))
-    : await query;
-
-  // Get counts of links
-  const [typeLinks, optionLinks, drinkLinks] = await Promise.all([
-    db.select({ id: ingredientTypesTable.inventoryIngredientId, count: sql<number>`count(*)` }).from(ingredientTypesTable).groupBy(ingredientTypesTable.inventoryIngredientId),
-    db.select({ id: ingredientOptionsTable.linkedIngredientId, count: sql<number>`count(*)` }).from(ingredientOptionsTable).groupBy(ingredientOptionsTable.linkedIngredientId),
-    db.select({ id: drinksTable.cupIngredientId, count: sql<number>`count(*)` }).from(drinksTable).groupBy(drinksTable.cupIngredientId),
-  ]);
-
-  const typeCountMap = new Map(typeLinks.map(l => [l.id, Number(l.count)]));
-  const optionCountMap = new Map(optionLinks.map(l => [l.id, Number(l.count)]));
-  const drinkCountMap = new Map(drinkLinks.map(l => [l.id, Number(l.count)]));
-
-  res.json(
-    serializeDates(ingredients.map((i) => {
-      return {
-        ...i,
-        costPerUnit: parseFloat(i.costPerUnit),
-        stockQuantity: parseFloat(i.stockQuantity),
-        lowStockThreshold: parseFloat(i.lowStockThreshold),
-        linkedTypeCount: (typeCountMap.get(i.id) || 0) + (optionCountMap.get(i.id) || 0),
-        linkedProductCount: drinkCountMap.get(i.id) || 0,
-      };
-    }))
-  );
 });
 
 router.post("/ingredients", requirePermission("admin:manage_ingredients"), async (req, res): Promise<void> => {
@@ -294,6 +308,7 @@ router.post("/ingredients", requirePermission("admin:manage_ingredients"), async
       branchId: sessionBranchId,
       ingredientId: ingredient.id,
       stockQuantity: String(parsed.data.stockQuantity ?? 0),
+      startupQuantity: String(parsed.data.startupQuantity ?? 0),
       lowStockThreshold: String(parsed.data.lowStockThreshold ?? 500),
     })
     .returning();
@@ -303,6 +318,7 @@ router.post("/ingredients", requirePermission("admin:manage_ingredients"), async
       ...ingredient,
       costPerUnit: parseFloat(ingredient.costPerUnit),
       stockQuantity: parseFloat(stock.stockQuantity),
+      startupQuantity: parseFloat(stock.startupQuantity || "0"),
       lowStockThreshold: parseFloat(stock.lowStockThreshold),
     }))
   );
@@ -357,6 +373,7 @@ router.patch("/ingredients/:id", requirePermission("admin:manage_ingredients"), 
   if (parsed.data.isActive !== undefined) updateData.isActive = parsed.data.isActive;
 
   if (parsed.data.stockQuantity !== undefined) stockUpdateData.stockQuantity = String(parsed.data.stockQuantity);
+  if (parsed.data.startupQuantity !== undefined) stockUpdateData.startupQuantity = String(parsed.data.startupQuantity);
   if (parsed.data.lowStockThreshold !== undefined) stockUpdateData.lowStockThreshold = String(parsed.data.lowStockThreshold);
 
   const [ingredient] = Object.keys(updateData).length > 0
@@ -376,6 +393,7 @@ router.patch("/ingredients/:id", requirePermission("admin:manage_ingredients"), 
         branchId: sessionBranchId,
         ingredientId: params.data.id,
         stockQuantity: stockUpdateData.stockQuantity as string || "0",
+        startupQuantity: stockUpdateData.startupQuantity as string || "0",
         lowStockThreshold: stockUpdateData.lowStockThreshold as string || "500",
       })
       .onConflictDoUpdate({
@@ -394,6 +412,7 @@ router.patch("/ingredients/:id", requirePermission("admin:manage_ingredients"), 
       ...ingredient,
       costPerUnit: parseFloat(ingredient.costPerUnit),
       stockQuantity: parseFloat(stock?.stockQuantity || "0"),
+      startupQuantity: parseFloat(stock?.startupQuantity || "0"),
       lowStockThreshold: parseFloat(stock?.lowStockThreshold || "500"),
     }))
   );
@@ -616,6 +635,7 @@ router.post("/ingredients/:id/restock", requirePermission("inventory:adjust"), a
       ...ingredient,
       costPerUnit: parseFloat(ingredient.costPerUnit),
       stockQuantity: parseFloat(updatedStock.stockQuantity),
+      startupQuantity: parseFloat(updatedStock.startupQuantity || "0"),
       lowStockThreshold: parseFloat(updatedStock.lowStockThreshold),
     }))
   );

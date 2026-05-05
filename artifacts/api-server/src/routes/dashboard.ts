@@ -51,9 +51,9 @@ router.get("/dashboard/summary", async (req, res): Promise<void> => {
   const todayCashOrders = todayOrders.filter(o => o.paymentMethod === 'cash');
   const todayCardOrders = todayOrders.filter(o => o.paymentMethod === 'card');
   
-  const todayRevenue = todayOrders.reduce((sum, o) => sum + parseFloat(o.total), 0);
-  const todayCashRevenue = todayCashOrders.reduce((sum, o) => sum + parseFloat(o.total), 0);
-  const todayCardRevenue = todayCardOrders.reduce((sum, o) => sum + parseFloat(o.total), 0);
+  const todayRevenue = todayOrders.reduce((sum, o) => sum + (parseFloat(o.total) || 0), 0);
+  const todayCashRevenue = todayCashOrders.reduce((sum, o) => sum + (parseFloat(o.total) || 0), 0);
+  const todayCardRevenue = todayCardOrders.reduce((sum, o) => sum + (parseFloat(o.total) || 0), 0);
 
   const todayItems = await db
     .select()
@@ -449,13 +449,13 @@ router.get("/dashboard/sales-by-day", async (req, res): Promise<void> => {
     if (!dailyStats[dateStr]) {
       dailyStats[dateStr] = { date: dateStr, orders: 0, revenue: 0, net: 0, tax: 0, discount: 0 };
     }
-    const subtotal = parseFloat(o.subtotal); // Gross
+    const subtotal = parseFloat(o.subtotal) || 0; // Gross
     const net = subtotal / 1.14;
     const tax = subtotal - net;
-    const discount = parseFloat(o.discount);
+    const discount = parseFloat(o.discount) || 0;
     
     dailyStats[dateStr].orders += 1;
-    dailyStats[dateStr].revenue += parseFloat(o.total); // Final collected
+    dailyStats[dateStr].revenue += (parseFloat(o.total) || 0); // Final collected
     dailyStats[dateStr].net += net;
     dailyStats[dateStr].tax += tax;
     dailyStats[dateStr].discount += discount;

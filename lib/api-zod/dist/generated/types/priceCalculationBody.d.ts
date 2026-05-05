@@ -7,6 +7,7 @@
  */
 import type { PriceCalculationBodySelectionsItem } from "./priceCalculationBodySelectionsItem";
 export interface PriceCalculationBody {
+    branchId?: number;
     selections: PriceCalculationBodySelectionsItem[];
 }
 //# sourceMappingURL=priceCalculationBody.d.ts.map

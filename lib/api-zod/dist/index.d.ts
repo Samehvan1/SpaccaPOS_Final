@@ -20,65 +20,122 @@ export declare const BaristaLoginBody: z.ZodObject<{
     password: string;
 }>;
 export type BaristaLoginBody = Infer<typeof api.BaristaLoginBody>;
-export declare const BaristaLoginResponse: z.ZodObject<{
+export declare const BaristaLoginResponse: z.ZodObject<{} & {
     user: z.ZodObject<{
         id: z.ZodNumber;
         name: z.ZodString;
-        role: z.ZodEnum<["admin", "barista", "frontdesk", "cashier", "pickup", "stockcontrol"]>;
         branchId: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
+        branch: z.ZodOptional<z.ZodObject<{
+            id: z.ZodOptional<z.ZodNumber>;
+            name: z.ZodOptional<z.ZodString>;
+        }, "strip", z.ZodTypeAny, {
+            id?: number | undefined;
+            name?: string | undefined;
+        }, {
+            id?: number | undefined;
+            name?: string | undefined;
+        }>>;
+    } & {
+        role: z.ZodString;
+        permissions: z.ZodArray<z.ZodString, "many">;
     }, "strip", z.ZodTypeAny, {
         id: number;
         name: string;
-        role: "admin" | "barista" | "frontdesk" | "cashier" | "pickup" | "stockcontrol";
+        role: string;
+        permissions: string[];
         branchId?: number | null | undefined;
+        branch?: {
+            id?: number | undefined;
+            name?: string | undefined;
+        } | undefined;
     }, {
         id: number;
         name: string;
-        role: "admin" | "barista" | "frontdesk" | "cashier" | "pickup" | "stockcontrol";
+        role: string;
+        permissions: string[];
         branchId?: number | null | undefined;
+        branch?: {
+            id?: number | undefined;
+            name?: string | undefined;
+        } | undefined;
     }>;
 }, "strip", z.ZodTypeAny, {
     user: {
         id: number;
         name: string;
-        role: "admin" | "barista" | "frontdesk" | "cashier" | "pickup" | "stockcontrol";
+        role: string;
+        permissions: string[];
         branchId?: number | null | undefined;
+        branch?: {
+            id?: number | undefined;
+            name?: string | undefined;
+        } | undefined;
     };
 }, {
     user: {
         id: number;
         name: string;
-        role: "admin" | "barista" | "frontdesk" | "cashier" | "pickup" | "stockcontrol";
+        role: string;
+        permissions: string[];
         branchId?: number | null | undefined;
+        branch?: {
+            id?: number | undefined;
+            name?: string | undefined;
+        } | undefined;
     };
 }>;
-export type BaristaLoginResponse = Infer<typeof api.BaristaLoginResponse>;
+export type BaristaLoginResponse = Infer<typeof BaristaLoginResponse>;
 export declare const GetMeResponse: z.ZodObject<{
     id: z.ZodNumber;
     name: z.ZodString;
-    role: z.ZodEnum<["admin", "barista", "frontdesk", "cashier", "pickup", "stockcontrol"]>;
     branchId: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
+    branch: z.ZodOptional<z.ZodObject<{
+        id: z.ZodOptional<z.ZodNumber>;
+        name: z.ZodOptional<z.ZodString>;
+    }, "strip", z.ZodTypeAny, {
+        id?: number | undefined;
+        name?: string | undefined;
+    }, {
+        id?: number | undefined;
+        name?: string | undefined;
+    }>>;
+} & {
+    role: z.ZodString;
+    permissions: z.ZodArray<z.ZodString, "many">;
 }, "strip", z.ZodTypeAny, {
     id: number;
     name: string;
-    role: "admin" | "barista" | "frontdesk" | "cashier" | "pickup" | "stockcontrol";
+    role: string;
+    permissions: string[];
     branchId?: number | null | undefined;
+    branch?: {
+        id?: number | undefined;
+        name?: string | undefined;
+    } | undefined;
 }, {
     id: number;
     name: string;
-    role: "admin" | "barista" | "frontdesk" | "cashier" | "pickup" | "stockcontrol";
+    role: string;
+    permissions: string[];
     branchId?: number | null | undefined;
+    branch?: {
+        id?: number | undefined;
+        name?: string | undefined;
+    } | undefined;
 }>;
-export type GetMeResponse = Infer<typeof api.GetMeResponse>;
+export type GetMeResponse = Infer<typeof GetMeResponse>;
 export declare const ListDrinksQueryParams: z.ZodObject<{
     category: z.ZodOptional<z.ZodString>;
     active: z.ZodOptional<z.ZodBoolean>;
     includeSlots: z.ZodOptional<z.ZodBoolean>;
+    branchId: z.ZodOptional<z.ZodNumber>;
 }, "strip", z.ZodTypeAny, {
+    branchId?: number | undefined;
     category?: string | undefined;
     active?: boolean | undefined;
     includeSlots?: boolean | undefined;
 }, {
+    branchId?: number | undefined;
     category?: string | undefined;
     active?: boolean | undefined;
     includeSlots?: boolean | undefined;
@@ -542,6 +599,7 @@ export declare const CalculateDrinkPriceParams: z.ZodObject<{
 }>;
 export type CalculateDrinkPriceParams = Infer<typeof api.CalculateDrinkPriceParams>;
 export declare const CalculateDrinkPriceBody: z.ZodObject<{
+    branchId: z.ZodOptional<z.ZodNumber>;
     selections: z.ZodArray<z.ZodObject<{
         ingredientId: z.ZodOptional<z.ZodNumber>;
         optionId: z.ZodOptional<z.ZodNumber>;
@@ -569,6 +627,7 @@ export declare const CalculateDrinkPriceBody: z.ZodObject<{
         slotId?: number | undefined;
         typeVolumeId?: number | undefined;
     }[];
+    branchId?: number | undefined;
 }, {
     selections: {
         ingredientId?: number | undefined;
@@ -577,6 +636,7 @@ export declare const CalculateDrinkPriceBody: z.ZodObject<{
         slotId?: number | undefined;
         typeVolumeId?: number | undefined;
     }[];
+    branchId?: number | undefined;
 }>;
 export type CalculateDrinkPriceBody = Infer<typeof api.CalculateDrinkPriceBody>;
 export declare const CalculateDrinkPriceResponse: z.ZodObject<{
@@ -665,6 +725,7 @@ export declare const ListIngredientsResponseItem: z.ZodObject<{
     unit: z.ZodString;
     costPerUnit: z.ZodNumber;
     stockQuantity: z.ZodNumber;
+    startupQuantity: z.ZodOptional<z.ZodNumber>;
     lowStockThreshold: z.ZodNumber;
     isActive: z.ZodBoolean;
     linkedTypeCount: z.ZodOptional<z.ZodNumber>;
@@ -683,6 +744,7 @@ export declare const ListIngredientsResponseItem: z.ZodObject<{
     costPerUnit: number;
     stockQuantity: number;
     lowStockThreshold: number;
+    startupQuantity?: number | undefined;
     linkedTypeCount?: number | undefined;
     linkedProductCount?: number | undefined;
 }, {
@@ -697,6 +759,7 @@ export declare const ListIngredientsResponseItem: z.ZodObject<{
     costPerUnit: number;
     stockQuantity: number;
     lowStockThreshold: number;
+    startupQuantity?: number | undefined;
     linkedTypeCount?: number | undefined;
     linkedProductCount?: number | undefined;
 }>;
@@ -709,6 +772,7 @@ export declare const ListIngredientsResponse: z.ZodArray<z.ZodObject<{
     unit: z.ZodString;
     costPerUnit: z.ZodNumber;
     stockQuantity: z.ZodNumber;
+    startupQuantity: z.ZodOptional<z.ZodNumber>;
     lowStockThreshold: z.ZodNumber;
     isActive: z.ZodBoolean;
     linkedTypeCount: z.ZodOptional<z.ZodNumber>;
@@ -727,6 +791,7 @@ export declare const ListIngredientsResponse: z.ZodArray<z.ZodObject<{
     costPerUnit: number;
     stockQuantity: number;
     lowStockThreshold: number;
+    startupQuantity?: number | undefined;
     linkedTypeCount?: number | undefined;
     linkedProductCount?: number | undefined;
 }, {
@@ -741,6 +806,7 @@ export declare const ListIngredientsResponse: z.ZodArray<z.ZodObject<{
     costPerUnit: number;
     stockQuantity: number;
     lowStockThreshold: number;
+    startupQuantity?: number | undefined;
     linkedTypeCount?: number | undefined;
     linkedProductCount?: number | undefined;
 }>, "many">;
@@ -751,6 +817,7 @@ export declare const CreateIngredientBody: z.ZodObject<{
     unit: z.ZodString;
     costPerUnit: z.ZodNumber;
     stockQuantity: z.ZodOptional<z.ZodNumber>;
+    startupQuantity: z.ZodOptional<z.ZodNumber>;
     lowStockThreshold: z.ZodOptional<z.ZodNumber>;
     isActive: z.ZodOptional<z.ZodBoolean>;
 }, "strip", z.ZodTypeAny, {
@@ -760,6 +827,7 @@ export declare const CreateIngredientBody: z.ZodObject<{
     costPerUnit: number;
     isActive?: boolean | undefined;
     stockQuantity?: number | undefined;
+    startupQuantity?: number | undefined;
     lowStockThreshold?: number | undefined;
 }, {
     name: string;
@@ -768,6 +836,7 @@ export declare const CreateIngredientBody: z.ZodObject<{
     costPerUnit: number;
     isActive?: boolean | undefined;
     stockQuantity?: number | undefined;
+    startupQuantity?: number | undefined;
     lowStockThreshold?: number | undefined;
 }>;
 export type CreateIngredientBody = Infer<typeof api.CreateIngredientBody>;
@@ -787,6 +856,7 @@ export declare const GetIngredientResponse: z.ZodIntersection<z.ZodObject<{
     unit: z.ZodString;
     costPerUnit: z.ZodNumber;
     stockQuantity: z.ZodNumber;
+    startupQuantity: z.ZodOptional<z.ZodNumber>;
     lowStockThreshold: z.ZodNumber;
     isActive: z.ZodBoolean;
     linkedTypeCount: z.ZodOptional<z.ZodNumber>;
@@ -805,6 +875,7 @@ export declare const GetIngredientResponse: z.ZodIntersection<z.ZodObject<{
     costPerUnit: number;
     stockQuantity: number;
     lowStockThreshold: number;
+    startupQuantity?: number | undefined;
     linkedTypeCount?: number | undefined;
     linkedProductCount?: number | undefined;
 }, {
@@ -819,6 +890,7 @@ export declare const GetIngredientResponse: z.ZodIntersection<z.ZodObject<{
     costPerUnit: number;
     stockQuantity: number;
     lowStockThreshold: number;
+    startupQuantity?: number | undefined;
     linkedTypeCount?: number | undefined;
     linkedProductCount?: number | undefined;
 }>, z.ZodObject<{
@@ -898,6 +970,7 @@ export declare const UpdateIngredientBody: z.ZodObject<{
     unit: z.ZodOptional<z.ZodString>;
     costPerUnit: z.ZodOptional<z.ZodNumber>;
     stockQuantity: z.ZodOptional<z.ZodNumber>;
+    startupQuantity: z.ZodOptional<z.ZodNumber>;
     lowStockThreshold: z.ZodOptional<z.ZodNumber>;
     isActive: z.ZodOptional<z.ZodBoolean>;
 }, "strip", z.ZodTypeAny, {
@@ -907,6 +980,7 @@ export declare const UpdateIngredientBody: z.ZodObject<{
     unit?: string | undefined;
     costPerUnit?: number | undefined;
     stockQuantity?: number | undefined;
+    startupQuantity?: number | undefined;
     lowStockThreshold?: number | undefined;
 }, {
     name?: string | undefined;
@@ -915,6 +989,7 @@ export declare const UpdateIngredientBody: z.ZodObject<{
     unit?: string | undefined;
     costPerUnit?: number | undefined;
     stockQuantity?: number | undefined;
+    startupQuantity?: number | undefined;
     lowStockThreshold?: number | undefined;
 }>;
 export type UpdateIngredientBody = Infer<typeof api.UpdateIngredientBody>;
@@ -1119,14 +1194,17 @@ export declare const ListOrdersQueryParams: z.ZodObject<{
     endDate: z.ZodOptional<z.ZodDate>;
     limit: z.ZodOptional<z.ZodNumber>;
     offset: z.ZodOptional<z.ZodNumber>;
+    branchId: z.ZodOptional<z.ZodNumber>;
 }, "strip", z.ZodTypeAny, {
     status?: string | undefined;
+    branchId?: number | undefined;
     startDate?: Date | undefined;
     endDate?: Date | undefined;
     limit?: number | undefined;
     offset?: number | undefined;
 }, {
     status?: string | undefined;
+    branchId?: number | undefined;
     startDate?: Date | undefined;
     endDate?: Date | undefined;
     limit?: number | undefined;
@@ -1139,69 +1217,69 @@ export declare const ListOrdersResponseItem: z.ZodIntersection<z.ZodObject<{
     baristaId: z.ZodNumber;
     baristaName: z.ZodString;
     status: z.ZodEnum<["pending", "paid", "in_progress", "ready", "completed", "cancelled", "refunded"]>;
-    customerName: z.ZodNullable<z.ZodString>;
+    customerName: z.ZodOptional<z.ZodNullable<z.ZodString>>;
     subtotal: z.ZodNumber;
     discount: z.ZodNumber;
     discountId: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
     discountValue: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
     discountType: z.ZodOptional<z.ZodNullable<z.ZodEnum<["percentage", "fixed"]>>>;
     total: z.ZodNumber;
-    paymentMethod: z.ZodEnum<["cash", "card", "wallet"]>;
-    amountTendered: z.ZodNullable<z.ZodNumber>;
-    changeDue: z.ZodNullable<z.ZodNumber>;
-    notes: z.ZodNullable<z.ZodString>;
-    createdAt: z.ZodString;
-    updatedAt: z.ZodString;
-    paidAt: z.ZodNullable<z.ZodString>;
-    readyAt: z.ZodNullable<z.ZodString>;
-    completedAt: z.ZodNullable<z.ZodString>;
-    cancelledAt: z.ZodNullable<z.ZodString>;
+    paymentMethod: z.ZodEnum<["cash", "card", "wallet", "hospitality"]>;
+    amountTendered: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
+    changeDue: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
+    notes: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    createdAt: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    updatedAt: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    paidAt: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    readyAt: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    completedAt: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    cancelledAt: z.ZodOptional<z.ZodNullable<z.ZodString>>;
 }, "strip", z.ZodTypeAny, {
     status: "pending" | "paid" | "in_progress" | "ready" | "completed" | "cancelled" | "refunded";
     id: number;
-    createdAt: string;
-    updatedAt: string;
     total: number;
     orderNumber: string;
     baristaId: number;
     baristaName: string;
-    customerName: string | null;
     subtotal: number;
     discount: number;
-    paymentMethod: "cash" | "card" | "wallet";
-    amountTendered: number | null;
-    changeDue: number | null;
-    notes: string | null;
-    paidAt: string | null;
-    readyAt: string | null;
-    completedAt: string | null;
-    cancelledAt: string | null;
+    paymentMethod: "cash" | "card" | "wallet" | "hospitality";
+    createdAt?: string | null | undefined;
+    updatedAt?: string | null | undefined;
+    customerName?: string | null | undefined;
     discountId?: number | null | undefined;
     discountValue?: number | null | undefined;
     discountType?: "percentage" | "fixed" | null | undefined;
+    amountTendered?: number | null | undefined;
+    changeDue?: number | null | undefined;
+    notes?: string | null | undefined;
+    paidAt?: string | null | undefined;
+    readyAt?: string | null | undefined;
+    completedAt?: string | null | undefined;
+    cancelledAt?: string | null | undefined;
 }, {
     status: "pending" | "paid" | "in_progress" | "ready" | "completed" | "cancelled" | "refunded";
     id: number;
-    createdAt: string;
-    updatedAt: string;
     total: number;
     orderNumber: string;
     baristaId: number;
     baristaName: string;
-    customerName: string | null;
     subtotal: number;
     discount: number;
-    paymentMethod: "cash" | "card" | "wallet";
-    amountTendered: number | null;
-    changeDue: number | null;
-    notes: string | null;
-    paidAt: string | null;
-    readyAt: string | null;
-    completedAt: string | null;
-    cancelledAt: string | null;
+    paymentMethod: "cash" | "card" | "wallet" | "hospitality";
+    createdAt?: string | null | undefined;
+    updatedAt?: string | null | undefined;
+    customerName?: string | null | undefined;
     discountId?: number | null | undefined;
     discountValue?: number | null | undefined;
     discountType?: "percentage" | "fixed" | null | undefined;
+    amountTendered?: number | null | undefined;
+    changeDue?: number | null | undefined;
+    notes?: string | null | undefined;
+    paidAt?: string | null | undefined;
+    readyAt?: string | null | undefined;
+    completedAt?: string | null | undefined;
+    cancelledAt?: string | null | undefined;
 }>, z.ZodObject<{
     items: z.ZodArray<z.ZodObject<{
         id: z.ZodNumber;
@@ -1360,69 +1438,69 @@ export declare const ListOrdersResponse: z.ZodArray<z.ZodIntersection<z.ZodObjec
     baristaId: z.ZodNumber;
     baristaName: z.ZodString;
     status: z.ZodEnum<["pending", "paid", "in_progress", "ready", "completed", "cancelled", "refunded"]>;
-    customerName: z.ZodNullable<z.ZodString>;
+    customerName: z.ZodOptional<z.ZodNullable<z.ZodString>>;
     subtotal: z.ZodNumber;
     discount: z.ZodNumber;
     discountId: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
     discountValue: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
     discountType: z.ZodOptional<z.ZodNullable<z.ZodEnum<["percentage", "fixed"]>>>;
     total: z.ZodNumber;
-    paymentMethod: z.ZodEnum<["cash", "card", "wallet"]>;
-    amountTendered: z.ZodNullable<z.ZodNumber>;
-    changeDue: z.ZodNullable<z.ZodNumber>;
-    notes: z.ZodNullable<z.ZodString>;
-    createdAt: z.ZodString;
-    updatedAt: z.ZodString;
-    paidAt: z.ZodNullable<z.ZodString>;
-    readyAt: z.ZodNullable<z.ZodString>;
-    completedAt: z.ZodNullable<z.ZodString>;
-    cancelledAt: z.ZodNullable<z.ZodString>;
+    paymentMethod: z.ZodEnum<["cash", "card", "wallet", "hospitality"]>;
+    amountTendered: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
+    changeDue: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
+    notes: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    createdAt: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    updatedAt: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    paidAt: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    readyAt: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    completedAt: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    cancelledAt: z.ZodOptional<z.ZodNullable<z.ZodString>>;
 }, "strip", z.ZodTypeAny, {
     status: "pending" | "paid" | "in_progress" | "ready" | "completed" | "cancelled" | "refunded";
     id: number;
-    createdAt: string;
-    updatedAt: string;
     total: number;
     orderNumber: string;
     baristaId: number;
     baristaName: string;
-    customerName: string | null;
     subtotal: number;
     discount: number;
-    paymentMethod: "cash" | "card" | "wallet";
-    amountTendered: number | null;
-    changeDue: number | null;
-    notes: string | null;
-    paidAt: string | null;
-    readyAt: string | null;
-    completedAt: string | null;
-    cancelledAt: string | null;
+    paymentMethod: "cash" | "card" | "wallet" | "hospitality";
+    createdAt?: string | null | undefined;
+    updatedAt?: string | null | undefined;
+    customerName?: string | null | undefined;
     discountId?: number | null | undefined;
     discountValue?: number | null | undefined;
     discountType?: "percentage" | "fixed" | null | undefined;
+    amountTendered?: number | null | undefined;
+    changeDue?: number | null | undefined;
+    notes?: string | null | undefined;
+    paidAt?: string | null | undefined;
+    readyAt?: string | null | undefined;
+    completedAt?: string | null | undefined;
+    cancelledAt?: string | null | undefined;
 }, {
     status: "pending" | "paid" | "in_progress" | "ready" | "completed" | "cancelled" | "refunded";
     id: number;
-    createdAt: string;
-    updatedAt: string;
     total: number;
     orderNumber: string;
     baristaId: number;
     baristaName: string;
-    customerName: string | null;
     subtotal: number;
     discount: number;
-    paymentMethod: "cash" | "card" | "wallet";
-    amountTendered: number | null;
-    changeDue: number | null;
-    notes: string | null;
-    paidAt: string | null;
-    readyAt: string | null;
-    completedAt: string | null;
-    cancelledAt: string | null;
+    paymentMethod: "cash" | "card" | "wallet" | "hospitality";
+    createdAt?: string | null | undefined;
+    updatedAt?: string | null | undefined;
+    customerName?: string | null | undefined;
     discountId?: number | null | undefined;
     discountValue?: number | null | undefined;
     discountType?: "percentage" | "fixed" | null | undefined;
+    amountTendered?: number | null | undefined;
+    changeDue?: number | null | undefined;
+    notes?: string | null | undefined;
+    paidAt?: string | null | undefined;
+    readyAt?: string | null | undefined;
+    completedAt?: string | null | undefined;
+    cancelledAt?: string | null | undefined;
 }>, z.ZodObject<{
     items: z.ZodArray<z.ZodObject<{
         id: z.ZodNumber;
@@ -1576,12 +1654,14 @@ export declare const ListOrdersResponse: z.ZodArray<z.ZodIntersection<z.ZodObjec
 }>>, "many">;
 export type ListOrdersResponse = Infer<typeof api.ListOrdersResponse>;
 export declare const CreateOrderBody: z.ZodObject<{
+    branchId: z.ZodOptional<z.ZodNumber>;
     customerName: z.ZodOptional<z.ZodString>;
-    paymentMethod: z.ZodEnum<["cash", "card", "wallet"]>;
+    paymentMethod: z.ZodEnum<["cash", "card", "wallet", "hospitality"]>;
     amountTendered: z.ZodOptional<z.ZodNumber>;
     notes: z.ZodOptional<z.ZodString>;
     discount: z.ZodOptional<z.ZodNumber>;
     discountCode: z.ZodOptional<z.ZodString>;
+    adminPin: z.ZodOptional<z.ZodString>;
     items: z.ZodArray<z.ZodObject<{
         drinkId: z.ZodNumber;
         quantity: z.ZodNumber;
@@ -1634,7 +1714,7 @@ export declare const CreateOrderBody: z.ZodObject<{
         specialNotes?: string | undefined;
     }>, "many">;
 }, "strip", z.ZodTypeAny, {
-    paymentMethod: "cash" | "card" | "wallet";
+    paymentMethod: "cash" | "card" | "wallet" | "hospitality";
     items: {
         drinkId: number;
         selections: {
@@ -1648,13 +1728,15 @@ export declare const CreateOrderBody: z.ZodObject<{
         quantity: number;
         specialNotes?: string | undefined;
     }[];
+    branchId?: number | undefined;
     customerName?: string | undefined;
     discount?: number | undefined;
     amountTendered?: number | undefined;
     notes?: string | undefined;
     discountCode?: string | undefined;
+    adminPin?: string | undefined;
 }, {
-    paymentMethod: "cash" | "card" | "wallet";
+    paymentMethod: "cash" | "card" | "wallet" | "hospitality";
     items: {
         drinkId: number;
         selections: {
@@ -1668,11 +1750,13 @@ export declare const CreateOrderBody: z.ZodObject<{
         quantity: number;
         specialNotes?: string | undefined;
     }[];
+    branchId?: number | undefined;
     customerName?: string | undefined;
     discount?: number | undefined;
     amountTendered?: number | undefined;
     notes?: string | undefined;
     discountCode?: string | undefined;
+    adminPin?: string | undefined;
 }>;
 export type CreateOrderBody = Infer<typeof api.CreateOrderBody>;
 export declare const GetOrderParams: z.ZodObject<{
@@ -1689,69 +1773,69 @@ export declare const GetOrderResponse: z.ZodIntersection<z.ZodObject<{
     baristaId: z.ZodNumber;
     baristaName: z.ZodString;
     status: z.ZodEnum<["pending", "paid", "in_progress", "ready", "completed", "cancelled", "refunded"]>;
-    customerName: z.ZodNullable<z.ZodString>;
+    customerName: z.ZodOptional<z.ZodNullable<z.ZodString>>;
     subtotal: z.ZodNumber;
     discount: z.ZodNumber;
     discountId: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
     discountValue: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
     discountType: z.ZodOptional<z.ZodNullable<z.ZodEnum<["percentage", "fixed"]>>>;
     total: z.ZodNumber;
-    paymentMethod: z.ZodEnum<["cash", "card", "wallet"]>;
-    amountTendered: z.ZodNullable<z.ZodNumber>;
-    changeDue: z.ZodNullable<z.ZodNumber>;
-    notes: z.ZodNullable<z.ZodString>;
-    createdAt: z.ZodString;
-    updatedAt: z.ZodString;
-    paidAt: z.ZodNullable<z.ZodString>;
-    readyAt: z.ZodNullable<z.ZodString>;
-    completedAt: z.ZodNullable<z.ZodString>;
-    cancelledAt: z.ZodNullable<z.ZodString>;
+    paymentMethod: z.ZodEnum<["cash", "card", "wallet", "hospitality"]>;
+    amountTendered: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
+    changeDue: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
+    notes: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    createdAt: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    updatedAt: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    paidAt: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    readyAt: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    completedAt: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    cancelledAt: z.ZodOptional<z.ZodNullable<z.ZodString>>;
 }, "strip", z.ZodTypeAny, {
     status: "pending" | "paid" | "in_progress" | "ready" | "completed" | "cancelled" | "refunded";
     id: number;
-    createdAt: string;
-    updatedAt: string;
     total: number;
     orderNumber: string;
     baristaId: number;
     baristaName: string;
-    customerName: string | null;
     subtotal: number;
     discount: number;
-    paymentMethod: "cash" | "card" | "wallet";
-    amountTendered: number | null;
-    changeDue: number | null;
-    notes: string | null;
-    paidAt: string | null;
-    readyAt: string | null;
-    completedAt: string | null;
-    cancelledAt: string | null;
+    paymentMethod: "cash" | "card" | "wallet" | "hospitality";
+    createdAt?: string | null | undefined;
+    updatedAt?: string | null | undefined;
+    customerName?: string | null | undefined;
     discountId?: number | null | undefined;
     discountValue?: number | null | undefined;
     discountType?: "percentage" | "fixed" | null | undefined;
+    amountTendered?: number | null | undefined;
+    changeDue?: number | null | undefined;
+    notes?: string | null | undefined;
+    paidAt?: string | null | undefined;
+    readyAt?: string | null | undefined;
+    completedAt?: string | null | undefined;
+    cancelledAt?: string | null | undefined;
 }, {
     status: "pending" | "paid" | "in_progress" | "ready" | "completed" | "cancelled" | "refunded";
     id: number;
-    createdAt: string;
-    updatedAt: string;
     total: number;
     orderNumber: string;
     baristaId: number;
     baristaName: string;
-    customerName: string | null;
     subtotal: number;
     discount: number;
-    paymentMethod: "cash" | "card" | "wallet";
-    amountTendered: number | null;
-    changeDue: number | null;
-    notes: string | null;
-    paidAt: string | null;
-    readyAt: string | null;
-    completedAt: string | null;
-    cancelledAt: string | null;
+    paymentMethod: "cash" | "card" | "wallet" | "hospitality";
+    createdAt?: string | null | undefined;
+    updatedAt?: string | null | undefined;
+    customerName?: string | null | undefined;
     discountId?: number | null | undefined;
     discountValue?: number | null | undefined;
     discountType?: "percentage" | "fixed" | null | undefined;
+    amountTendered?: number | null | undefined;
+    changeDue?: number | null | undefined;
+    notes?: string | null | undefined;
+    paidAt?: string | null | undefined;
+    readyAt?: string | null | undefined;
+    completedAt?: string | null | undefined;
+    cancelledAt?: string | null | undefined;
 }>, z.ZodObject<{
     items: z.ZodArray<z.ZodObject<{
         id: z.ZodNumber;
@@ -1914,10 +1998,19 @@ export declare const UpdateOrderStatusParams: z.ZodObject<{
 export type UpdateOrderStatusParams = Infer<typeof api.UpdateOrderStatusParams>;
 export declare const UpdateOrderStatusBody: z.ZodObject<{
     status: z.ZodEnum<["pending", "paid", "in_progress", "ready", "completed", "cancelled", "refunded"]>;
+    paymentMethod: z.ZodOptional<z.ZodEnum<["cash", "card", "wallet", "hospitality"]>>;
+    cashierId: z.ZodOptional<z.ZodNumber>;
+    adminPin: z.ZodOptional<z.ZodString>;
 }, "strip", z.ZodTypeAny, {
     status: "pending" | "paid" | "in_progress" | "ready" | "completed" | "cancelled" | "refunded";
+    paymentMethod?: "cash" | "card" | "wallet" | "hospitality" | undefined;
+    adminPin?: string | undefined;
+    cashierId?: number | undefined;
 }, {
     status: "pending" | "paid" | "in_progress" | "ready" | "completed" | "cancelled" | "refunded";
+    paymentMethod?: "cash" | "card" | "wallet" | "hospitality" | undefined;
+    adminPin?: string | undefined;
+    cashierId?: number | undefined;
 }>;
 export type UpdateOrderStatusBody = Infer<typeof api.UpdateOrderStatusBody>;
 export declare const UpdateOrderStatusResponse: z.ZodObject<{
@@ -1926,81 +2019,87 @@ export declare const UpdateOrderStatusResponse: z.ZodObject<{
     baristaId: z.ZodNumber;
     baristaName: z.ZodString;
     status: z.ZodEnum<["pending", "paid", "in_progress", "ready", "completed", "cancelled", "refunded"]>;
-    customerName: z.ZodNullable<z.ZodString>;
+    customerName: z.ZodOptional<z.ZodNullable<z.ZodString>>;
     subtotal: z.ZodNumber;
     discount: z.ZodNumber;
     discountId: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
     discountValue: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
     discountType: z.ZodOptional<z.ZodNullable<z.ZodEnum<["percentage", "fixed"]>>>;
     total: z.ZodNumber;
-    paymentMethod: z.ZodEnum<["cash", "card", "wallet"]>;
-    amountTendered: z.ZodNullable<z.ZodNumber>;
-    changeDue: z.ZodNullable<z.ZodNumber>;
-    notes: z.ZodNullable<z.ZodString>;
-    createdAt: z.ZodString;
-    updatedAt: z.ZodString;
-    paidAt: z.ZodNullable<z.ZodString>;
-    readyAt: z.ZodNullable<z.ZodString>;
-    completedAt: z.ZodNullable<z.ZodString>;
-    cancelledAt: z.ZodNullable<z.ZodString>;
+    paymentMethod: z.ZodEnum<["cash", "card", "wallet", "hospitality"]>;
+    amountTendered: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
+    changeDue: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
+    notes: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    createdAt: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    updatedAt: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    paidAt: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    readyAt: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    completedAt: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    cancelledAt: z.ZodOptional<z.ZodNullable<z.ZodString>>;
 }, "strip", z.ZodTypeAny, {
     status: "pending" | "paid" | "in_progress" | "ready" | "completed" | "cancelled" | "refunded";
     id: number;
-    createdAt: string;
-    updatedAt: string;
     total: number;
     orderNumber: string;
     baristaId: number;
     baristaName: string;
-    customerName: string | null;
     subtotal: number;
     discount: number;
-    paymentMethod: "cash" | "card" | "wallet";
-    amountTendered: number | null;
-    changeDue: number | null;
-    notes: string | null;
-    paidAt: string | null;
-    readyAt: string | null;
-    completedAt: string | null;
-    cancelledAt: string | null;
+    paymentMethod: "cash" | "card" | "wallet" | "hospitality";
+    createdAt?: string | null | undefined;
+    updatedAt?: string | null | undefined;
+    customerName?: string | null | undefined;
     discountId?: number | null | undefined;
     discountValue?: number | null | undefined;
     discountType?: "percentage" | "fixed" | null | undefined;
+    amountTendered?: number | null | undefined;
+    changeDue?: number | null | undefined;
+    notes?: string | null | undefined;
+    paidAt?: string | null | undefined;
+    readyAt?: string | null | undefined;
+    completedAt?: string | null | undefined;
+    cancelledAt?: string | null | undefined;
 }, {
     status: "pending" | "paid" | "in_progress" | "ready" | "completed" | "cancelled" | "refunded";
     id: number;
-    createdAt: string;
-    updatedAt: string;
     total: number;
     orderNumber: string;
     baristaId: number;
     baristaName: string;
-    customerName: string | null;
     subtotal: number;
     discount: number;
-    paymentMethod: "cash" | "card" | "wallet";
-    amountTendered: number | null;
-    changeDue: number | null;
-    notes: string | null;
-    paidAt: string | null;
-    readyAt: string | null;
-    completedAt: string | null;
-    cancelledAt: string | null;
+    paymentMethod: "cash" | "card" | "wallet" | "hospitality";
+    createdAt?: string | null | undefined;
+    updatedAt?: string | null | undefined;
+    customerName?: string | null | undefined;
     discountId?: number | null | undefined;
     discountValue?: number | null | undefined;
     discountType?: "percentage" | "fixed" | null | undefined;
+    amountTendered?: number | null | undefined;
+    changeDue?: number | null | undefined;
+    notes?: string | null | undefined;
+    paidAt?: string | null | undefined;
+    readyAt?: string | null | undefined;
+    completedAt?: string | null | undefined;
+    cancelledAt?: string | null | undefined;
 }>;
 export type UpdateOrderStatusResponse = Infer<typeof api.UpdateOrderStatusResponse>;
 export declare const ListStockMovementsQueryParams: z.ZodObject<{
     ingredientId: z.ZodOptional<z.ZodNumber>;
+    startDate: z.ZodOptional<z.ZodDate>;
+    endDate: z.ZodOptional<z.ZodDate>;
     limit: z.ZodOptional<z.ZodNumber>;
     offset: z.ZodOptional<z.ZodNumber>;
 }, "strip", z.ZodTypeAny, {
     ingredientId?: number | undefined;
+    startDate?: Date | undefined;
+    endDate?: Date | undefined;
     limit?: number | undefined;
     offset?: number | undefined;
 }, {
     ingredientId?: number | undefined;
+    startDate?: Date | undefined;
+    endDate?: Date | undefined;
     limit?: number | undefined;
     offset?: number | undefined;
 }>;
@@ -2133,69 +2232,69 @@ export declare const GetActiveOrdersResponseItem: z.ZodIntersection<z.ZodObject<
     baristaId: z.ZodNumber;
     baristaName: z.ZodString;
     status: z.ZodEnum<["pending", "paid", "in_progress", "ready", "completed", "cancelled", "refunded"]>;
-    customerName: z.ZodNullable<z.ZodString>;
+    customerName: z.ZodOptional<z.ZodNullable<z.ZodString>>;
     subtotal: z.ZodNumber;
     discount: z.ZodNumber;
     discountId: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
     discountValue: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
     discountType: z.ZodOptional<z.ZodNullable<z.ZodEnum<["percentage", "fixed"]>>>;
     total: z.ZodNumber;
-    paymentMethod: z.ZodEnum<["cash", "card", "wallet"]>;
-    amountTendered: z.ZodNullable<z.ZodNumber>;
-    changeDue: z.ZodNullable<z.ZodNumber>;
-    notes: z.ZodNullable<z.ZodString>;
-    createdAt: z.ZodString;
-    updatedAt: z.ZodString;
-    paidAt: z.ZodNullable<z.ZodString>;
-    readyAt: z.ZodNullable<z.ZodString>;
-    completedAt: z.ZodNullable<z.ZodString>;
-    cancelledAt: z.ZodNullable<z.ZodString>;
+    paymentMethod: z.ZodEnum<["cash", "card", "wallet", "hospitality"]>;
+    amountTendered: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
+    changeDue: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
+    notes: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    createdAt: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    updatedAt: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    paidAt: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    readyAt: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    completedAt: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    cancelledAt: z.ZodOptional<z.ZodNullable<z.ZodString>>;
 }, "strip", z.ZodTypeAny, {
     status: "pending" | "paid" | "in_progress" | "ready" | "completed" | "cancelled" | "refunded";
     id: number;
-    createdAt: string;
-    updatedAt: string;
     total: number;
     orderNumber: string;
     baristaId: number;
     baristaName: string;
-    customerName: string | null;
     subtotal: number;
     discount: number;
-    paymentMethod: "cash" | "card" | "wallet";
-    amountTendered: number | null;
-    changeDue: number | null;
-    notes: string | null;
-    paidAt: string | null;
-    readyAt: string | null;
-    completedAt: string | null;
-    cancelledAt: string | null;
+    paymentMethod: "cash" | "card" | "wallet" | "hospitality";
+    createdAt?: string | null | undefined;
+    updatedAt?: string | null | undefined;
+    customerName?: string | null | undefined;
     discountId?: number | null | undefined;
     discountValue?: number | null | undefined;
     discountType?: "percentage" | "fixed" | null | undefined;
+    amountTendered?: number | null | undefined;
+    changeDue?: number | null | undefined;
+    notes?: string | null | undefined;
+    paidAt?: string | null | undefined;
+    readyAt?: string | null | undefined;
+    completedAt?: string | null | undefined;
+    cancelledAt?: string | null | undefined;
 }, {
     status: "pending" | "paid" | "in_progress" | "ready" | "completed" | "cancelled" | "refunded";
     id: number;
-    createdAt: string;
-    updatedAt: string;
     total: number;
     orderNumber: string;
     baristaId: number;
     baristaName: string;
-    customerName: string | null;
     subtotal: number;
     discount: number;
-    paymentMethod: "cash" | "card" | "wallet";
-    amountTendered: number | null;
-    changeDue: number | null;
-    notes: string | null;
-    paidAt: string | null;
-    readyAt: string | null;
-    completedAt: string | null;
-    cancelledAt: string | null;
+    paymentMethod: "cash" | "card" | "wallet" | "hospitality";
+    createdAt?: string | null | undefined;
+    updatedAt?: string | null | undefined;
+    customerName?: string | null | undefined;
     discountId?: number | null | undefined;
     discountValue?: number | null | undefined;
     discountType?: "percentage" | "fixed" | null | undefined;
+    amountTendered?: number | null | undefined;
+    changeDue?: number | null | undefined;
+    notes?: string | null | undefined;
+    paidAt?: string | null | undefined;
+    readyAt?: string | null | undefined;
+    completedAt?: string | null | undefined;
+    cancelledAt?: string | null | undefined;
 }>, z.ZodObject<{
     items: z.ZodArray<z.ZodObject<{
         id: z.ZodNumber;
@@ -2354,69 +2453,69 @@ export declare const GetActiveOrdersResponse: z.ZodArray<z.ZodIntersection<z.Zod
     baristaId: z.ZodNumber;
     baristaName: z.ZodString;
     status: z.ZodEnum<["pending", "paid", "in_progress", "ready", "completed", "cancelled", "refunded"]>;
-    customerName: z.ZodNullable<z.ZodString>;
+    customerName: z.ZodOptional<z.ZodNullable<z.ZodString>>;
     subtotal: z.ZodNumber;
     discount: z.ZodNumber;
     discountId: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
     discountValue: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
     discountType: z.ZodOptional<z.ZodNullable<z.ZodEnum<["percentage", "fixed"]>>>;
     total: z.ZodNumber;
-    paymentMethod: z.ZodEnum<["cash", "card", "wallet"]>;
-    amountTendered: z.ZodNullable<z.ZodNumber>;
-    changeDue: z.ZodNullable<z.ZodNumber>;
-    notes: z.ZodNullable<z.ZodString>;
-    createdAt: z.ZodString;
-    updatedAt: z.ZodString;
-    paidAt: z.ZodNullable<z.ZodString>;
-    readyAt: z.ZodNullable<z.ZodString>;
-    completedAt: z.ZodNullable<z.ZodString>;
-    cancelledAt: z.ZodNullable<z.ZodString>;
+    paymentMethod: z.ZodEnum<["cash", "card", "wallet", "hospitality"]>;
+    amountTendered: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
+    changeDue: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
+    notes: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    createdAt: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    updatedAt: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    paidAt: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    readyAt: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    completedAt: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    cancelledAt: z.ZodOptional<z.ZodNullable<z.ZodString>>;
 }, "strip", z.ZodTypeAny, {
     status: "pending" | "paid" | "in_progress" | "ready" | "completed" | "cancelled" | "refunded";
     id: number;
-    createdAt: string;
-    updatedAt: string;
     total: number;
     orderNumber: string;
     baristaId: number;
     baristaName: string;
-    customerName: string | null;
     subtotal: number;
     discount: number;
-    paymentMethod: "cash" | "card" | "wallet";
-    amountTendered: number | null;
-    changeDue: number | null;
-    notes: string | null;
-    paidAt: string | null;
-    readyAt: string | null;
-    completedAt: string | null;
-    cancelledAt: string | null;
+    paymentMethod: "cash" | "card" | "wallet" | "hospitality";
+    createdAt?: string | null | undefined;
+    updatedAt?: string | null | undefined;
+    customerName?: string | null | undefined;
     discountId?: number | null | undefined;
     discountValue?: number | null | undefined;
     discountType?: "percentage" | "fixed" | null | undefined;
+    amountTendered?: number | null | undefined;
+    changeDue?: number | null | undefined;
+    notes?: string | null | undefined;
+    paidAt?: string | null | undefined;
+    readyAt?: string | null | undefined;
+    completedAt?: string | null | undefined;
+    cancelledAt?: string | null | undefined;
 }, {
     status: "pending" | "paid" | "in_progress" | "ready" | "completed" | "cancelled" | "refunded";
     id: number;
-    createdAt: string;
-    updatedAt: string;
     total: number;
     orderNumber: string;
     baristaId: number;
     baristaName: string;
-    customerName: string | null;
     subtotal: number;
     discount: number;
-    paymentMethod: "cash" | "card" | "wallet";
-    amountTendered: number | null;
-    changeDue: number | null;
-    notes: string | null;
-    paidAt: string | null;
-    readyAt: string | null;
-    completedAt: string | null;
-    cancelledAt: string | null;
+    paymentMethod: "cash" | "card" | "wallet" | "hospitality";
+    createdAt?: string | null | undefined;
+    updatedAt?: string | null | undefined;
+    customerName?: string | null | undefined;
     discountId?: number | null | undefined;
     discountValue?: number | null | undefined;
     discountType?: "percentage" | "fixed" | null | undefined;
+    amountTendered?: number | null | undefined;
+    changeDue?: number | null | undefined;
+    notes?: string | null | undefined;
+    paidAt?: string | null | undefined;
+    readyAt?: string | null | undefined;
+    completedAt?: string | null | undefined;
+    cancelledAt?: string | null | undefined;
 }>, z.ZodObject<{
     items: z.ZodArray<z.ZodObject<{
         id: z.ZodNumber;
@@ -2826,74 +2925,83 @@ export declare const CreateUserBody: z.ZodObject<{
     name: z.ZodString;
     username: z.ZodString;
     password: z.ZodString;
-    role: z.ZodEnum<["admin", "barista", "frontdesk", "cashier", "pickup", "stockcontrol"]>;
-    pin: z.ZodNullable<z.ZodOptional<z.ZodString>>;
+    pin: z.ZodOptional<z.ZodString>;
+} & {
+    role: z.ZodString;
+    branchId: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
 }, "strip", z.ZodTypeAny, {
     username: string;
     password: string;
     name: string;
-    role: "admin" | "barista" | "frontdesk" | "cashier" | "pickup" | "stockcontrol";
-    pin?: string | null | undefined;
+    role: string;
+    branchId?: number | null | undefined;
+    pin?: string | undefined;
 }, {
     username: string;
     password: string;
     name: string;
-    role: "admin" | "barista" | "frontdesk" | "cashier" | "pickup" | "stockcontrol";
-    pin?: string | null | undefined;
+    role: string;
+    branchId?: number | null | undefined;
+    pin?: string | undefined;
 }>;
-export type CreateUserBody = Infer<typeof api.CreateUserBody>;
+export type CreateUserBody = Infer<typeof CreateUserBody>;
 export declare const UpdateUserBody: z.ZodObject<{
     name: z.ZodOptional<z.ZodString>;
     username: z.ZodOptional<z.ZodString>;
     password: z.ZodOptional<z.ZodString>;
-    role: z.ZodOptional<z.ZodEnum<["admin", "barista", "frontdesk", "cashier", "pickup", "stockcontrol"]>>;
-    pin: z.ZodNullable<z.ZodOptional<z.ZodString>>;
+    pin: z.ZodOptional<z.ZodString>;
     isActive: z.ZodOptional<z.ZodBoolean>;
+} & {
+    role: z.ZodOptional<z.ZodString>;
+    branchId: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
 }, "strip", z.ZodTypeAny, {
     username?: string | undefined;
     password?: string | undefined;
     name?: string | undefined;
-    role?: "admin" | "barista" | "frontdesk" | "cashier" | "pickup" | "stockcontrol" | undefined;
+    role?: string | undefined;
+    branchId?: number | null | undefined;
     isActive?: boolean | undefined;
-    pin?: string | null | undefined;
+    pin?: string | undefined;
 }, {
     username?: string | undefined;
     password?: string | undefined;
     name?: string | undefined;
-    role?: "admin" | "barista" | "frontdesk" | "cashier" | "pickup" | "stockcontrol" | undefined;
+    role?: string | undefined;
+    branchId?: number | null | undefined;
     isActive?: boolean | undefined;
-    pin?: string | null | undefined;
+    pin?: string | undefined;
 }>;
-export type UpdateUserBody = Infer<typeof api.UpdateUserBody>;
+export type UpdateUserBody = Infer<typeof UpdateUserBody>;
 export declare const UserDetail: z.ZodObject<{
     id: z.ZodNumber;
     name: z.ZodString;
     username: z.ZodString;
-    role: z.ZodEnum<["admin", "barista", "frontdesk", "cashier", "pickup", "stockcontrol"]>;
-    pin: z.ZodNullable<z.ZodOptional<z.ZodString>>;
     isActive: z.ZodBoolean;
-    createdAt: z.ZodOptional<z.ZodString>;
-    updatedAt: z.ZodOptional<z.ZodString>;
+    createdAt: z.ZodOptional<z.ZodDate>;
+} & {
+    role: z.ZodString;
+    branchId: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
+    permissions: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
 }, "strip", z.ZodTypeAny, {
     username: string;
     id: number;
     name: string;
-    role: "admin" | "barista" | "frontdesk" | "cashier" | "pickup" | "stockcontrol";
+    role: string;
     isActive: boolean;
-    createdAt?: string | undefined;
-    updatedAt?: string | undefined;
-    pin?: string | null | undefined;
+    branchId?: number | null | undefined;
+    createdAt?: Date | undefined;
+    permissions?: string[] | undefined;
 }, {
     username: string;
     id: number;
     name: string;
-    role: "admin" | "barista" | "frontdesk" | "cashier" | "pickup" | "stockcontrol";
+    role: string;
     isActive: boolean;
-    createdAt?: string | undefined;
-    updatedAt?: string | undefined;
-    pin?: string | null | undefined;
+    branchId?: number | null | undefined;
+    createdAt?: Date | undefined;
+    permissions?: string[] | undefined;
 }>;
-export type UserDetail = Infer<typeof api.UpdateUserResponse>;
+export type UserDetail = Infer<typeof UserDetail>;
 export declare const ActivityLog: z.ZodObject<{
     id: z.ZodNumber;
     userId: z.ZodNumber;

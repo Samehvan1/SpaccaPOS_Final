@@ -2,7 +2,7 @@ import "dotenv/config";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import { db, ingredientsTable, ingredientTypesTable, drinksTable, stockMovementsTable, ingredientOptionsTable, orderItemCustomizationsTable, orderItemsTable, ordersTable, drinkIngredientSlotsTable } from "../../lib/db/src/index.js";
+import { db, ingredientsTable, ingredientTypesTable, drinksTable, stockMovementsTable, ingredientOptionsTable, orderItemCustomizationsTable, orderItemsTable, ordersTable, drinkIngredientSlotsTable, branchStockTable } from "../../lib/db/src/index.js";
 import { eq, sql } from "drizzle-orm";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -93,15 +93,22 @@ async function main() {
         }
         usedSlugs.add(slug);
 
-        await tx.insert(ingredientsTable).values({
+        const [ingredient] = await tx.insert(ingredientsTable).values({
           name,
           slug,
           ingredientType: type,
           unit,
           costPerUnit: "0",
+          isActive: true
+        }).returning();
+
+        // For initial import, we can initialize branch stock for branch ID 1
+        await tx.insert(branchStockTable).values({
+          branchId: 1,
+          ingredientId: ingredient.id,
           stockQuantity: "0",
           lowStockThreshold: "100",
-          isActive: true
+          startupQuantity: "0"
         });
       }
     });

@@ -5,10 +5,14 @@
  * Spacca POS API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { UserBranch } from "./userBranch";
 import type { UserRole } from "./userRole";
 export interface User {
     id: number;
     name: string;
     role: UserRole;
+    /** @nullable */
+    branchId?: number | null;
+    branch?: UserBranch;
 }
 //# sourceMappingURL=user.d.ts.map

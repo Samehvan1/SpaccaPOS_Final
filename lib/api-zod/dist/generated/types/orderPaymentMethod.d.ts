@@ -10,5 +10,6 @@ export declare const OrderPaymentMethod: {
     readonly cash: "cash";
     readonly card: "card";
     readonly wallet: "wallet";
+    readonly hospitality: "hospitality";
 };
 //# sourceMappingURL=orderPaymentMethod.d.ts.map
