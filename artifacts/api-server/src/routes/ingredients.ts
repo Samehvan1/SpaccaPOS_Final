@@ -288,6 +288,13 @@ router.post("/ingredients", requirePermission("admin:manage_ingredients"), async
     return;
   }
 
+  // Check for duplicate name
+  const [existing] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.name, parsed.data.name)).limit(1);
+  if (existing) {
+    res.status(400).json({ error: `An inventory item with the name "${parsed.data.name}" already exists.` });
+    return;
+  }
+
   const slug = slugify(parsed.data.name);
 
   const [ingredient] = await db
@@ -364,6 +371,13 @@ router.patch("/ingredients/:id", requirePermission("admin:manage_ingredients"), 
   const stockUpdateData: Record<string, unknown> = {};
 
   if (parsed.data.name !== undefined) {
+    const [existing] = await db.select().from(ingredientsTable)
+      .where(and(eq(ingredientsTable.name, parsed.data.name), sql`id != ${params.data.id}`))
+      .limit(1);
+    if (existing) {
+      res.status(400).json({ error: `An inventory item with the name "${parsed.data.name}" already exists.` });
+      return;
+    }
     updateData.name = parsed.data.name;
     updateData.slug = slugify(parsed.data.name);
   }
@@ -470,6 +484,15 @@ router.post("/ingredients/:id/options", requirePermission("admin:manage_ingredie
   const parsed = CreateIngredientOptionBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  // Check for duplicate label within this ingredient
+  const [existing] = await db.select().from(ingredientOptionsTable)
+    .where(and(eq(ingredientOptionsTable.ingredientId, params.data.id), eq(ingredientOptionsTable.label, parsed.data.label)))
+    .limit(1);
+  if (existing) {
+    res.status(400).json({ error: `An option with the label "${parsed.data.label}" already exists for this ingredient.` });
     return;
   }
 

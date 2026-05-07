@@ -30,6 +30,11 @@ router.get("/catalog/categories", async (_req, res): Promise<void> => {
 router.post("/catalog/categories", requirePermission("admin:manage_catalog"), async (req, res): Promise<void> => {
   const { name, sortOrder } = req.body;
   if (!name) { res.status(400).json({ error: "name required" }); return; }
+
+  // Check duplicate
+  const [existing] = await db.select().from(ingredientCategoriesTable).where(eq(ingredientCategoriesTable.name, name)).limit(1);
+  if (existing) { res.status(400).json({ error: `A category with the name "${name}" already exists.` }); return; }
+
   const [row] = await db.insert(ingredientCategoriesTable).values({ name, sortOrder: sortOrder ?? 0 }).returning();
   globalCache.clear();
   res.status(201).json(row);
@@ -122,6 +127,10 @@ router.get("/catalog/types/:id", async (req, res): Promise<void> => {
 router.post("/catalog/types", requirePermission("admin:manage_catalog"), async (req, res): Promise<void> => {
   const { categoryId, name, inventoryIngredientId, processedQty, producedQty, unit, isActive, affectsCupSize, sortOrder, color, extraCost, pricingMode } = req.body;
   if (!categoryId || !name) { res.status(400).json({ error: "categoryId and name required" }); return; }
+
+  // Check duplicate
+  const [existing] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.name, name)).limit(1);
+  if (existing) { res.status(400).json({ error: `An ingredient type with the name "${name}" already exists.` }); return; }
   const [row] = await db.insert(ingredientTypesTable).values({ 
     categoryId, 
     name, 
@@ -264,6 +273,10 @@ router.get("/catalog/volumes", async (_req, res): Promise<void> => {
 router.post("/catalog/volumes", requirePermission("admin:manage_catalog"), async (req, res): Promise<void> => {
   const { name, processedQty, producedQty, unit, sortOrder } = req.body;
   if (!name) { res.status(400).json({ error: "name required" }); return; }
+
+  // Check duplicate
+  const [existing] = await db.select().from(ingredientVolumesTable).where(eq(ingredientVolumesTable.name, name)).limit(1);
+  if (existing) { res.status(400).json({ error: `A volume with the name "${name}" already exists.` }); return; }
   const [row] = await db.insert(ingredientVolumesTable).values({ name, processedQty: processedQty ?? "0", producedQty: producedQty ?? "0", unit: unit ?? "ml", sortOrder: sortOrder ?? 0 }).returning();
   res.status(201).json(row);
 });

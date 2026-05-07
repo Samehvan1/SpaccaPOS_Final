@@ -8,12 +8,15 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Plus, AlertTriangle, ArrowDownToLine, ArrowUpFromLine, PackageOpen, Download } from "lucide-react";
+import { ArrowLeft, Plus, AlertTriangle, ArrowDownToLine, ArrowUpFromLine, PackageOpen, Download, Check, ChevronsUpDown } from "lucide-react";
 import { Link } from "wouter";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
+import { cn } from "@/lib/utils";
 
 export default function StockAdmin() {
   const { selectedBranchId } = useAuth();
@@ -30,6 +33,7 @@ export default function StockAdmin() {
   const { toast } = useToast();
 
   const [isRestockOpen, setIsRestockOpen] = useState(false);
+  const [isIngredientOpen, setIsIngredientOpen] = useState(false);
   const [selectedIngredient, setSelectedIngredient] = useState<string>("");
   const [quantity, setQuantity] = useState("");
   const [note, setNote] = useState("");
@@ -194,14 +198,49 @@ export default function StockAdmin() {
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
                 <Label>Ingredient</Label>
-                <Select value={selectedIngredient} onValueChange={setSelectedIngredient}>
-                  <SelectTrigger><SelectValue placeholder="Select ingredient" /></SelectTrigger>
-                  <SelectContent>
-                    {ingredients?.map(ing => (
-                      <SelectItem key={ing.id} value={ing.id.toString()}>{ing.name} ({ing.unit})</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Popover open={isIngredientOpen} onOpenChange={setIsIngredientOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={isIngredientOpen}
+                      className="w-full justify-between"
+                    >
+                      {selectedIngredient
+                        ? ingredients?.find((ing) => ing.id.toString() === selectedIngredient)?.name + " (" + ingredients?.find((ing) => ing.id.toString() === selectedIngredient)?.unit + ")"
+                        : "Select ingredient..."}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[400px] p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Search ingredient..." />
+                      <CommandList>
+                        <CommandEmpty>No ingredient found.</CommandEmpty>
+                        <CommandGroup>
+                          {ingredients?.map((ing) => (
+                            <CommandItem
+                              key={ing.id}
+                              value={ing.name}
+                              onSelect={() => {
+                                setSelectedIngredient(ing.id.toString());
+                                setIsIngredientOpen(false);
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  selectedIngredient === ing.id.toString() ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              {ing.name} ({ing.unit})
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="qty">Quantity Added</Label>

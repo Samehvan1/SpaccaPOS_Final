@@ -92,17 +92,16 @@ export default function StockQuantitiesPage() {
           <label className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-1.5">
             <Coffee className="h-3 w-3" /> Drink
           </label>
-          <Select value={selectedDrinkId} onValueChange={setSelectedDrinkId}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select a drink" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">View All Ingredients</SelectItem>
-              {drinks.map((d: any) => (
-                <SelectItem key={d.id} value={String(d.id)}>{d.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            <Select onValueChange={setSelectedDrinkId} value={selectedDrinkId}>
+              <SelectTrigger className="w-[300px]">
+                <SelectValue placeholder="Select a drink..." />
+              </SelectTrigger>
+              <SelectContent>
+                {drinks.filter((d: any) => d.isActive).map((d: any) => (
+                  <SelectItem key={d.id} value={String(d.id)}>{d.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
         </div>
 
         <div className="md:col-span-2 space-y-2">

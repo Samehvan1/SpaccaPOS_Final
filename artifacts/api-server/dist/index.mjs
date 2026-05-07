@@ -81019,7 +81019,7 @@ async function buildDrinkDetail(drinkId, branchId) {
           }));
         }
       }
-      if (effectiveTypeOptions.length === 0 && !slot.predefinedSlotId && slot.ingredientTypeId) {
+      if (effectiveTypeOptions.length === 0 && slot.ingredientTypeId) {
         effectiveTypeOptions = [{
           id: 0,
           slotId: slot.id,
@@ -81636,14 +81636,18 @@ router3.get("/drinks/:id/stock-usage", requirePermission("catalog:view"), async 
     return;
   }
   const drinkId = idParsed.data.id;
-  const drinkDetail = await buildDrinkDetail(drinkId, req.session.branchId);
-  if (!drinkDetail) {
+  console.log(`[StockUsage-Debug] Fetching usage for drinkId: ${drinkId}`);
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
+  const drink = await db.select().from(drinksTable).where(eq(drinksTable.id, drinkId)).limit(1).then((r) => r[0]);
+  if (!drink) {
     res.status(404).json({ error: "Drink not found" });
     return;
   }
   const usage = [];
-  if (drinkDetail.cupIngredientId) {
-    const [ing] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, drinkDetail.cupIngredientId));
+  if (drink.cupIngredientId) {
+    const [ing] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, drink.cupIngredientId));
     if (ing) {
       usage.push({
         type: "cup",
@@ -81655,39 +81659,83 @@ router3.get("/drinks/:id/stock-usage", requirePermission("catalog:view"), async 
       });
     }
   }
-  for (const slot of drinkDetail.slots) {
-    if (slot.slotStyle === "legacy" && slot.ingredient) {
+  const slots = await db.select().from(drinkIngredientSlotsTable).where(eq(drinkIngredientSlotsTable.drinkId, drinkId));
+  console.log(`[StockUsage-Debug] Found ${slots.length} slots for drinkId ${drinkId}`);
+  for (const slot of slots) {
+    console.log(`***************************************************`);
+    console.log(`[DEBUG-TRACE] SLOT: "${slot.slotLabel}" (ID: ${slot.id})`);
+    console.log(`[DEBUG-TRACE]   - ingredientId: ${slot.ingredientId}`);
+    console.log(`[DEBUG-TRACE]   - ingredientTypeId: ${slot.ingredientTypeId}`);
+    console.log(`[DEBUG-TRACE]   - predefinedSlotId: ${slot.predefinedSlotId}`);
+    console.log(`[DEBUG-TRACE]   - defaultOptionId: ${slot.defaultOptionId}`);
+    const seenIngredients = /* @__PURE__ */ new Set();
+    const addUsage = (ing, type, label, qty) => {
+      console.log(`[DEBUG-TRACE]   !!! MATCH FOUND !!! -> ${ing.name} via ${type} (qty: ${qty})`);
+      if (seenIngredients.has(ing.id)) return;
+      seenIngredients.add(ing.id);
       usage.push({
-        type: "legacy",
-        slotLabel: slot.slotLabel,
-        ingredientId: slot.ingredient.id,
-        ingredientName: slot.ingredient.name,
-        unit: slot.ingredient.unit,
-        options: slot.ingredient.options?.map((o) => ({
-          label: o.label,
-          qty: o.processedQty
-        }))
+        type,
+        slotLabel: label,
+        ingredientId: ing.id,
+        ingredientName: ing.name,
+        unit: ing.unit,
+        qty
       });
-    } else if (slot.slotStyle === "typed" && slot.typeOptions) {
-      for (const to of slot.typeOptions) {
-        const [ingType] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, to.ingredientTypeId));
+    };
+    if (slot.ingredientId) {
+      const [ing] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, slot.ingredientId));
+      if (ing) addUsage(ing, "legacy", slot.slotLabel, 0);
+    }
+    if (slot.defaultOptionId) {
+      const [opt] = await db.select().from(ingredientOptionsTable).where(eq(ingredientOptionsTable.id, slot.defaultOptionId));
+      if (opt) {
+        const [ing] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, opt.ingredientId));
+        if (ing) addUsage(ing, "legacy-option", slot.slotLabel, Number(opt.processedQty || 0));
+      }
+    }
+    if (slot.ingredientTypeId) {
+      const [ingType] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, slot.ingredientTypeId));
+      if (ingType?.inventoryIngredientId) {
+        const [ing] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, ingType.inventoryIngredientId));
+        if (ing) addUsage(ing, "typed-catalog", slot.slotLabel, Number(ingType.processedQty || 0));
+      }
+    }
+    const typeOptions = await db.select().from(drinkSlotTypeOptionsTable).where(eq(drinkSlotTypeOptionsTable.slotId, slot.id));
+    for (const to of typeOptions) {
+      const [ingType] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, to.ingredientTypeId));
+      if (ingType?.inventoryIngredientId) {
+        const [ing] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, ingType.inventoryIngredientId));
+        if (ing) addUsage(ing, "typed-option", slot.slotLabel, Number(to.processedQty || ingType.processedQty || 0));
+      }
+    }
+    const slotVolumes = await db.select().from(drinkSlotVolumesTable).where(eq(drinkSlotVolumesTable.slotId, slot.id));
+    for (const sv of slotVolumes) {
+      const [typeVol] = await db.select().from(ingredientTypeVolumesTable).where(eq(ingredientTypeVolumesTable.id, sv.typeVolumeId));
+      if (typeVol) {
+        const [ingType] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, typeVol.ingredientTypeId));
         if (ingType?.inventoryIngredientId) {
           const [ing] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, ingType.inventoryIngredientId));
-          if (ing) {
-            usage.push({
-              type: "typed",
-              slotLabel: slot.slotLabel,
-              ingredientTypeId: to.ingredientTypeId,
-              typeName: to.typeName,
-              ingredientId: ing.id,
-              ingredientName: ing.name,
-              unit: ing.unit,
-              qty: to.processedQty,
-              volumes: to.volumes?.map((v) => ({
-                name: v.volumeName,
-                qty: v.processedQty
-              }))
-            });
+          if (ing) addUsage(ing, "typed-volume", slot.slotLabel, Number(sv.processedQty || typeVol.processedQty || 0));
+        }
+      }
+    }
+    if (slot.predefinedSlotId) {
+      const templateOptions = await db.select().from(predefinedSlotTypeOptionsTable).where(eq(predefinedSlotTypeOptionsTable.predefinedSlotId, slot.predefinedSlotId));
+      for (const tto of templateOptions) {
+        const [ingType] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, tto.ingredientTypeId));
+        if (ingType?.inventoryIngredientId) {
+          const [ing] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, ingType.inventoryIngredientId));
+          if (ing) addUsage(ing, "typed-template", slot.slotLabel + " (Template)", Number(tto.processedQty || ingType.processedQty || 0));
+        }
+      }
+      const templateVolumes = await db.select().from(predefinedSlotVolumesTable).where(eq(predefinedSlotVolumesTable.predefinedSlotId, slot.predefinedSlotId));
+      for (const tv of templateVolumes) {
+        const [typeVol] = await db.select().from(ingredientTypeVolumesTable).where(eq(ingredientTypeVolumesTable.id, tv.typeVolumeId));
+        if (typeVol) {
+          const [ingType] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, typeVol.ingredientTypeId));
+          if (ingType?.inventoryIngredientId) {
+            const [ing] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, ingType.inventoryIngredientId));
+            if (ing) addUsage(ing, "typed-template-vol", slot.slotLabel + " (Template)", Number(tv.processedQty || typeVol.processedQty || 0));
           }
         }
       }
