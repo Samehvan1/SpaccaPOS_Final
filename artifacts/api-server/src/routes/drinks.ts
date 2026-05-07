@@ -902,4 +902,76 @@ router.post("/drinks/:id/price", async (req, res): Promise<void> => {
     }
   }});
 
+// GET /drinks/:id/stock-usage — list all inventory items linked to this drink
+router.get("/drinks/:id/stock-usage", requirePermission("catalog:view"), async (req, res): Promise<void> => {
+  const idParsed = GetDrinkParams.safeParse(req.params);
+  if (!idParsed.success) { res.status(400).json({ error: idParsed.error.message }); return; }
+  const drinkId = idParsed.data.id;
+
+  const drinkDetail = await buildDrinkDetail(drinkId, (req.session as any).branchId);
+  if (!drinkDetail) {
+    res.status(404).json({ error: "Drink not found" });
+    return;
+  }
+
+  // Flatten all linked ingredients
+  const usage: any[] = [];
+  
+  if (drinkDetail.cupIngredientId) {
+    const [ing] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, drinkDetail.cupIngredientId));
+    if (ing) {
+      usage.push({
+        type: "cup",
+        slotLabel: "Cup",
+        ingredientId: ing.id,
+        ingredientName: ing.name,
+        unit: ing.unit,
+        qty: 1
+      });
+    }
+  }
+
+  for (const slot of drinkDetail.slots) {
+    if (slot.slotStyle === "legacy" && slot.ingredient) {
+      usage.push({
+        type: "legacy",
+        slotLabel: slot.slotLabel,
+        ingredientId: slot.ingredient.id,
+        ingredientName: slot.ingredient.name,
+        unit: slot.ingredient.unit,
+        options: slot.ingredient.options?.map((o: any) => ({
+          label: o.label,
+          qty: o.processedQty
+        }))
+      });
+    } else if (slot.slotStyle === "typed" && slot.typeOptions) {
+      for (const to of slot.typeOptions) {
+        // Find inventory item for this type
+        const [ingType] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, to.ingredientTypeId));
+        if (ingType?.inventoryIngredientId) {
+          const [ing] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, ingType.inventoryIngredientId));
+          if (ing) {
+            usage.push({
+              type: "typed",
+              slotLabel: slot.slotLabel,
+              ingredientTypeId: to.ingredientTypeId,
+              typeName: to.typeName,
+              ingredientId: ing.id,
+              ingredientName: ing.name,
+              unit: ing.unit,
+              qty: to.processedQty,
+              volumes: to.volumes?.map((v: any) => ({
+                name: v.volumeName,
+                qty: v.processedQty
+              }))
+            });
+          }
+        }
+      }
+    }
+  }
+
+  res.json(usage);
+});
+
 export default router;

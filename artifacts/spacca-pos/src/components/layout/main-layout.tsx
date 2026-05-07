@@ -260,6 +260,17 @@ export function MainLayout({ children }: MainLayoutProps) {
         { href: "/admin/finance/pl", label: "P&L Reports" },
       ]
     },
+    { 
+      href: "/admin/operations", 
+      label: "Operations", 
+      icon: ClipboardCheck, 
+      permission: "admin:view",
+      children: [
+        { href: "/admin/operations/cash-spot-check", label: "Cash spot check" },
+        { href: "/admin/operations/shift-report", label: "Shift Sales Report" },
+        { href: "/admin/operations/stock-quantities", label: "Stock quantities" },
+      ]
+    },
     { href: "/admin/stock-audits", label: "Stock Audits", icon: History, permission: "inventory:view" },
   ].filter(item => hasPermission(item.permission));
 

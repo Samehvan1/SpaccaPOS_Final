@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq, and, gte, lte, isNull, desc, sql, inArray } from "drizzle-orm";
-import { db, cashierSessionsTable, usersTable, ordersTable } from "@workspace/db";
+import { db, cashierSessionsTable, usersTable, ordersTable, orderItemsTable } from "@workspace/db";
 import { z } from "zod";
 
 const router: IRouter = Router();
@@ -185,6 +185,7 @@ router.get("/cashier/performance/:cashierId", requirePermission("cashier:view_re
   const cashRevenue = completedOrders.filter(o => o.paymentMethod === "cash").reduce((sum, o) => sum + parseFloat(o.total as any), 0);
   const cardRevenue = completedOrders.filter(o => o.paymentMethod === "card").reduce((sum, o) => sum + parseFloat(o.total as any), 0);
   const walletRevenue = completedOrders.filter(o => o.paymentMethod === "wallet").reduce((sum, o) => sum + parseFloat(o.total as any), 0);
+  const hospitalityRevenue = completedOrders.filter(o => o.paymentMethod === "hospitality").reduce((sum, o) => sum + parseFloat(o.total as any), 0);
 
   const [cashier] = await db
     .select({ id: usersTable.id, name: usersTable.name })
@@ -198,6 +199,7 @@ router.get("/cashier/performance/:cashierId", requirePermission("cashier:view_re
     cashRevenue,
     cardRevenue,
     walletRevenue,
+    hospitalityRevenue,
     avgOrderValue: completedOrders.length > 0 ? totalRevenue / completedOrders.length : 0,
   });
 });
@@ -286,6 +288,7 @@ router.get("/cashier/sessions/:id/performance", requirePermission("cashier:view_
   const cashRevenue = completedOrders.filter(o => o.paymentMethod === "cash").reduce((sum, o) => sum + parseFloat(o.total as any), 0);
   const cardRevenue = completedOrders.filter(o => o.paymentMethod === "card").reduce((sum, o) => sum + parseFloat(o.total as any), 0);
   const walletRevenue = completedOrders.filter(o => o.paymentMethod === "wallet").reduce((sum, o) => sum + parseFloat(o.total as any), 0);
+  const hospitalityRevenue = completedOrders.filter(o => o.paymentMethod === "hospitality").reduce((sum, o) => sum + parseFloat(o.total as any), 0);
 
   const [cashier] = await db
     .select({ name: usersTable.name })
@@ -301,6 +304,136 @@ router.get("/cashier/sessions/:id/performance", requirePermission("cashier:view_
     cashRevenue,
     cardRevenue,
     walletRevenue,
+    hospitalityRevenue,
+  });
+});
+
+// GET /cashier/sessions/:id/report — detailed report with stats and orders
+router.get("/cashier/sessions/:id/report", requirePermission("cashier:view_reports"), async (req, res): Promise<void> => {
+  const sessionId = parseInt(req.params.id as string);
+  if (isNaN(sessionId)) {
+    res.status(400).json({ error: "Invalid sessionId" });
+    return;
+  }
+
+  const [session] = await db
+    .select()
+    .from(cashierSessionsTable)
+    .where(eq(cashierSessionsTable.id, sessionId));
+
+  if (!session) {
+    res.status(404).json({ error: "Session not found" });
+    return;
+  }
+
+  const start = session.startedAt;
+  const end = session.endedAt || new Date();
+
+  // Fetch all orders in the session
+  const orders = await db
+    .select({
+      id: ordersTable.id,
+      orderNumber: ordersTable.orderNumber,
+      total: ordersTable.total,
+      paymentMethod: ordersTable.paymentMethod,
+      status: ordersTable.status,
+      createdAt: ordersTable.createdAt,
+      customerName: ordersTable.customerName,
+    })
+    .from(ordersTable)
+    .where(and(
+      eq(ordersTable.cashierId, session.cashierId),
+      gte(sql`COALESCE(${ordersTable.paidAt}, ${ordersTable.createdAt})`, start),
+      lte(sql`COALESCE(${ordersTable.paidAt}, ${ordersTable.createdAt})`, end)
+    ))
+    .orderBy(desc(ordersTable.createdAt));
+
+  const completedOrders = orders.filter(o => ["completed", "paid", "ready", "in_progress"].includes(o.status));
+  
+  // Main Totals
+  const totalRevenue = completedOrders.reduce((sum, o) => sum + parseFloat(o.total as any), 0);
+  const cashRevenue = completedOrders.filter(o => o.paymentMethod === "cash").reduce((sum, o) => sum + parseFloat(o.total as any), 0);
+  const cardRevenue = completedOrders.filter(o => o.paymentMethod === "card").reduce((sum, o) => sum + parseFloat(o.total as any), 0);
+  const walletRevenue = completedOrders.filter(o => o.paymentMethod === "wallet").reduce((sum, o) => sum + parseFloat(o.total as any), 0);
+  const hospitalityRevenue = completedOrders.filter(o => o.paymentMethod === "hospitality").reduce((sum, o) => sum + parseFloat(o.total as any), 0);
+
+  // Statistics: Top 5 Orders by Price
+  const topOrdersByPrice = [...completedOrders]
+    .sort((a, b) => parseFloat(b.total as any) - parseFloat(a.total as any))
+    .slice(0, 5);
+
+  // Statistics: Rush by Hour
+  const rushByHour: Record<number, number> = {};
+  for (const o of completedOrders) {
+    const hour = new Date(o.createdAt).getHours();
+    rushByHour[hour] = (rushByHour[hour] || 0) + 1;
+  }
+  const rushByHourList = Object.entries(rushByHour).map(([hour, count]) => ({
+    hour: parseInt(hour),
+    count
+  })).sort((a, b) => a.hour - b.hour);
+
+  // Statistics: Top 5 Drinks
+  // We need to fetch items for all completed orders
+  const orderIds = completedOrders.map(o => o.id);
+  let topDrinks: any[] = [];
+  if (orderIds.length > 0) {
+    const items = await db
+      .select({
+        drinkId: orderItemsTable.drinkId,
+        drinkName: orderItemsTable.drinkName,
+        quantity: orderItemsTable.quantity,
+      })
+      .from(orderItemsTable)
+      .where(inArray(orderItemsTable.orderId, orderIds));
+
+    const drinkStats: Record<number, { name: string; count: number }> = {};
+    for (const item of items) {
+      if (!drinkStats[item.drinkId]) {
+        drinkStats[item.drinkId] = { name: item.drinkName, count: 0 };
+      }
+      drinkStats[item.drinkId].count += item.quantity;
+    }
+
+    topDrinks = Object.entries(drinkStats)
+      .map(([id, stats]) => ({
+        id: parseInt(id),
+        name: stats.name,
+        count: stats.count
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+  }
+
+  const [cashier] = await db
+    .select({ name: usersTable.name })
+    .from(usersTable)
+    .where(eq(usersTable.id, session.cashierId));
+
+  res.json({
+    session: {
+      id: session.id,
+      cashierName: cashier?.name ?? "Unknown",
+      startedAt: session.startedAt,
+      endedAt: session.endedAt,
+    },
+    totals: {
+      totalRevenue,
+      cashRevenue,
+      cardRevenue,
+      walletRevenue,
+      hospitalityRevenue,
+      orderCount: completedOrders.length,
+    },
+    statistics: {
+      topDrinks,
+      topOrdersByPrice,
+      rushByHour: rushByHourList,
+    },
+    orders: orders.map(o => ({
+      ...o,
+      total: parseFloat(o.total as any)
+    }))
   });
 });
 

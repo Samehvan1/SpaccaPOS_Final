@@ -81629,6 +81629,72 @@ router3.post("/drinks/:id/price", async (req, res) => {
     }
   }
 });
+router3.get("/drinks/:id/stock-usage", requirePermission("catalog:view"), async (req, res) => {
+  const idParsed = GetDrinkParams2.safeParse(req.params);
+  if (!idParsed.success) {
+    res.status(400).json({ error: idParsed.error.message });
+    return;
+  }
+  const drinkId = idParsed.data.id;
+  const drinkDetail = await buildDrinkDetail(drinkId, req.session.branchId);
+  if (!drinkDetail) {
+    res.status(404).json({ error: "Drink not found" });
+    return;
+  }
+  const usage = [];
+  if (drinkDetail.cupIngredientId) {
+    const [ing] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, drinkDetail.cupIngredientId));
+    if (ing) {
+      usage.push({
+        type: "cup",
+        slotLabel: "Cup",
+        ingredientId: ing.id,
+        ingredientName: ing.name,
+        unit: ing.unit,
+        qty: 1
+      });
+    }
+  }
+  for (const slot of drinkDetail.slots) {
+    if (slot.slotStyle === "legacy" && slot.ingredient) {
+      usage.push({
+        type: "legacy",
+        slotLabel: slot.slotLabel,
+        ingredientId: slot.ingredient.id,
+        ingredientName: slot.ingredient.name,
+        unit: slot.ingredient.unit,
+        options: slot.ingredient.options?.map((o) => ({
+          label: o.label,
+          qty: o.processedQty
+        }))
+      });
+    } else if (slot.slotStyle === "typed" && slot.typeOptions) {
+      for (const to of slot.typeOptions) {
+        const [ingType] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, to.ingredientTypeId));
+        if (ingType?.inventoryIngredientId) {
+          const [ing] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, ingType.inventoryIngredientId));
+          if (ing) {
+            usage.push({
+              type: "typed",
+              slotLabel: slot.slotLabel,
+              ingredientTypeId: to.ingredientTypeId,
+              typeName: to.typeName,
+              ingredientId: ing.id,
+              ingredientName: ing.name,
+              unit: ing.unit,
+              qty: to.processedQty,
+              volumes: to.volumes?.map((v) => ({
+                name: v.volumeName,
+                qty: v.processedQty
+              }))
+            });
+          }
+        }
+      }
+    }
+  }
+  res.json(usage);
+});
 var drinks_default = router3;
 
 // src/routes/ingredients.ts
@@ -82859,7 +82925,6 @@ router7.get("/dashboard/active-orders", async (req, res) => {
       lineTotal: parseFloat(i.lineTotal),
       customizations: customizationsByItemId[i.id] ?? []
     });
-    console.log(`[KDS-Server-Debug] Order: ${i.orderId}, Item: ${i.drinkName}, Station: ${i.kitchenStation}, StationID: ${i.kitchenStationId}`);
     return acc;
   }, {});
   const ordersWithDetails = activeOrders.map((order) => ({
@@ -84246,6 +84311,7 @@ router15.get("/cashier/performance/:cashierId", requirePermission("cashier:view_
   const cashRevenue = completedOrders.filter((o) => o.paymentMethod === "cash").reduce((sum2, o) => sum2 + parseFloat(o.total), 0);
   const cardRevenue = completedOrders.filter((o) => o.paymentMethod === "card").reduce((sum2, o) => sum2 + parseFloat(o.total), 0);
   const walletRevenue = completedOrders.filter((o) => o.paymentMethod === "wallet").reduce((sum2, o) => sum2 + parseFloat(o.total), 0);
+  const hospitalityRevenue = completedOrders.filter((o) => o.paymentMethod === "hospitality").reduce((sum2, o) => sum2 + parseFloat(o.total), 0);
   const [cashier] = await db.select({ id: usersTable.id, name: usersTable.name }).from(usersTable).where(eq(usersTable.id, cashierId));
   res.json({
     cashier: cashier ?? null,
@@ -84254,6 +84320,7 @@ router15.get("/cashier/performance/:cashierId", requirePermission("cashier:view_
     cashRevenue,
     cardRevenue,
     walletRevenue,
+    hospitalityRevenue,
     avgOrderValue: completedOrders.length > 0 ? totalRevenue / completedOrders.length : 0
   });
 });
@@ -84307,6 +84374,7 @@ router15.get("/cashier/sessions/:id/performance", requirePermission("cashier:vie
   const cashRevenue = completedOrders.filter((o) => o.paymentMethod === "cash").reduce((sum2, o) => sum2 + parseFloat(o.total), 0);
   const cardRevenue = completedOrders.filter((o) => o.paymentMethod === "card").reduce((sum2, o) => sum2 + parseFloat(o.total), 0);
   const walletRevenue = completedOrders.filter((o) => o.paymentMethod === "wallet").reduce((sum2, o) => sum2 + parseFloat(o.total), 0);
+  const hospitalityRevenue = completedOrders.filter((o) => o.paymentMethod === "hospitality").reduce((sum2, o) => sum2 + parseFloat(o.total), 0);
   const [cashier] = await db.select({ name: usersTable.name }).from(usersTable).where(eq(usersTable.id, session2.cashierId));
   res.json({
     cashierName: cashier?.name ?? "Unknown",
@@ -84316,7 +84384,98 @@ router15.get("/cashier/sessions/:id/performance", requirePermission("cashier:vie
     totalRevenue,
     cashRevenue,
     cardRevenue,
-    walletRevenue
+    walletRevenue,
+    hospitalityRevenue
+  });
+});
+router15.get("/cashier/sessions/:id/report", requirePermission("cashier:view_reports"), async (req, res) => {
+  const sessionId = parseInt(req.params.id);
+  if (isNaN(sessionId)) {
+    res.status(400).json({ error: "Invalid sessionId" });
+    return;
+  }
+  const [session2] = await db.select().from(cashierSessionsTable).where(eq(cashierSessionsTable.id, sessionId));
+  if (!session2) {
+    res.status(404).json({ error: "Session not found" });
+    return;
+  }
+  const start = session2.startedAt;
+  const end = session2.endedAt || /* @__PURE__ */ new Date();
+  const orders = await db.select({
+    id: ordersTable.id,
+    orderNumber: ordersTable.orderNumber,
+    total: ordersTable.total,
+    paymentMethod: ordersTable.paymentMethod,
+    status: ordersTable.status,
+    createdAt: ordersTable.createdAt,
+    customerName: ordersTable.customerName
+  }).from(ordersTable).where(and(
+    eq(ordersTable.cashierId, session2.cashierId),
+    gte(sql`COALESCE(${ordersTable.paidAt}, ${ordersTable.createdAt})`, start),
+    lte(sql`COALESCE(${ordersTable.paidAt}, ${ordersTable.createdAt})`, end)
+  )).orderBy(desc(ordersTable.createdAt));
+  const completedOrders = orders.filter((o) => ["completed", "paid", "ready", "in_progress"].includes(o.status));
+  const totalRevenue = completedOrders.reduce((sum2, o) => sum2 + parseFloat(o.total), 0);
+  const cashRevenue = completedOrders.filter((o) => o.paymentMethod === "cash").reduce((sum2, o) => sum2 + parseFloat(o.total), 0);
+  const cardRevenue = completedOrders.filter((o) => o.paymentMethod === "card").reduce((sum2, o) => sum2 + parseFloat(o.total), 0);
+  const walletRevenue = completedOrders.filter((o) => o.paymentMethod === "wallet").reduce((sum2, o) => sum2 + parseFloat(o.total), 0);
+  const hospitalityRevenue = completedOrders.filter((o) => o.paymentMethod === "hospitality").reduce((sum2, o) => sum2 + parseFloat(o.total), 0);
+  const topOrdersByPrice = [...completedOrders].sort((a, b) => parseFloat(b.total) - parseFloat(a.total)).slice(0, 5);
+  const rushByHour = {};
+  for (const o of completedOrders) {
+    const hour = new Date(o.createdAt).getHours();
+    rushByHour[hour] = (rushByHour[hour] || 0) + 1;
+  }
+  const rushByHourList = Object.entries(rushByHour).map(([hour, count2]) => ({
+    hour: parseInt(hour),
+    count: count2
+  })).sort((a, b) => a.hour - b.hour);
+  const orderIds = completedOrders.map((o) => o.id);
+  let topDrinks = [];
+  if (orderIds.length > 0) {
+    const items = await db.select({
+      drinkId: orderItemsTable.drinkId,
+      drinkName: orderItemsTable.drinkName,
+      quantity: orderItemsTable.quantity
+    }).from(orderItemsTable).where(inArray(orderItemsTable.orderId, orderIds));
+    const drinkStats = {};
+    for (const item of items) {
+      if (!drinkStats[item.drinkId]) {
+        drinkStats[item.drinkId] = { name: item.drinkName, count: 0 };
+      }
+      drinkStats[item.drinkId].count += item.quantity;
+    }
+    topDrinks = Object.entries(drinkStats).map(([id, stats]) => ({
+      id: parseInt(id),
+      name: stats.name,
+      count: stats.count
+    })).sort((a, b) => b.count - a.count).slice(0, 5);
+  }
+  const [cashier] = await db.select({ name: usersTable.name }).from(usersTable).where(eq(usersTable.id, session2.cashierId));
+  res.json({
+    session: {
+      id: session2.id,
+      cashierName: cashier?.name ?? "Unknown",
+      startedAt: session2.startedAt,
+      endedAt: session2.endedAt
+    },
+    totals: {
+      totalRevenue,
+      cashRevenue,
+      cardRevenue,
+      walletRevenue,
+      hospitalityRevenue,
+      orderCount: completedOrders.length
+    },
+    statistics: {
+      topDrinks,
+      topOrdersByPrice,
+      rushByHour: rushByHourList
+    },
+    orders: orders.map((o) => ({
+      ...o,
+      total: parseFloat(o.total)
+    }))
   });
 });
 var cashier_sessions_default = router15;
