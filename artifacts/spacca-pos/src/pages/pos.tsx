@@ -448,7 +448,7 @@ export default function PosTerminal() {
   // Checkout
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [customerName, setCustomerName] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState<"cash" | "card" | "wallet" | "hospitality">("card");
+  const [paymentMethod, setPaymentMethod] = useState<"cash" | "card" | "wallet" | "hospitality">("cash");
   const [adminPin, setAdminPin] = useState("");
   const [amountTendered, setAmountTendered] = useState("");
 
@@ -484,6 +484,8 @@ export default function PosTerminal() {
         setIsCheckoutOpen(false);
         setCustomerName("");
         setAmountTendered("");
+        setPaymentMethod("cash");
+        setAdminPin("");
       },
       onError: () => {
         toast({ variant: "destructive", title: "Error", description: "Failed to create order." });

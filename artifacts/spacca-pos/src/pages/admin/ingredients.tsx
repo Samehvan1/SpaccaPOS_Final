@@ -579,7 +579,7 @@ function TypesTab({ inventoryItems }: { inventoryItems: Ingredient[] }) {
                 <PopoverContent className="w-[300px] p-0" align="start">
                   <Command>
                     <CommandInput placeholder="Search inventory item..." />
-                    <CommandList>
+                    <CommandList className="max-h-[300px] overflow-y-auto">
                       <CommandEmpty>No item found.</CommandEmpty>
                       <CommandGroup>
                         <CommandItem

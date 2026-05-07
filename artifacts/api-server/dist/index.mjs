@@ -28,11 +28,11 @@ var __export = (target, all) => {
   for (var name in all)
     __defProp(target, name, { get: all[name], enumerable: true });
 };
-var __copyProps = (to, from, except2, desc3) => {
+var __copyProps = (to, from, except2, desc2) => {
   if (from && typeof from === "object" || typeof from === "function") {
     for (let key of __getOwnPropNames(from))
       if (!__hasOwnProp.call(to, key) && key !== except2)
-        __defProp(to, key, { get: () => from[key], enumerable: !(desc3 = __getOwnPropDesc(from, key)) || desc3.enumerable });
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc2 = __getOwnPropDesc(from, key)) || desc2.enumerable });
   }
   return to;
 };
@@ -1673,10 +1673,10 @@ var require_http_errors = __commonJS({
       return ServerError;
     }
     function nameFunc(func, name) {
-      var desc3 = Object.getOwnPropertyDescriptor(func, "name");
-      if (desc3 && desc3.configurable) {
-        desc3.value = name;
-        Object.defineProperty(func, "name", desc3);
+      var desc2 = Object.getOwnPropertyDescriptor(func, "name");
+      if (desc2 && desc2.configurable) {
+        desc2.value = name;
+        Object.defineProperty(func, "name", desc2);
       }
     }
     function populateConstructorExports(exports2, codes, HttpError) {
@@ -17121,14 +17121,14 @@ var require_get = __commonJS({
         throw e;
       }
     }
-    var desc3 = !!hasProtoAccessor && gOPD && gOPD(
+    var desc2 = !!hasProtoAccessor && gOPD && gOPD(
       Object.prototype,
       /** @type {keyof typeof Object.prototype} */
       "__proto__"
     );
     var $Object = Object;
     var $getPrototypeOf = $Object.getPrototypeOf;
-    module.exports = desc3 && typeof desc3.get === "function" ? callBind([desc3.get]) : typeof $getPrototypeOf === "function" ? (
+    module.exports = desc2 && typeof desc2.get === "function" ? callBind([desc2.get]) : typeof $getPrototypeOf === "function" ? (
       /** @type {import('./get')} */
       function getDunder(value) {
         return $getPrototypeOf(value == null ? value : $Object(value));
@@ -17478,10 +17478,10 @@ var require_get_intrinsic = __commonJS({
             return void undefined2;
           }
           if ($gOPD && i + 1 >= parts.length) {
-            var desc3 = $gOPD(value, part);
-            isOwn = !!desc3;
-            if (isOwn && "get" in desc3 && !("originalValue" in desc3.get)) {
-              value = desc3.get;
+            var desc2 = $gOPD(value, part);
+            isOwn = !!desc2;
+            if (isOwn && "get" in desc2 && !("originalValue" in desc2.get)) {
+              value = desc2.get;
             } else {
               value = value[part];
             }
@@ -32079,12 +32079,12 @@ var require_result = __commonJS({
         }
         const row = {};
         for (let i = 0; i < fieldDescriptions.length; i++) {
-          const desc3 = fieldDescriptions[i];
-          row[desc3.name] = null;
+          const desc2 = fieldDescriptions[i];
+          row[desc2.name] = null;
           if (this._types) {
-            this._parsers[i] = this._types.getTypeParser(desc3.dataTypeID, desc3.format || "text");
+            this._parsers[i] = this._types.getTypeParser(desc2.dataTypeID, desc2.format || "text");
           } else {
-            this._parsers[i] = types3.getTypeParser(desc3.dataTypeID, desc3.format || "text");
+            this._parsers[i] = types3.getTypeParser(desc2.dataTypeID, desc2.format || "text");
           }
         }
         this._prebuiltEmptyResultObject = { ...row };
@@ -72545,16 +72545,16 @@ var require_typedarray = __commonJS({
     })()) {
       defineProp = Object.defineProperty;
     } else {
-      defineProp = function(o, p, desc3) {
+      defineProp = function(o, p, desc2) {
         if (!o === Object(o)) throw new TypeError("Object.defineProperty called on non-object");
-        if (ECMAScript.HasProperty(desc3, "get") && Object.prototype.__defineGetter__) {
-          Object.prototype.__defineGetter__.call(o, p, desc3.get);
+        if (ECMAScript.HasProperty(desc2, "get") && Object.prototype.__defineGetter__) {
+          Object.prototype.__defineGetter__.call(o, p, desc2.get);
         }
-        if (ECMAScript.HasProperty(desc3, "set") && Object.prototype.__defineSetter__) {
-          Object.prototype.__defineSetter__.call(o, p, desc3.set);
+        if (ECMAScript.HasProperty(desc2, "set") && Object.prototype.__defineSetter__) {
+          Object.prototype.__defineSetter__.call(o, p, desc2.set);
         }
-        if (ECMAScript.HasProperty(desc3, "value")) {
-          o[p] = desc3.value;
+        if (ECMAScript.HasProperty(desc2, "value")) {
+          o[p] = desc2.value;
         }
         return o;
       };
@@ -80403,6 +80403,7 @@ router2.post("/auth/login", async (req, res) => {
   }
   req.session.userId = result.user.id;
   req.session.branchId = result.user.branchId;
+  req.session.role = result.user.role;
   await db.insert(activityLogsTable).values({
     userId: result.user.id,
     action: "LOGIN",
@@ -80487,6 +80488,7 @@ router2.post("/auth/emergency-login", async (req, res) => {
     return;
   }
   req.session.userId = user.id;
+  req.session.role = user.role;
   req.session.save(() => res.json({ success: true }));
 });
 var auth_default = router2;
@@ -81260,6 +81262,11 @@ router3.post("/drinks", requirePermission("admin:manage_drinks"), async (req, re
   }
   const { slots: slotDefs } = parsed.data;
   const drinkData = parsed.data;
+  const [existingDrink] = await db.select().from(drinksTable).where(eq(drinksTable.name, drinkData.name)).limit(1);
+  if (existingDrink) {
+    res.status(400).json({ error: `A drink with the name "${drinkData.name}" already exists.` });
+    return;
+  }
   let categoryName = drinkData.category;
   if (drinkData.categoryId) {
     const [cat] = await db.select({ name: drinkCategoriesTable.name }).from(drinkCategoriesTable).where(eq(drinkCategoriesTable.id, drinkData.categoryId));
@@ -81325,7 +81332,14 @@ router3.patch("/drinks/:id", requirePermission("admin:manage_drinks"), async (re
     return;
   }
   const updateData = {};
-  if (parsed.data.name !== void 0) updateData.name = parsed.data.name;
+  if (parsed.data.name !== void 0) {
+    const [existing] = await db.select().from(drinksTable).where(and(eq(drinksTable.name, parsed.data.name), sql`id != ${params.data.id}`)).limit(1);
+    if (existing) {
+      res.status(400).json({ error: `A drink with the name "${parsed.data.name}" already exists.` });
+      return;
+    }
+    updateData.name = parsed.data.name;
+  }
   if (parsed.data.description !== void 0) updateData.description = parsed.data.description;
   if (parsed.data.categoryId !== void 0) {
     const catId = parsed.data.categoryId;
@@ -81645,6 +81659,11 @@ router3.get("/drinks/:id/stock-usage", requirePermission("catalog:view"), async 
     res.status(404).json({ error: "Drink not found" });
     return;
   }
+  const duplicates = await db.select().from(drinksTable).where(eq(drinksTable.name, drink.name));
+  if (duplicates.length > 1) {
+    console.warn(`[DEBUG-TRACE] WARNING: Found ${duplicates.length} drinks with name "${drink.name}". IDs: ${duplicates.map((d) => d.id).join(", ")}`);
+  }
+  console.log(`[DEBUG-TRACE] DRINK NAME: "${drink.name}" (ID: ${drink.id})`);
   const usage = [];
   if (drink.cupIngredientId) {
     const [ing] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, drink.cupIngredientId));
@@ -81957,6 +81976,11 @@ router4.post("/ingredients", requirePermission("admin:manage_ingredients"), asyn
     res.status(400).json({ error: "No branch associated with session" });
     return;
   }
+  const [existing] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.name, parsed.data.name)).limit(1);
+  if (existing) {
+    res.status(400).json({ error: `An inventory item with the name "${parsed.data.name}" already exists.` });
+    return;
+  }
   const slug = slugify(parsed.data.name);
   const [ingredient] = await db.insert(ingredientsTable).values({
     name: parsed.data.name,
@@ -82014,6 +82038,11 @@ router4.patch("/ingredients/:id", requirePermission("admin:manage_ingredients"),
   const updateData = {};
   const stockUpdateData = {};
   if (parsed.data.name !== void 0) {
+    const [existing] = await db.select().from(ingredientsTable).where(and(eq(ingredientsTable.name, parsed.data.name), sql`id != ${params.data.id}`)).limit(1);
+    if (existing) {
+      res.status(400).json({ error: `An inventory item with the name "${parsed.data.name}" already exists.` });
+      return;
+    }
     updateData.name = parsed.data.name;
     updateData.slug = slugify(parsed.data.name);
   }
@@ -82087,6 +82116,11 @@ router4.post("/ingredients/:id/options", requirePermission("admin:manage_ingredi
   const parsed = CreateIngredientOptionBody2.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+  const [existing] = await db.select().from(ingredientOptionsTable).where(and(eq(ingredientOptionsTable.ingredientId, params.data.id), eq(ingredientOptionsTable.label, parsed.data.label))).limit(1);
+  if (existing) {
+    res.status(400).json({ error: `An option with the label "${parsed.data.label}" already exists for this ingredient.` });
     return;
   }
   const [option] = await db.insert(ingredientOptionsTable).values({
@@ -83198,6 +83232,11 @@ router8.post("/catalog/categories", requirePermission("admin:manage_catalog"), a
     res.status(400).json({ error: "name required" });
     return;
   }
+  const [existing] = await db.select().from(ingredientCategoriesTable).where(eq(ingredientCategoriesTable.name, name)).limit(1);
+  if (existing) {
+    res.status(400).json({ error: `A category with the name "${name}" already exists.` });
+    return;
+  }
   const [row] = await db.insert(ingredientCategoriesTable).values({ name, sortOrder: sortOrder ?? 0 }).returning();
   globalCache.clear();
   res.status(201).json(row);
@@ -83276,6 +83315,11 @@ router8.post("/catalog/types", requirePermission("admin:manage_catalog"), async 
   const { categoryId, name, inventoryIngredientId, processedQty, producedQty, unit, isActive, affectsCupSize, sortOrder, color, extraCost, pricingMode } = req.body;
   if (!categoryId || !name) {
     res.status(400).json({ error: "categoryId and name required" });
+    return;
+  }
+  const [existing] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.name, name)).limit(1);
+  if (existing) {
+    res.status(400).json({ error: `An ingredient type with the name "${name}" already exists.` });
     return;
   }
   const [row] = await db.insert(ingredientTypesTable).values({
@@ -83413,6 +83457,11 @@ router8.post("/catalog/volumes", requirePermission("admin:manage_catalog"), asyn
   const { name, processedQty, producedQty, unit, sortOrder } = req.body;
   if (!name) {
     res.status(400).json({ error: "name required" });
+    return;
+  }
+  const [existing] = await db.select().from(ingredientVolumesTable).where(eq(ingredientVolumesTable.name, name)).limit(1);
+  if (existing) {
+    res.status(400).json({ error: `A volume with the name "${name}" already exists.` });
     return;
   }
   const [row] = await db.insert(ingredientVolumesTable).values({ name, processedQty: processedQty ?? "0", producedQty: producedQty ?? "0", unit: unit ?? "ml", sortOrder: sortOrder ?? 0 }).returning();
@@ -84316,7 +84365,20 @@ router15.post("/cashier/end-session", requirePermission("cashier:close_session")
   });
 });
 router15.get("/cashier/active", async (req, res) => {
-  const sessionId = req.session.cashierSessionId;
+  let sessionId = req.session.cashierSessionId;
+  let userRole = req.session.role;
+  const userId = req.session.userId;
+  if (!userRole && userId) {
+    const [user] = await db.select({ role: usersTable.role }).from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+    if (user) {
+      userRole = user.role;
+      req.session.role = userRole;
+    }
+  }
+  if (!sessionId && userRole === "admin") {
+    const [latestOpen] = await db.select().from(cashierSessionsTable).where(isNull(cashierSessionsTable.endedAt)).orderBy(desc(cashierSessionsTable.startedAt)).limit(1);
+    if (latestOpen) sessionId = latestOpen.id;
+  }
   if (!sessionId) {
     res.json(null);
     return;
@@ -84499,6 +84561,26 @@ router15.get("/cashier/sessions/:id/report", requirePermission("cashier:view_rep
       count: stats.count
     })).sort((a, b) => b.count - a.count).slice(0, 5);
   }
+  const statistics = {
+    topDrinks,
+    topOrdersByPrice,
+    rushByHour: rushByHourList,
+    categorySales: []
+  };
+  if (orderIds.length > 0) {
+    const categoryStats = await db.select({
+      categoryId: drinkCategoriesTable.id,
+      categoryName: drinkCategoriesTable.name,
+      quantity: sql`sum(${orderItemsTable.quantity})`,
+      totalSales: sql`sum(${orderItemsTable.lineTotal})`
+    }).from(orderItemsTable).innerJoin(drinksTable, eq(orderItemsTable.drinkId, drinksTable.id)).innerJoin(drinkCategoriesTable, eq(drinksTable.categoryId, drinkCategoriesTable.id)).where(inArray(orderItemsTable.orderId, orderIds)).groupBy(drinkCategoriesTable.id, drinkCategoriesTable.name);
+    statistics.categorySales = categoryStats.map((c) => ({
+      id: c.categoryId,
+      name: c.categoryName,
+      quantity: Number(c.quantity),
+      total: Number(c.totalSales)
+    }));
+  }
   const [cashier] = await db.select({ name: usersTable.name }).from(usersTable).where(eq(usersTable.id, session2.cashierId));
   res.json({
     session: {
@@ -84515,11 +84597,7 @@ router15.get("/cashier/sessions/:id/report", requirePermission("cashier:view_rep
       hospitalityRevenue,
       orderCount: completedOrders.length
     },
-    statistics: {
-      topDrinks,
-      topOrdersByPrice,
-      rushByHour: rushByHourList
-    },
+    statistics,
     orders: orders.map((o) => ({
       ...o,
       total: parseFloat(o.total)
@@ -85003,6 +85081,92 @@ var branches_default = router17;
 var import_express21 = __toESM(require_express2(), 1);
 init_drizzle_orm();
 init_src();
+
+// src/lib/recipe-utils.ts
+init_src();
+init_drizzle_orm();
+async function getRecipeContext(drinkIds) {
+  if (drinkIds.length === 0) {
+    return { slots: [], options: [], slotVolumes: [], ingredientOptions: [], volumes: [], types: [], typeVolumes: [] };
+  }
+  const [slots, options, slotVolumes, ingredientOptions, volumes, types3, typeVolumes] = await Promise.all([
+    db.select().from(drinkIngredientSlotsTable).where(inArray(drinkIngredientSlotsTable.drinkId, drinkIds)),
+    db.select().from(drinkSlotTypeOptionsTable).where(inArray(drinkSlotTypeOptionsTable.slotId, db.select({ id: drinkIngredientSlotsTable.id }).from(drinkIngredientSlotsTable).where(inArray(drinkIngredientSlotsTable.drinkId, drinkIds)))),
+    db.select().from(drinkSlotVolumesTable).where(inArray(drinkSlotVolumesTable.slotId, db.select({ id: drinkIngredientSlotsTable.id }).from(drinkIngredientSlotsTable).where(inArray(drinkIngredientSlotsTable.drinkId, drinkIds)))),
+    db.select().from(ingredientOptionsTable),
+    db.select().from(ingredientVolumesTable),
+    db.select().from(ingredientTypesTable),
+    db.select().from(ingredientTypeVolumesTable)
+  ]);
+  return { slots, options, slotVolumes, ingredientOptions, volumes, types: types3, typeVolumes };
+}
+function analyzeCustomization(cust, context) {
+  const { slots, options, slotVolumes, ingredientOptions, volumes, types: types3, typeVolumes } = context;
+  const currentLabel = cust.optionLabel || cust.ingredientName || "None";
+  const drinkSlots = slots.filter((s) => s.drinkId === cust.drinkId);
+  const matchingSlot = drinkSlots.find((s) => s.slotLabel === cust.slotLabel);
+  const slotL = (cust.slotLabel || "").toLowerCase();
+  const optL = currentLabel.toLowerCase();
+  if (slotL.includes("cup") || slotL.includes("pack") || optL.includes("cup") || optL.includes("pack")) return null;
+  if (!matchingSlot) {
+    return {
+      ...cust,
+      defaultLabel: "None",
+      replacementLabel: `${cust.slotLabel}: ${currentLabel}`
+    };
+  }
+  if (matchingSlot.isDynamic) return null;
+  const slotOptionsCount = options.filter((o) => o.slotId === matchingSlot.id).length;
+  const slotVolumesCount = slotVolumes.filter((v) => v.slotId === matchingSlot.id && v.isEnabled).length;
+  if (slotOptionsCount <= 1 && slotVolumesCount <= 1 && matchingSlot.ingredientId) return null;
+  if (slotOptionsCount === 1 && slotVolumesCount === 0 || slotOptionsCount === 0 && slotVolumesCount === 1) return null;
+  let recipeDefault = "None";
+  if (matchingSlot.defaultOptionId) {
+    const defOpt = ingredientOptions.find((o) => o.id === matchingSlot.defaultOptionId);
+    if (defOpt) recipeDefault = defOpt.label;
+  } else {
+    const defVol = slotVolumes.find((v) => v.slotId === matchingSlot.id && v.isDefault);
+    if (defVol) {
+      const tv = typeVolumes.find((t) => t.id === defVol.typeVolumeId);
+      if (tv) {
+        const v = volumes.find((vol) => vol.id === tv.volumeId);
+        const t = types3.find((typ) => typ.id === tv.ingredientTypeId);
+        recipeDefault = `${t?.name || ""} . ${v?.name || ""}`.trim();
+        if (recipeDefault.endsWith(".")) recipeDefault = recipeDefault.slice(0, -2).trim();
+        if (recipeDefault.startsWith(".")) recipeDefault = recipeDefault.slice(1).trim();
+      }
+    } else {
+      const defType = options.find((o) => o.slotId === matchingSlot.id && o.isDefault);
+      if (defType) {
+        const t = types3.find((typ) => typ.id === defType.ingredientTypeId);
+        recipeDefault = t?.name || "None";
+      }
+    }
+  }
+  const normalize = (s) => (s || "").toLowerCase().replace(/\(.*\)/g, "").replace(/[\s\-\·\.\,]/g, "");
+  if (normalize(recipeDefault) === normalize(currentLabel)) return null;
+  let isMatch = false;
+  if (matchingSlot.defaultOptionId !== null || cust.optionId !== null) {
+    if (matchingSlot.defaultOptionId === cust.optionId) isMatch = true;
+  } else if (matchingSlot.ingredientId !== null || cust.ingredientId !== null) {
+    if (matchingSlot.ingredientId === cust.ingredientId) isMatch = true;
+  } else {
+    const defaultVol = slotVolumes.find((v) => v.slotId === matchingSlot.id && v.isDefault);
+    if (defaultVol) {
+      if (defaultVol.typeVolumeId === cust.typeVolumeId) isMatch = true;
+    } else if (!cust.typeVolumeId || normalize(currentLabel) === "none") {
+      isMatch = true;
+    }
+  }
+  if (isMatch) return null;
+  return {
+    ...cust,
+    defaultLabel: `${matchingSlot.slotLabel}: ${recipeDefault}`,
+    replacementLabel: `${matchingSlot.slotLabel}: ${currentLabel}`
+  };
+}
+
+// src/routes/finance.ts
 var router18 = (0, import_express21.Router)();
 router18.get("/finance/inventory-usage", requirePermission("reports:view"), async (req, res) => {
   const { startDate, endDate, branchId } = req.query;
@@ -85228,6 +85392,120 @@ router18.get("/finance/ingredient-recipes", requirePermission("reports:view"), a
     };
   });
   res.json(report);
+});
+router18.get("/finance/sales-items", requirePermission("reports:view"), async (req, res) => {
+  const { startDate, endDate, branchId } = req.query;
+  const targetBranchId = branchId && branchId !== "all" ? parseInt(branchId) : null;
+  const start = startDate ? new Date(startDate) : new Date((/* @__PURE__ */ new Date()).setDate((/* @__PURE__ */ new Date()).getDate() - 30));
+  const end = endDate ? new Date(endDate) : /* @__PURE__ */ new Date();
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+    res.status(400).json({ error: "Invalid date format" });
+    return;
+  }
+  const items = await db.select({
+    id: orderItemsTable.id,
+    orderId: ordersTable.id,
+    date: ordersTable.createdAt,
+    orderNumber: ordersTable.orderNumber,
+    cashier: usersTable.name,
+    branch: branchesTable.name,
+    drinkName: orderItemsTable.drinkName,
+    drinkId: orderItemsTable.drinkId,
+    quantity: orderItemsTable.quantity,
+    unitPrice: orderItemsTable.unitPrice,
+    lineTotal: orderItemsTable.lineTotal,
+    subtotal: ordersTable.subtotal,
+    discount: ordersTable.discount,
+    discountName: ordersTable.discountCode,
+    discountValue: ordersTable.discountValue,
+    total: ordersTable.total,
+    paymentMethod: ordersTable.paymentMethod,
+    category: drinksTable.category
+  }).from(orderItemsTable).innerJoin(ordersTable, eq(orderItemsTable.orderId, ordersTable.id)).innerJoin(drinksTable, eq(orderItemsTable.drinkId, drinksTable.id)).innerJoin(branchesTable, eq(ordersTable.branchId, branchesTable.id)).leftJoin(usersTable, eq(ordersTable.cashierId, usersTable.id)).where(and(
+    gte(ordersTable.createdAt, start),
+    lte(ordersTable.createdAt, end),
+    eq(ordersTable.status, "completed"),
+    targetBranchId ? eq(ordersTable.branchId, targetBranchId) : void 0
+  )).orderBy(desc(ordersTable.createdAt));
+  if (items.length === 0) return res.json([]);
+  const itemIds = items.map((i) => i.id);
+  const drinkIds = [...new Set(items.map((i) => i.drinkId))];
+  const [rawCustomizations, context] = await Promise.all([
+    db.select().from(orderItemCustomizationsTable).where(inArray(orderItemCustomizationsTable.orderItemId, itemIds)),
+    getRecipeContext(drinkIds)
+  ]);
+  const report = items.map((item) => {
+    const itemCustoms = rawCustomizations.filter((c) => c.orderItemId === item.id);
+    const actualOverrides = itemCustoms.map((c) => analyzeCustomization({ ...c, drinkId: item.drinkId }, context)).filter(Boolean);
+    const lineGross = parseFloat(item.lineTotal);
+    const beforeTax = lineGross / 1.14;
+    const taxAmount = lineGross - beforeTax;
+    const orderSubtotal = parseFloat(item.subtotal) || 1;
+    const orderDiscountAmt = parseFloat(item.discount) || 0;
+    const effectiveDiscountPct = orderDiscountAmt / (orderSubtotal / 1.14) * 100;
+    const discountVal = item.discountValue ? parseFloat(item.discountValue) : effectiveDiscountPct;
+    const afterDiscount = beforeTax * ((100 - effectiveDiscountPct) / 100);
+    const finalPrice = afterDiscount + taxAmount;
+    const itemDiscountAmt = beforeTax - afterDiscount;
+    return {
+      date: item.date,
+      orderNo: item.orderNumber,
+      invNo: item.orderId,
+      cashier: item.cashier || "System",
+      branch: item.branch,
+      item: item.drinkName,
+      quantity: item.quantity,
+      isCustomized: actualOverrides.length > 0 ? "Customize" : "Standard",
+      salePrice: parseFloat(item.unitPrice),
+      totalGross: lineGross,
+      netBeforeTax: beforeTax,
+      taxAmount,
+      discountName: item.discountName || "None",
+      discountValue: discountVal,
+      discountAmount: itemDiscountAmt,
+      subtotalPrice: beforeTax,
+      finalPrice,
+      paymentMethod: item.paymentMethod,
+      category: item.category || "Other"
+    };
+  });
+  res.json(serializeDates(report));
+});
+router18.get("/finance/customizations-report", requirePermission("reports:view"), async (req, res) => {
+  const { startDate, endDate, branchId } = req.query;
+  const targetBranchId = branchId && branchId !== "all" ? parseInt(branchId) : null;
+  const start = startDate ? new Date(startDate) : new Date((/* @__PURE__ */ new Date()).setDate((/* @__PURE__ */ new Date()).getDate() - 30));
+  const end = endDate ? new Date(endDate) : /* @__PURE__ */ new Date();
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+    res.status(400).json({ error: "Invalid date format" });
+    return;
+  }
+  const rawCustoms = await db.select({
+    date: ordersTable.createdAt,
+    orderNumber: ordersTable.orderNumber,
+    cashier: usersTable.name,
+    branch: branchesTable.name,
+    drinkName: orderItemsTable.drinkName,
+    drinkId: orderItemsTable.drinkId,
+    slotLabel: orderItemCustomizationsTable.slotLabel,
+    optionLabel: orderItemCustomizationsTable.optionLabel,
+    consumedQty: orderItemCustomizationsTable.consumedQty,
+    addedCost: orderItemCustomizationsTable.addedCost,
+    unit: ingredientsTable.unit,
+    ingredientName: ingredientsTable.name,
+    ingredientId: orderItemCustomizationsTable.ingredientId,
+    optionId: orderItemCustomizationsTable.optionId,
+    typeVolumeId: orderItemCustomizationsTable.typeVolumeId
+  }).from(orderItemCustomizationsTable).innerJoin(orderItemsTable, eq(orderItemCustomizationsTable.orderItemId, orderItemsTable.id)).innerJoin(ordersTable, eq(orderItemsTable.orderId, ordersTable.id)).innerJoin(branchesTable, eq(ordersTable.branchId, branchesTable.id)).leftJoin(usersTable, eq(ordersTable.cashierId, usersTable.id)).leftJoin(ingredientsTable, eq(orderItemCustomizationsTable.ingredientId, ingredientsTable.id)).where(and(
+    gte(ordersTable.createdAt, start),
+    lte(ordersTable.createdAt, end),
+    eq(ordersTable.status, "completed"),
+    targetBranchId ? eq(ordersTable.branchId, targetBranchId) : void 0
+  )).orderBy(desc(ordersTable.createdAt));
+  const drinkIds = [...new Set(rawCustoms.map((c) => c.drinkId))];
+  const context = await getRecipeContext(drinkIds);
+  const report = rawCustoms.map((c) => analyzeCustomization(c, context)).filter(Boolean);
+  res.json(serializeDates(report));
 });
 var finance_default = router18;
 

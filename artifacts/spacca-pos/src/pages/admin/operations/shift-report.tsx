@@ -7,10 +7,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { format } from "date-fns";
-import { TrendingUp, Clock, Users, Coffee, CreditCard, Wallet, Banknote, Handshake, Eye, Search } from "lucide-react";
+import { TrendingUp, Clock, Users, Coffee, CreditCard, Wallet, Banknote, Handshake, Eye, Search, Download } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
 
 export default function ShiftReportPage() {
+  const { toast } = useToast();
   const [selectedSessionId, setSelectedSessionId] = useState<number | null>(null);
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
@@ -59,6 +61,36 @@ export default function ShiftReportPage() {
     (o.customerName || "").toLowerCase().includes(orderSearch.toLowerCase())
   ) || [];
 
+  const handleExport = () => {
+    if (!report?.orders?.length) {
+      toast({ variant: "destructive", title: "No data to export" });
+      return;
+    }
+
+    const headers = ["Time", "Order #", "Customer", "Method", "Status", "Subtotal", "Discount", "Total"];
+    const rows = report.orders.map((o: any) => [
+      format(new Date(o.createdAt), "HH:mm:ss"),
+      o.orderNumber,
+      `"${(o.customerName || "").replace(/"/g, '""')}"`,
+      o.paymentMethod,
+      o.status,
+      o.subtotal || o.total,
+      o.discount || 0,
+      o.total
+    ]);
+
+    const csvContent = [headers.join(","), ...rows.map((r: any[]) => r.join(","))].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `shift_report_${activeSessionId}_${format(new Date(), "yyyyMMdd_HHmm")}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast({ title: "Export successful", description: "CSV file has been downloaded." });
+  };
+
   if (isLoading && !report) return <div className="p-8">Loading report...</div>;
 
   return (
@@ -69,23 +101,28 @@ export default function ShiftReportPage() {
           <p className="text-muted-foreground">Detailed performance analysis for cashier shifts.</p>
         </div>
 
-        <div className="flex items-center gap-2 min-w-[300px]">
-          <span className="text-sm font-medium whitespace-nowrap">Select Session:</span>
-          <Select 
-            value={String(activeSessionId || "")} 
-            onValueChange={(v) => setSelectedSessionId(parseInt(v))}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Select a session" />
-            </SelectTrigger>
-            <SelectContent>
-              {sessions.map((s: any) => (
-                <SelectItem key={s.id} value={String(s.id)}>
-                  {format(new Date(s.startedAt), "MMM d, HH:mm")} - {s.cashierName} {s.endedAt ? "" : "(Active)"}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div className="flex items-center gap-3 min-w-[400px]">
+          <Button variant="outline" size="sm" onClick={handleExport} className="gap-2 shrink-0">
+            <Download className="h-4 w-4" /> Download CSV
+          </Button>
+          <div className="flex items-center gap-2 flex-1">
+            <span className="text-sm font-medium whitespace-nowrap">Select Session:</span>
+            <Select 
+              value={String(activeSessionId || "")} 
+              onValueChange={(v) => setSelectedSessionId(parseInt(v))}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select a session" />
+              </SelectTrigger>
+              <SelectContent>
+                {sessions.map((s: any) => (
+                  <SelectItem key={s.id} value={String(s.id)}>
+                    {format(new Date(s.startedAt), "MMM d, HH:mm")} - {s.cashierName} {s.endedAt ? "" : "(Active)"}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
 

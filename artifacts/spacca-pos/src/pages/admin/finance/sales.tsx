@@ -7,11 +7,20 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   BarChart2, TrendingUp, Coffee, Receipt, 
   Banknote, Calendar, ChevronLeft, ChevronRight,
-  Download, Tag, CheckCircle2, History
+  Download, Tag, CheckCircle2, History, Layers, Sliders,
+  Eye, Package, User, Clock, MapPin, Search
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { format, subDays } from "date-fns";
@@ -32,14 +41,33 @@ export default function SalesAnalysisPage() {
   const [reportPage, setReportPage] = useState(1);
   const [isDailyGrouped, setIsDailyGrouped] = useState(false);
   const [selectedBranch, setSelectedBranch] = useState(selectedBranchId ? String(selectedBranchId) : "all");
+  const [activeTab, setActiveTab] = useState("orders");
   
   const [orders, setOrders] = useState<any[]>([]);
+  const [drinkSales, setDrinkSales] = useState<any[]>([]);
+  const [customizations, setCustomizations] = useState<any[]>([]);
   const [summary, setSummary] = useState<any[]>([]);
   const [dailySummary, setDailySummary] = useState<any[]>([]);
   const [branches, setBranches] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedOrderDetails, setSelectedOrderDetails] = useState<any>(null);
+  const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
+  const [fetchingOrder, setFetchingOrder] = useState(false);
   
   const rowsPerPage = 50;
+
+  const fetchOrderDetails = async (orderId: number) => {
+    setFetchingOrder(true);
+    try {
+      const data = await api(`/api/orders/${orderId}`);
+      setSelectedOrderDetails(data);
+      setIsOrderModalOpen(true);
+    } catch (err) {
+      toast({ variant: "destructive", title: "Failed to load order details" });
+    } finally {
+      setFetchingOrder(false);
+    }
+  };
 
   const loadData = async () => {
     setLoading(true);
@@ -48,23 +76,36 @@ export default function SalesAnalysisPage() {
         startDate: reportStartDate,
         endDate: reportEndDate,
         status: "paid,completed,ready,in_progress",
-        limit: String(rowsPerPage),
-        offset: String((reportPage - 1) * rowsPerPage)
       });
       if (selectedBranch !== "all") params.append("branchId", selectedBranch);
 
-      const [orderData, summaryData, branchData] = await Promise.all([
-        api(`/api/orders?${params.toString()}`),
-        api(`/api/dashboard/sales-by-category?${params.toString()}`),
-        api("/api/admin/branches")
-      ]);
-      setOrders(orderData);
-      setSummary(summaryData);
-      setBranches(branchData);
+      if (activeTab === "orders") {
+        params.append("limit", String(rowsPerPage));
+        params.append("offset", String((reportPage - 1) * rowsPerPage));
+        const [orderData, summaryData, branchData] = await Promise.all([
+          api(`/api/orders?${params.toString()}`),
+          api(`/api/dashboard/sales-by-category?${params.toString()}`),
+          api("/api/admin/branches")
+        ]);
+        setOrders(orderData);
+        setSummary(summaryData);
+        setBranches(branchData);
 
-      if (isDailyGrouped) {
-        const dailyData = await api(`/api/dashboard/sales-by-day?${params.toString()}`);
-        setDailySummary(dailyData);
+        if (isDailyGrouped) {
+          const dailyData = await api(`/api/dashboard/sales-by-day?${params.toString()}`);
+          setDailySummary(dailyData);
+        }
+      } else if (activeTab === "drinks") {
+        const data = await api(`/api/finance/sales-items?${params.toString()}`);
+        setDrinkSales(data);
+      } else if (activeTab === "customs") {
+        const data = await api(`/api/finance/customizations-report?${params.toString()}`);
+        setCustomizations(data);
+      }
+      
+      // Always load branches for filter
+      if (branches.length === 0) {
+        setBranches(await api("/api/admin/branches"));
       }
     } catch (err) {
       toast({ variant: "destructive", title: "Failed to load sales data" });
@@ -75,7 +116,7 @@ export default function SalesAnalysisPage() {
 
   useEffect(() => {
     loadData();
-  }, [reportStartDate, reportEndDate, reportPage, isDailyGrouped, selectedBranch]);
+  }, [reportStartDate, reportEndDate, reportPage, isDailyGrouped, selectedBranch, activeTab]);
 
   const totals = useMemo(() => {
     const revenue = summary?.reduce((s, c) => s + c.totalRevenue, 0) ?? 0;
@@ -86,25 +127,72 @@ export default function SalesAnalysisPage() {
   }, [summary, orders]);
 
   const handleExportCSV = () => {
-    const headers = ["OrderID", "Date", "Time", "Order Number", "Subtotal", "Discount", "Total", "Status", "Payment"];
-    const rows = orders.map(o => [
-      o.id,
-      format(new Date(o.createdAt), "yyyy-MM-dd"),
-      format(new Date(o.createdAt), "HH:mm"),
-      `#${o.orderNumber}`,
-      o.subtotal,
-      o.discount,
-      o.total,
-      o.status,
-      o.paymentMethod
-    ]);
+    let headers: string[] = [];
+    let rows: any[][] = [];
+    let filename = `sales_report_${reportStartDate}_to_${reportEndDate}.csv`;
 
-    const csvContent = "data:text/csv;charset=utf-8," + headers.join(",") + "\n" + rows.map(e => e.join(",")).join("\n");
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `sales_report_${reportStartDate}_to_${reportEndDate}.csv`);
-    document.body.appendChild(link);
+    if (activeTab === "orders") {
+      headers = ["OrderID", "Date", "Time", "Order Number", "Subtotal", "Discount", "Total", "Status", "Payment"];
+      rows = orders.map(o => [
+        o.id,
+        format(new Date(o.createdAt), "yyyy-MM-dd"),
+        format(new Date(o.createdAt), "HH:mm"),
+        `#${o.orderNumber}`,
+        o.subtotal,
+        o.discount,
+        o.total,
+        o.status,
+        o.paymentMethod
+      ]);
+    } else if (activeTab === "drinks") {
+      filename = `drink_sales_${reportStartDate}_to_${reportEndDate}.csv`;
+      headers = ["Date", "Order NO", "Inv.NO", "Cashier", "Branch", "Item", "Quantity", "Standard/Customize", "Sale Price", "Total Price (Gross)", "Before Tax (Net)", "Tax Amount", "Discount Name", "Discount value", "Discount Amount", "SubTotal Price", "Final Price", "Payment Method", "Category"];
+      rows = drinkSales.map(i => [
+        format(new Date(i.date), "yyyy-MM-dd"),
+        i.orderNo,
+        i.invNo,
+        i.cashier,
+        i.branch,
+        i.item,
+        i.quantity,
+        i.isCustomized,
+        i.salePrice,
+        i.totalGross,
+        i.netBeforeTax,
+        i.taxAmount,
+        i.discountName,
+        i.discountValue,
+        i.discountAmount,
+        i.subtotalPrice,
+        i.finalPrice,
+        i.paymentMethod,
+        i.category
+      ]);
+    } else if (activeTab === "customs") {
+      filename = `customizations_${reportStartDate}_to_${reportEndDate}.csv`;
+      headers = ["Date", "Order NO", "Inv.NO", "Cashier", "Branch", "Item/Drink", "Standard Ing.", "Quantity", "Customized Ing.", "Quantity", "Unit", "Sales Price"];
+      rows = customizations.map(c => [
+        format(new Date(c.date), "yyyy-MM-dd"),
+        c.orderNumber,
+        "-",
+        c.cashier || "System",
+        c.branch,
+        c.drinkName,
+        c.defaultLabel || "Standard", 
+        "-",
+        c.replacementLabel,
+        c.consumedQty,
+        c.unit || "unit",
+        c.addedCost
+      ]);
+    }
+
+    const csvContent = [headers.join(","), ...rows.map(r => r.map(val => `"${String(val).replace(/"/g, '""')}"`).join(","))].join("\n");
+    const blob = new Blob(["\ufeff", csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.body.appendChild(document.createElement("a"));
+    link.href = url;
+    link.download = filename;
     link.click();
     document.body.removeChild(link);
   };
@@ -142,8 +230,8 @@ export default function SalesAnalysisPage() {
               <Input type="date" value={reportEndDate} onChange={e => setReportEndDate(e.target.value)} />
             </div>
             <div className="flex items-center gap-2 h-10">
-              <Switch checked={isDailyGrouped} onCheckedChange={setIsDailyGrouped} id="daily-grp" />
-              <Label htmlFor="daily-grp" className="cursor-pointer">Group by Day</Label>
+              <Switch checked={isDailyGrouped} onCheckedChange={setIsDailyGrouped} id="daily-grp" disabled={activeTab !== "orders"} />
+              <Label htmlFor="daily-grp" className={`cursor-pointer ${activeTab !== "orders" ? "opacity-50" : ""}`}>Group by Day</Label>
             </div>
             <div className="flex justify-end">
               <Button variant="outline" className="gap-2 w-full" onClick={handleExportCSV}>
@@ -154,104 +242,313 @@ export default function SalesAnalysisPage() {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          { label: "Revenue", value: fmt(totals.revenue), icon: Banknote },
-          { label: "Orders", value: totals.count, icon: Receipt },
-          { label: "Drinks", value: totals.drinks, icon: Coffee },
-          { label: "Discounts", value: fmt(totals.discounts), icon: Tag },
-        ].map((stat, i) => (
-          <Card key={i}>
-            <CardContent className="p-4 flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-primary/10">
-                <stat.icon className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground font-medium">{stat.label}</p>
-                <p className="text-lg font-bold">{stat.value}</p>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="orders" className="gap-2"><Receipt className="h-4 w-4" /> Orders Totals</TabsTrigger>
+          <TabsTrigger value="drinks" className="gap-2"><Coffee className="h-4 w-4" /> Drink Sales</TabsTrigger>
+          <TabsTrigger value="customs" className="gap-2"><Sliders className="h-4 w-4" /> Customizations</TabsTrigger>
+        </TabsList>
 
-      <div className="rounded-md border bg-card">
-        {isDailyGrouped ? (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead className="text-right">Orders</TableHead>
-                <TableHead className="text-right">Net Revenue</TableHead>
-                <TableHead className="text-right">Tax</TableHead>
-                <TableHead className="text-right">Discount</TableHead>
-                <TableHead className="text-right">Final Revenue</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {dailySummary.map((day) => (
-                <TableRow key={day.date}>
-                  <TableCell className="font-bold">{day.date}</TableCell>
-                  <TableCell className="text-right">{day.orders}</TableCell>
-                  <TableCell className="text-right">{fmt(day.net)}</TableCell>
-                  <TableCell className="text-right text-muted-foreground">{fmt(day.tax)}</TableCell>
-                  <TableCell className="text-right text-destructive">-{fmt(day.discount)}</TableCell>
-                  <TableCell className="text-right font-bold text-primary">{fmt(day.revenue)}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Order #</TableHead>
-                <TableHead>Date & Time</TableHead>
-                <TableHead>Subtotal</TableHead>
-                <TableHead>Discount</TableHead>
-                <TableHead>Total</TableHead>
-                <TableHead>Payment</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
+        <TabsContent value="orders" className="space-y-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {[
+              { label: "Revenue", value: fmt(totals.revenue), icon: Banknote },
+              { label: "Orders", value: totals.count, icon: Receipt },
+              { label: "Drinks", value: totals.drinks, icon: Coffee },
+              { label: "Discounts", value: fmt(totals.discounts), icon: Tag },
+            ].map((stat, i) => (
+              <Card key={i}>
+                <CardContent className="p-4 flex items-center gap-4">
+                  <div className="p-3 rounded-xl bg-primary/10">
+                    <stat.icon className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground font-medium">{stat.label}</p>
+                    <p className="text-lg font-bold">{stat.value}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          <div className="rounded-md border bg-card">
+            {isDailyGrouped ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead className="text-right">Orders</TableHead>
+                    <TableHead className="text-right">Net Revenue</TableHead>
+                    <TableHead className="text-right">Tax</TableHead>
+                    <TableHead className="text-right">Discount</TableHead>
+                    <TableHead className="text-right">Final Revenue</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {dailySummary.map((day) => (
+                    <TableRow key={day.date}>
+                      <TableCell className="font-bold">{day.date}</TableCell>
+                      <TableCell className="text-right">{day.orders}</TableCell>
+                      <TableCell className="text-right">{fmt(day.net)}</TableCell>
+                      <TableCell className="text-right text-muted-foreground">{fmt(day.tax)}</TableCell>
+                      <TableCell className="text-right text-destructive">-{fmt(day.discount)}</TableCell>
+                      <TableCell className="text-right font-bold text-primary">{fmt(day.revenue)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Order #</TableHead>
+                    <TableHead>Date & Time</TableHead>
+                    <TableHead>Subtotal</TableHead>
+                    <TableHead>Discount</TableHead>
+                    <TableHead>Total</TableHead>
+                    <TableHead>Payment</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {loading ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-10">Loading orders...</TableCell>
+                    </TableRow>
+                  ) : orders.map((order) => (
+                    <TableRow key={order.id}>
+                      <TableCell>
+                        <button 
+                          onClick={() => fetchOrderDetails(order.id)}
+                          className="font-mono font-medium text-primary hover:underline"
+                          disabled={fetchingOrder}
+                        >
+                          #{order.orderNumber}
+                        </button>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-sm">
+                        {format(new Date(order.createdAt), "MMM dd, HH:mm")}
+                      </TableCell>
+                      <TableCell>{fmt(order.subtotal)}</TableCell>
+                      <TableCell className="text-destructive">-{fmt(order.discount)}</TableCell>
+                      <TableCell className="font-bold">{fmt(order.total)}</TableCell>
+                      <TableCell className="capitalize">{order.paymentMethod}</TableCell>
+                      <TableCell>
+                        <Badge variant={order.status === "completed" ? "default" : "secondary"} className="capitalize">
+                          {order.status}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </div>
+
+          {!isDailyGrouped && (
+            <div className="flex justify-center gap-2 pb-10">
+              <Button variant="outline" onClick={() => setReportPage(p => Math.max(1, p - 1))} disabled={reportPage === 1}>
+                Previous
+              </Button>
+              <div className="flex items-center px-4 font-medium text-sm">Page {reportPage}</div>
+              <Button variant="outline" onClick={() => setReportPage(p => p + 1)} disabled={orders.length < rowsPerPage}>
+                Next
+              </Button>
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="drinks">
+          <div className="rounded-md border bg-card">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-10">Loading orders...</TableCell>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Item</TableHead>
+                  <TableHead>Category</TableHead>
+                  <TableHead className="text-right">Qty</TableHead>
+                  <TableHead className="text-right">Price</TableHead>
+                  <TableHead className="text-right">Total</TableHead>
+                  <TableHead>Order #</TableHead>
                 </TableRow>
-              ) : orders.map((order) => (
-                <TableRow key={order.id}>
-                  <TableCell className="font-mono font-medium">#{order.orderNumber}</TableCell>
-                  <TableCell className="text-muted-foreground text-sm">
-                    {format(new Date(order.createdAt), "MMM dd, HH:mm")}
-                  </TableCell>
-                  <TableCell>{fmt(order.subtotal)}</TableCell>
-                  <TableCell className="text-destructive">-{fmt(order.discount)}</TableCell>
-                  <TableCell className="font-bold">{fmt(order.total)}</TableCell>
-                  <TableCell className="capitalize">{order.paymentMethod}</TableCell>
-                  <TableCell>
-                    <Badge variant={order.status === "completed" ? "default" : "secondary"} className="capitalize">
-                      {order.status}
-                    </Badge>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </div>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  <TableRow><TableCell colSpan={7} className="text-center py-10">Loading drink sales...</TableCell></TableRow>
+                ) : drinkSales.length === 0 ? (
+                  <TableRow><TableCell colSpan={7} className="text-center py-10 text-muted-foreground">No data found for this range.</TableCell></TableRow>
+                ) : drinkSales.map((item, i) => (
+                  <TableRow key={i}>
+                    <TableCell className="text-sm">{format(new Date(item.date), "MMM dd")}</TableCell>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2">
+                        {item.item}
+                        {item.isCustomized === "Customize" && <Badge variant="outline" className="text-[9px] h-4">Custom</Badge>}
+                      </div>
+                    </TableCell>
+                    <TableCell><Badge variant="secondary" className="capitalize text-[10px]">{item.category}</Badge></TableCell>
+                    <TableCell className="text-right">{item.quantity}</TableCell>
+                    <TableCell className="text-right">{fmt(item.salePrice)}</TableCell>
+                    <TableCell className="text-right font-bold">{fmt(item.totalGross)}</TableCell>
+                    <TableCell>
+                      <button 
+                        onClick={() => fetchOrderDetails(item.invNo)}
+                        className="font-mono text-xs text-primary hover:underline"
+                      >
+                        #{item.orderNo}
+                      </button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </TabsContent>
 
-      {!isDailyGrouped && (
-        <div className="flex justify-center gap-2 pb-10">
-          <Button variant="outline" onClick={() => setReportPage(p => Math.max(1, p - 1))} disabled={reportPage === 1}>
-            Previous
-          </Button>
-          <div className="flex items-center px-4 font-medium text-sm">Page {reportPage}</div>
-          <Button variant="outline" onClick={() => setReportPage(p => p + 1)} disabled={orders.length < rowsPerPage}>
-            Next
-          </Button>
-        </div>
-      )}
+        <TabsContent value="customs">
+          <div className="rounded-md border bg-card">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Drink</TableHead>
+                  <TableHead>Standard</TableHead>
+                  <TableHead>Replacement</TableHead>
+                  <TableHead className="text-right">Qty</TableHead>
+                  <TableHead className="text-right">Added Cost</TableHead>
+                  <TableHead>Branch</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  <TableRow><TableCell colSpan={7} className="text-center py-10">Loading customizations...</TableCell></TableRow>
+                ) : customizations.length === 0 ? (
+                  <TableRow><TableCell colSpan={7} className="text-center py-10 text-muted-foreground">No customizations found.</TableCell></TableRow>
+                ) : customizations.map((c, i) => (
+                  <TableRow key={i}>
+                    <TableCell className="text-sm">{format(new Date(c.date), "MMM dd")}</TableCell>
+                    <TableCell className="font-medium">{c.drinkName}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="text-muted-foreground font-normal">{c.defaultLabel}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-sm font-medium">{c.replacementLabel}</span>
+                    </TableCell>
+                    <TableCell className="text-right font-mono text-sm">{c.consumedQty} {c.unit}</TableCell>
+                    <TableCell className="text-right font-bold">{fmt(c.addedCost)}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{c.branch}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </TabsContent>
+      </Tabs>
+
+      <Dialog open={isOrderModalOpen} onOpenChange={setIsOrderModalOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-2xl">
+              <Receipt className="h-6 w-6 text-primary" />
+              Order #{selectedOrderDetails?.orderNumber}
+            </DialogTitle>
+            <DialogDescription>
+              Created on {selectedOrderDetails && format(new Date(selectedOrderDetails.createdAt), "MMMM dd, yyyy HH:mm")}
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedOrderDetails && (
+            <div className="space-y-6 py-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="space-y-1">
+                  <span className="text-xs text-muted-foreground flex items-center gap-1"><User className="h-3 w-3" /> Cashier</span>
+                  <p className="font-medium">{selectedOrderDetails.cashierName || "System"}</p>
+                </div>
+                <div className="space-y-1">
+                  <span className="text-xs text-muted-foreground flex items-center gap-1"><MapPin className="h-3 w-3" /> Branch</span>
+                  <p className="font-medium">{branches.find(b => b.id === selectedOrderDetails.branchId)?.name || "Unknown"}</p>
+                </div>
+                <div className="space-y-1">
+                  <span className="text-xs text-muted-foreground flex items-center gap-1"><Banknote className="h-3 w-3" /> Payment</span>
+                  <p className="font-medium capitalize">{selectedOrderDetails.paymentMethod}</p>
+                </div>
+                <div className="space-y-1">
+                  <span className="text-xs text-muted-foreground flex items-center gap-1"><CheckCircle2 className="h-3 w-3" /> Status</span>
+                  <Badge variant="secondary" className="capitalize">{selectedOrderDetails.status}</Badge>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <h3 className="text-sm font-bold flex items-center gap-2"><Coffee className="h-4 w-4" /> Order Items</h3>
+                <div className="rounded-lg border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/50">
+                        <TableHead>Drink</TableHead>
+                        <TableHead className="text-right">Qty</TableHead>
+                        <TableHead className="text-right">Unit Price</TableHead>
+                        <TableHead className="text-right">Total</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {selectedOrderDetails.items.map((item: any) => (
+                        <>
+                          <TableRow key={item.id}>
+                            <TableCell className="font-medium">{item.drinkName}</TableCell>
+                            <TableCell className="text-right">{item.quantity}</TableCell>
+                            <TableCell className="text-right">{fmt(item.unitPrice)}</TableCell>
+                            <TableCell className="text-right font-bold">{fmt(item.lineTotal)}</TableCell>
+                          </TableRow>
+                          {item.customizations?.length > 0 && (
+                            <TableRow key={`${item.id}-cust`} className="bg-muted/10">
+                              <TableCell colSpan={4} className="py-2 px-6">
+                                <div className="flex flex-wrap gap-2">
+                                  {item.customizations.map((c: any) => (
+                                    <Badge key={c.id} variant="outline" className="text-[10px] bg-background">
+                                      <span className="text-primary font-bold mr-1">{c.slotLabel}:</span> {c.optionLabel}
+                                      {c.addedCost > 0 && <span className="ml-1 text-green-600">+{fmt(c.addedCost)}</span>}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+
+              <div className="flex justify-end">
+                <div className="w-full md:w-64 space-y-2 border-t pt-4">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Subtotal</span>
+                    <span>{fmt(selectedOrderDetails.subtotal)}</span>
+                  </div>
+                  {selectedOrderDetails.discount > 0 && (
+                    <div className="flex justify-between text-sm text-destructive font-medium">
+                      <span className="flex items-center gap-1"><Tag className="h-3 w-3" /> Discount ({selectedOrderDetails.discountCode})</span>
+                      <span>-{fmt(selectedOrderDetails.discount)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-lg font-bold border-t pt-2 mt-2">
+                    <span>Total</span>
+                    <span className="text-primary">{fmt(selectedOrderDetails.total)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {selectedOrderDetails.notes && (
+                <div className="bg-muted/30 p-3 rounded-lg text-sm italic text-muted-foreground">
+                  <span className="font-bold not-italic block mb-1">Order Notes:</span>
+                  {selectedOrderDetails.notes}
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

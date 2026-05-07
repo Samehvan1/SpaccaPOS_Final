@@ -45,6 +45,7 @@ router.post("/auth/login", async (req, res): Promise<void> => {
 
   (req.session as unknown as Record<string, unknown>).userId = result.user.id;
   (req.session as unknown as Record<string, unknown>).branchId = result.user.branchId;
+  (req.session as unknown as Record<string, unknown>).role = result.user.role;
 
   // Log activity
   await db.insert(activityLogsTable).values({
@@ -157,6 +158,7 @@ router.post("/auth/emergency-login", async (req, res): Promise<void> => {
     return;
   }
   (req.session as any).userId = user.id;
+  (req.session as any).role = user.role;
   req.session.save(() => res.json({ success: true }));
 });
 

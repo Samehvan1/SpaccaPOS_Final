@@ -215,7 +215,7 @@ export default function StockAdmin() {
                   <PopoverContent className="w-[400px] p-0" align="start">
                     <Command>
                       <CommandInput placeholder="Search ingredient..." />
-                      <CommandList>
+                      <CommandList className="max-h-[300px] overflow-y-auto">
                         <CommandEmpty>No ingredient found.</CommandEmpty>
                         <CommandGroup>
                           {ingredients?.map((ing) => (

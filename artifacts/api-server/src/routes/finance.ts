@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, and, sql, sum, count, desc, gte, lte } from "drizzle-orm";
+import { eq, and, sql, sum, count, desc, gte, lte, inArray } from "drizzle-orm";
 import { 
   db, 
   ingredientsTable, 
@@ -17,10 +17,14 @@ import {
   predefinedSlotTypeOptionsTable,
   predefinedSlotVolumesTable,
   ingredientTypeVolumesTable,
-  ingredientVolumesTable
+  ingredientVolumesTable,
+  usersTable,
+  branchesTable,
+  ingredientOptionsTable
 } from "@workspace/db";
 import { serializeDates } from "../lib/serialize";
 import { requirePermission } from "../middleware/permissions";
+import { analyzeCustomization, getRecipeContext } from "../lib/recipe-utils";
 
 const router: IRouter = Router();
 
@@ -324,6 +328,165 @@ router.get("/finance/ingredient-recipes", requirePermission("reports:view"), asy
   });
 
   res.json(report);
+});
+
+// ── Detailed Sales Items Report ──────────────────────────────────────────
+router.get("/finance/sales-items", requirePermission("reports:view"), async (req, res) => {
+  const { startDate, endDate, branchId } = req.query;
+  const targetBranchId = branchId && branchId !== "all" ? parseInt(branchId as string) : null;
+  const start = startDate ? new Date(startDate as string) : new Date(new Date().setDate(new Date().getDate() - 30));
+  const end = endDate ? new Date(endDate as string) : new Date();
+  
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+    res.status(400).json({ error: "Invalid date format" });
+    return;
+  }
+
+  const items = await db
+    .select({
+      id: orderItemsTable.id,
+      orderId: ordersTable.id,
+      date: ordersTable.createdAt,
+      orderNumber: ordersTable.orderNumber,
+      cashier: usersTable.name,
+      branch: branchesTable.name,
+      drinkName: orderItemsTable.drinkName,
+      drinkId: orderItemsTable.drinkId,
+      quantity: orderItemsTable.quantity,
+      unitPrice: orderItemsTable.unitPrice,
+      lineTotal: orderItemsTable.lineTotal,
+      subtotal: ordersTable.subtotal,
+      discount: ordersTable.discount,
+      discountName: ordersTable.discountCode,
+      discountValue: ordersTable.discountValue,
+      total: ordersTable.total,
+      paymentMethod: ordersTable.paymentMethod,
+      category: drinksTable.category,
+    })
+    .from(orderItemsTable)
+    .innerJoin(ordersTable, eq(orderItemsTable.orderId, ordersTable.id))
+    .innerJoin(drinksTable, eq(orderItemsTable.drinkId, drinksTable.id))
+    .innerJoin(branchesTable, eq(ordersTable.branchId, branchesTable.id))
+    .leftJoin(usersTable, eq(ordersTable.cashierId, usersTable.id))
+    .where(and(
+      gte(ordersTable.createdAt, start),
+      lte(ordersTable.createdAt, end),
+      eq(ordersTable.status, "completed"),
+      targetBranchId ? eq(ordersTable.branchId, targetBranchId) : undefined
+    ))
+    .orderBy(desc(ordersTable.createdAt));
+
+  if (items.length === 0) return res.json([]);
+
+  const itemIds = items.map(i => i.id);
+  const drinkIds = [...new Set(items.map(i => i.drinkId))];
+
+  const [rawCustomizations, context] = await Promise.all([
+    db.select().from(orderItemCustomizationsTable).where(inArray(orderItemCustomizationsTable.orderItemId, itemIds)),
+    getRecipeContext(drinkIds)
+  ]);
+
+  const report = items.map(item => {
+    const itemCustoms = rawCustomizations.filter(c => c.orderItemId === item.id);
+    // Check if any of these customizations are true overrides
+    const actualOverrides = itemCustoms
+      .map(c => analyzeCustomization({ ...c, drinkId: item.drinkId }, context))
+      .filter(Boolean);
+
+    // Financials (Strictly following user formulas)
+    const lineGross = parseFloat(item.lineTotal as string);
+    const beforeTax = lineGross / 1.14;
+    const taxAmount = lineGross - beforeTax;
+    
+    // Determine discount percentage for this line
+    const orderSubtotal = parseFloat(item.subtotal as string) || 1;
+    const orderDiscountAmt = parseFloat(item.discount as string) || 0;
+    // Effective discount percentage (on net/before-tax)
+    const effectiveDiscountPct = (orderDiscountAmt / (orderSubtotal / 1.14)) * 100;
+    
+    const discountVal = item.discountValue ? parseFloat(item.discountValue as string) : effectiveDiscountPct;
+    const afterDiscount = beforeTax * ((100 - effectiveDiscountPct) / 100);
+    const finalPrice = afterDiscount + taxAmount;
+    const itemDiscountAmt = beforeTax - afterDiscount;
+
+    return {
+      date: item.date,
+      orderNo: item.orderNumber,
+      invNo: item.orderId,
+      cashier: item.cashier || "System",
+      branch: item.branch,
+      item: item.drinkName,
+      quantity: item.quantity,
+      isCustomized: actualOverrides.length > 0 ? "Customize" : "Standard",
+      salePrice: parseFloat(item.unitPrice as string),
+      totalGross: lineGross,
+      netBeforeTax: beforeTax,
+      taxAmount: taxAmount,
+      discountName: item.discountName || "None",
+      discountValue: discountVal,
+      discountAmount: itemDiscountAmt,
+      subtotalPrice: beforeTax,
+      finalPrice: finalPrice,
+      paymentMethod: item.paymentMethod,
+      category: (item as any).category || "Other"
+    };
+  });
+
+  res.json(serializeDates(report));
+});
+
+// ── Customizations Detailed Report ─────────────────────────────────────────
+router.get("/finance/customizations-report", requirePermission("reports:view"), async (req, res) => {
+  const { startDate, endDate, branchId } = req.query;
+  const targetBranchId = branchId && branchId !== "all" ? parseInt(branchId as string) : null;
+  const start = startDate ? new Date(startDate as string) : new Date(new Date().setDate(new Date().getDate() - 30));
+  const end = endDate ? new Date(endDate as string) : new Date();
+  
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+    res.status(400).json({ error: "Invalid date format" });
+    return;
+  }
+
+  const rawCustoms = await db
+    .select({
+      date: ordersTable.createdAt,
+      orderNumber: ordersTable.orderNumber,
+      cashier: usersTable.name,
+      branch: branchesTable.name,
+      drinkName: orderItemsTable.drinkName,
+      drinkId: orderItemsTable.drinkId,
+      slotLabel: orderItemCustomizationsTable.slotLabel,
+      optionLabel: orderItemCustomizationsTable.optionLabel,
+      consumedQty: orderItemCustomizationsTable.consumedQty,
+      addedCost: orderItemCustomizationsTable.addedCost,
+      unit: ingredientsTable.unit,
+      ingredientName: ingredientsTable.name,
+      ingredientId: orderItemCustomizationsTable.ingredientId,
+      optionId: orderItemCustomizationsTable.optionId,
+      typeVolumeId: orderItemCustomizationsTable.typeVolumeId,
+    })
+    .from(orderItemCustomizationsTable)
+    .innerJoin(orderItemsTable, eq(orderItemCustomizationsTable.orderItemId, orderItemsTable.id))
+    .innerJoin(ordersTable, eq(orderItemsTable.orderId, ordersTable.id))
+    .innerJoin(branchesTable, eq(ordersTable.branchId, branchesTable.id))
+    .leftJoin(usersTable, eq(ordersTable.cashierId, usersTable.id))
+    .leftJoin(ingredientsTable, eq(orderItemCustomizationsTable.ingredientId, ingredientsTable.id))
+    .where(and(
+      gte(ordersTable.createdAt, start),
+      lte(ordersTable.createdAt, end),
+      eq(ordersTable.status, "completed"),
+      targetBranchId ? eq(ordersTable.branchId, targetBranchId) : undefined
+    ))
+    .orderBy(desc(ordersTable.createdAt));
+
+  const drinkIds = [...new Set(rawCustoms.map(c => c.drinkId))];
+  const context = await getRecipeContext(drinkIds);
+
+  const report = rawCustoms
+    .map(c => analyzeCustomization(c, context))
+    .filter(Boolean);
+
+  res.json(serializeDates(report));
 });
 
 export default router;

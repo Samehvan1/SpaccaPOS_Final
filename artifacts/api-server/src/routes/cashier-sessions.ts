@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq, and, gte, lte, isNull, desc, sql, inArray } from "drizzle-orm";
-import { db, cashierSessionsTable, usersTable, ordersTable, orderItemsTable } from "@workspace/db";
+import { db, cashierSessionsTable, usersTable, ordersTable, orderItemsTable, drinksTable, drinkCategoriesTable } from "@workspace/db";
 import { z } from "zod";
 
 const router: IRouter = Router();
@@ -123,7 +123,31 @@ router.post("/cashier/end-session", requirePermission("cashier:close_session"), 
 
 // GET /cashier/active — return current active cashier session
 router.get("/cashier/active", async (req, res): Promise<void> => {
-  const sessionId = (req.session as any).cashierSessionId as number | undefined;
+  let sessionId = (req.session as any).cashierSessionId as number | undefined;
+  let userRole = (req.session as any).role;
+  const userId = (req.session as any).userId;
+
+  // If role is missing from session (legacy session), fetch it from DB
+  if (!userRole && userId) {
+    const [user] = await db.select({ role: usersTable.role }).from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+    if (user) {
+      userRole = user.role;
+      (req.session as any).role = userRole; // Cache it
+    }
+  }
+  
+  if (!sessionId && userRole === "admin") {
+    // If admin and no session in session storage, find the latest open session overall
+    const [latestOpen] = await db
+      .select()
+      .from(cashierSessionsTable)
+      .where(isNull(cashierSessionsTable.endedAt))
+      .orderBy(desc(cashierSessionsTable.startedAt))
+      .limit(1);
+    
+    if (latestOpen) sessionId = latestOpen.id;
+  }
+
   if (!sessionId) {
     res.json(null);
     return;
@@ -377,6 +401,7 @@ router.get("/cashier/sessions/:id/report", requirePermission("cashier:view_repor
   // We need to fetch items for all completed orders
   const orderIds = completedOrders.map(o => o.id);
   let topDrinks: any[] = [];
+  
   if (orderIds.length > 0) {
     const items = await db
       .select({
@@ -405,6 +430,36 @@ router.get("/cashier/sessions/:id/report", requirePermission("cashier:view_repor
       .slice(0, 5);
   }
 
+  const statistics: any = {
+    topDrinks,
+    topOrdersByPrice,
+    rushByHour: rushByHourList,
+    categorySales: []
+  };
+
+  if (orderIds.length > 0) {
+    // Statistics: Sales by Category
+    const categoryStats = await db
+      .select({
+        categoryId: drinkCategoriesTable.id,
+        categoryName: drinkCategoriesTable.name,
+        quantity: sql<number>`sum(${orderItemsTable.quantity})`,
+        totalSales: sql<number>`sum(${orderItemsTable.lineTotal})`,
+      })
+      .from(orderItemsTable)
+      .innerJoin(drinksTable, eq(orderItemsTable.drinkId, drinksTable.id))
+      .innerJoin(drinkCategoriesTable, eq(drinksTable.categoryId, drinkCategoriesTable.id))
+      .where(inArray(orderItemsTable.orderId, orderIds))
+      .groupBy(drinkCategoriesTable.id, drinkCategoriesTable.name);
+
+    statistics.categorySales = categoryStats.map(c => ({
+      id: c.categoryId,
+      name: c.categoryName,
+      quantity: Number(c.quantity),
+      total: Number(c.totalSales)
+    }));
+  }
+
   const [cashier] = await db
     .select({ name: usersTable.name })
     .from(usersTable)
@@ -425,11 +480,7 @@ router.get("/cashier/sessions/:id/report", requirePermission("cashier:view_repor
       hospitalityRevenue,
       orderCount: completedOrders.length,
     },
-    statistics: {
-      topDrinks,
-      topOrdersByPrice,
-      rushByHour: rushByHourList,
-    },
+    statistics,
     orders: orders.map(o => ({
       ...o,
       total: parseFloat(o.total as any)
