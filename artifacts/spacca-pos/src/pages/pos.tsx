@@ -353,6 +353,14 @@ export default function PosTerminal() {
   const [appliedDiscount, setAppliedDiscount] = useState<any>(null);
   const [isValidatingDiscount, setIsValidatingDiscount] = useState(false);
 
+  // Auto-clear discount when cart is emptied to prevent accidental reuse for next customer
+  useEffect(() => {
+    if (cart.length === 0 && (discountCode || appliedDiscount)) {
+      setDiscountCode("");
+      setAppliedDiscount(null);
+    }
+  }, [cart.length, discountCode, appliedDiscount]);
+
   const cartSubtotal = cart.reduce((sum, item) => sum + item.totalPrice * item.quantity, 0);
   const discountAmount = useMemo(() => {
     if (!appliedDiscount) return 0;
@@ -693,9 +701,26 @@ export default function PosTerminal() {
                 </span>
               )}
             </h2>
-            <button onClick={() => setIsCartOpen(false)} className="p-1 rounded-md hover:bg-muted transition-colors">
-              <X className="h-5 w-5" />
-            </button>
+            <div className="flex items-center gap-2">
+              {cart.length > 0 && (
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive rounded-full"
+                  onClick={() => {
+                    if (confirm("Clear all items from cart?")) {
+                      setCart([]);
+                    }
+                  }}
+                  title="Clear Cart"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              )}
+              <button onClick={() => setIsCartOpen(false)} className="p-1 rounded-md hover:bg-muted transition-colors">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
           </div>
 
           <ScrollArea className="flex-1 p-3">
@@ -1124,6 +1149,7 @@ export default function PosTerminal() {
                     onChange={e => setAdminPin(e.target.value)}
                     placeholder="Enter Admin PIN"
                     className="pl-9 border-pink-200 focus-visible:ring-pink-500"
+                    autoComplete="off"
                   />
                 </div>
               </div>
@@ -1153,6 +1179,7 @@ export default function PosTerminal() {
                     placeholder="Enter code"
                     className="pl-9 font-mono font-bold uppercase"
                     disabled={!!appliedDiscount || isValidatingDiscount}
+                    autoComplete="off"
                   />
                 </div>
                 {appliedDiscount ? (

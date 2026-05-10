@@ -28,11 +28,11 @@ var __export = (target, all) => {
   for (var name in all)
     __defProp(target, name, { get: all[name], enumerable: true });
 };
-var __copyProps = (to, from, except2, desc2) => {
+var __copyProps = (to, from, except2, desc3) => {
   if (from && typeof from === "object" || typeof from === "function") {
     for (let key of __getOwnPropNames(from))
       if (!__hasOwnProp.call(to, key) && key !== except2)
-        __defProp(to, key, { get: () => from[key], enumerable: !(desc2 = __getOwnPropDesc(from, key)) || desc2.enumerable });
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc3 = __getOwnPropDesc(from, key)) || desc3.enumerable });
   }
   return to;
 };
@@ -1673,10 +1673,10 @@ var require_http_errors = __commonJS({
       return ServerError;
     }
     function nameFunc(func, name) {
-      var desc2 = Object.getOwnPropertyDescriptor(func, "name");
-      if (desc2 && desc2.configurable) {
-        desc2.value = name;
-        Object.defineProperty(func, "name", desc2);
+      var desc3 = Object.getOwnPropertyDescriptor(func, "name");
+      if (desc3 && desc3.configurable) {
+        desc3.value = name;
+        Object.defineProperty(func, "name", desc3);
       }
     }
     function populateConstructorExports(exports2, codes, HttpError) {
@@ -17121,14 +17121,14 @@ var require_get = __commonJS({
         throw e;
       }
     }
-    var desc2 = !!hasProtoAccessor && gOPD && gOPD(
+    var desc3 = !!hasProtoAccessor && gOPD && gOPD(
       Object.prototype,
       /** @type {keyof typeof Object.prototype} */
       "__proto__"
     );
     var $Object = Object;
     var $getPrototypeOf = $Object.getPrototypeOf;
-    module.exports = desc2 && typeof desc2.get === "function" ? callBind([desc2.get]) : typeof $getPrototypeOf === "function" ? (
+    module.exports = desc3 && typeof desc3.get === "function" ? callBind([desc3.get]) : typeof $getPrototypeOf === "function" ? (
       /** @type {import('./get')} */
       function getDunder(value) {
         return $getPrototypeOf(value == null ? value : $Object(value));
@@ -17478,10 +17478,10 @@ var require_get_intrinsic = __commonJS({
             return void undefined2;
           }
           if ($gOPD && i + 1 >= parts.length) {
-            var desc2 = $gOPD(value, part);
-            isOwn = !!desc2;
-            if (isOwn && "get" in desc2 && !("originalValue" in desc2.get)) {
-              value = desc2.get;
+            var desc3 = $gOPD(value, part);
+            isOwn = !!desc3;
+            if (isOwn && "get" in desc3 && !("originalValue" in desc3.get)) {
+              value = desc3.get;
             } else {
               value = value[part];
             }
@@ -32079,12 +32079,12 @@ var require_result = __commonJS({
         }
         const row = {};
         for (let i = 0; i < fieldDescriptions.length; i++) {
-          const desc2 = fieldDescriptions[i];
-          row[desc2.name] = null;
+          const desc3 = fieldDescriptions[i];
+          row[desc3.name] = null;
           if (this._types) {
-            this._parsers[i] = this._types.getTypeParser(desc2.dataTypeID, desc2.format || "text");
+            this._parsers[i] = this._types.getTypeParser(desc3.dataTypeID, desc3.format || "text");
           } else {
-            this._parsers[i] = types3.getTypeParser(desc2.dataTypeID, desc2.format || "text");
+            this._parsers[i] = types3.getTypeParser(desc3.dataTypeID, desc3.format || "text");
           }
         }
         this._prebuiltEmptyResultObject = { ...row };
@@ -72545,16 +72545,16 @@ var require_typedarray = __commonJS({
     })()) {
       defineProp = Object.defineProperty;
     } else {
-      defineProp = function(o, p, desc2) {
+      defineProp = function(o, p, desc3) {
         if (!o === Object(o)) throw new TypeError("Object.defineProperty called on non-object");
-        if (ECMAScript.HasProperty(desc2, "get") && Object.prototype.__defineGetter__) {
-          Object.prototype.__defineGetter__.call(o, p, desc2.get);
+        if (ECMAScript.HasProperty(desc3, "get") && Object.prototype.__defineGetter__) {
+          Object.prototype.__defineGetter__.call(o, p, desc3.get);
         }
-        if (ECMAScript.HasProperty(desc2, "set") && Object.prototype.__defineSetter__) {
-          Object.prototype.__defineSetter__.call(o, p, desc2.set);
+        if (ECMAScript.HasProperty(desc3, "set") && Object.prototype.__defineSetter__) {
+          Object.prototype.__defineSetter__.call(o, p, desc3.set);
         }
-        if (ECMAScript.HasProperty(desc2, "value")) {
-          o[p] = desc2.value;
+        if (ECMAScript.HasProperty(desc3, "value")) {
+          o[p] = desc3.value;
         }
         return o;
       };
@@ -80474,9 +80474,16 @@ router2.post("/auth/verify-pin", async (req, res) => {
     res.status(400).json({ error: "PIN is required" });
     return;
   }
-  const [user] = await db.select().from(usersTable).where(and(eq(usersTable.pin, pin), eq(usersTable.role, "admin"))).limit(1);
+  const [user] = await db.select().from(usersTable).where(
+    and(
+      eq(usersTable.pin, pin),
+      eq(usersTable.role, "admin"),
+      eq(usersTable.isActive, true)
+    )
+  ).limit(1);
   if (!user) {
-    res.status(401).json({ error: "Invalid Admin PIN" });
+    console.warn(`[Security] PIN verification failed: Invalid or inactive Admin PIN`);
+    res.status(401).json({ error: "Invalid or inactive Admin PIN" });
     return;
   }
   res.json({ success: true, message: "PIN verified" });
@@ -81811,9 +81818,16 @@ router4.post("/ingredients/import-csv", requirePermission("admin:manage_ingredie
       res.status(400).json({ error: "Admin PIN is required for this action." });
       return;
     }
-    const [admin] = await db.select().from(usersTable).where(and(eq(usersTable.pin, pin), eq(usersTable.role, "admin"))).limit(1);
+    const [admin] = await db.select().from(usersTable).where(
+      and(
+        eq(usersTable.pin, pin),
+        eq(usersTable.role, "admin"),
+        eq(usersTable.isActive, true)
+      )
+    ).limit(1);
     if (!admin) {
-      res.status(401).json({ error: "Invalid Admin PIN. Critical actions require authorization." });
+      console.warn(`[Security] CSV import authorization failed: Invalid Admin PIN used`);
+      res.status(401).json({ error: "Invalid or inactive Admin PIN" });
       return;
     }
     const csvPath = path3.join(process.cwd(), "Inventory2026.csv");
@@ -82408,11 +82422,19 @@ router5.post("/orders", async (req, res) => {
       res.status(403).json({ error: "Admin PIN required for hospitality orders" });
       return;
     }
-    const [admin] = await db.select().from(usersTable).where(and(eq(usersTable.pin, adminPin), eq(usersTable.role, "admin"))).limit(1);
+    const [admin] = await db.select().from(usersTable).where(
+      and(
+        eq(usersTable.pin, adminPin),
+        eq(usersTable.role, "admin"),
+        eq(usersTable.isActive, true)
+      )
+    ).limit(1);
     if (!admin) {
-      res.status(401).json({ error: "Invalid Admin PIN" });
+      console.warn(`[Security] Hospitality authorization failed: Invalid Admin PIN used`);
+      res.status(401).json({ error: "Invalid or inactive Admin PIN" });
       return;
     }
+    console.log(`[Security] Hospitality authorized by admin: ${admin.name} (ID: ${admin.id})`);
   }
   const drinkIds = [...new Set(orderItems.map((i) => i.drinkId))];
   const allOptionIds = [
@@ -82683,11 +82705,19 @@ router5.patch("/orders/:id/status", async (req, res, next) => {
         res.status(403).json({ error: "Admin PIN required for hospitality authorization" });
         return;
       }
-      const [admin] = await db.select().from(usersTable).where(and(eq(usersTable.pin, adminPin), eq(usersTable.role, "admin"))).limit(1);
+      const [admin] = await db.select().from(usersTable).where(
+        and(
+          eq(usersTable.pin, adminPin),
+          eq(usersTable.role, "admin"),
+          eq(usersTable.isActive, true)
+        )
+      ).limit(1);
       if (!admin) {
-        res.status(401).json({ error: "Invalid Admin PIN" });
+        console.warn(`[Security] Hospitality authorization failed: Invalid Admin PIN used for order ${params.data.id}`);
+        res.status(401).json({ error: "Invalid or inactive Admin PIN" });
         return;
       }
+      console.log(`[Security] Hospitality authorized by admin: ${admin.name} (ID: ${admin.id}) for order ${params.data.id}`);
       const [existingOrder] = await db.select().from(ordersTable).where(eq(ordersTable.id, params.data.id));
       if (existingOrder) {
         updateData.discount = String(existingOrder.subtotal);
@@ -82761,11 +82791,19 @@ router5.post("/orders/:id/refund", requirePermission("cashier:refund_order"), as
     res.status(400).json({ error: "Admin PIN is required" });
     return;
   }
-  const [admin] = await db.select().from(usersTable).where(and(eq(usersTable.pin, adminPin), eq(usersTable.role, "admin")));
+  const [admin] = await db.select().from(usersTable).where(
+    and(
+      eq(usersTable.pin, adminPin),
+      eq(usersTable.role, "admin"),
+      eq(usersTable.isActive, true)
+    )
+  ).limit(1);
   if (!admin) {
-    res.status(401).json({ error: "Invalid Admin PIN" });
+    console.warn(`[Security] Refund authorization failed: Invalid Admin PIN used for order ${id}`);
+    res.status(401).json({ error: "Invalid or inactive Admin PIN" });
     return;
   }
+  console.log(`[Security] Refund authorized by admin: ${admin.name} (ID: ${admin.id}) for order ${id}`);
   const orderId = parseInt(id);
   const [order] = await db.select().from(ordersTable).where(eq(ordersTable.id, orderId)).limit(1);
   if (!order) {
@@ -82834,7 +82872,7 @@ router6.get("/stock/movements", async (req, res) => {
       conditions.push(lte(stockMovementsTable.createdAt, params.data.endDate));
     }
   }
-  const movements = await db.select().from(stockMovementsTable).where(conditions.length ? and(...conditions) : void 0).orderBy(desc(stockMovementsTable.createdAt));
+  const movements = await db.select().from(stockMovementsTable).where(conditions.length ? and(...conditions) : void 0).orderBy(asc(stockMovementsTable.createdAt));
   const limit = params.success && params.data.limit ? params.data.limit : 100;
   const offset = params.success && params.data.offset ? params.data.offset : 0;
   const paginated = movements.slice(offset, offset + limit);

@@ -235,12 +235,22 @@ router.post("/orders", async (req, res): Promise<void> => {
     const [admin] = await db
       .select()
       .from(usersTable)
-      .where(and(eq(usersTable.pin, adminPin), eq(usersTable.role, "admin")))
+      .where(
+        and(
+          eq(usersTable.pin, adminPin),
+          eq(usersTable.role, "admin"),
+          eq(usersTable.isActive, true)
+        )
+      )
       .limit(1);
+
     if (!admin) {
-      res.status(401).json({ error: "Invalid Admin PIN" });
+      console.warn(`[Security] Hospitality authorization failed: Invalid Admin PIN used`);
+      res.status(401).json({ error: "Invalid or inactive Admin PIN" });
       return;
     }
+
+    console.log(`[Security] Hospitality authorized by admin: ${admin.name} (ID: ${admin.id})`);
   }
 
   // ── Batch-fetch all required data in parallel ──────────────────────────────
@@ -580,12 +590,22 @@ router.patch("/orders/:id/status", async (req, res, next): Promise<void> => {
       const [admin] = await db
         .select()
         .from(usersTable)
-        .where(and(eq(usersTable.pin, adminPin), eq(usersTable.role, "admin")))
+        .where(
+          and(
+            eq(usersTable.pin, adminPin),
+            eq(usersTable.role, "admin"),
+            eq(usersTable.isActive, true)
+          )
+        )
         .limit(1);
+
       if (!admin) {
-        res.status(401).json({ error: "Invalid Admin PIN" });
+        console.warn(`[Security] Hospitality authorization failed: Invalid Admin PIN used for order ${params.data.id}`);
+        res.status(401).json({ error: "Invalid or inactive Admin PIN" });
         return;
       }
+
+      console.log(`[Security] Hospitality authorized by admin: ${admin.name} (ID: ${admin.id}) for order ${params.data.id}`);
 
       // If changed to hospitality, apply 100% discount
       // Fetch current order to get subtotal
@@ -703,12 +723,22 @@ router.post("/orders/:id/refund", requirePermission("cashier:refund_order"), asy
   const [admin] = await db
     .select()
     .from(usersTable)
-    .where(and(eq(usersTable.pin, adminPin), eq(usersTable.role, "admin")));
+    .where(
+      and(
+        eq(usersTable.pin, adminPin),
+        eq(usersTable.role, "admin"),
+        eq(usersTable.isActive, true)
+      )
+    )
+    .limit(1);
 
   if (!admin) {
-    res.status(401).json({ error: "Invalid Admin PIN" });
+    console.warn(`[Security] Refund authorization failed: Invalid Admin PIN used for order ${id}`);
+    res.status(401).json({ error: "Invalid or inactive Admin PIN" });
     return;
   }
+
+  console.log(`[Security] Refund authorized by admin: ${admin.name} (ID: ${admin.id}) for order ${id}`);
 
   const orderId = parseInt(id as string);
   const [order] = await db.select().from(ordersTable).where(eq(ordersTable.id, orderId)).limit(1);

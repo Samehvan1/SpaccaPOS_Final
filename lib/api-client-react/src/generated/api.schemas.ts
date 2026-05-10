@@ -459,6 +459,8 @@ export interface Order {
   /** @nullable */
   discountId?: number | null;
   /** @nullable */
+  discountCode?: string | null;
+  /** @nullable */
   discountValue?: number | null;
   /** @nullable */
   discountType?: OrderDiscountType;

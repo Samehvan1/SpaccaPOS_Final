@@ -393,7 +393,7 @@ router.get("/finance/sales-items", requirePermission("reports:view"), async (req
       .map(c => analyzeCustomization({ ...c, drinkId: item.drinkId }, context))
       .filter(Boolean);
 
-    // Financials (Strictly following user formulas)
+    // Financials (Strictly following formulas)
     const lineGross = parseFloat(item.lineTotal as string);
     const beforeTax = lineGross / 1.14;
     const taxAmount = lineGross - beforeTax;

@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, and, inArray, sql, gte, lte, desc } from "drizzle-orm";
+import { eq, and, inArray, sql, gte, lte, desc, asc } from "drizzle-orm";
 import { serializeDates } from "../lib/serialize";
 import {
   db,
@@ -48,7 +48,7 @@ router.get("/stock/movements", async (req, res): Promise<void> => {
     .select()
     .from(stockMovementsTable)
     .where(conditions.length ? and(...conditions) : undefined)
-    .orderBy(desc(stockMovementsTable.createdAt));
+    .orderBy(asc(stockMovementsTable.createdAt));
 
   const limit = params.success && params.data.limit ? params.data.limit : 100;
   const offset = params.success && params.data.offset ? params.data.offset : 0;

@@ -126,18 +126,22 @@ export type RestockIngredientResponse = Infer<
 // Orders
 export const ListOrdersQueryParams = api.ListOrdersQueryParams;
 export type ListOrdersQueryParams = Infer<typeof api.ListOrdersQueryParams>;
-export const ListOrdersResponseItem = api.ListOrdersResponseItem;
-export type ListOrdersResponseItem = Infer<typeof api.ListOrdersResponseItem>;
-export const ListOrdersResponse = api.ListOrdersResponse;
-export type ListOrdersResponse = Infer<typeof api.ListOrdersResponse>;
+export const ListOrdersResponseItem = api.ListOrdersResponseItem.and(z.object({
+  discountCode: z.string().nullish(),
+}));
+export type ListOrdersResponseItem = Infer<typeof ListOrdersResponseItem>;
+export const ListOrdersResponse = z.array(ListOrdersResponseItem);
+export type ListOrdersResponse = Infer<typeof ListOrdersResponse>;
 
 export const CreateOrderBody = api.CreateOrderBody;
 export type CreateOrderBody = Infer<typeof api.CreateOrderBody>;
 
 export const GetOrderParams = api.GetOrderParams;
 export type GetOrderParams = Infer<typeof api.GetOrderParams>;
-export const GetOrderResponse = api.GetOrderResponse;
-export type GetOrderResponse = Infer<typeof api.GetOrderResponse>;
+export const GetOrderResponse = api.GetOrderResponse.and(z.object({
+  discountCode: z.string().nullish(),
+}));
+export type GetOrderResponse = Infer<typeof GetOrderResponse>;
 
 export const UpdateOrderStatusParams = api.UpdateOrderStatusParams;
 export type UpdateOrderStatusParams = Infer<typeof api.UpdateOrderStatusParams>;
@@ -174,7 +178,8 @@ export type GetDashboardSummaryResponse = Infer<
   typeof api.GetDashboardSummaryResponse
 >;
 export const GetActiveOrdersResponseItem = api.GetActiveOrdersResponseItem.and(z.object({
-  items: z.array(z.any()) // Allow extra fields in items like kitchenStationId
+  items: z.array(z.any()), // Allow extra fields in items like kitchenStationId
+  discountCode: z.string().nullish(),
 }));
 export type GetActiveOrdersResponseItem = Infer<
   typeof GetActiveOrdersResponseItem

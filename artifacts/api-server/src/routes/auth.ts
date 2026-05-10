@@ -138,11 +138,18 @@ router.post("/auth/verify-pin", async (req, res): Promise<void> => {
   const [user] = await db
     .select()
     .from(usersTable)
-    .where(and(eq(usersTable.pin, pin), eq(usersTable.role, "admin")))
+    .where(
+      and(
+        eq(usersTable.pin, pin),
+        eq(usersTable.role, "admin"),
+        eq(usersTable.isActive, true)
+      )
+    )
     .limit(1);
 
   if (!user) {
-    res.status(401).json({ error: "Invalid Admin PIN" });
+    console.warn(`[Security] PIN verification failed: Invalid or inactive Admin PIN`);
+    res.status(401).json({ error: "Invalid or inactive Admin PIN" });
     return;
   }
 

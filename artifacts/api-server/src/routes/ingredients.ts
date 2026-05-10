@@ -84,9 +84,21 @@ router.post("/ingredients/import-csv", requirePermission("admin:manage_ingredien
     }
 
     // Verify PIN
-    const [admin] = await db.select().from(usersTable).where(and(eq(usersTable.pin, pin), eq(usersTable.role, "admin"))).limit(1);
+    const [admin] = await db
+      .select()
+      .from(usersTable)
+      .where(
+        and(
+          eq(usersTable.pin, pin),
+          eq(usersTable.role, "admin"),
+          eq(usersTable.isActive, true)
+        )
+      )
+      .limit(1);
+
     if (!admin) {
-      res.status(401).json({ error: "Invalid Admin PIN. Critical actions require authorization." });
+      console.warn(`[Security] CSV import authorization failed: Invalid Admin PIN used`);
+      res.status(401).json({ error: "Invalid or inactive Admin PIN" });
       return;
     }
 

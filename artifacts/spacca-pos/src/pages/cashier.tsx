@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/componen
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Check, X, Loader2, Calculator, ClipboardList, User, ListChecks, CreditCard, Banknote, Wallet, Receipt, Printer, FileText, LogOut, Clock, ShoppingBag, TrendingUp, Lock, RotateCcw, Search, History, Gift } from "lucide-react";
+import { Check, X, Loader2, Calculator, ClipboardList, User, ListChecks, CreditCard, Banknote, Wallet, Receipt, Printer, FileText, LogOut, Clock, ShoppingBag, TrendingUp, Lock, RotateCcw, Search, History, Gift, Tag } from "lucide-react";
 import { fmt } from "@/lib/currency";
 import { printCustomerReceipt, printAgentReceipts } from "@/components/receipt-printer";
 import { useSettings } from "@/hooks/use-settings";
@@ -462,6 +462,20 @@ export default function CashierPage() {
                                   <label className="text-[10px] font-black text-neon-green uppercase tracking-[0.2em] mb-1 block">Amount Due</label>
                                   <div className="text-4xl font-black tracking-tighter text-neon-green">{fmt(heroOrder.total)}</div>
                                 </div>
+                                {heroOrder.discountCode && (heroOrder.discount as any) > 0 && (
+                                  <div>
+                                    <label className="text-[10px] font-black text-amber-400 uppercase tracking-[0.2em] mb-1 block">Applied Discount</label>
+                                    <div className="text-xl font-black text-amber-400 flex items-center gap-1.5 italic">
+                                      <Tag className="h-4 w-4" />
+                                      {heroOrder.discountCode}
+                                      {heroOrder.discountValue && (
+                                        <span className="text-xs font-bold bg-amber-400/10 px-1.5 py-0.5 rounded border border-amber-400/20">
+                                          {heroOrder.discountType === 'percentage' ? `${heroOrder.discountValue}%` : fmt(Number(heroOrder.discountValue))}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
                               </div>
                               <div className="pt-4 border-t border-white/5 flex flex-col md:flex-row gap-8 items-start">
                                 <div className="flex-1">
@@ -550,6 +564,12 @@ export default function CashierPage() {
                                 </div>
                                 <div className="text-right">
                                   <div className="text-2xl font-black text-neon-green">{fmt(order.total)}</div>
+                                  {order.discountCode && (order.discount as any) > 0 && (
+                                    <div className="text-[10px] font-bold text-amber-400 flex items-center justify-end gap-1 mt-0.5">
+                                      <Tag className="h-2.5 w-2.5" />
+                                      {order.discountCode} ({order.discountType === 'percentage' ? `${order.discountValue}%` : fmt(Number(order.discountValue))})
+                                    </div>
+                                  )}
                                   <div className="flex flex-wrap gap-1 justify-end mt-1">
                                     {["cash", "card", "wallet", "hospitality"].map(m => {
                                       const rawLocal = localPaymentMethods.get(order.id);
@@ -662,6 +682,12 @@ export default function CashierPage() {
                         }`}>
                           {order.status}
                         </Badge>
+                        {order.discountCode && (order.discount as any) > 0 && (
+                          <div className="mt-1 text-[9px] font-bold text-amber-400 flex items-center justify-end gap-1">
+                            <Tag className="h-2.5 w-2.5" />
+                            {order.discountCode}
+                          </div>
+                        )}
                       </div>
                       <div className="flex items-center gap-2">
                         <Button variant="outline" size="sm" className="h-10 px-3 border-white/10 hover:bg-neon-cyan/10 hover:text-neon-cyan gap-2 rounded-xl" onClick={() => handlePrintAll(order)}>
