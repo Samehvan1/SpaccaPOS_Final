@@ -3,6 +3,7 @@ import { eq, and, desc, sql } from "drizzle-orm";
 import { db, stockAuditsTable, stockAuditItemsTable, ingredientsTable, stockMovementsTable, usersTable, branchStockTable } from "@workspace/db";
 import { serializeDates } from "../lib/serialize";
 import { logActivity } from "../lib/activity-logger";
+import { globalCache } from "../lib/cache";
 
 const router: IRouter = Router();
 
@@ -198,9 +199,6 @@ router.post("/stock-audits/:id/approve", async (req, res) => {
 
       for (const item of items) {
         // Use finalQuantity if set by admin, otherwise use actualQuantity reported by staff
-        const targetQuantity = item.finalQuantity !== null ? item.actualQuantity : item.actualQuantity;
-        // Wait, if finalQuantity is set, we should use it. 
-        // Logic fix: 
         const finalQty = item.finalQuantity !== null ? item.finalQuantity : item.actualQuantity;
         
         // Fetch current stock for this specific branch
@@ -251,6 +249,10 @@ router.post("/stock-audits/:id/approve", async (req, res) => {
         .where(eq(stockAuditsTable.id, auditId));
     });
 
+    globalCache.clear();
+    const { broadcastEvent } = await import("../lib/sse");
+    broadcastEvent("inventory_updated", { type: "audit_approved", auditId });
+
     await logActivity(req, "APPROVE_STOCK_AUDIT", "stock_audit", auditId);
     res.json({ success: true });
   } catch (err: any) {
@@ -272,6 +274,10 @@ router.post("/stock-audits/:id/reject", async (req, res) => {
       approvedAt: new Date(),
     })
     .where(eq(stockAuditsTable.id, auditId));
+
+  globalCache.clear();
+  const { broadcastEvent } = await import("../lib/sse");
+  broadcastEvent("inventory_updated", { type: "audit_rejected", auditId });
 
   await logActivity(req, "REJECT_STOCK_AUDIT", "stock_audit", auditId);
   res.json({ success: true });

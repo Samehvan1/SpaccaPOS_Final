@@ -235,6 +235,7 @@ router.get("/ingredients", requirePermission("inventory:view"), async (req, res)
           ? sql<string>`COALESCE(${branchStockTable.startupQuantity}, '0')`
           : sql<string>`'0'`,
         updatedAt: ingredientsTable.updatedAt,
+        createdAt: ingredientsTable.createdAt,
       })
       .from(ingredientsTable)
       .leftJoin(
@@ -278,6 +279,8 @@ router.get("/ingredients", requirePermission("inventory:view"), async (req, res)
           lowStockThreshold: parseFloat(String(i.lowStockThreshold || "0")) || 0,
           linkedTypeCount: (typeCountMap.get(i.id) || 0) + (optionCountMap.get(i.id) || 0),
           linkedProductCount: drinkCountMap.get(i.id) || 0,
+          createdAt: (i as any).createdAt || new Date(),
+          updatedAt: i.updatedAt || (i as any).createdAt || new Date(),
         };
       }))
     );

@@ -48,7 +48,7 @@ router.get("/stock/movements", async (req, res): Promise<void> => {
     .select()
     .from(stockMovementsTable)
     .where(conditions.length ? and(...conditions) : undefined)
-    .orderBy(asc(stockMovementsTable.createdAt));
+    .orderBy(desc(stockMovementsTable.createdAt));
 
   const limit = params.success && params.data.limit ? params.data.limit : 100;
   const offset = params.success && params.data.offset ? params.data.offset : 0;
