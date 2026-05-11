@@ -81193,18 +81193,29 @@ async function buildDrinkDetail(drinkId, branchId) {
         slotResult = { ...effectiveSlot, slotStyle: "legacy", ingredient: null, volumes: [] };
       }
       let isAvailable = true;
+      let unavailableReason = null;
       if (effectiveSlot.isRequired) {
         if (slotResult.slotStyle === "typed" && slotResult.typeOptions && slotResult.typeOptions.length > 0) {
           isAvailable = slotResult.typeOptions.some((to) => to.isAvailable);
+          if (!isAvailable) {
+            unavailableReason = `Out of stock: ${slotResult.slotLabel}`;
+          }
         } else if (slotResult.ingredient?.options && slotResult.ingredient.options.length > 0) {
           isAvailable = slotResult.ingredient.options.some((o) => o.isAvailable);
+          if (!isAvailable) {
+            unavailableReason = `Out of stock: ${slotResult.ingredient.name}`;
+          }
         } else if (slotResult.ingredient) {
           isAvailable = (slotResult.ingredient.stockQuantity ?? 0) > 0;
+          if (!isAvailable) {
+            unavailableReason = `Out of stock: ${slotResult.ingredient.name}`;
+          }
         }
       }
-      return { ...slotResult, isAvailable };
+      return { ...slotResult, isAvailable, unavailableReason };
     })
   );
+  const unavailableReasons = slotsWithDetails.filter((s) => !s.isAvailable && s.unavailableReason).map((s) => s.unavailableReason);
   let isCupAvailable = true;
   if (drink.cupIngredientId) {
     if (branchId) {
@@ -81217,13 +81228,17 @@ async function buildDrinkDetail(drinkId, branchId) {
       const [result2] = await db.select({ totalStock: sql`SUM(${branchStockTable.stockQuantity})` }).from(branchStockTable).where(eq(branchStockTable.ingredientId, drink.cupIngredientId));
       isCupAvailable = result2?.totalStock ? Number(result2.totalStock) >= 1 : false;
     }
+    if (!isCupAvailable) {
+      unavailableReasons.push("Out of stock: Required Cup/Glass");
+    }
   }
   const isDrinkAvailable = isCupAvailable && slotsWithDetails.every((s) => s.isAvailable);
   const result = {
     ...drink,
     basePrice: Number(drink.basePrice),
     slots: slotsWithDetails,
-    isAvailable: isDrinkAvailable
+    isAvailable: isDrinkAvailable,
+    unavailableReasons
   };
   globalCache.set(cacheKey, result);
   return result;
@@ -81271,7 +81286,8 @@ router3.get("/drinks", async (req, res) => {
         ...d,
         basePrice: Number(d.basePrice),
         defaultPrice,
-        isAvailable: detail.isAvailable
+        isAvailable: detail.isAvailable,
+        unavailableReasons: detail.unavailableReasons
       };
     })
   );
@@ -81392,8 +81408,8 @@ router3.patch("/drinks/:id", requirePermission("admin:manage_drinks"), async (re
     res.status(404).json({ error: "Drink not found" });
     return;
   }
-  globalCache.delete(`drink_detail_${params.data.id}`);
-  globalCache.delete(`drink_default_price_${params.data.id}`);
+  globalCache.clearPrefix(`drink_detail_${params.data.id}`);
+  globalCache.clearPrefix(`drink_default_price_${params.data.id}`);
   res.json(UpdateDrinkResponse2.parse(serializeDates({
     ...drink,
     basePrice: Number(drink.basePrice),
@@ -81593,8 +81609,8 @@ router3.put("/drinks/:id/slots", requirePermission("admin:manage_drinks"), async
     res.status(404).json({ error: "Drink not found" });
     return;
   }
-  globalCache.delete(`drink_detail_${drinkId}`);
-  globalCache.delete(`drink_default_price_${drinkId}`);
+  globalCache.clearPrefix(`drink_detail_${drinkId}`);
+  globalCache.clearPrefix(`drink_default_price_${drinkId}`);
   res.json(serializeDates(detail));
 });
 router3.delete("/drinks/:id", requirePermission("admin:manage_drinks"), async (req, res) => {
@@ -82188,6 +82204,8 @@ router4.patch("/ingredients/:id/options/:optionId", requirePermission("admin:man
   }
   const updateData = {};
   if (parsed.data.label !== void 0) updateData.label = parsed.data.label;
+  if (parsed.data.processedQty !== void 0) updateData.processedQty = String(parsed.data.processedQty);
+  if (parsed.data.producedQty !== void 0) updateData.producedQty = String(parsed.data.producedQty);
   if (parsed.data.extraCost !== void 0) updateData.extraCost = String(parsed.data.extraCost);
   if (parsed.data.isDefault !== void 0) updateData.isDefault = parsed.data.isDefault;
   if (parsed.data.sortOrder !== void 0) updateData.sortOrder = parsed.data.sortOrder;

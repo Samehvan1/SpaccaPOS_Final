@@ -552,6 +552,8 @@ router.patch("/ingredients/:id/options/:optionId", requirePermission("admin:mana
 
   const updateData: Record<string, unknown> = {};
   if (parsed.data.label !== undefined) updateData.label = parsed.data.label;
+  if (parsed.data.processedQty !== undefined) updateData.processedQty = String(parsed.data.processedQty);
+  if (parsed.data.producedQty !== undefined) updateData.producedQty = String(parsed.data.producedQty);
   if (parsed.data.extraCost !== undefined) updateData.extraCost = String(parsed.data.extraCost);
   if (parsed.data.isDefault !== undefined) updateData.isDefault = parsed.data.isDefault;
   if (parsed.data.sortOrder !== undefined) updateData.sortOrder = parsed.data.sortOrder;

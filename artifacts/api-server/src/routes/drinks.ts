@@ -356,19 +356,33 @@ async function buildDrinkDetail(drinkId: number, branchId?: number) {
 
       // Availability check
       let isAvailable = true;
+      let unavailableReason: string | null = null;
       if (effectiveSlot.isRequired) {
         if (slotResult.slotStyle === "typed" && slotResult.typeOptions && slotResult.typeOptions.length > 0) {
           isAvailable = slotResult.typeOptions.some((to: any) => to.isAvailable);
+          if (!isAvailable) {
+            unavailableReason = `Out of stock: ${slotResult.slotLabel}`;
+          }
         } else if (slotResult.ingredient?.options && slotResult.ingredient.options.length > 0) {
           isAvailable = slotResult.ingredient.options.some((o: any) => o.isAvailable);
+          if (!isAvailable) {
+            unavailableReason = `Out of stock: ${slotResult.ingredient.name}`;
+          }
         } else if (slotResult.ingredient) {
           isAvailable = (slotResult.ingredient.stockQuantity ?? 0) > 0;
+          if (!isAvailable) {
+            unavailableReason = `Out of stock: ${slotResult.ingredient.name}`;
+          }
         }
       }
       
-      return { ...slotResult, isAvailable };
+      return { ...slotResult, isAvailable, unavailableReason };
     })
   );
+
+  const unavailableReasons = slotsWithDetails
+    .filter(s => !s.isAvailable && s.unavailableReason)
+    .map(s => s.unavailableReason as string);
 
   let isCupAvailable = true;
   if (drink.cupIngredientId) {
@@ -387,6 +401,9 @@ async function buildDrinkDetail(drinkId: number, branchId?: number) {
         .where(eq(branchStockTable.ingredientId, drink.cupIngredientId));
       isCupAvailable = result?.totalStock ? Number(result.totalStock) >= 1 : false;
     }
+    if (!isCupAvailable) {
+      unavailableReasons.push("Out of stock: Required Cup/Glass");
+    }
   }
 
   const isDrinkAvailable = isCupAvailable && slotsWithDetails.every(s => s.isAvailable);
@@ -396,6 +413,7 @@ async function buildDrinkDetail(drinkId: number, branchId?: number) {
     basePrice: Number(drink.basePrice),
     slots: slotsWithDetails,
     isAvailable: isDrinkAvailable,
+    unavailableReasons,
   };
   
   globalCache.set(cacheKey, result);
@@ -459,7 +477,8 @@ router.get("/drinks", async (req, res): Promise<void> => {
         ...d, 
         basePrice: Number(d.basePrice), 
         defaultPrice,
-        isAvailable: detail.isAvailable 
+        isAvailable: detail.isAvailable,
+        unavailableReasons: detail.unavailableReasons
       };
     })
   );
@@ -608,8 +627,8 @@ router.patch("/drinks/:id", requirePermission("admin:manage_drinks"), async (req
   if (!drink) { res.status(404).json({ error: "Drink not found" }); return; }
 
   // Invalidate cache
-  globalCache.delete(`drink_detail_${params.data.id}`);
-  globalCache.delete(`drink_default_price_${params.data.id}`);
+  globalCache.clearPrefix(`drink_detail_${params.data.id}`);
+  globalCache.clearPrefix(`drink_default_price_${params.data.id}`);
 
   res.json(UpdateDrinkResponse.parse(serializeDates({ 
     ...drink, 
@@ -844,8 +863,8 @@ router.put("/drinks/:id/slots", requirePermission("admin:manage_drinks"), async 
   if (!detail) { res.status(404).json({ error: "Drink not found" }); return; }
   
   // Invalidate cache
-  globalCache.delete(`drink_detail_${drinkId}`);
-  globalCache.delete(`drink_default_price_${drinkId}`);
+  globalCache.clearPrefix(`drink_detail_${drinkId}`);
+  globalCache.clearPrefix(`drink_default_price_${drinkId}`);
   
   res.json(serializeDates(detail));
 });

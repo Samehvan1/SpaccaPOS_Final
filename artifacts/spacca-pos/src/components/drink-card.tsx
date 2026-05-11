@@ -14,13 +14,18 @@ export function DrinkCard({ drink, onClick, variant }: DrinkCardProps) {
   const { allowNoStockSell } = useSettings();
   const imageUrl = (drink as any).imageUrl as string | null | undefined;
   const isAvailable = (drink as any).isAvailable !== false;
+  const unavailableReasons = (drink as any).unavailableReasons as string[] | undefined;
   const showOutOfStock = !isAvailable && !allowNoStockSell;
+  const tooltipText = showOutOfStock && unavailableReasons?.length 
+    ? `Missing: ${unavailableReasons.join(", ")}` 
+    : undefined;
 
   if (variant === "pos") {
     return (
       <button
         onClick={onClick}
         disabled={showOutOfStock}
+        title={tooltipText}
         className={`flex flex-col rounded-lg border bg-card text-card-foreground transition-all h-40 overflow-hidden group w-full relative ${
           showOutOfStock 
             ? "opacity-90 cursor-not-allowed" 
