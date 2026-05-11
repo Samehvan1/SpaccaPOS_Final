@@ -165,12 +165,7 @@ export default function PosTerminal() {
           // Find available types (if not allowing no-stock sell)
           const availableTypes = allowNoStockSell 
             ? typeOptions 
-            : typeOptions.filter(to => {
-                const stock = to.stockQuantity ?? 0;
-                if (stock <= 0) return false;
-                // At least one volume must be affordable in terms of stock
-                return (to.volumes ?? []).some((v: any) => stock >= (v.processedQty || 0));
-              });
+            : typeOptions.filter(to => to.isAvailable);
 
           const activeTypeOptions = availableTypes.length > 0 ? availableTypes : typeOptions;
           const defTypeOpt = activeTypeOptions.find((to: any) => to.isDefault) ?? activeTypeOptions[0];
@@ -885,8 +880,7 @@ export default function PosTerminal() {
                                   disabled={isOutOfStock}
                                   onClick={() => {
                                     setSelections(prev => ({ ...prev, [slot.id]: typeOpt.ingredientTypeId }));
-                                    const stock = typeOpt.stockQuantity ?? 0;
-                                    const availableVols = (typeOpt.volumes ?? []).filter((v: any) => allowNoStockSell || stock >= (v.processedQty || 0));
+                                    const availableVols = (typeOpt.volumes ?? []).filter((v: any) => allowNoStockSell || v.isAvailable);
                                     const defVol = availableVols.find((v: any) => v.isDefault) ?? availableVols[availableVols.length - 1] ?? typeOpt.volumes?.[0];
                                     setSubSelections(prev => {
                                       const next = { ...prev };
@@ -987,8 +981,7 @@ export default function PosTerminal() {
                                 // Auto-select first sub-option of newly selected type
                                 if (option.linkedIngredient?.options?.length) {
                                   const subOpts = option.linkedIngredient.options;
-                                  const subStock = option.linkedIngredient.stockQuantity ?? 0;
-                                  const availableSub = allowNoStockSell ? subOpts : subOpts.filter((so: any) => subStock >= (so.processedQty || 0));
+                                  const availableSub = allowNoStockSell ? subOpts : subOpts.filter((so: any) => so.isAvailable);
                                   const defSub = availableSub.find((o: any) => o.isDefault) || availableSub[0] || subOpts[0];
                                   setSubSelections(prev => ({ ...prev, [slot.id]: defSub.id }));
                                 } else {
