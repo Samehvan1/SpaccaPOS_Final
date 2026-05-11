@@ -28,11 +28,11 @@ var __export = (target, all) => {
   for (var name in all)
     __defProp(target, name, { get: all[name], enumerable: true });
 };
-var __copyProps = (to, from, except2, desc3) => {
+var __copyProps = (to, from, except2, desc2) => {
   if (from && typeof from === "object" || typeof from === "function") {
     for (let key of __getOwnPropNames(from))
       if (!__hasOwnProp.call(to, key) && key !== except2)
-        __defProp(to, key, { get: () => from[key], enumerable: !(desc3 = __getOwnPropDesc(from, key)) || desc3.enumerable });
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc2 = __getOwnPropDesc(from, key)) || desc2.enumerable });
   }
   return to;
 };
@@ -1673,10 +1673,10 @@ var require_http_errors = __commonJS({
       return ServerError;
     }
     function nameFunc(func, name) {
-      var desc3 = Object.getOwnPropertyDescriptor(func, "name");
-      if (desc3 && desc3.configurable) {
-        desc3.value = name;
-        Object.defineProperty(func, "name", desc3);
+      var desc2 = Object.getOwnPropertyDescriptor(func, "name");
+      if (desc2 && desc2.configurable) {
+        desc2.value = name;
+        Object.defineProperty(func, "name", desc2);
       }
     }
     function populateConstructorExports(exports2, codes, HttpError) {
@@ -17121,14 +17121,14 @@ var require_get = __commonJS({
         throw e;
       }
     }
-    var desc3 = !!hasProtoAccessor && gOPD && gOPD(
+    var desc2 = !!hasProtoAccessor && gOPD && gOPD(
       Object.prototype,
       /** @type {keyof typeof Object.prototype} */
       "__proto__"
     );
     var $Object = Object;
     var $getPrototypeOf = $Object.getPrototypeOf;
-    module.exports = desc3 && typeof desc3.get === "function" ? callBind([desc3.get]) : typeof $getPrototypeOf === "function" ? (
+    module.exports = desc2 && typeof desc2.get === "function" ? callBind([desc2.get]) : typeof $getPrototypeOf === "function" ? (
       /** @type {import('./get')} */
       function getDunder(value) {
         return $getPrototypeOf(value == null ? value : $Object(value));
@@ -17478,10 +17478,10 @@ var require_get_intrinsic = __commonJS({
             return void undefined2;
           }
           if ($gOPD && i + 1 >= parts.length) {
-            var desc3 = $gOPD(value, part);
-            isOwn = !!desc3;
-            if (isOwn && "get" in desc3 && !("originalValue" in desc3.get)) {
-              value = desc3.get;
+            var desc2 = $gOPD(value, part);
+            isOwn = !!desc2;
+            if (isOwn && "get" in desc2 && !("originalValue" in desc2.get)) {
+              value = desc2.get;
             } else {
               value = value[part];
             }
@@ -32079,12 +32079,12 @@ var require_result = __commonJS({
         }
         const row = {};
         for (let i = 0; i < fieldDescriptions.length; i++) {
-          const desc3 = fieldDescriptions[i];
-          row[desc3.name] = null;
+          const desc2 = fieldDescriptions[i];
+          row[desc2.name] = null;
           if (this._types) {
-            this._parsers[i] = this._types.getTypeParser(desc3.dataTypeID, desc3.format || "text");
+            this._parsers[i] = this._types.getTypeParser(desc2.dataTypeID, desc2.format || "text");
           } else {
-            this._parsers[i] = types3.getTypeParser(desc3.dataTypeID, desc3.format || "text");
+            this._parsers[i] = types3.getTypeParser(desc2.dataTypeID, desc2.format || "text");
           }
         }
         this._prebuiltEmptyResultObject = { ...row };
@@ -72545,16 +72545,16 @@ var require_typedarray = __commonJS({
     })()) {
       defineProp = Object.defineProperty;
     } else {
-      defineProp = function(o, p, desc3) {
+      defineProp = function(o, p, desc2) {
         if (!o === Object(o)) throw new TypeError("Object.defineProperty called on non-object");
-        if (ECMAScript.HasProperty(desc3, "get") && Object.prototype.__defineGetter__) {
-          Object.prototype.__defineGetter__.call(o, p, desc3.get);
+        if (ECMAScript.HasProperty(desc2, "get") && Object.prototype.__defineGetter__) {
+          Object.prototype.__defineGetter__.call(o, p, desc2.get);
         }
-        if (ECMAScript.HasProperty(desc3, "set") && Object.prototype.__defineSetter__) {
-          Object.prototype.__defineSetter__.call(o, p, desc3.set);
+        if (ECMAScript.HasProperty(desc2, "set") && Object.prototype.__defineSetter__) {
+          Object.prototype.__defineSetter__.call(o, p, desc2.set);
         }
-        if (ECMAScript.HasProperty(desc3, "value")) {
-          o[p] = desc3.value;
+        if (ECMAScript.HasProperty(desc2, "value")) {
+          o[p] = desc2.value;
         }
         return o;
       };
@@ -78552,10 +78552,15 @@ var DeleteIngredientOptionParams2 = DeleteIngredientOptionParams;
 var RestockIngredientBody2 = RestockIngredientBody;
 var RestockIngredientResponse2 = RestockIngredientResponse;
 var ListOrdersQueryParams2 = ListOrdersQueryParams;
-var ListOrdersResponse2 = ListOrdersResponse;
+var ListOrdersResponseItem2 = ListOrdersResponseItem.and(external_exports2.object({
+  discountCode: external_exports2.string().nullish()
+}));
+var ListOrdersResponse2 = external_exports2.array(ListOrdersResponseItem2);
 var CreateOrderBody2 = CreateOrderBody;
 var GetOrderParams2 = GetOrderParams;
-var GetOrderResponse2 = GetOrderResponse;
+var GetOrderResponse2 = GetOrderResponse.and(external_exports2.object({
+  discountCode: external_exports2.string().nullish()
+}));
 var UpdateOrderStatusParams2 = UpdateOrderStatusParams;
 var UpdateOrderStatusBody2 = UpdateOrderStatusBody;
 var UpdateOrderStatusResponse2 = UpdateOrderStatusResponse;
@@ -78564,8 +78569,9 @@ var ListStockMovementsResponse2 = ListStockMovementsResponse;
 var CreateStockAdjustmentBody2 = CreateStockAdjustmentBody;
 var GetDashboardSummaryResponse2 = GetDashboardSummaryResponse;
 var GetActiveOrdersResponseItem2 = GetActiveOrdersResponseItem.and(external_exports2.object({
-  items: external_exports2.array(external_exports2.any())
+  items: external_exports2.array(external_exports2.any()),
   // Allow extra fields in items like kitchenStationId
+  discountCode: external_exports2.string().nullish()
 }));
 var GetActiveOrdersResponse2 = external_exports2.array(GetActiveOrdersResponseItem2);
 var GetLowStockIngredientsResponse2 = GetLowStockIngredientsResponse;
@@ -80957,7 +80963,7 @@ var storage = import_multer.default.diskStorage({
 var upload = (0, import_multer.default)({ storage, limits: { fileSize: 5 * 1024 * 1024 } });
 var router3 = (0, import_express3.Router)();
 async function buildDrinkDetail(drinkId, branchId) {
-  const cacheKey = `drink_detail_${drinkId}`;
+  const cacheKey = `drink_detail_${drinkId}_${branchId ?? "global"}`;
   const cached2 = globalCache.get(cacheKey);
   if (cached2) return cached2;
   const [drink] = await db.select().from(drinksTable).where(eq(drinksTable.id, drinkId));
@@ -81050,12 +81056,16 @@ async function buildDrinkDetail(drinkId, branchId) {
             const [category] = ingType ? await db.select().from(ingredientCategoriesTable).where(eq(ingredientCategoriesTable.id, ingType.categoryId)) : [null];
             let stockQuantity = 999999;
             if (ingType?.inventoryIngredientId) {
-              const [inv] = await db.select({ stock: branchStockTable.stockQuantity }).from(branchStockTable).where(and(
-                eq(branchStockTable.ingredientId, ingType.inventoryIngredientId),
-                branchId ? eq(branchStockTable.branchId, branchId) : sql`1=1`
-              )).limit(1);
-              if (inv) stockQuantity = Number(inv.stock);
-              else if (branchId) stockQuantity = 0;
+              if (branchId) {
+                const [inv] = await db.select({ stock: branchStockTable.stockQuantity }).from(branchStockTable).where(and(
+                  eq(branchStockTable.ingredientId, ingType.inventoryIngredientId),
+                  eq(branchStockTable.branchId, branchId)
+                )).limit(1);
+                stockQuantity = inv ? Number(inv.stock) : 0;
+              } else {
+                const [result2] = await db.select({ totalStock: sql`SUM(${branchStockTable.stockQuantity})` }).from(branchStockTable).where(eq(branchStockTable.ingredientId, ingType.inventoryIngredientId));
+                stockQuantity = result2?.totalStock ? Number(result2.totalStock) : 0;
+              }
             } else if (!ingType) {
               stockQuantity = 0;
             }
@@ -81122,11 +81132,16 @@ async function buildDrinkDetail(drinkId, branchId) {
         const options = await db.select().from(ingredientOptionsTable).where(eq(ingredientOptionsTable.ingredientId, slot.ingredientId)).orderBy(ingredientOptionsTable.sortOrder);
         let stockQuantity = 0;
         if (ingredient) {
-          const [stockRow] = await db.select({ stock: branchStockTable.stockQuantity }).from(branchStockTable).where(and(
-            eq(branchStockTable.ingredientId, ingredient.id),
-            branchId ? eq(branchStockTable.branchId, branchId) : sql`1=1`
-          )).limit(1);
-          stockQuantity = stockRow ? Number(stockRow.stock) : 0;
+          if (branchId) {
+            const [stockRow] = await db.select({ stock: branchStockTable.stockQuantity }).from(branchStockTable).where(and(
+              eq(branchStockTable.ingredientId, ingredient.id),
+              eq(branchStockTable.branchId, branchId)
+            )).limit(1);
+            stockQuantity = stockRow ? Number(stockRow.stock) : 0;
+          } else {
+            const [result2] = await db.select({ totalStock: sql`SUM(${branchStockTable.stockQuantity})` }).from(branchStockTable).where(eq(branchStockTable.ingredientId, ingredient.id));
+            stockQuantity = result2?.totalStock ? Number(result2.totalStock) : 0;
+          }
         }
         const enrichedOptions = await Promise.all(
           options.map(async (o) => {
@@ -81179,9 +81194,9 @@ async function buildDrinkDetail(drinkId, branchId) {
       }
       let isAvailable = true;
       if (effectiveSlot.isRequired) {
-        if (slotResult.slotStyle === "typed" && slotResult.typeOptions) {
+        if (slotResult.slotStyle === "typed" && slotResult.typeOptions && slotResult.typeOptions.length > 0) {
           isAvailable = slotResult.typeOptions.some((to) => to.isAvailable);
-        } else if (slotResult.ingredient?.options) {
+        } else if (slotResult.ingredient?.options && slotResult.ingredient.options.length > 0) {
           isAvailable = slotResult.ingredient.options.some((o) => o.isAvailable);
         } else if (slotResult.ingredient) {
           isAvailable = (slotResult.ingredient.stockQuantity ?? 0) > 0;
@@ -81192,14 +81207,15 @@ async function buildDrinkDetail(drinkId, branchId) {
   );
   let isCupAvailable = true;
   if (drink.cupIngredientId) {
-    const [cupInv] = await db.select({ stock: branchStockTable.stockQuantity }).from(branchStockTable).where(and(
-      eq(branchStockTable.ingredientId, drink.cupIngredientId),
-      branchId ? eq(branchStockTable.branchId, branchId) : sql`1=1`
-    )).limit(1);
-    if (cupInv) {
-      isCupAvailable = Number(cupInv.stock) >= 1;
-    } else if (branchId) {
-      isCupAvailable = false;
+    if (branchId) {
+      const [cupInv] = await db.select({ stock: branchStockTable.stockQuantity }).from(branchStockTable).where(and(
+        eq(branchStockTable.ingredientId, drink.cupIngredientId),
+        eq(branchStockTable.branchId, branchId)
+      )).limit(1);
+      isCupAvailable = cupInv ? Number(cupInv.stock) >= 1 : false;
+    } else {
+      const [result2] = await db.select({ totalStock: sql`SUM(${branchStockTable.stockQuantity})` }).from(branchStockTable).where(eq(branchStockTable.ingredientId, drink.cupIngredientId));
+      isCupAvailable = result2?.totalStock ? Number(result2.totalStock) >= 1 : false;
     }
   }
   const isDrinkAvailable = isCupAvailable && slotsWithDetails.every((s) => s.isAvailable);
@@ -81917,7 +81933,7 @@ router4.get("/ingredients", requirePermission("inventory:view"), async (req, res
     const rawBranchId = req.query.branchId;
     const isAdmin = sessionUser.role === "admin";
     const sessionBranchId = sessionUser.branchId;
-    let targetBranchId = sessionBranchId;
+    let targetBranchId = sessionBranchId ?? null;
     if (isAdmin) {
       if (rawBranchId === "all") {
         targetBranchId = null;
@@ -81934,10 +81950,11 @@ router4.get("/ingredients", requirePermission("inventory:view"), async (req, res
       unit: ingredientsTable.unit,
       costPerUnit: ingredientsTable.costPerUnit,
       isActive: ingredientsTable.isActive,
-      stockQuantity: targetBranchId !== null ? sql`COALESCE(${branchStockTable.stockQuantity}, '0')` : sql`(SELECT COALESCE(SUM(bs.stock_quantity), 0)::text FROM branch_stock bs WHERE bs.ingredient_id = ${ingredientsTable.id})`,
-      lowStockThreshold: targetBranchId !== null ? sql`COALESCE(${branchStockTable.lowStockThreshold}, '500')` : sql`'500'`,
-      startupQuantity: targetBranchId !== null ? sql`COALESCE(${branchStockTable.startupQuantity}, '0')` : sql`'0'`,
-      updatedAt: ingredientsTable.updatedAt
+      stockQuantity: targetBranchId !== null && targetBranchId !== void 0 ? sql`COALESCE(${branchStockTable.stockQuantity}, '0')` : sql`(SELECT COALESCE(SUM(bs.stock_quantity), 0)::text FROM branch_stock bs WHERE bs.ingredient_id = ${ingredientsTable.id})`,
+      lowStockThreshold: targetBranchId !== null && targetBranchId !== void 0 ? sql`COALESCE(${branchStockTable.lowStockThreshold}, '500')` : sql`'500'`,
+      startupQuantity: targetBranchId !== null && targetBranchId !== void 0 ? sql`COALESCE(${branchStockTable.startupQuantity}, '0')` : sql`'0'`,
+      updatedAt: ingredientsTable.updatedAt,
+      createdAt: ingredientsTable.createdAt
     }).from(ingredientsTable).leftJoin(
       branchStockTable,
       and(
@@ -81961,19 +81978,21 @@ router4.get("/ingredients", requirePermission("inventory:view"), async (req, res
     const typeCountMap = new Map(typeLinks.map((l) => [l.id, Number(l.count)]));
     const optionCountMap = new Map(optionLinks.map((l) => [l.id, Number(l.count)]));
     const drinkCountMap = new Map(drinkLinks.map((l) => [l.id, Number(l.count)]));
-    res.json(
-      serializeDates(ingredientRows.map((i) => {
-        return {
-          ...i,
-          costPerUnit: parseFloat(String(i.costPerUnit || "0")) || 0,
-          stockQuantity: parseFloat(String(i.stockQuantity || "0")) || 0,
-          startupQuantity: parseFloat(String(i.startupQuantity || "0")) || 0,
-          lowStockThreshold: parseFloat(String(i.lowStockThreshold || "0")) || 0,
-          linkedTypeCount: (typeCountMap.get(i.id) || 0) + (optionCountMap.get(i.id) || 0),
-          linkedProductCount: drinkCountMap.get(i.id) || 0
-        };
-      }))
-    );
+    const responseBody = ingredientRows.map((i) => {
+      return {
+        ...i,
+        costPerUnit: parseFloat(String(i.costPerUnit || "0")) || 0,
+        stockQuantity: parseFloat(String(i.stockQuantity || "0")) || 0,
+        startupQuantity: parseFloat(String(i.startupQuantity || "0")) || 0,
+        lowStockThreshold: parseFloat(String(i.lowStockThreshold || "0")) || 0,
+        linkedTypeCount: (typeCountMap.get(i.id) || 0) + (optionCountMap.get(i.id) || 0),
+        linkedProductCount: drinkCountMap.get(i.id) || 0,
+        createdAt: i.createdAt || /* @__PURE__ */ new Date(),
+        updatedAt: i.updatedAt || i.createdAt || /* @__PURE__ */ new Date()
+      };
+    });
+    console.log(`[Ingredients-Debug] First 3 items stock:`, responseBody.slice(0, 3).map((it) => ({ id: it.id, name: it.name, stock: it.stockQuantity })));
+    res.json(serializeDates(responseBody));
   } catch (err) {
     console.error("[Ingredients API Error]:", err);
     res.status(500).json({ error: "Failed to load ingredients data" });
@@ -82872,7 +82891,7 @@ router6.get("/stock/movements", async (req, res) => {
       conditions.push(lte(stockMovementsTable.createdAt, params.data.endDate));
     }
   }
-  const movements = await db.select().from(stockMovementsTable).where(conditions.length ? and(...conditions) : void 0).orderBy(asc(stockMovementsTable.createdAt));
+  const movements = await db.select().from(stockMovementsTable).where(conditions.length ? and(...conditions) : void 0).orderBy(desc(stockMovementsTable.createdAt));
   const limit = params.success && params.data.limit ? params.data.limit : 100;
   const offset = params.success && params.data.offset ? params.data.offset : 0;
   const paginated = movements.slice(offset, offset + limit);
@@ -83075,7 +83094,9 @@ router7.get("/dashboard/low-stock", async (req, res) => {
     costPerUnit: ingredientsTable.costPerUnit,
     isActive: ingredientsTable.isActive,
     stockQuantity: branchStockTable.stockQuantity,
-    lowStockThreshold: branchStockTable.lowStockThreshold
+    lowStockThreshold: branchStockTable.lowStockThreshold,
+    createdAt: ingredientsTable.createdAt,
+    updatedAt: ingredientsTable.updatedAt
   }).from(ingredientsTable).innerJoin(
     branchStockTable,
     and(
@@ -83095,7 +83116,9 @@ router7.get("/dashboard/low-stock", async (req, res) => {
         ...i,
         costPerUnit: parseFloat(i.costPerUnit),
         stockQuantity: parseFloat(i.stockQuantity),
-        lowStockThreshold: parseFloat(i.lowStockThreshold)
+        lowStockThreshold: parseFloat(i.lowStockThreshold),
+        createdAt: i.createdAt || /* @__PURE__ */ new Date(),
+        updatedAt: i.updatedAt || i.createdAt || /* @__PURE__ */ new Date()
       })))
     )
   );
@@ -84763,6 +84786,7 @@ var admin_default = adminRouter;
 var import_express18 = __toESM(require_express2(), 1);
 init_drizzle_orm();
 init_src();
+init_cache2();
 var router16 = (0, import_express18.Router)();
 router16.get("/stock-audits", async (req, res) => {
   const sessionUser = req.session;
@@ -84901,7 +84925,6 @@ router16.post("/stock-audits/:id/approve", async (req, res) => {
       if (audit.status !== "pending") throw new Error("Audit already processed");
       const items = await tx.select().from(stockAuditItemsTable).where(eq(stockAuditItemsTable.auditId, auditId));
       for (const item of items) {
-        const targetQuantity = item.finalQuantity !== null ? item.actualQuantity : item.actualQuantity;
         const finalQty = item.finalQuantity !== null ? item.finalQuantity : item.actualQuantity;
         const [stockRow] = await tx.select({ stock: branchStockTable.stockQuantity }).from(branchStockTable).where(and(
           eq(branchStockTable.ingredientId, item.ingredientId),
@@ -84935,6 +84958,9 @@ router16.post("/stock-audits/:id/approve", async (req, res) => {
         approvedAt: /* @__PURE__ */ new Date()
       }).where(eq(stockAuditsTable.id, auditId));
     });
+    globalCache.clear();
+    const { broadcastEvent: broadcastEvent2 } = await Promise.resolve().then(() => (init_sse(), sse_exports));
+    broadcastEvent2("inventory_updated", { type: "audit_approved", auditId });
     await logActivity(req, "APPROVE_STOCK_AUDIT", "stock_audit", auditId);
     res.json({ success: true });
   } catch (err) {
@@ -84950,6 +84976,9 @@ router16.post("/stock-audits/:id/reject", async (req, res) => {
     approvedBy: userId,
     approvedAt: /* @__PURE__ */ new Date()
   }).where(eq(stockAuditsTable.id, auditId));
+  globalCache.clear();
+  const { broadcastEvent: broadcastEvent2 } = await Promise.resolve().then(() => (init_sse(), sse_exports));
+  broadcastEvent2("inventory_updated", { type: "audit_rejected", auditId });
   await logActivity(req, "REJECT_STOCK_AUDIT", "stock_audit", auditId);
   res.json({ success: true });
 });

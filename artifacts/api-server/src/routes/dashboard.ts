@@ -206,6 +206,8 @@ router.get("/dashboard/low-stock", async (req, res): Promise<void> => {
       isActive: ingredientsTable.isActive,
       stockQuantity: branchStockTable.stockQuantity,
       lowStockThreshold: branchStockTable.lowStockThreshold,
+      createdAt: ingredientsTable.createdAt,
+      updatedAt: ingredientsTable.updatedAt,
     })
     .from(ingredientsTable)
     .innerJoin(
@@ -230,6 +232,8 @@ router.get("/dashboard/low-stock", async (req, res): Promise<void> => {
         costPerUnit: parseFloat(i.costPerUnit),
         stockQuantity: parseFloat(i.stockQuantity),
         lowStockThreshold: parseFloat(i.lowStockThreshold),
+        createdAt: (i as any).createdAt || new Date(),
+        updatedAt: (i as any).updatedAt || (i as any).createdAt || new Date(),
       })))
     )
   );

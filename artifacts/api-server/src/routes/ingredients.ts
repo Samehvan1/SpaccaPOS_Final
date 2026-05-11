@@ -205,7 +205,7 @@ router.get("/ingredients", requirePermission("inventory:view"), async (req, res)
     const isAdmin = sessionUser.role === "admin";
     const sessionBranchId = sessionUser.branchId;
 
-    let targetBranchId: number | null = sessionBranchId;
+    let targetBranchId: number | null = sessionBranchId ?? null;
     if (isAdmin) {
       if (rawBranchId === 'all') {
         targetBranchId = null;
@@ -225,13 +225,13 @@ router.get("/ingredients", requirePermission("inventory:view"), async (req, res)
         unit: ingredientsTable.unit,
         costPerUnit: ingredientsTable.costPerUnit,
         isActive: ingredientsTable.isActive,
-        stockQuantity: targetBranchId !== null 
+        stockQuantity: (targetBranchId !== null && targetBranchId !== undefined) 
           ? sql<string>`COALESCE(${branchStockTable.stockQuantity}, '0')` 
           : sql<string>`(SELECT COALESCE(SUM(bs.stock_quantity), 0)::text FROM branch_stock bs WHERE bs.ingredient_id = ${ingredientsTable.id})`,
-        lowStockThreshold: targetBranchId !== null 
+        lowStockThreshold: (targetBranchId !== null && targetBranchId !== undefined) 
           ? sql<string>`COALESCE(${branchStockTable.lowStockThreshold}, '500')` 
           : sql<string>`'500'`,
-        startupQuantity: targetBranchId !== null
+        startupQuantity: (targetBranchId !== null && targetBranchId !== undefined)
           ? sql<string>`COALESCE(${branchStockTable.startupQuantity}, '0')`
           : sql<string>`'0'`,
         updatedAt: ingredientsTable.updatedAt,
@@ -269,21 +269,23 @@ router.get("/ingredients", requirePermission("inventory:view"), async (req, res)
     const optionCountMap = new Map(optionLinks.map(l => [l.id, Number(l.count)]));
     const drinkCountMap = new Map(drinkLinks.map(l => [l.id, Number(l.count)]));
 
-    res.json(
-      serializeDates(ingredientRows.map((i) => {
-        return {
-          ...i,
-          costPerUnit: parseFloat(String(i.costPerUnit || "0")) || 0,
-          stockQuantity: parseFloat(String(i.stockQuantity || "0")) || 0,
-          startupQuantity: parseFloat(String((i as any).startupQuantity || "0")) || 0,
-          lowStockThreshold: parseFloat(String(i.lowStockThreshold || "0")) || 0,
-          linkedTypeCount: (typeCountMap.get(i.id) || 0) + (optionCountMap.get(i.id) || 0),
-          linkedProductCount: drinkCountMap.get(i.id) || 0,
-          createdAt: (i as any).createdAt || new Date(),
-          updatedAt: i.updatedAt || (i as any).createdAt || new Date(),
-        };
-      }))
-    );
+    const responseBody = ingredientRows.map((i) => {
+      return {
+        ...i,
+        costPerUnit: parseFloat(String(i.costPerUnit || "0")) || 0,
+        stockQuantity: parseFloat(String(i.stockQuantity || "0")) || 0,
+        startupQuantity: parseFloat(String((i as any).startupQuantity || "0")) || 0,
+        lowStockThreshold: parseFloat(String(i.lowStockThreshold || "0")) || 0,
+        linkedTypeCount: (typeCountMap.get(i.id) || 0) + (optionCountMap.get(i.id) || 0),
+        linkedProductCount: drinkCountMap.get(i.id) || 0,
+        createdAt: (i as any).createdAt || new Date(),
+        updatedAt: i.updatedAt || (i as any).createdAt || new Date(),
+      };
+    });
+
+    console.log(`[Ingredients-Debug] First 3 items stock:`, responseBody.slice(0, 3).map(it => ({ id: it.id, name: it.name, stock: it.stockQuantity })));
+
+    res.json(serializeDates(responseBody));
   } catch (err: any) {
     console.error("[Ingredients API Error]:", err);
     res.status(500).json({ error: "Failed to load ingredients data" });

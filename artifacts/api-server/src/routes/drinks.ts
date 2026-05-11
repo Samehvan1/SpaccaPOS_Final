@@ -56,7 +56,7 @@ import {
 const router: IRouter = Router();
 
 async function buildDrinkDetail(drinkId: number, branchId?: number) {
-  const cacheKey = `drink_detail_${drinkId}`;
+  const cacheKey = `drink_detail_${drinkId}_${branchId ?? 'global'}`;
   const cached = globalCache.get<any>(cacheKey);
   if (cached) return cached;
 
@@ -181,17 +181,23 @@ async function buildDrinkDetail(drinkId: number, branchId?: number) {
             // Fetch current stock from linked inventory item for specific branch
             let stockQuantity = 999999;
             if (ingType?.inventoryIngredientId) {
-              const [inv] = await db.select({ stock: branchStockTable.stockQuantity })
-                .from(branchStockTable)
-                .where(and(
-                  eq(branchStockTable.ingredientId, ingType.inventoryIngredientId),
-                  branchId ? eq(branchStockTable.branchId, branchId) : sql`1=1`
-                ))
-                .limit(1);
-              if (inv) stockQuantity = Number(inv.stock);
-              else if (branchId) stockQuantity = 0; // If branch specified but no record, it's 0
+              if (branchId) {
+                const [inv] = await db.select({ stock: branchStockTable.stockQuantity })
+                  .from(branchStockTable)
+                  .where(and(
+                    eq(branchStockTable.ingredientId, ingType.inventoryIngredientId),
+                    eq(branchStockTable.branchId, branchId)
+                  ))
+                  .limit(1);
+                stockQuantity = inv ? Number(inv.stock) : 0;
+              } else {
+                // Global view: sum across all branches
+                const [result] = await db.select({ totalStock: sql<string>`SUM(${branchStockTable.stockQuantity})` })
+                  .from(branchStockTable)
+                  .where(eq(branchStockTable.ingredientId, ingType.inventoryIngredientId));
+                stockQuantity = result?.totalStock ? Number(result.totalStock) : 0;
+              }
             } else if (!ingType) {
-              // If no type defined, assume out of stock unless it's a very simple drink
               stockQuantity = 0;
             }
               
@@ -277,14 +283,21 @@ async function buildDrinkDetail(drinkId: number, branchId?: number) {
 
         let stockQuantity = 0;
         if (ingredient) {
-          const [stockRow] = await db.select({ stock: branchStockTable.stockQuantity })
-            .from(branchStockTable)
-            .where(and(
-              eq(branchStockTable.ingredientId, ingredient.id),
-              branchId ? eq(branchStockTable.branchId, branchId) : sql`1=1`
-            ))
-            .limit(1);
-          stockQuantity = stockRow ? Number(stockRow.stock) : 0;
+          if (branchId) {
+            const [stockRow] = await db.select({ stock: branchStockTable.stockQuantity })
+              .from(branchStockTable)
+              .where(and(
+                eq(branchStockTable.ingredientId, ingredient.id),
+                eq(branchStockTable.branchId, branchId)
+              ))
+              .limit(1);
+            stockQuantity = stockRow ? Number(stockRow.stock) : 0;
+          } else {
+            const [result] = await db.select({ totalStock: sql<string>`SUM(${branchStockTable.stockQuantity})` })
+              .from(branchStockTable)
+              .where(eq(branchStockTable.ingredientId, ingredient.id));
+            stockQuantity = result?.totalStock ? Number(result.totalStock) : 0;
+          }
         }
 
         const enrichedOptions = await Promise.all(
@@ -344,9 +357,9 @@ async function buildDrinkDetail(drinkId: number, branchId?: number) {
       // Availability check
       let isAvailable = true;
       if (effectiveSlot.isRequired) {
-        if (slotResult.slotStyle === "typed" && slotResult.typeOptions) {
+        if (slotResult.slotStyle === "typed" && slotResult.typeOptions && slotResult.typeOptions.length > 0) {
           isAvailable = slotResult.typeOptions.some((to: any) => to.isAvailable);
-        } else if (slotResult.ingredient?.options) {
+        } else if (slotResult.ingredient?.options && slotResult.ingredient.options.length > 0) {
           isAvailable = slotResult.ingredient.options.some((o: any) => o.isAvailable);
         } else if (slotResult.ingredient) {
           isAvailable = (slotResult.ingredient.stockQuantity ?? 0) > 0;
@@ -359,17 +372,20 @@ async function buildDrinkDetail(drinkId: number, branchId?: number) {
 
   let isCupAvailable = true;
   if (drink.cupIngredientId) {
-    const [cupInv] = await db.select({ stock: branchStockTable.stockQuantity })
-      .from(branchStockTable)
-      .where(and(
-        eq(branchStockTable.ingredientId, drink.cupIngredientId),
-        branchId ? eq(branchStockTable.branchId, branchId) : sql`1=1`
-      ))
-      .limit(1);
-    if (cupInv) {
-      isCupAvailable = Number(cupInv.stock) >= 1; // Assuming 1 cup per drink
-    } else if (branchId) {
-      isCupAvailable = false;
+    if (branchId) {
+      const [cupInv] = await db.select({ stock: branchStockTable.stockQuantity })
+        .from(branchStockTable)
+        .where(and(
+          eq(branchStockTable.ingredientId, drink.cupIngredientId),
+          eq(branchStockTable.branchId, branchId)
+        ))
+        .limit(1);
+      isCupAvailable = cupInv ? Number(cupInv.stock) >= 1 : false;
+    } else {
+      const [result] = await db.select({ totalStock: sql<string>`SUM(${branchStockTable.stockQuantity})` })
+        .from(branchStockTable)
+        .where(eq(branchStockTable.ingredientId, drink.cupIngredientId));
+      isCupAvailable = result?.totalStock ? Number(result.totalStock) >= 1 : false;
     }
   }
 
