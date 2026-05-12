@@ -57,8 +57,12 @@ export const buildDrinkDefaultsMap = (slots: any[]) => {
     let typeName = "";
     
     if (slot.slotStyle === "typed") {
-      const defType = slot.typeOptions?.find((to: any) => to.isDefault);
-      const defVol = defType?.volumes?.find((v: any) => v.isDefault);
+      let defType = slot.typeOptions?.find((to: any) => to.isDefault);
+      if (!defType && slot.typeOptions?.length > 0) defType = slot.typeOptions[0]; // Fallback to first
+
+      let defVol = defType?.volumes?.find((v: any) => v.isDefault);
+      if (!defVol && defType?.volumes?.length > 0) defVol = defType.volumes[0]; // Fallback to first
+      
       typeName = defType?.typeName ?? "";
       
       if (defType && defVol) {
@@ -67,7 +71,8 @@ export const buildDrinkDefaultsMap = (slots: any[]) => {
         label = defType.typeName;
       }
     } else if (slot.slotStyle === "legacy") {
-      const defOpt = slot.ingredient?.options?.find((o: any) => o.isDefault);
+      let defOpt = slot.ingredient?.options?.find((o: any) => o.isDefault);
+      if (!defOpt && slot.ingredient?.options?.length > 0) defOpt = slot.ingredient.options[0]; // Fallback
       if (defOpt) {
         label = defOpt.label;
       }

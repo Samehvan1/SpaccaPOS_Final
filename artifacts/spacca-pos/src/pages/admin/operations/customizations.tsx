@@ -11,8 +11,14 @@ import { Progress } from "@/components/ui/progress";
 
 export default function CustomizationsAnalysisPage() {
   const [selectedBranch, setSelectedBranch] = useState<string>("all");
-  const [startDate, setStartDate] = useState(format(new Date().setDate(new Date().getDate() - 30), "yyyy-MM-dd"));
-  const [endDate, setEndDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [localStartDate, setLocalStartDate] = useState(format(new Date().setDate(new Date().getDate() - 30), "yyyy-MM-dd"));
+  const [localEndDate, setLocalEndDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  
+  const [filterState, setFilterState] = useState({
+    branch: "all",
+    start: format(new Date().setDate(new Date().getDate() - 30), "yyyy-MM-dd"),
+    end: format(new Date(), "yyyy-MM-dd")
+  });
 
   const { data: branches = [] } = useQuery({
     queryKey: ["/api/admin/branches"],
@@ -23,16 +29,27 @@ export default function CustomizationsAnalysisPage() {
     }
   });
 
-  const { data: analytics, isLoading } = useQuery({
-    queryKey: ["/api/finance/customization-analytics", { startDate, endDate, branchId: selectedBranch }],
+  const { data: analytics, isLoading, refetch } = useQuery({
+    queryKey: ["/api/finance/customization-analytics", filterState],
     queryFn: async () => {
-      const params = new URLSearchParams({ startDate, endDate });
-      if (selectedBranch !== "all") params.append("branchId", selectedBranch);
+      const params = new URLSearchParams({ 
+        startDate: filterState.start, 
+        endDate: filterState.end 
+      });
+      if (filterState.branch !== "all") params.append("branchId", filterState.branch);
       const res = await fetch(`/api/finance/customization-analytics?${params.toString()}`);
       if (!res.ok) throw new Error("Failed to fetch analytics");
       return res.json();
     }
   });
+
+  const handleApply = () => {
+    setFilterState({
+      branch: selectedBranch,
+      start: localStartDate,
+      end: localEndDate
+    });
+  };
 
   if (isLoading) {
     return (
@@ -58,9 +75,17 @@ export default function CustomizationsAnalysisPage() {
 
       <Card className="border-primary/20 bg-primary/5">
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-bold flex items-center gap-2 uppercase tracking-wider text-primary">
-            <Filter className="h-4 w-4" /> Filter Analytics Period
-          </CardTitle>
+          <div className="flex justify-between items-center">
+            <CardTitle className="text-sm font-bold flex items-center gap-2 uppercase tracking-wider text-primary">
+              <Filter className="h-4 w-4" /> Filter Analytics Period
+            </CardTitle>
+            <button 
+              onClick={handleApply}
+              className="bg-primary text-primary-foreground px-4 py-1.5 rounded-md text-xs font-bold hover:opacity-90 transition-opacity flex items-center gap-2 shadow-sm"
+            >
+              <TrendingUp className="h-3 w-3" /> Apply Filters
+            </button>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -80,11 +105,11 @@ export default function CustomizationsAnalysisPage() {
             </div>
             <div className="space-y-2">
               <label className="text-[10px] font-black uppercase text-muted-foreground">From Date</label>
-              <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="bg-background" />
+              <Input type="date" value={localStartDate} onChange={e => setLocalStartDate(e.target.value)} className="bg-background" />
             </div>
             <div className="space-y-2">
               <label className="text-[10px] font-black uppercase text-muted-foreground">To Date</label>
-              <Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="bg-background" />
+              <Input type="date" value={localEndDate} onChange={e => setLocalEndDate(e.target.value)} className="bg-background" />
             </div>
           </div>
         </CardContent>
@@ -109,7 +134,7 @@ export default function CustomizationsAnalysisPage() {
                 <TableHeader className="bg-muted/10">
                   <TableRow className="hover:bg-transparent border-b">
                     <TableHead className="font-bold py-4 pl-6">Drink Name</TableHead>
-                    <TableHead className="text-right font-bold">Total Orders</TableHead>
+                    <TableHead className="text-right font-bold">Total Drinks</TableHead>
                     <TableHead className="text-right font-bold">Customized</TableHead>
                     <TableHead className="text-right font-bold">% of Drinks</TableHead>
                     <TableHead className="text-right font-bold">Total Price</TableHead>

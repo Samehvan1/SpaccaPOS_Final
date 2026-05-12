@@ -25,6 +25,7 @@ import {
 import { serializeDates } from "../lib/serialize";
 import { requirePermission } from "../middleware/permissions";
 import { analyzeCustomization, getRecipeContext } from "../lib/recipe-utils";
+import { startOfDay, endOfDay, subDays } from "date-fns";
 
 const router: IRouter = Router();
 
@@ -495,8 +496,8 @@ router.get("/finance/customizations-report", requirePermission("reports:view"), 
 router.get("/finance/customization-analytics", requirePermission("reports:view"), async (req, res) => {
   const { startDate, endDate, branchId } = req.query;
   const targetBranchId = branchId && branchId !== "all" ? parseInt(branchId as string) : null;
-  const start = startDate ? new Date(startDate as string) : new Date(new Date().setDate(new Date().getDate() - 30));
-  const end = endDate ? new Date(endDate as string) : new Date();
+  const start = startDate ? startOfDay(new Date(`${startDate}T00:00:00`)) : startOfDay(subDays(new Date(), 30));
+  const end = endDate ? endOfDay(new Date(`${endDate}T23:59:59`)) : endOfDay(new Date());
   
   if (isNaN(start.getTime()) || isNaN(end.getTime())) {
     res.status(400).json({ error: "Invalid date format" });
@@ -516,7 +517,7 @@ router.get("/finance/customization-analytics", requirePermission("reports:view")
     .where(and(
       gte(ordersTable.createdAt, start),
       lte(ordersTable.createdAt, end),
-      eq(ordersTable.status, "completed"),
+      inArray(ordersTable.status, ["paid", "ready", "completed"]),
       targetBranchId ? eq(ordersTable.branchId, targetBranchId) : undefined
     ));
 

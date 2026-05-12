@@ -85172,87 +85172,115 @@ init_src();
 init_drizzle_orm();
 async function getRecipeContext(drinkIds) {
   if (drinkIds.length === 0) {
-    return { slots: [], options: [], slotVolumes: [], ingredientOptions: [], volumes: [], types: [], typeVolumes: [] };
+    return { slots: [], options: [], slotVolumes: [], ingredientOptions: [], volumes: [], types: [], typeVolumes: [], predefinedSlots: [], templateOptions: [], templateVolumes: [] };
   }
-  const [slots, options, slotVolumes, ingredientOptions, volumes, types3, typeVolumes] = await Promise.all([
-    db.select().from(drinkIngredientSlotsTable).where(inArray(drinkIngredientSlotsTable.drinkId, drinkIds)),
-    db.select().from(drinkSlotTypeOptionsTable).where(inArray(drinkSlotTypeOptionsTable.slotId, db.select({ id: drinkIngredientSlotsTable.id }).from(drinkIngredientSlotsTable).where(inArray(drinkIngredientSlotsTable.drinkId, drinkIds)))),
-    db.select().from(drinkSlotVolumesTable).where(inArray(drinkSlotVolumesTable.slotId, db.select({ id: drinkIngredientSlotsTable.id }).from(drinkIngredientSlotsTable).where(inArray(drinkIngredientSlotsTable.drinkId, drinkIds)))),
+  const slots = await db.select().from(drinkIngredientSlotsTable).where(inArray(drinkIngredientSlotsTable.drinkId, drinkIds));
+  const slotIds = slots.map((s) => s.id);
+  const templateIds = [...new Set(slots.map((s) => s.predefinedSlotId).filter((id) => id !== null))];
+  const [options, slotVolumes, ingredientOptions, volumes, types3, typeVolumes, predefinedSlots, templateOptions, templateVolumes] = await Promise.all([
+    slotIds.length > 0 ? db.select().from(drinkSlotTypeOptionsTable).where(inArray(drinkSlotTypeOptionsTable.slotId, slotIds)) : Promise.resolve([]),
+    slotIds.length > 0 ? db.select().from(drinkSlotVolumesTable).where(inArray(drinkSlotVolumesTable.slotId, slotIds)) : Promise.resolve([]),
     db.select().from(ingredientOptionsTable),
     db.select().from(ingredientVolumesTable),
     db.select().from(ingredientTypesTable),
-    db.select().from(ingredientTypeVolumesTable)
+    db.select().from(ingredientTypeVolumesTable),
+    // Template data
+    templateIds.length > 0 ? db.select().from(predefinedSlotsTable).where(inArray(predefinedSlotsTable.id, templateIds)) : Promise.resolve([]),
+    templateIds.length > 0 ? db.select().from(predefinedSlotTypeOptionsTable).where(inArray(predefinedSlotTypeOptionsTable.predefinedSlotId, templateIds)) : Promise.resolve([]),
+    templateIds.length > 0 ? db.select().from(predefinedSlotVolumesTable).where(inArray(predefinedSlotVolumesTable.predefinedSlotId, templateIds)) : Promise.resolve([])
   ]);
-  return { slots, options, slotVolumes, ingredientOptions, volumes, types: types3, typeVolumes };
+  return { slots, options, slotVolumes, ingredientOptions, volumes, types: types3, typeVolumes, predefinedSlots, templateOptions, templateVolumes };
 }
 function analyzeCustomization(cust, context) {
-  const { slots, options, slotVolumes, ingredientOptions, volumes, types: types3, typeVolumes } = context;
+  const {
+    slots,
+    options,
+    slotVolumes,
+    ingredientOptions,
+    volumes,
+    types: types3,
+    typeVolumes,
+    predefinedSlots,
+    templateOptions,
+    templateVolumes
+  } = context;
   const currentLabel = cust.optionLabel || cust.ingredientName || "None";
   const drinkSlots = slots.filter((s) => s.drinkId === cust.drinkId);
   const matchingSlot = drinkSlots.find((s) => s.slotLabel === cust.slotLabel);
+  if (!matchingSlot) return null;
+  let effectiveIsDynamic = matchingSlot.isDynamic;
+  const template = matchingSlot.predefinedSlotId ? predefinedSlots.find((ps) => ps.id === matchingSlot.predefinedSlotId) : null;
+  if (template) {
+    if (effectiveIsDynamic === null || effectiveIsDynamic === void 0) effectiveIsDynamic = template.isDynamic;
+  }
+  let effectiveOptions = options.filter((o) => o.slotId === matchingSlot.id);
+  if (effectiveOptions.length === 0 && template) {
+    effectiveOptions = templateOptions.filter((to) => to.predefinedSlotId === template.id);
+  }
+  let effectiveSlotVolumes = slotVolumes.filter((v) => v.slotId === matchingSlot.id);
+  if (effectiveSlotVolumes.length === 0 && template) {
+    effectiveSlotVolumes = templateVolumes.filter((tv) => tv.predefinedSlotId === template.id);
+  }
   const slotL = (cust.slotLabel || "").toLowerCase();
   const optL = currentLabel.toLowerCase();
   if (slotL.includes("cup") || slotL.includes("pack") || optL.includes("cup") || optL.includes("pack")) return null;
-  if (!matchingSlot) {
-    return null;
-  }
-  if (matchingSlot.isDynamic) {
-    const t = types3.find((typ) => typ.id === matchingSlot.ingredientTypeId);
-    if (t && currentLabel.toLowerCase().startsWith(t.name.toLowerCase())) {
-      return null;
-    }
-    return {
-      ...cust,
-      defaultLabel: `${matchingSlot.slotLabel}: ${t?.name || "Standard"}`,
-      replacementLabel: `${matchingSlot.slotLabel}: ${currentLabel}`
-    };
-  }
-  const slotOptionsCount = options.filter((o) => o.slotId === matchingSlot.id).length;
-  const slotVolumesCount = slotVolumes.filter((v) => v.slotId === matchingSlot.id && v.isEnabled).length;
+  const slotOptionsCount = effectiveOptions.length;
+  const slotVolumesCount = effectiveSlotVolumes.filter((v) => v.isEnabled !== false).length;
   if (slotOptionsCount <= 1 && slotVolumesCount <= 1 && matchingSlot.ingredientId) return null;
   if (slotOptionsCount === 1 && slotVolumesCount === 0 || slotOptionsCount === 0 && slotVolumesCount === 1) return null;
   let recipeDefault = "None";
-  if (matchingSlot.defaultOptionId) {
-    const defOpt = ingredientOptions.find((o) => o.id === matchingSlot.defaultOptionId);
-    if (defOpt) recipeDefault = defOpt.label;
-  } else {
-    const defVol = slotVolumes.find((v) => v.slotId === matchingSlot.id && v.isDefault);
-    if (defVol) {
-      const tv = typeVolumes.find((t) => t.id === defVol.typeVolumeId);
-      if (tv) {
-        const v = volumes.find((vol) => vol.id === tv.volumeId);
-        const t = types3.find((typ) => typ.id === tv.ingredientTypeId);
-        recipeDefault = `${t?.name || ""} . ${v?.name || ""}`.trim();
-        if (recipeDefault.endsWith(".")) recipeDefault = recipeDefault.slice(0, -2).trim();
-        if (recipeDefault.startsWith(".")) recipeDefault = recipeDefault.slice(1).trim();
-      }
+  let typeName = "";
+  let defType = effectiveOptions.find((o) => o.isDefault);
+  if (!defType && effectiveOptions.length > 0) defType = effectiveOptions[0];
+  let defVolInfo = null;
+  const style = matchingSlot.ingredientTypeId || matchingSlot.predefinedSlotId ? "typed" : "legacy";
+  if (style === "typed" && defType) {
+    const t = types3.find((typ) => typ.id === defType.ingredientTypeId);
+    typeName = defType.typeName || t?.name || "";
+    const baseVolumes = typeVolumes.filter((tv) => tv.ingredientTypeId === defType.ingredientTypeId && tv.isActive);
+    const directOverrides = slotVolumes.filter((v) => v.slotId === matchingSlot.id);
+    const templateOverrides = template ? templateVolumes.filter((tv) => tv.predefinedSlotId === template.id) : [];
+    const resolvedVolumes = baseVolumes.map((bv) => {
+      const drinkOverride = directOverrides.find((ov) => ov.typeVolumeId === bv.id);
+      const tempOverride = templateOverrides.find((ov) => ov.typeVolumeId === bv.id);
+      return {
+        id: bv.id,
+        volumeId: bv.volumeId,
+        isDefault: drinkOverride?.isDefault ?? tempOverride?.isDefault ?? bv.isDefault,
+        isEnabled: drinkOverride?.isEnabled ?? tempOverride?.isEnabled ?? true
+      };
+    }).filter((v) => v.isEnabled);
+    defVolInfo = resolvedVolumes.find((v) => v.isDefault);
+    if (!defVolInfo && resolvedVolumes.length > 0) defVolInfo = resolvedVolumes[0];
+    if (defVolInfo) {
+      const v = volumes.find((vol) => vol.id === defVolInfo.volumeId);
+      recipeDefault = `${typeName} \xB7 ${v?.name || ""}`;
     } else {
-      const defType = options.find((o) => o.slotId === matchingSlot.id && o.isDefault);
-      if (defType) {
-        const t = types3.find((typ) => typ.id === defType.ingredientTypeId);
-        recipeDefault = t?.name || "None";
-      }
+      recipeDefault = typeName;
     }
+  } else if (style === "legacy") {
+    let defOpt = ingredientOptions.find((o) => o.id === matchingSlot.defaultOptionId);
+    if (!defOpt && matchingSlot.ingredientId) {
+      const ingredientOpts = ingredientOptions.filter((o) => o.ingredientId === matchingSlot.ingredientId);
+      if (ingredientOpts.length > 0) defOpt = ingredientOpts[0];
+    }
+    if (defOpt) recipeDefault = defOpt.label;
   }
-  const normalize = (s) => (s || "").toLowerCase().replace(/\(.*\)/g, "").replace(/\d+(ml|g|oz|cl)/g, "").replace(/[\s\-\·\.\,]/g, "").replace(/standard|default|none/g, "");
+  const normalize = (s) => (s || "").toLowerCase().replace(/\(.*\)/g, "").replace(/\d+(ml|g|oz|cl|pcs)/g, "").replace(/[\s\-\·\.\,\|]/g, "").replace(/standard|default|none/g, "").trim();
   const normRecipe = normalize(recipeDefault);
   const normCurrent = normalize(currentLabel);
-  if (normRecipe === normCurrent) return null;
-  if ((normRecipe === "" || normRecipe === "none") && (normCurrent === "" || normCurrent === "none")) return null;
   let isMatch = false;
   if (matchingSlot.defaultOptionId !== null && cust.optionId !== null) {
     if (matchingSlot.defaultOptionId === cust.optionId) isMatch = true;
   } else if (matchingSlot.ingredientId !== null && cust.ingredientId !== null) {
     if (matchingSlot.ingredientId === cust.ingredientId) isMatch = true;
   } else {
-    const defaultVol = slotVolumes.find((v) => v.slotId === matchingSlot.id && v.isDefault);
-    if (defaultVol) {
-      if (defaultVol.typeVolumeId === cust.typeVolumeId) isMatch = true;
-    }
-    if (normRecipe === normCurrent && normRecipe !== "") isMatch = true;
-    if (!isMatch && !defaultVol && (!cust.typeVolumeId || normCurrent === "")) {
-      isMatch = true;
-    }
+    if (defVolInfo && defVolInfo.id === cust.typeVolumeId) isMatch = true;
+  }
+  if (!isMatch && normRecipe === normCurrent) isMatch = true;
+  if (effectiveIsDynamic) {
+    if (isMatch) return null;
+    if (typeName && currentLabel.toLowerCase().startsWith(typeName.toLowerCase())) return null;
   }
   if (isMatch) return null;
   return {
@@ -85260,6 +85288,57 @@ function analyzeCustomization(cust, context) {
     defaultLabel: `${matchingSlot.slotLabel}: ${recipeDefault}`,
     replacementLabel: `${matchingSlot.slotLabel}: ${currentLabel}`
   };
+}
+
+// ../../node_modules/.pnpm/date-fns@3.6.0/node_modules/date-fns/toDate.mjs
+function toDate(argument) {
+  const argStr = Object.prototype.toString.call(argument);
+  if (argument instanceof Date || typeof argument === "object" && argStr === "[object Date]") {
+    return new argument.constructor(+argument);
+  } else if (typeof argument === "number" || argStr === "[object Number]" || typeof argument === "string" || argStr === "[object String]") {
+    return new Date(argument);
+  } else {
+    return /* @__PURE__ */ new Date(NaN);
+  }
+}
+
+// ../../node_modules/.pnpm/date-fns@3.6.0/node_modules/date-fns/constructFrom.mjs
+function constructFrom(date6, value) {
+  if (date6 instanceof Date) {
+    return new date6.constructor(value);
+  } else {
+    return new Date(value);
+  }
+}
+
+// ../../node_modules/.pnpm/date-fns@3.6.0/node_modules/date-fns/addDays.mjs
+function addDays(date6, amount) {
+  const _date2 = toDate(date6);
+  if (isNaN(amount)) return constructFrom(date6, NaN);
+  if (!amount) {
+    return _date2;
+  }
+  _date2.setDate(_date2.getDate() + amount);
+  return _date2;
+}
+
+// ../../node_modules/.pnpm/date-fns@3.6.0/node_modules/date-fns/startOfDay.mjs
+function startOfDay(date6) {
+  const _date2 = toDate(date6);
+  _date2.setHours(0, 0, 0, 0);
+  return _date2;
+}
+
+// ../../node_modules/.pnpm/date-fns@3.6.0/node_modules/date-fns/endOfDay.mjs
+function endOfDay(date6) {
+  const _date2 = toDate(date6);
+  _date2.setHours(23, 59, 59, 999);
+  return _date2;
+}
+
+// ../../node_modules/.pnpm/date-fns@3.6.0/node_modules/date-fns/subDays.mjs
+function subDays(date6, amount) {
+  return addDays(date6, -amount);
 }
 
 // src/routes/finance.ts
@@ -85608,8 +85687,8 @@ router18.get("/finance/customizations-report", requirePermission("reports:view")
 router18.get("/finance/customization-analytics", requirePermission("reports:view"), async (req, res) => {
   const { startDate, endDate, branchId } = req.query;
   const targetBranchId = branchId && branchId !== "all" ? parseInt(branchId) : null;
-  const start = startDate ? new Date(startDate) : new Date((/* @__PURE__ */ new Date()).setDate((/* @__PURE__ */ new Date()).getDate() - 30));
-  const end = endDate ? new Date(endDate) : /* @__PURE__ */ new Date();
+  const start = startDate ? startOfDay(/* @__PURE__ */ new Date(`${startDate}T00:00:00`)) : startOfDay(subDays(/* @__PURE__ */ new Date(), 30));
+  const end = endDate ? endOfDay(/* @__PURE__ */ new Date(`${endDate}T23:59:59`)) : endOfDay(/* @__PURE__ */ new Date());
   if (isNaN(start.getTime()) || isNaN(end.getTime())) {
     res.status(400).json({ error: "Invalid date format" });
     return;
@@ -85622,7 +85701,7 @@ router18.get("/finance/customization-analytics", requirePermission("reports:view
   }).from(orderItemsTable).innerJoin(ordersTable, eq(orderItemsTable.orderId, ordersTable.id)).where(and(
     gte(ordersTable.createdAt, start),
     lte(ordersTable.createdAt, end),
-    eq(ordersTable.status, "completed"),
+    inArray(ordersTable.status, ["paid", "ready", "completed"]),
     targetBranchId ? eq(ordersTable.branchId, targetBranchId) : void 0
   ));
   if (items.length === 0) return res.json({ drinks: [], slots: [], options: [] });
