@@ -132,17 +132,64 @@ export default function SalesAnalysisPage() {
     let filename = `sales_report_${reportStartDate}_to_${reportEndDate}.csv`;
 
     if (activeTab === "orders") {
-      headers = ["OrderID", "Date", "Time", "Order Number", "Subtotal", "Discount", "Total", "Status", "Payment"];
-      rows = orders.map(o => [
-        o.id,
-        format(new Date(o.createdAt), "yyyy-MM-dd"),
-        format(new Date(o.createdAt), "HH:mm"),
-        `#${o.orderNumber}`,
-        o.subtotal,
-        o.discount,
-        o.total,
-        o.status,
-        o.paymentMethod
+      headers = ["OrderID", "Date", "Time", "Order Number", "Items Count", "Total Price", "Before Tax", "Tax Value", "Discount Name", "Discount Value", "Discount Amount", "Final Price", "Status", "Payment Method"];
+      
+      let totalItemsCount = 0;
+      let totalGrossPrice = 0;
+      let totalNetPrice = 0;
+      let totalTaxValue = 0;
+      let totalDiscountAmount = 0;
+      let totalFinalPrice = 0;
+
+      rows = orders.map(o => {
+        const itemsCount = o.items?.reduce((acc: number, item: any) => acc + item.quantity, 0) || 0;
+        const grossPrice = o.subtotal || 0;
+        const netPrice = grossPrice / 1.14;
+        const taxValue = grossPrice - netPrice;
+        const discountAmount = o.discount || 0;
+        const finalPrice = o.total || 0;
+
+        totalItemsCount += itemsCount;
+        totalGrossPrice += grossPrice;
+        totalNetPrice += netPrice;
+        totalTaxValue += taxValue;
+        totalDiscountAmount += discountAmount;
+        totalFinalPrice += finalPrice;
+
+        return [
+          o.id,
+          format(new Date(o.createdAt), "yyyy-MM-dd"),
+          format(new Date(o.createdAt), "HH:mm"),
+          `#${o.orderNumber}`,
+          itemsCount,
+          grossPrice.toFixed(2),
+          netPrice.toFixed(2),
+          taxValue.toFixed(2),
+          o.discountCode || "-",
+          o.discountValue ? (o.discountType === 'percentage' ? `${o.discountValue}%` : o.discountValue.toFixed(2)) : "0",
+          discountAmount.toFixed(2),
+          finalPrice.toFixed(2),
+          o.status,
+          o.paymentMethod
+        ];
+      });
+
+      // Add Totals row
+      rows.push([
+        "TOTALS",
+        "",
+        "",
+        "",
+        totalItemsCount,
+        totalGrossPrice.toFixed(2),
+        totalNetPrice.toFixed(2),
+        totalTaxValue.toFixed(2),
+        "",
+        "",
+        totalDiscountAmount.toFixed(2),
+        totalFinalPrice.toFixed(2),
+        "",
+        ""
       ]);
     } else if (activeTab === "drinks") {
       filename = `drink_sales_${reportStartDate}_to_${reportEndDate}.csv`;
