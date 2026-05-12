@@ -1197,7 +1197,7 @@ export default function PosTerminal() {
               {appliedDiscount && (
                 <p className="text-[10px] text-green-600 font-bold uppercase tracking-wider flex items-center gap-1 mt-0.5">
                   <Check className="h-3 w-3" /> 
-                  Applied: {appliedDiscount.type === 'percentage' ? `${appliedDiscount.value}%` : `E£${fmt(appliedDiscount.value)}`} Off
+                  Applied: {appliedDiscount.type === 'percentage' ? `${appliedDiscount.value}%` : fmt(appliedDiscount.value)} Off
                 </p>
               )}
             </div>

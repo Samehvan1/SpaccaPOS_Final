@@ -81279,15 +81279,15 @@ router3.get("/drinks", async (req, res) => {
   });
   const drinksWithDetails = await Promise.all(
     filtered.map(async (d) => {
-      const detail = await buildDrinkDetail(d.id, targetBranchId);
-      if (!detail) return { ...d, basePrice: Number(d.basePrice), defaultPrice: 0, isAvailable: false };
+      const detail = params.success && params.data.includeSlots ? await buildDrinkDetail(d.id, targetBranchId) : null;
       const defaultPrice = await computeDefaultPrice(d.id);
       return {
         ...d,
         basePrice: Number(d.basePrice),
         defaultPrice,
-        isAvailable: detail.isAvailable,
-        unavailableReasons: detail.unavailableReasons
+        isAvailable: detail ? detail.isAvailable : true,
+        unavailableReasons: detail ? detail.unavailableReasons : [],
+        slots: detail ? detail.slots : void 0
       };
     })
   );
@@ -85194,13 +85194,19 @@ function analyzeCustomization(cust, context) {
   const optL = currentLabel.toLowerCase();
   if (slotL.includes("cup") || slotL.includes("pack") || optL.includes("cup") || optL.includes("pack")) return null;
   if (!matchingSlot) {
+    return null;
+  }
+  if (matchingSlot.isDynamic) {
+    const t = types3.find((typ) => typ.id === matchingSlot.ingredientTypeId);
+    if (t && currentLabel.toLowerCase().startsWith(t.name.toLowerCase())) {
+      return null;
+    }
     return {
       ...cust,
-      defaultLabel: "None",
-      replacementLabel: `${cust.slotLabel}: ${currentLabel}`
+      defaultLabel: `${matchingSlot.slotLabel}: ${t?.name || "Standard"}`,
+      replacementLabel: `${matchingSlot.slotLabel}: ${currentLabel}`
     };
   }
-  if (matchingSlot.isDynamic) return null;
   const slotOptionsCount = options.filter((o) => o.slotId === matchingSlot.id).length;
   const slotVolumesCount = slotVolumes.filter((v) => v.slotId === matchingSlot.id && v.isEnabled).length;
   if (slotOptionsCount <= 1 && slotVolumesCount <= 1 && matchingSlot.ingredientId) return null;
@@ -85228,18 +85234,23 @@ function analyzeCustomization(cust, context) {
       }
     }
   }
-  const normalize = (s) => (s || "").toLowerCase().replace(/\(.*\)/g, "").replace(/[\s\-\·\.\,]/g, "");
-  if (normalize(recipeDefault) === normalize(currentLabel)) return null;
+  const normalize = (s) => (s || "").toLowerCase().replace(/\(.*\)/g, "").replace(/\d+(ml|g|oz|cl)/g, "").replace(/[\s\-\·\.\,]/g, "").replace(/standard|default|none/g, "");
+  const normRecipe = normalize(recipeDefault);
+  const normCurrent = normalize(currentLabel);
+  if (normRecipe === normCurrent) return null;
+  if ((normRecipe === "" || normRecipe === "none") && (normCurrent === "" || normCurrent === "none")) return null;
   let isMatch = false;
-  if (matchingSlot.defaultOptionId !== null || cust.optionId !== null) {
+  if (matchingSlot.defaultOptionId !== null && cust.optionId !== null) {
     if (matchingSlot.defaultOptionId === cust.optionId) isMatch = true;
-  } else if (matchingSlot.ingredientId !== null || cust.ingredientId !== null) {
+  } else if (matchingSlot.ingredientId !== null && cust.ingredientId !== null) {
     if (matchingSlot.ingredientId === cust.ingredientId) isMatch = true;
   } else {
     const defaultVol = slotVolumes.find((v) => v.slotId === matchingSlot.id && v.isDefault);
     if (defaultVol) {
       if (defaultVol.typeVolumeId === cust.typeVolumeId) isMatch = true;
-    } else if (!cust.typeVolumeId || normalize(currentLabel) === "none") {
+    }
+    if (normRecipe === normCurrent && normRecipe !== "") isMatch = true;
+    if (!isMatch && !defaultVol && (!cust.typeVolumeId || normCurrent === "")) {
       isMatch = true;
     }
   }
@@ -85288,6 +85299,7 @@ router18.get("/finance/inventory-usage", requirePermission("reports:view"), asyn
     return {
       id: ing.id,
       name: ing.name,
+      type: ing.ingredientType || ing.ingredient_type || "other",
       unit: ing.unit,
       costPerUnit: parseFloat(String(ing.costPerUnit || "0")) || 0,
       totalConsumed: usage ? parseFloat(String(usage.totalConsumed || "0")) || 0 : 0,
@@ -85471,6 +85483,7 @@ router18.get("/finance/ingredient-recipes", requirePermission("reports:view"), a
     return {
       id: ing.id,
       name: ing.name,
+      type: ing.ingredientType || ing.ingredient_type || "other",
       unit: ing.unit,
       drinks: usage,
       totalRecipeQty
@@ -85591,6 +85604,87 @@ router18.get("/finance/customizations-report", requirePermission("reports:view")
   const context = await getRecipeContext(drinkIds);
   const report = rawCustoms.map((c) => analyzeCustomization(c, context)).filter(Boolean);
   res.json(serializeDates(report));
+});
+router18.get("/finance/customization-analytics", requirePermission("reports:view"), async (req, res) => {
+  const { startDate, endDate, branchId } = req.query;
+  const targetBranchId = branchId && branchId !== "all" ? parseInt(branchId) : null;
+  const start = startDate ? new Date(startDate) : new Date((/* @__PURE__ */ new Date()).setDate((/* @__PURE__ */ new Date()).getDate() - 30));
+  const end = endDate ? new Date(endDate) : /* @__PURE__ */ new Date();
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+    res.status(400).json({ error: "Invalid date format" });
+    return;
+  }
+  const items = await db.select({
+    id: orderItemsTable.id,
+    drinkId: orderItemsTable.drinkId,
+    drinkName: orderItemsTable.drinkName,
+    lineTotal: orderItemsTable.lineTotal
+  }).from(orderItemsTable).innerJoin(ordersTable, eq(orderItemsTable.orderId, ordersTable.id)).where(and(
+    gte(ordersTable.createdAt, start),
+    lte(ordersTable.createdAt, end),
+    eq(ordersTable.status, "completed"),
+    targetBranchId ? eq(ordersTable.branchId, targetBranchId) : void 0
+  ));
+  if (items.length === 0) return res.json({ drinks: [], slots: [], options: [] });
+  const itemIds = items.map((i) => i.id);
+  const drinkIds = [...new Set(items.map((i) => i.drinkId))];
+  const [rawCustoms, context] = await Promise.all([
+    db.select().from(orderItemCustomizationsTable).where(inArray(orderItemCustomizationsTable.orderItemId, itemIds)),
+    getRecipeContext(drinkIds)
+  ]);
+  const itemOverrides = /* @__PURE__ */ new Map();
+  rawCustoms.forEach((c) => {
+    const item = items.find((i) => i.id === c.orderItemId);
+    if (!item) return;
+    const analysis = analyzeCustomization({ ...c, drinkId: item.drinkId }, context);
+    if (analysis) {
+      if (!itemOverrides.has(c.orderItemId)) itemOverrides.set(c.orderItemId, []);
+      itemOverrides.get(c.orderItemId).push(analysis);
+    }
+  });
+  const drinkStats = /* @__PURE__ */ new Map();
+  items.forEach((item) => {
+    if (!drinkStats.has(item.drinkId)) {
+      drinkStats.set(item.drinkId, { name: item.drinkName, totalCount: 0, customizedCount: 0, totalRevenue: 0, customizedRevenue: 0 });
+    }
+    const stats = drinkStats.get(item.drinkId);
+    const price = parseFloat(String(item.lineTotal || "0"));
+    stats.totalCount++;
+    stats.totalRevenue += price;
+    if (itemOverrides.has(item.id)) {
+      stats.customizedCount++;
+      stats.customizedRevenue += price;
+    }
+  });
+  const drinksReport = Array.from(drinkStats.entries()).map(([id, s]) => ({
+    id,
+    name: s.name,
+    totalCount: s.totalCount,
+    customizedCount: s.customizedCount,
+    percentage: s.customizedCount / s.totalCount * 100,
+    totalRevenue: s.totalRevenue,
+    customizedRevenue: s.customizedRevenue,
+    percentageRevenue: s.totalRevenue > 0 ? s.customizedRevenue / s.totalRevenue * 100 : 0
+  })).sort((a, b) => b.customizedCount - a.customizedCount);
+  const slotStats = /* @__PURE__ */ new Map();
+  const optionStats = /* @__PURE__ */ new Map();
+  itemOverrides.forEach((overrides) => {
+    overrides.forEach((ov) => {
+      slotStats.set(ov.slotLabel, (slotStats.get(ov.slotLabel) || 0) + 1);
+      const optKey = `${ov.slotLabel}:${ov.optionLabel}`;
+      if (!optionStats.has(optKey)) {
+        optionStats.set(optKey, { label: ov.optionLabel, count: 0, slot: ov.slotLabel });
+      }
+      optionStats.get(optKey).count++;
+    });
+  });
+  const slotsReport = Array.from(slotStats.entries()).map(([label, count2]) => ({ label, count: count2 })).sort((a, b) => b.count - a.count);
+  const optionsReport = Array.from(optionStats.values()).sort((a, b) => b.count - a.count);
+  res.json({
+    drinks: drinksReport,
+    slots: slotsReport,
+    options: optionsReport
+  });
 });
 var finance_default = router18;
 

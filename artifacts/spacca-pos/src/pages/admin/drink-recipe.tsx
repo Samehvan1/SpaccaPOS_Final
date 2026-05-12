@@ -1143,7 +1143,7 @@ export default function DrinkRecipe() {
                             <SelectItem value="none">No default</SelectItem>
                             {options.map((o: any) => (
                               <SelectItem key={o.id} value={o.id.toString()}>
-                                {o.label}{o.extraCost > 0 ? ` (+E£${Number(o.extraCost).toFixed(2)})` : ""}
+                                {o.label}{o.extraCost > 0 ? ` (+EGP ${Number(o.extraCost).toFixed(2)})` : ""}
                               </SelectItem>
                             ))}
                           </SelectContent>

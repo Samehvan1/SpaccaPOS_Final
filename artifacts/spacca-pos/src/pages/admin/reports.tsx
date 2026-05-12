@@ -25,6 +25,7 @@ import { Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { format, subDays, startOfDay, endOfDay, parseISO, differenceInSeconds } from "date-fns";
 import { fmt, pure, CURRENCY } from "@/lib/currency";
+import { isActuallyCustomized as checkCustomization, buildDrinkDefaultsMap } from "@/lib/recipe-utils";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend,
@@ -80,40 +81,13 @@ export default function ReportsPage() {
   // Fetch all drinks with slots for precise customization detection in the list
   const { data: allDrinksCatalog } = useListDrinks({ includeSlots: true } as any);
 
-  // Helper to build defaults map for any given set of drink slots
-  const buildDefaultsMap = (slots: any[]) => {
-    const map: Record<string, { label: string; isDynamic: boolean; typeName: string }> = {};
-    if (!slots) return map;
-    slots.forEach(slot => {
-      let label = "";
-      let typeName = "";
-      if (slot.slotStyle === "typed") {
-        const defType = slot.typeOptions?.find((to: any) => to.isDefault);
-        const defVol = defType?.volumes?.find((v: any) => v.isDefault);
-        typeName = defType?.typeName ?? "";
-        if (defType && defVol) {
-          label = `${defType.typeName} · ${defVol.volumeName}`;
-        } else if (defType) {
-          label = defType.typeName;
-        }
-      } else if (slot.slotStyle === "legacy") {
-         const defOpt = slot.ingredient?.options?.find((o: any) => o.isDefault);
-         if (defOpt) {
-           label = defOpt.label;
-         }
-      }
-      map[slot.slotLabel] = { label, isDynamic: !!slot.isDynamic, typeName };
-    });
-    return map;
-  };
-
   // Fetch drink details for defaults when a customized item is selected (modal)
   const { data: drinkDetail, isLoading: loadingDrinkDetail } = useGetDrink(
     selectedCustomizedItem?.drinkId || 0,
     { enabled: !!selectedCustomizedItem?.drinkId } as any
   );
 
-  const defaultsMap = useMemo(() => buildDefaultsMap(drinkDetail?.slots as any[]), [drinkDetail]);
+  const defaultsMap = useMemo(() => buildDrinkDefaultsMap(drinkDetail?.slots as any[]), [drinkDetail]);
 
   // Dashboard Tab Data
   const { data: summary, isLoading: loadingSummary } = useGetDashboardSummary({ branchId: selectedBranchId } as any);
@@ -140,7 +114,7 @@ export default function ReportsPage() {
   const { data: reportOrders, isLoading: loadingReportOrders } = useListOrders({
     startDate: reportStartDate,
     endDate: reportEndDate,
-    status: "paid,completed,ready,in_progress", // Match summary by excluding cancelled/refunded
+    status: "pending,paid,completed,ready,in_progress", // Include pending to match summary cards
     limit: rowsPerPage,
     offset: (reportPage - 1) * rowsPerPage,
     branchId: selectedBranchId
@@ -188,21 +162,8 @@ export default function ReportsPage() {
       } else {
         const drinkInCatalog = allDrinksCatalog?.find((d: any) => d.id === item.drinkId) as any;
         if (drinkInCatalog?.slots) {
-          const itemDefaults = buildDefaultsMap(drinkInCatalog.slots);
-          const norm = (s: string) => s.replace(/\s*[·()]\s*/g, "|").trim().toLowerCase();
-          
-          isActuallyCustomized = customizations.some((c: any) => {
-            const def = itemDefaults[c.slotLabel];
-            if (!def) return false;
-            
-            // Exact same normalization and logic as the details modal
-            const norm = (s: string) => s.replace(/\s*[·()]\s*/g, "|").replace(/\|+$/, "").trim().toLowerCase();
-            
-            if (def.isDynamic) {
-              return !c.optionLabel.toLowerCase().startsWith(def.typeName.toLowerCase());
-            }
-            return norm(c.optionLabel) !== norm(def.label);
-          });
+          const itemDefaults = buildDrinkDefaultsMap(drinkInCatalog.slots);
+          isActuallyCustomized = customizations.some((c: any) => checkCustomization(c, itemDefaults));
         } else {
           // If catalog not yet loaded, don't guess based on cost (defaults can have costs)
           isActuallyCustomized = false;
@@ -214,8 +175,8 @@ export default function ReportsPage() {
         orderId: order.id,
         orderNumber: order.orderNumber,
         createdAt: order.createdAt,
-        orderDiscount: order.discount,
-        orderSubtotal: order.subtotal,
+        orderDiscount: parseFloat(order.discount || 0),
+        orderSubtotal: parseFloat(order.subtotal || 0),
         isCustomized: isActuallyCustomized
       };
     })).filter(item => !showCustomizedOnly || item.isCustomized);
@@ -238,8 +199,8 @@ export default function ReportsPage() {
     if (!reportOrders || reportOrders.length === 0) return;
 
     const headers = [
-      "OrderID", "Date", "Time", "Order Number", "Total Price (Gross)", "Before Tax (Net)", 
-      "Tax Amount", "Discount %", "Discount Amount", "SubTotal Price", "Final Price", "Status", "Payment Method"
+      "OrderID", "Date", "Time", "Order Number", "Items Count", "Total Price (Gross)", "Before Tax (Net)", 
+      "Tax Amount", "Discount Name", "Discount Value", "Discount Amount", "Final Price", "Status", "Payment Method"
     ];
 
     const rows = (reportOrders || []).map(order => {
@@ -253,22 +214,47 @@ export default function ReportsPage() {
 
       return [
         order.id,
-        format(new Date(order.createdAt), "yyyy-MM-dd"),
-        format(new Date(order.createdAt), "HH:mm"),
+        order.createdAt ? format(new Date(order.createdAt), "yyyy-MM-dd") : "—",
+        order.createdAt ? format(new Date(order.createdAt), "HH:mm") : "—",
         `#${order.orderNumber}`,
+        (order.items || []).length,
         totalPrice.toFixed(2),
         beforeTax.toFixed(2),
         taxAmount.toFixed(2),
-        `${discountPercent.toFixed(1)}%`,
+        order.discountCode || "None",
+        order.discountValue ? (order.discountType === "percentage" ? `${order.discountValue}%` : `EGP ${order.discountValue}`) : "0",
         discountAmt.toFixed(2),
-        subtotalPrice.toFixed(2),
         finalPrice.toFixed(2),
         order.status,
         order.paymentMethod
       ].map(v => `"${v}"`).join(",");
     });
 
-    const csvContent = [headers.join(","), ...rows].join("\n");
+    // Calculate totals for the CSV
+    const totals = (reportOrders || []).reduce((acc, order) => {
+      const totalPrice = order.subtotal;
+      const beforeTax = totalPrice / 1.14;
+      const taxAmount = totalPrice - beforeTax;
+      const discountAmt = order.discount;
+      const subtotalPrice = beforeTax - discountAmt;
+      const finalPrice = subtotalPrice + taxAmount;
+      
+      acc.totalPrice += totalPrice;
+      acc.beforeTax += beforeTax;
+      acc.taxAmount += taxAmount;
+      acc.discountAmt += discountAmt;
+      acc.subtotalPrice += subtotalPrice;
+      acc.finalPrice += finalPrice;
+      acc.itemsCount += (order.items || []).length;
+      return acc;
+    }, { totalPrice: 0, beforeTax: 0, taxAmount: 0, discountAmt: 0, subtotalPrice: 0, finalPrice: 0, itemsCount: 0 });
+
+    const totalRow = [
+      "TOTALS", "", "", "", totals.itemsCount, totals.totalPrice.toFixed(2), totals.beforeTax.toFixed(2),
+      totals.taxAmount.toFixed(2), "", "", totals.discountAmt.toFixed(2), totals.finalPrice.toFixed(2), "", ""
+    ].map(v => `"${v}"`).join(",");
+
+    const csvContent = [headers.join(","), ...rows, totalRow].join("\n");
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
@@ -666,7 +652,7 @@ export default function ReportsPage() {
                         <TableRow key={order.id}>
                           <TableCell className="font-mono font-medium">#{order.orderNumber}</TableCell>
                           <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
-                            {format(new Date(order.createdAt), "MMM d, h:mm a")}
+                            {order.createdAt ? format(new Date(order.createdAt), "MMM d, h:mm a") : "—"}
                           </TableCell>
                           <TableCell>{order.baristaName}</TableCell>
                           <TableCell className="capitalize">{order.paymentMethod}</TableCell>
@@ -783,6 +769,7 @@ export default function ReportsPage() {
                         <TableHead className="font-bold">Date</TableHead>
                         <TableHead className="font-bold">Time</TableHead>
                         <TableHead className="font-bold">Order #</TableHead>
+                        <TableHead className="text-center font-bold">Items</TableHead>
                         <TableHead className="font-bold">Coupon</TableHead>
                         <TableHead className="text-right font-bold whitespace-nowrap">Total Price (Gross)</TableHead>
                         <TableHead className="text-right font-bold whitespace-nowrap">Before Tax (Net)</TableHead>
@@ -832,9 +819,10 @@ export default function ReportsPage() {
                               >
                                 {order.id}
                               </TableCell>
-                              <TableCell className="whitespace-nowrap">{format(new Date(order.createdAt), "yyyy-MM-dd")}</TableCell>
-                              <TableCell>{format(new Date(order.createdAt), "HH:mm")}</TableCell>
+                              <TableCell className="whitespace-nowrap">{order.createdAt ? format(new Date(order.createdAt), "yyyy-MM-dd") : "—"}</TableCell>
+                              <TableCell>{order.createdAt ? format(new Date(order.createdAt), "HH:mm") : "—"}</TableCell>
                                <TableCell className="font-mono font-bold">#{order.orderNumber}</TableCell>
+                               <TableCell className="text-center">{(order.items || []).length}</TableCell>
                                <TableCell>
                                  {(order as any).discountId ? (
                                    <Badge variant="outline" className="font-mono text-[10px] bg-primary/5">

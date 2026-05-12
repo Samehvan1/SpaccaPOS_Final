@@ -84,6 +84,7 @@ router.get("/finance/inventory-usage", requirePermission("reports:view"), async 
     return {
       id: ing.id,
       name: ing.name,
+      type: ing.ingredientType || (ing as any).ingredient_type || "other",
       unit: ing.unit,
       costPerUnit: parseFloat(String(ing.costPerUnit || "0")) || 0,
       totalConsumed: usage ? parseFloat(String(usage.totalConsumed || "0")) || 0 : 0,
@@ -321,6 +322,7 @@ router.get("/finance/ingredient-recipes", requirePermission("reports:view"), asy
     return {
       id: ing.id,
       name: ing.name,
+      type: ing.ingredientType || (ing as any).ingredient_type || "other",
       unit: ing.unit,
       drinks: usage,
       totalRecipeQty: totalRecipeQty
@@ -489,4 +491,115 @@ router.get("/finance/customizations-report", requirePermission("reports:view"), 
   res.json(serializeDates(report));
 });
 
+// ── Customization Analytics Report ────────────────────────────────────────
+router.get("/finance/customization-analytics", requirePermission("reports:view"), async (req, res) => {
+  const { startDate, endDate, branchId } = req.query;
+  const targetBranchId = branchId && branchId !== "all" ? parseInt(branchId as string) : null;
+  const start = startDate ? new Date(startDate as string) : new Date(new Date().setDate(new Date().getDate() - 30));
+  const end = endDate ? new Date(endDate as string) : new Date();
+  
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+    res.status(400).json({ error: "Invalid date format" });
+    return;
+  }
+
+  // 1. Get all order items in period
+  const items = await db
+    .select({
+      id: orderItemsTable.id,
+      drinkId: orderItemsTable.drinkId,
+      drinkName: orderItemsTable.drinkName,
+      lineTotal: orderItemsTable.lineTotal,
+    })
+    .from(orderItemsTable)
+    .innerJoin(ordersTable, eq(orderItemsTable.orderId, ordersTable.id))
+    .where(and(
+      gte(ordersTable.createdAt, start),
+      lte(ordersTable.createdAt, end),
+      eq(ordersTable.status, "completed"),
+      targetBranchId ? eq(ordersTable.branchId, targetBranchId) : undefined
+    ));
+
+  if (items.length === 0) return res.json({ drinks: [], slots: [], options: [] });
+
+  const itemIds = items.map(i => i.id);
+  const drinkIds = [...new Set(items.map(i => i.drinkId))];
+
+  // 2. Get all customizations and recipe context
+  const [rawCustoms, context] = await Promise.all([
+    db.select().from(orderItemCustomizationsTable).where(inArray(orderItemCustomizationsTable.orderItemId, itemIds)),
+    getRecipeContext(drinkIds)
+  ]);
+
+  // 3. Identify overrides
+  const itemOverrides = new Map<number, any[]>();
+  rawCustoms.forEach(c => {
+    const item = items.find(i => i.id === c.orderItemId);
+    if (!item) return;
+    const analysis = analyzeCustomization({ ...c, drinkId: item.drinkId }, context);
+    if (analysis) {
+       if (!itemOverrides.has(c.orderItemId)) itemOverrides.set(c.orderItemId, []);
+       itemOverrides.get(c.orderItemId)!.push(analysis);
+    }
+  });
+
+  // 4. Aggregate Drink Stats
+  const drinkStats = new Map<number, { name: string, totalCount: number, customizedCount: number, totalRevenue: number, customizedRevenue: number }>();
+  
+  items.forEach(item => {
+    if (!drinkStats.has(item.drinkId)) {
+      drinkStats.set(item.drinkId, { name: item.drinkName, totalCount: 0, customizedCount: 0, totalRevenue: 0, customizedRevenue: 0 });
+    }
+    const stats = drinkStats.get(item.drinkId)!;
+    const price = parseFloat(String(item.lineTotal || "0"));
+    stats.totalCount++;
+    stats.totalRevenue += price;
+    
+    if (itemOverrides.has(item.id)) {
+      stats.customizedCount++;
+      stats.customizedRevenue += price;
+    }
+  });
+
+  const drinksReport = Array.from(drinkStats.entries()).map(([id, s]) => ({
+    id,
+    name: s.name,
+    totalCount: s.totalCount,
+    customizedCount: s.customizedCount,
+    percentage: (s.customizedCount / s.totalCount) * 100,
+    totalRevenue: s.totalRevenue,
+    customizedRevenue: s.customizedRevenue,
+    percentageRevenue: (s.totalRevenue > 0 ? (s.customizedRevenue / s.totalRevenue) * 100 : 0)
+  })).sort((a, b) => b.customizedCount - a.customizedCount);
+
+  // 5. Aggregate Slot & Option Stats
+  const slotStats = new Map<string, number>();
+  const optionStats = new Map<string, { label: string, count: number, slot: string }>();
+
+  itemOverrides.forEach((overrides) => {
+    overrides.forEach(ov => {
+      slotStats.set(ov.slotLabel, (slotStats.get(ov.slotLabel) || 0) + 1);
+      const optKey = `${ov.slotLabel}:${ov.optionLabel}`;
+      if (!optionStats.has(optKey)) {
+        optionStats.set(optKey, { label: ov.optionLabel, count: 0, slot: ov.slotLabel });
+      }
+      optionStats.get(optKey)!.count++;
+    });
+  });
+
+  const slotsReport = Array.from(slotStats.entries())
+    .map(([label, count]) => ({ label, count }))
+    .sort((a, b) => b.count - a.count);
+    
+  const optionsReport = Array.from(optionStats.values())
+    .sort((a, b) => b.count - a.count);
+
+  res.json({
+    drinks: drinksReport,
+    slots: slotsReport,
+    options: optionsReport
+  });
+});
+
 export default router;
+

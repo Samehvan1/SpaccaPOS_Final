@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -62,6 +62,13 @@ export default function InventoryUsagePage() {
   const [startDate, setStartDate] = useState(format(new Date().setDate(new Date().getDate() - 30), "yyyy-MM-dd"));
   const [endDate, setEndDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 50;
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, usageMode, selectedBranch, startDate, endDate]);
 
   const loadData = async () => {
     setLoading(true);
@@ -93,15 +100,16 @@ export default function InventoryUsagePage() {
     let rows: any[] = [];
 
     if (usageMode === "catalog") {
-      headers = ["Ingredient Name", "Drink Name", "Slot", "Default Qty", "Unit"];
-      catalogReport.forEach(ing => {
+      headers = ["Item Type", "Ingredient Name", "Drink Name", "Slot", "Default Qty", "Unit"];
+      sortedCatalog.forEach(ing => {
         ing.drinks.forEach((d: any) => {
-          rows.push([ing.name, d.drinkName, d.slotLabel, d.quantity, d.unit]);
+          rows.push([ing.type, ing.name, d.drinkName, d.slotLabel, d.quantity, d.unit]);
         });
       });
     } else {
-      headers = ["Item Name", "Consumed", "Unit", "Orders Count", "Current Stock", "Startup Stock"];
-      rows = report.map(r => [
+      headers = ["Item Type", "Item Name", "Consumed", "Unit", "Orders Count", "Current Stock", "Startup Stock"];
+      rows = sortedReport.map(r => [
+        r.type,
         r.name,
         r.totalConsumed,
         r.unit,
@@ -124,13 +132,37 @@ export default function InventoryUsagePage() {
     document.body.removeChild(link);
   };
 
-  const filteredReport = report.filter(r => 
-    r.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const sortedReport = useMemo(() => {
+    return [...report]
+      .filter(r => r.name.toLowerCase().includes(searchTerm.toLowerCase()))
+      .sort((a, b) => {
+        const typeA = a.type || "";
+        const typeB = b.type || "";
+        if (typeA !== typeB) return typeA.localeCompare(typeB);
+        return a.name.localeCompare(b.name);
+      });
+  }, [report, searchTerm]);
 
-  const filteredCatalog = catalogReport.filter(r => 
-    r.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const sortedCatalog = useMemo(() => {
+    return [...catalogReport]
+      .filter(r => r.name.toLowerCase().includes(searchTerm.toLowerCase()))
+      .sort((a, b) => {
+        const typeA = a.type || "";
+        const typeB = b.type || "";
+        if (typeA !== typeB) return typeA.localeCompare(typeB);
+        return a.name.localeCompare(b.name);
+      });
+  }, [catalogReport, searchTerm]);
+
+  const paginatedReport = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return sortedReport.slice(start, start + itemsPerPage);
+  }, [sortedReport, currentPage]);
+
+  const paginatedCatalog = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return sortedCatalog.slice(start, start + itemsPerPage);
+  }, [sortedCatalog, currentPage]);
 
   return (
     <div className="space-y-6 p-6">
@@ -211,6 +243,7 @@ export default function InventoryUsagePage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Ingredient Name</TableHead>
+                <TableHead>Type</TableHead>
                 <TableHead className="text-right">Total Recipe Qty</TableHead>
                 <TableHead>In Recipes (Drinks)</TableHead>
                 <TableHead>Default Quantities per Drink</TableHead>
@@ -219,23 +252,28 @@ export default function InventoryUsagePage() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center py-10 text-muted-foreground">
+                  <TableCell colSpan={5} className="text-center py-10 text-muted-foreground">
                     <div className="flex flex-col items-center gap-2">
                       <Package className="h-8 w-8 animate-pulse" />
                       <span>Auditing catalog recipes...</span>
                     </div>
                   </TableCell>
                 </TableRow>
-              ) : filteredCatalog.length === 0 ? (
+              ) : sortedCatalog.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center py-10 text-muted-foreground">
+                  <TableCell colSpan={5} className="text-center py-10 text-muted-foreground">
                     No ingredients found.
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredCatalog.map((ing) => (
+                paginatedCatalog.map((ing) => (
                   <TableRow key={ing.id}>
                     <TableCell className="font-medium align-top py-4">{ing.name}</TableCell>
+                    <TableCell className="align-top py-4">
+                      <Badge variant="outline" className="w-fit text-[10px] font-normal capitalize">
+                        {ing.type || "Other"}
+                      </Badge>
+                    </TableCell>
                     <TableCell className="text-right align-top py-4">
                       <div className="flex flex-col items-end">
                         <span className="font-mono font-bold text-primary">{(ing.totalRecipeQty || 0).toFixed(2)}</span>
@@ -258,6 +296,7 @@ export default function InventoryUsagePage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Ingredient Name</TableHead>
+                <TableHead>Type</TableHead>
                 <TableHead className="text-right">Actual Consumed</TableHead>
                 <TableHead>Unit</TableHead>
                 <TableHead className="text-right">Orders Count</TableHead>
@@ -269,23 +308,28 @@ export default function InventoryUsagePage() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center py-10 text-muted-foreground">
                     <div className="flex flex-col items-center gap-2">
                       <Package className="h-8 w-8 animate-pulse" />
                       <span>Analyzing usage data...</span>
                     </div>
                   </TableCell>
                 </TableRow>
-              ) : filteredReport.length === 0 ? (
+              ) : sortedReport.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center py-10 text-muted-foreground">
                     No data found for the selected criteria.
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredReport.map((r) => (
+                paginatedReport.map((r) => (
                   <TableRow key={r.id}>
                     <TableCell className="font-medium">{r.name}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="w-fit text-[10px] font-normal capitalize">
+                        {r.type || "Other"}
+                      </Badge>
+                    </TableCell>
                     <TableCell className="text-right font-bold text-primary">
                       {(r.totalConsumed || 0).toFixed(2)}
                     </TableCell>
@@ -304,6 +348,28 @@ export default function InventoryUsagePage() {
             </TableBody>
           </Table>
         )}
+      </div>
+
+      <div className="flex justify-center items-center gap-2 py-6">
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={() => setCurrentPage(p => Math.max(1, p - 1))} 
+          disabled={currentPage === 1}
+        >
+          Previous
+        </Button>
+        <div className="flex items-center px-4 font-medium text-sm">
+          Page {currentPage} of {Math.ceil((usageMode === "catalog" ? sortedCatalog.length : sortedReport.length) / itemsPerPage) || 1}
+        </div>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={() => setCurrentPage(p => p + 1)} 
+          disabled={currentPage >= Math.ceil((usageMode === "catalog" ? sortedCatalog.length : sortedReport.length) / itemsPerPage)}
+        >
+          Next
+        </Button>
       </div>
     </div>
   );

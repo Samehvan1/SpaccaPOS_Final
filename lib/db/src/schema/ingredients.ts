@@ -93,8 +93,8 @@ export const ingredientVolumesTable = pgTable("ingredient_volumes", {
 
 /**
  * Links a volume to an ingredient type, with per-type overrides and cost.
- * e.g. "Brazilian Espresso" + "Single Shot" = 9g → 18ml, +E£0
- *      "Oat Milk" + "Medium 150ml" = 150ml, +E£15
+ * e.g. "Brazilian Espresso" + "Single Shot" = 9g → 18ml, +EGP 0
+ *      "Oat Milk" + "Medium 150ml" = 150ml, +EGP 15
  */
 export const ingredientTypeVolumesTable = pgTable("ingredient_type_volumes", {
   id: serial("id").primaryKey(),

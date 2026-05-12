@@ -64,15 +64,23 @@ export function analyzeCustomization(cust: any, context: CustomizationContext) {
   ) return null;
 
   if (!matchingSlot) {
-    return { 
-      ...cust, 
-      defaultLabel: "None", 
-      replacementLabel: `${cust.slotLabel}: ${currentLabel}` 
-    };
+    // If slot not found in current drink catalog, don't assume customization (might be legacy or internal)
+    return null;
   }
 
-  // 2. Exclude Dynamic Slots
-  if (matchingSlot.isDynamic) return null;
+  // 2. Dynamic Slots Handling (Match reports.tsx logic)
+  if (matchingSlot.isDynamic) {
+    const t = types.find(typ => typ.id === matchingSlot.ingredientTypeId);
+    if (t && currentLabel.toLowerCase().startsWith(t.name.toLowerCase())) {
+      return null;
+    }
+    // If it doesn't start with type name, it's customized
+    return { 
+      ...cust, 
+      defaultLabel: `${matchingSlot.slotLabel}: ${t?.name || "Standard"}`,
+      replacementLabel: `${matchingSlot.slotLabel}: ${currentLabel}`
+    };
+  }
 
   // 3. Exclude non-customizable slots (only one choice available)
   const slotOptionsCount = options.filter(o => o.slotId === matchingSlot.id).length;
@@ -111,22 +119,33 @@ export function analyzeCustomization(cust: any, context: CustomizationContext) {
   const normalize = (s: string) => (s || "")
     .toLowerCase()
     .replace(/\(.*\)/g, "")
-    .replace(/[\s\-\·\.\,]/g, "");
+    .replace(/\d+(ml|g|oz|cl)/g, "")
+    .replace(/[\s\-\·\.\,]/g, "")
+    .replace(/standard|default|none/g, "");
   
-  if (normalize(recipeDefault) === normalize(currentLabel)) return null;
+  const normRecipe = normalize(recipeDefault);
+  const normCurrent = normalize(currentLabel);
+
+  if (normRecipe === normCurrent) return null;
+  if ((normRecipe === "" || normRecipe === "none") && (normCurrent === "" || normCurrent === "none")) return null;
 
   let isMatch = false;
 
   // Legacy Comparison
-  if (matchingSlot.defaultOptionId !== null || cust.optionId !== null) {
+  if (matchingSlot.defaultOptionId !== null && cust.optionId !== null) {
     if (matchingSlot.defaultOptionId === cust.optionId) isMatch = true;
-  } else if (matchingSlot.ingredientId !== null || cust.ingredientId !== null) {
+  } else if (matchingSlot.ingredientId !== null && cust.ingredientId !== null) {
     if (matchingSlot.ingredientId === cust.ingredientId) isMatch = true;
   } else {
     const defaultVol = slotVolumes.find(v => v.slotId === matchingSlot.id && v.isDefault);
     if (defaultVol) {
       if (defaultVol.typeVolumeId === cust.typeVolumeId) isMatch = true;
-    } else if (!cust.typeVolumeId || normalize(currentLabel) === "none") {
+    } 
+    
+    // Fallback: If normalization matches, it's a match regardless of ID
+    if (normRecipe === normCurrent && normRecipe !== "") isMatch = true;
+    
+    if (!isMatch && !defaultVol && (!cust.typeVolumeId || normCurrent === "")) {
       isMatch = true;
     }
   }

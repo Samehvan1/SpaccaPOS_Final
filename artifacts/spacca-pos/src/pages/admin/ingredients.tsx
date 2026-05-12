@@ -733,7 +733,7 @@ function TypesTab({ inventoryItems }: { inventoryItems: Ingredient[] }) {
                             <div className="text-[10px] text-muted-foreground flex items-center gap-2 mt-0.5">
                               <span className="flex items-center gap-1"><Droplet className="h-3 w-3" /> Proc: {tv.processedQty ?? tv.volume?.processedQty ?? "0"}</span>
                               <span className="flex items-center gap-1"><Droplets className="h-3 w-3" /> Prod: {tv.producedQty ?? tv.volume?.producedQty ?? "0"}</span>
-                              <span className="flex items-center gap-1 text-primary/80 font-medium">· +E£{fmt(parseFloat(tv.extraCost))}</span>
+                              <span className="flex items-center gap-1 text-primary/80 font-medium">· +{fmt(parseFloat(tv.extraCost))}</span>
                             </div>
                           )}
                         </div>
@@ -829,7 +829,7 @@ function TypesTab({ inventoryItems }: { inventoryItems: Ingredient[] }) {
                     <Input className="h-8 text-xs text-center" type="number" step="0.1" value={addingProducedQty} onChange={e => setAddingProducedQty(e.target.value)} />
                   </div>
                   <div className="grid gap-1.5">
-                    <Label className="text-xs text-right">Cost (E£)</Label>
+                    <Label className="text-xs text-right">Cost (EGP)</Label>
                     <Input className="h-8 text-xs text-right" type="number" step="0.01" value={addingExtraCost} onChange={e => setAddingExtraCost(e.target.value)} />
                   </div>
                 </div>
@@ -1325,7 +1325,7 @@ function InventoryTab() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="i-cost">Cost per Unit (E£)</Label>
+                <Label htmlFor="i-cost">Cost per Unit (EGP)</Label>
                 <Input id="i-cost" type="number" step="0.0001" value={cost} onChange={e => setCost(e.target.value)} />
               </div>
               {mode === "edit" && (
@@ -1413,7 +1413,7 @@ function InventoryTab() {
                         <Input className="h-8 text-sm" value={newOptLabel} onChange={e => setNewOptLabel(e.target.value)} placeholder="e.g. Oat Milk, Small 100ml" />
                       </div>
                       <div className="grid gap-1.5">
-                        <Label className="text-xs">Extra Cost (E£)</Label>
+                        <Label className="text-xs">Extra Cost (EGP)</Label>
                         <Input className="h-8 text-sm" type="number" step="0.01" value={newOptExtraCost} onChange={e => setNewOptExtraCost(e.target.value)} />
                       </div>
                     </div>
@@ -1812,7 +1812,7 @@ function TemplateOptionsDialog({ open, onOpenChange, template, onUpdate }: { ope
                               <div className="text-[9px] text-muted-foreground flex items-center gap-1.5 mt-0.5 ml-6">
                                 <span>{override?.processedQty ?? tv.processedQty}ml</span>
                                 <span>·</span>
-                                <span className="text-primary/80">+E£{override?.extraCost ?? tv.extraCost}</span>
+                                <span className="text-primary/80">+EGP {override?.extraCost ?? tv.extraCost}</span>
                               </div>
                             )}
                           </div>

@@ -43,6 +43,7 @@ import PLReport from "@/pages/admin/finance/pl";
 import CashSpotCheckPage from "@/pages/admin/operations/cash-spot-check";
 import ShiftReportPage from "@/pages/admin/operations/shift-report";
 import StockQuantitiesPage from "@/pages/admin/operations/stock-quantities";
+import CustomizationsAnalysisReport from "@/pages/admin/operations/customizations";
 
 // PWA Helper to update title for "Add to Home Screen"
 function PWAContextHandler() {
@@ -237,6 +238,11 @@ function AppRoutes() {
       <Route path="/admin/operations/stock-quantities">
         <MainLayout>
           <ProtectedRoute component={StockQuantitiesPage} permission="inventory:view" />
+        </MainLayout>
+      </Route>
+      <Route path="/admin/operations/customizations">
+        <MainLayout>
+          <ProtectedRoute component={CustomizationsAnalysisReport} permission="reports:view" />
         </MainLayout>
       </Route>
 

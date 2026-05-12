@@ -153,7 +153,7 @@ export default function DiscountsAdmin() {
                       </div>
                     </TableCell>
                     <TableCell className="font-semibold">
-                      {d.type === "percentage" ? `${d.value}%` : `E£${fmt(d.value)}`}
+                      {d.type === "percentage" ? `${d.value}%` : fmt(d.value)}
                     </TableCell>
                     <TableCell>
                       <Badge variant={d.isActive ? "default" : "secondary"}>
@@ -197,7 +197,7 @@ export default function DiscountsAdmin() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="percentage">Percentage (%)</SelectItem>
-                    <SelectItem value="fixed">Fixed Amount (E£)</SelectItem>
+                    <SelectItem value="fixed">Fixed Amount (EGP)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -212,7 +212,7 @@ export default function DiscountsAdmin() {
                     onChange={e => setValue(e.target.value)} 
                   />
                   <div className="absolute right-3 top-2 text-xs text-muted-foreground font-medium">
-                    {type === "percentage" ? "%" : "E£"}
+                    {type === "percentage" ? "%" : "EGP"}
                   </div>
                 </div>
               </div>

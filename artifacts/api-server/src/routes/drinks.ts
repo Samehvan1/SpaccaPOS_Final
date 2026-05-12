@@ -469,16 +469,18 @@ router.get("/drinks", async (req, res): Promise<void> => {
 
   const drinksWithDetails = await Promise.all(
     filtered.map(async (d) => {
-      const detail = await buildDrinkDetail(d.id, targetBranchId);
-      if (!detail) return { ...d, basePrice: Number(d.basePrice), defaultPrice: 0, isAvailable: false };
+      const detail = params.success && params.data.includeSlots 
+        ? await buildDrinkDetail(d.id, targetBranchId)
+        : null;
       
       const defaultPrice = await computeDefaultPrice(d.id);
       return { 
         ...d, 
         basePrice: Number(d.basePrice), 
         defaultPrice,
-        isAvailable: detail.isAvailable,
-        unavailableReasons: detail.unavailableReasons
+        isAvailable: detail ? detail.isAvailable : true,
+        unavailableReasons: detail ? detail.unavailableReasons : [],
+        slots: detail ? detail.slots : undefined,
       };
     })
   );

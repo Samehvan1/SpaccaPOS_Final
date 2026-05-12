@@ -507,7 +507,7 @@ export default function DrinksAdmin() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="d-price">Base Price (E£)</Label>
+                <Label htmlFor="d-price">Base Price (EGP)</Label>
                 <Input id="d-price" type="number" step="5" value={basePrice} onChange={e => setBasePrice(e.target.value)} placeholder="e.g. 130" />
               </div>
               <div className="grid gap-2">

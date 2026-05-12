@@ -269,6 +269,7 @@ export function MainLayout({ children }: MainLayoutProps) {
         { href: "/admin/operations/cash-spot-check", label: "Cash spot check" },
         { href: "/admin/operations/shift-report", label: "Shift Sales Report" },
         { href: "/admin/operations/stock-quantities", label: "Stock quantities" },
+        { href: "/admin/operations/customizations", label: "Customizations Analysis" },
       ]
     },
     { href: "/admin/stock-audits", label: "Stock Audits", icon: History, permission: "inventory:view" },

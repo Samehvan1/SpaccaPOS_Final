@@ -137,7 +137,7 @@ export default function ShiftReportPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">E£{report.totals.totalRevenue.toFixed(2)}</div>
+                <div className="text-2xl font-bold">EGP {report.totals.totalRevenue.toFixed(2)}</div>
                 <p className="text-xs text-muted-foreground">{report.totals.orderCount} Orders</p>
               </CardContent>
             </Card>
@@ -149,7 +149,7 @@ export default function ShiftReportPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">E£{report.totals.cashRevenue.toFixed(2)}</div>
+                <div className="text-2xl font-bold">EGP {report.totals.cashRevenue.toFixed(2)}</div>
               </CardContent>
             </Card>
 
@@ -160,7 +160,7 @@ export default function ShiftReportPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">E£{report.totals.cardRevenue.toFixed(2)}</div>
+                <div className="text-2xl font-bold">EGP {report.totals.cardRevenue.toFixed(2)}</div>
               </CardContent>
             </Card>
 
@@ -171,7 +171,7 @@ export default function ShiftReportPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">E£{report.totals.walletRevenue.toFixed(2)}</div>
+                <div className="text-2xl font-bold">EGP {report.totals.walletRevenue.toFixed(2)}</div>
               </CardContent>
             </Card>
 
@@ -182,7 +182,7 @@ export default function ShiftReportPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">E£{report.totals.hospitalityRevenue.toFixed(2)}</div>
+                <div className="text-2xl font-bold">EGP {report.totals.hospitalityRevenue.toFixed(2)}</div>
               </CardContent>
             </Card>
           </div>
@@ -219,7 +219,7 @@ export default function ShiftReportPage() {
                         onClick={() => handleOrderClick(o.id)}
                       >
                         <span className="text-sm font-medium">{o.orderNumber}</span>
-                        <span className="font-bold">E£{parseFloat(o.total).toFixed(2)}</span>
+                        <span className="font-bold">EGP {parseFloat(o.total).toFixed(2)}</span>
                       </div>
                     ))}
                   </div>
@@ -303,7 +303,7 @@ export default function ShiftReportPage() {
                                 {o.status}
                               </Badge>
                             </TableCell>
-                            <TableCell className="text-right font-bold">E£{o.total.toFixed(2)}</TableCell>
+                            <TableCell className="text-right font-bold">EGP {o.total.toFixed(2)}</TableCell>
                             <TableCell>
                               <Eye className="h-4 w-4 text-muted-foreground" />
                             </TableCell>
@@ -366,14 +366,14 @@ export default function ShiftReportPage() {
                         ))}
                       </div>
                     </div>
-                    <div className="text-sm font-medium">E£{(item.lineTotal || 0).toFixed(2)}</div>
+                    <div className="text-sm font-medium">EGP {(item.lineTotal || 0).toFixed(2)}</div>
                   </div>
                 ))}
               </div>
 
               <div className="flex justify-between items-center pt-2 border-t">
                 <span className="text-lg font-bold">Total</span>
-                <span className="text-2xl font-black text-primary">E£{selectedOrder.total.toFixed(2)}</span>
+                <span className="text-2xl font-black text-primary">EGP {selectedOrder.total.toFixed(2)}</span>
               </div>
             </div>
           )}
