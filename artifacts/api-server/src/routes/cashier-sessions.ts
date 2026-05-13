@@ -481,7 +481,7 @@ router.get("/cashier/sessions/:id/report", requirePermission("cashier:view_repor
       orderCount: completedOrders.length,
     },
     statistics,
-    orders: orders.map(o => ({
+    orders: completedOrders.map(o => ({
       ...o,
       total: parseFloat(o.total as any)
     }))

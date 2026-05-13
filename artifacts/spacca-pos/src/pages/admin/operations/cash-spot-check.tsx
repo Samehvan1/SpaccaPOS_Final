@@ -5,13 +5,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Banknote, Plus, History, Calculator, CheckCircle2, Printer } from "lucide-react";
+import { Banknote, Plus, History, Calculator, CheckCircle2, Printer, AlertCircle, TrendingDown, TrendingUp, CheckCircle } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 
 export default function CashSpotCheckPage() {
   const { toast } = useToast();
   const [isChecking, setIsChecking] = useState(false);
+  const [showResult, setShowResult] = useState(false);
   
   // Fetch active session report for printing details
   const { data: activeSession, refetch: refetchActive } = useQuery({
@@ -116,9 +118,10 @@ export default function CashSpotCheckPage() {
           <div class="separator"></div>
 
           <div class="section">
-            <div class="row"><span>Total Before Tax:</span> <span>EGP ${subtotal.toFixed(2)}</span></div>
-            <div class="row"><span>Total Discount:</span> <span>EGP ${discount.toFixed(2)}</span></div>
-            <div class="row"><span class="bold">Final:</span> <span class="bold">EGP ${final.toFixed(2)}</span></div>
+            <div class="row"><span>Gross Sales:</span> <span>EGP ${subtotal.toFixed(2)}</span></div>
+            <div class="row"><span>Total Discounts:</span> <span>EGP ${discount.toFixed(2)}</span></div>
+            <div class="separator" style="margin: 5px 0;"></div>
+            <div class="row"><span class="bold">Net Revenue (Final):</span> <span class="bold">EGP ${final.toFixed(2)}</span></div>
           </div>
 
           <div class="separator"></div>
@@ -138,21 +141,24 @@ export default function CashSpotCheckPage() {
   };
 
   const handleSave = () => {
-    toast({
-      title: "Spot Check Recorded",
-      description: `Total counted: EGP ${total.toFixed(2)}`,
-    });
-    
-    // Ask to print
-    if (confirm("Would you like to print the spot check report?")) {
-      handlePrint();
-    }
+    setShowResult(true);
+  };
 
+  const handleFinish = () => {
+    setShowResult(false);
     setIsChecking(false);
     setCounts({
       "200": "", "100": "", "50": "", "20": "", "10": "", "5": "", "1": "", "0.5": "", "Credit": ""
     });
   };
+
+  const cashExpected = report?.totals?.cashRevenue || 0;
+  const cardExpected = report?.totals?.cardRevenue || 0;
+  const cashFound = total - (parseFloat(counts["Credit"]) || 0);
+  const cardFound = parseFloat(counts["Credit"]) || 0;
+  const cashDiff = cashFound - cashExpected;
+  const cardDiff = cardFound - cardExpected;
+  const totalDiff = cashDiff + cardDiff;
 
   return (
     <div className="p-8 w-full flex flex-col gap-6 overflow-y-auto">
@@ -267,6 +273,80 @@ export default function CashSpotCheckPage() {
           </CardContent>
         </Card>
       )}
+      {/* Result Summary Dialog */}
+      <Dialog open={showResult} onOpenChange={setShowResult}>
+        <DialogContent className="sm:max-w-[450px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-xl">
+              <Calculator className="h-5 w-5 text-primary" />
+              Spot Check Result
+            </DialogTitle>
+            <DialogDescription>
+              Comparison between physical drawer and system records.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-4 space-y-6">
+            {/* Main Discrepancy Card */}
+            <div className={`p-4 rounded-xl border-2 flex flex-col items-center justify-center gap-1 ${
+              totalDiff === 0 ? "bg-green-50 border-green-200 text-green-700" :
+              totalDiff > 0 ? "bg-blue-50 border-blue-200 text-blue-700" :
+              "bg-red-50 border-red-200 text-red-700"
+            }`}>
+              <span className="text-xs font-bold uppercase tracking-widest opacity-70">Overall Discrepancy</span>
+              <div className="flex items-center gap-2">
+                {totalDiff === 0 ? <CheckCircle className="h-6 w-6" /> : 
+                 totalDiff > 0 ? <TrendingUp className="h-6 w-6" /> : 
+                 <TrendingDown className="h-6 w-6" />}
+                <span className="text-3xl font-black">
+                  {totalDiff > 0 ? "+" : ""}{totalDiff.toFixed(2)} EGP
+                </span>
+              </div>
+              <span className="text-xs font-medium">
+                {totalDiff === 0 ? "Perfect Match" : totalDiff > 0 ? "Surplus Found" : "Shortage Detected"}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-3 p-3 rounded-lg bg-muted/30 border border-border/50">
+                <div className="text-[10px] font-bold uppercase text-muted-foreground">Cash Revenue</div>
+                <div className="space-y-1">
+                  <div className="flex justify-between text-xs"><span>Expected:</span> <span className="font-semibold">{cashExpected.toFixed(2)}</span></div>
+                  <div className="flex justify-between text-xs"><span>Found:</span> <span className="font-semibold">{cashFound.toFixed(2)}</span></div>
+                  <div className="h-px bg-border my-1" />
+                  <div className={`flex justify-between text-sm font-bold ${cashDiff < 0 ? "text-red-600" : cashDiff > 0 ? "text-blue-600" : "text-green-600"}`}>
+                    <span>Diff:</span>
+                    <span>{cashDiff > 0 ? "+" : ""}{cashDiff.toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-3 p-3 rounded-lg bg-muted/30 border border-border/50">
+                <div className="text-[10px] font-bold uppercase text-muted-foreground">Card Revenue</div>
+                <div className="space-y-1">
+                  <div className="flex justify-between text-xs"><span>Expected:</span> <span className="font-semibold">{cardExpected.toFixed(2)}</span></div>
+                  <div className="flex justify-between text-xs"><span>Found:</span> <span className="font-semibold">{cardFound.toFixed(2)}</span></div>
+                  <div className="h-px bg-border my-1" />
+                  <div className={`flex justify-between text-sm font-bold ${cardDiff < 0 ? "text-red-600" : cardDiff > 0 ? "text-blue-600" : "text-green-600"}`}>
+                    <span>Diff:</span>
+                    <span>{cardDiff > 0 ? "+" : ""}{cardDiff.toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={handleFinish} className="flex-1">
+              Close
+            </Button>
+            <Button onClick={() => { handlePrint(); handleFinish(); }} className="flex-1 gap-2">
+              <Printer className="h-4 w-4" />
+              Print & Finish
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
