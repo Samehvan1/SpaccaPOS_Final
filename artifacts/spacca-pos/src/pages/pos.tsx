@@ -356,18 +356,7 @@ export default function PosTerminal() {
     }
   }, [cart.length, discountCode, appliedDiscount]);
 
-  const cartSubtotal = cart.reduce((sum, item) => sum + item.totalPrice * item.quantity, 0);
-  const discountAmount = useMemo(() => {
-    if (!appliedDiscount) return 0;
-    if (appliedDiscount.type === "percentage") {
-      const beforeTax = cartSubtotal / 1.14;
-      return (beforeTax * appliedDiscount.value) / 100;
-    }
-    return appliedDiscount.value;
-  }, [appliedDiscount, cartSubtotal]);
 
-  const cartTotal = cartSubtotal - discountAmount;
-  const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   const handleAddToCart = () => {
     if (!activeDrink || !drinkDetail || !priceBreakdown) return;
@@ -455,6 +444,22 @@ export default function PosTerminal() {
   const [adminPin, setAdminPin] = useState("");
   const [amountTendered, setAmountTendered] = useState("");
 
+  const cartSubtotal = cart.reduce((sum, item) => sum + item.totalPrice * item.quantity, 0);
+  const discountAmount = useMemo(() => {
+    if (!appliedDiscount) return 0;
+    if (appliedDiscount.type === "percentage") {
+      const beforeTax = cartSubtotal / 1.14;
+      return (beforeTax * appliedDiscount.value) / 100;
+    }
+    return appliedDiscount.value;
+  }, [appliedDiscount, cartSubtotal]);
+
+  const cartTotal = cartSubtotal - discountAmount;
+  const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+
+  const discountPercentage = appliedDiscount?.type === "percentage" ? appliedDiscount.value : (cartSubtotal > 0 ? (discountAmount / cartSubtotal) * 100 : 0);
+  const isNameRequired = paymentMethod === "hospitality" || discountPercentage > 50;
+
   const handleValidateDiscount = async () => {
     if (!discountCode.trim()) return;
     setIsValidatingDiscount(true);
@@ -498,6 +503,17 @@ export default function PosTerminal() {
 
   const handleCheckout = () => {
     if (cart.length === 0) return;
+
+    // Validation for >50% discount or Hospitality
+    if (isNameRequired && !customerName.trim()) {
+      toast({
+        variant: "destructive",
+        title: "Customer Name Required",
+        description: `Please enter customer name for ${paymentMethod === "hospitality" ? "Hospitality" : "high discount"} orders.`
+      });
+      return;
+    }
+
     createOrder({
       data: {
         branchId: selectedBranchId || undefined,
@@ -1104,7 +1120,9 @@ export default function PosTerminal() {
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="customer">Customer Name (Optional)</Label>
+              <Label htmlFor="customer" className={isNameRequired ? "text-primary font-bold" : ""}>
+                Customer Name {isNameRequired ? "(Required)" : "(Optional)"}
+              </Label>
               <Input
                 id="customer"
                 value={customerName}
