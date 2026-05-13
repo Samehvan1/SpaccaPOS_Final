@@ -80509,6 +80509,31 @@ router2.post("/auth/emergency-login", async (req, res) => {
   req.session.role = user.role;
   req.session.save(() => res.json({ success: true }));
 });
+router2.post("/auth/change-profile", async (req, res) => {
+  const userId = req.session.userId;
+  if (!userId) {
+    res.status(401).json({ error: "Not authenticated" });
+    return;
+  }
+  const { password, pin } = req.body;
+  if (!password && !pin) {
+    res.status(400).json({ error: "Either password or PIN must be provided" });
+    return;
+  }
+  const updateData = {};
+  if (password) {
+    updateData.passwordHash = await bcryptjs_default.hash(password, 10);
+  }
+  if (pin) {
+    updateData.pin = pin;
+  }
+  await db.update(usersTable).set(updateData).where(eq(usersTable.id, userId));
+  await logActivity(req, "UPDATE_OWN_PROFILE", "user", userId, {
+    changedPassword: !!password,
+    changedPin: !!pin
+  });
+  res.json({ success: true, message: "Profile updated successfully" });
+});
 var auth_default = router2;
 
 // src/routes/drinks.ts
@@ -81284,7 +81309,7 @@ router3.get("/drinks", async (req, res) => {
   });
   const drinksWithDetails = await Promise.all(
     filtered.map(async (d) => {
-      const detail = params.success && params.data.includeSlots ? await buildDrinkDetail(d.id, targetBranchId) : null;
+      const detail = await buildDrinkDetail(d.id, targetBranchId);
       const defaultPrice = await computeDefaultPrice(d.id);
       return {
         ...d,
@@ -81292,7 +81317,7 @@ router3.get("/drinks", async (req, res) => {
         defaultPrice,
         isAvailable: detail ? detail.isAvailable : true,
         unavailableReasons: detail ? detail.unavailableReasons : [],
-        slots: detail ? detail.slots : void 0
+        slots: params.success && params.data.includeSlots ? detail?.slots : void 0
       };
     })
   );

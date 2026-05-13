@@ -469,9 +469,9 @@ router.get("/drinks", async (req, res): Promise<void> => {
 
   const drinksWithDetails = await Promise.all(
     filtered.map(async (d) => {
-      const detail = params.success && params.data.includeSlots 
-        ? await buildDrinkDetail(d.id, targetBranchId)
-        : null;
+      // Always calculate detail (availability) to ensure the POS shows accurate Out of Stock badges.
+      // Caching ensures this remains performant even for large lists.
+      const detail = await buildDrinkDetail(d.id, targetBranchId);
       
       const defaultPrice = await computeDefaultPrice(d.id);
       return { 
@@ -480,7 +480,7 @@ router.get("/drinks", async (req, res): Promise<void> => {
         defaultPrice,
         isAvailable: detail ? detail.isAvailable : true,
         unavailableReasons: detail ? detail.unavailableReasons : [],
-        slots: detail ? detail.slots : undefined,
+        slots: (params.success && params.data.includeSlots) ? detail?.slots : undefined,
       };
     })
   );
