@@ -230,6 +230,13 @@ export const UpdateDiscountBody = api.UpdateDiscountBody;
 export type UpdateDiscountBody = Infer<typeof api.UpdateDiscountBody>;
 
 // Users
+export const ListUsersResponseItem = api.ListUsersResponseItem.extend({
+  pin: z.string().nullish(),
+});
+export type ListUsersResponseItem = Infer<typeof ListUsersResponseItem>;
+export const ListUsersResponse = z.array(ListUsersResponseItem);
+export type ListUsersResponse = Infer<typeof ListUsersResponse>;
+
 export const CreateUserBody = api.CreateUserBody.extend({
   role: z.string(),
   branchId: z.number().nullable().optional(),
@@ -244,6 +251,7 @@ export type UpdateUserBody = Infer<typeof UpdateUserBody>;
 
 export const UserDetail = api.UpdateUserResponse.extend({
   role: z.string(),
+  pin: z.string().nullish(),
   branchId: z.number().nullable().optional(),
   permissions: z.array(z.string()).optional(),
 }); // This has all fields

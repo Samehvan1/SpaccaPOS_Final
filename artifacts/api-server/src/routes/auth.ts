@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { db, usersTable, activityLogsTable, branchesTable } from "@workspace/db";
 import { logActivity } from "../lib/activity-logger";
 import { BaristaLoginBody, BaristaLoginResponse, GetMeResponse } from "@workspace/api-zod";
@@ -141,7 +141,7 @@ router.post("/auth/verify-pin", async (req, res): Promise<void> => {
     .where(
       and(
         eq(usersTable.pin, pin),
-        eq(usersTable.role, "admin"),
+        inArray(usersTable.role, ["admin", "cashier"]),
         eq(usersTable.isActive, true)
       )
     )
@@ -149,7 +149,7 @@ router.post("/auth/verify-pin", async (req, res): Promise<void> => {
 
   if (!user) {
     console.warn(`[Security] PIN verification failed: Invalid or inactive Admin PIN`);
-    res.status(401).json({ error: "Invalid or inactive Admin PIN" });
+    res.status(401).json({ error: "Invalid or inactive PIN" });
     return;
   }
 
@@ -167,6 +167,42 @@ router.post("/auth/emergency-login", async (req, res): Promise<void> => {
   (req.session as any).userId = user.id;
   (req.session as any).role = user.role;
   req.session.save(() => res.json({ success: true }));
+});
+
+// Allow logged-in user to change their own password and PIN
+router.post("/auth/change-profile", async (req, res): Promise<void> => {
+  const userId = (req.session as any).userId;
+  if (!userId) {
+    res.status(401).json({ error: "Not authenticated" });
+    return;
+  }
+
+  const { password, pin } = req.body;
+  
+  if (!password && !pin) {
+    res.status(400).json({ error: "Either password or PIN must be provided" });
+    return;
+  }
+
+  const updateData: any = {};
+  if (password) {
+    updateData.passwordHash = await bcrypt.hash(password, 10);
+  }
+  if (pin) {
+    updateData.pin = pin;
+  }
+
+  await db
+    .update(usersTable)
+    .set(updateData)
+    .where(eq(usersTable.id, userId));
+
+  await logActivity(req, "UPDATE_OWN_PROFILE", "user", userId, { 
+    changedPassword: !!password, 
+    changedPin: !!pin 
+  });
+
+  res.json({ success: true, message: "Profile updated successfully" });
 });
 
 export default router;

@@ -201,7 +201,7 @@ export default function CashierPage() {
           body: JSON.stringify({ pin: adminPin }),
           credentials: "include",
         });
-        if (!res.ok) throw new Error((await res.json()).error ?? "Invalid Admin PIN");
+        if (!res.ok) throw new Error((await res.json()).error ?? "Invalid PIN");
         // Store both the chosen method AND the verified PIN for later use on Approve
         setLocalPaymentMethods(prev => new Map(prev).set(authAction.orderId, `hospitality:${adminPin}`));
         toast({ title: "Hospitality Authorized", description: "Click Approve to finalize the hospitality order." });
@@ -835,7 +835,7 @@ export default function CashierPage() {
           <div className="py-6 space-y-6">
             <div className="text-center space-y-2">
               <p className="text-sm text-muted-foreground">
-                Admin PIN required for {authAction?.type === 'refund' ? 'Refund' : 'Hospitality'} (Order <span className="text-neon-cyan">#{orders.find(o => o.id === authAction?.orderId)?.orderNumber || recentOrders.find(o => o.id === authAction?.orderId)?.orderNumber}</span>)
+                Admin or Cashier PIN required for {authAction?.type === 'refund' ? 'Refund' : 'Hospitality'} (Order <span className="text-neon-cyan">#{orders.find(o => o.id === authAction?.orderId)?.orderNumber || recentOrders.find(o => o.id === authAction?.orderId)?.orderNumber}</span>)
               </p>
             </div>
             
@@ -865,7 +865,7 @@ export default function CashierPage() {
               disabled={adminPin.length < 4 || isRefunding}
               onClick={handleAdminAuth}
             >
-              {isRefunding ? <Loader2 className="h-5 w-5 animate-spin" /> : "Verify Admin PIN"}
+              {isRefunding ? <Loader2 className="h-5 w-5 animate-spin" /> : "Verify PIN"}
             </Button>
           </DialogFooter>
         </DialogContent>

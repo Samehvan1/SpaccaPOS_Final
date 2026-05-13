@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db, usersTable, userPermissionsTable, permissionsTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
-import { CreateUserBody, UpdateUserBody, UserDetail } from "@workspace/api-zod";
+import { CreateUserBody, UpdateUserBody, UserDetail, ListUsersResponseItem } from "@workspace/api-zod";
 import { resolveUserPermissions } from "../lib/permissions";
 import bcrypt from "bcryptjs";
 import { requirePermission } from "../middleware/permissions";
@@ -23,13 +23,13 @@ usersRouter.get("/users", requirePermission("users:view"), async (req, res): Pro
     const allUsers = targetBranchId 
       ? await db.select().from(usersTable).where(eq(usersTable.branchId, targetBranchId))
       : await db.select().from(usersTable);
-    res.json(allUsers.map(u => UserDetail.parse({
+    res.json(allUsers.map(u => ListUsersResponseItem.parse({
       ...u,
+      pin: u.pin, // Explicitly pass pin
       username: u.username ?? `user_${u.id}`,
       isActive: u.isActive ?? true,
       createdAt: u.createdAt ? u.createdAt.toISOString() : new Date().toISOString(),
       updatedAt: u.updatedAt ? u.updatedAt.toISOString() : new Date().toISOString(),
-      permissions: [], // We don't load all perms in the list for performance
     })));
     return;
   } catch (error: any) {
@@ -70,6 +70,7 @@ usersRouter.post("/users", requirePermission("users:create"), async (req, res): 
 
     res.status(201).json(UserDetail.parse({
       ...newUser,
+      pin: newUser.pin,
       username: newUser.username ?? `user_${newUser.id}`,
       isActive: newUser.isActive ?? true,
       createdAt: newUser.createdAt ? newUser.createdAt.toISOString() : new Date().toISOString(),
@@ -126,6 +127,7 @@ usersRouter.patch("/users/:id", requirePermission("users:update"), async (req, r
 
     res.json(UserDetail.parse({
       ...updatedUser,
+      pin: updatedUser.pin,
       username: updatedUser.username ?? `user_${updatedUser.id}`,
       isActive: updatedUser.isActive ?? true,
       createdAt: updatedUser.createdAt ? updatedUser.createdAt.toISOString() : new Date().toISOString(),

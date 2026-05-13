@@ -229,7 +229,7 @@ router.post("/orders", async (req, res): Promise<void> => {
   // Hospitality requires admin authorization
   if (parsed.data.paymentMethod === "hospitality") {
     if (!adminPin) {
-      res.status(403).json({ error: "Admin PIN required for hospitality orders" });
+      res.status(403).json({ error: "Admin or Cashier PIN required for hospitality orders" });
       return;
     }
     const [admin] = await db
@@ -238,7 +238,7 @@ router.post("/orders", async (req, res): Promise<void> => {
       .where(
         and(
           eq(usersTable.pin, adminPin),
-          eq(usersTable.role, "admin"),
+          inArray(usersTable.role, ["admin", "cashier"]),
           eq(usersTable.isActive, true)
         )
       )
@@ -246,7 +246,7 @@ router.post("/orders", async (req, res): Promise<void> => {
 
     if (!admin) {
       console.warn(`[Security] Hospitality authorization failed: Invalid Admin PIN used`);
-      res.status(401).json({ error: "Invalid or inactive Admin PIN" });
+      res.status(401).json({ error: "Invalid or inactive PIN" });
       return;
     }
 
@@ -584,7 +584,7 @@ router.patch("/orders/:id/status", async (req, res, next): Promise<void> => {
     if (parsed.data.paymentMethod === "hospitality") {
       const adminPin = (parsed.data as any).adminPin;
       if (!adminPin) {
-        res.status(403).json({ error: "Admin PIN required for hospitality authorization" });
+        res.status(403).json({ error: "Admin or Cashier PIN required for hospitality authorization" });
         return;
       }
       const [admin] = await db
@@ -593,7 +593,7 @@ router.patch("/orders/:id/status", async (req, res, next): Promise<void> => {
         .where(
           and(
             eq(usersTable.pin, adminPin),
-            eq(usersTable.role, "admin"),
+            inArray(usersTable.role, ["admin", "cashier"]),
             eq(usersTable.isActive, true)
           )
         )
@@ -601,7 +601,7 @@ router.patch("/orders/:id/status", async (req, res, next): Promise<void> => {
 
       if (!admin) {
         console.warn(`[Security] Hospitality authorization failed: Invalid Admin PIN used for order ${params.data.id}`);
-        res.status(401).json({ error: "Invalid or inactive Admin PIN" });
+        res.status(401).json({ error: "Invalid or inactive PIN" });
         return;
       }
 
@@ -716,7 +716,7 @@ router.post("/orders/:id/refund", requirePermission("cashier:refund_order"), asy
   const { adminPin, returnToStockItems } = req.body as { adminPin: string; returnToStockItems?: number[] };
 
   if (!adminPin) {
-    res.status(400).json({ error: "Admin PIN is required" });
+    res.status(400).json({ error: "Admin or Cashier PIN is required" });
     return;
   }
 
@@ -726,7 +726,7 @@ router.post("/orders/:id/refund", requirePermission("cashier:refund_order"), asy
     .where(
       and(
         eq(usersTable.pin, adminPin),
-        eq(usersTable.role, "admin"),
+        inArray(usersTable.role, ["admin", "cashier"]),
         eq(usersTable.isActive, true)
       )
     )
@@ -734,7 +734,7 @@ router.post("/orders/:id/refund", requirePermission("cashier:refund_order"), asy
 
   if (!admin) {
     console.warn(`[Security] Refund authorization failed: Invalid Admin PIN used for order ${id}`);
-    res.status(401).json({ error: "Invalid or inactive Admin PIN" });
+    res.status(401).json({ error: "Invalid or inactive PIN" });
     return;
   }
 

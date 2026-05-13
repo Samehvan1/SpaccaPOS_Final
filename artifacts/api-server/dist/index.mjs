@@ -78581,6 +78581,10 @@ var GetTopDrinksQueryParams2 = GetTopDrinksQueryParams;
 var GetTopDrinksResponse2 = GetTopDrinksResponse;
 var CreateDiscountBody2 = CreateDiscountBody;
 var UpdateDiscountBody2 = UpdateDiscountBody;
+var ListUsersResponseItem2 = ListUsersResponseItem.extend({
+  pin: external_exports2.string().nullish()
+});
+var ListUsersResponse2 = external_exports2.array(ListUsersResponseItem2);
 var CreateUserBody2 = CreateUserBody.extend({
   role: external_exports2.string(),
   branchId: external_exports2.number().nullable().optional()
@@ -78591,6 +78595,7 @@ var UpdateUserBody2 = UpdateUserBody.extend({
 });
 var UserDetail = UpdateUserResponse.extend({
   role: external_exports2.string(),
+  pin: external_exports2.string().nullish(),
   branchId: external_exports2.number().nullable().optional(),
   permissions: external_exports2.array(external_exports2.string()).optional()
 });
@@ -80483,13 +80488,13 @@ router2.post("/auth/verify-pin", async (req, res) => {
   const [user] = await db.select().from(usersTable).where(
     and(
       eq(usersTable.pin, pin),
-      eq(usersTable.role, "admin"),
+      inArray(usersTable.role, ["admin", "cashier"]),
       eq(usersTable.isActive, true)
     )
   ).limit(1);
   if (!user) {
     console.warn(`[Security] PIN verification failed: Invalid or inactive Admin PIN`);
-    res.status(401).json({ error: "Invalid or inactive Admin PIN" });
+    res.status(401).json({ error: "Invalid or inactive PIN" });
     return;
   }
   res.json({ success: true, message: "PIN verified" });
@@ -82456,19 +82461,19 @@ router5.post("/orders", async (req, res) => {
   const { items: orderItems, adminPin } = parsed.data;
   if (parsed.data.paymentMethod === "hospitality") {
     if (!adminPin) {
-      res.status(403).json({ error: "Admin PIN required for hospitality orders" });
+      res.status(403).json({ error: "Admin or Cashier PIN required for hospitality orders" });
       return;
     }
     const [admin] = await db.select().from(usersTable).where(
       and(
         eq(usersTable.pin, adminPin),
-        eq(usersTable.role, "admin"),
+        inArray(usersTable.role, ["admin", "cashier"]),
         eq(usersTable.isActive, true)
       )
     ).limit(1);
     if (!admin) {
       console.warn(`[Security] Hospitality authorization failed: Invalid Admin PIN used`);
-      res.status(401).json({ error: "Invalid or inactive Admin PIN" });
+      res.status(401).json({ error: "Invalid or inactive PIN" });
       return;
     }
     console.log(`[Security] Hospitality authorized by admin: ${admin.name} (ID: ${admin.id})`);
@@ -82739,19 +82744,19 @@ router5.patch("/orders/:id/status", async (req, res, next) => {
     if (parsed.data.paymentMethod === "hospitality") {
       const adminPin = parsed.data.adminPin;
       if (!adminPin) {
-        res.status(403).json({ error: "Admin PIN required for hospitality authorization" });
+        res.status(403).json({ error: "Admin or Cashier PIN required for hospitality authorization" });
         return;
       }
       const [admin] = await db.select().from(usersTable).where(
         and(
           eq(usersTable.pin, adminPin),
-          eq(usersTable.role, "admin"),
+          inArray(usersTable.role, ["admin", "cashier"]),
           eq(usersTable.isActive, true)
         )
       ).limit(1);
       if (!admin) {
         console.warn(`[Security] Hospitality authorization failed: Invalid Admin PIN used for order ${params.data.id}`);
-        res.status(401).json({ error: "Invalid or inactive Admin PIN" });
+        res.status(401).json({ error: "Invalid or inactive PIN" });
         return;
       }
       console.log(`[Security] Hospitality authorized by admin: ${admin.name} (ID: ${admin.id}) for order ${params.data.id}`);
@@ -82825,19 +82830,19 @@ router5.post("/orders/:id/refund", requirePermission("cashier:refund_order"), as
   const { id } = req.params;
   const { adminPin, returnToStockItems } = req.body;
   if (!adminPin) {
-    res.status(400).json({ error: "Admin PIN is required" });
+    res.status(400).json({ error: "Admin or Cashier PIN is required" });
     return;
   }
   const [admin] = await db.select().from(usersTable).where(
     and(
       eq(usersTable.pin, adminPin),
-      eq(usersTable.role, "admin"),
+      inArray(usersTable.role, ["admin", "cashier"]),
       eq(usersTable.isActive, true)
     )
   ).limit(1);
   if (!admin) {
     console.warn(`[Security] Refund authorization failed: Invalid Admin PIN used for order ${id}`);
-    res.status(401).json({ error: "Invalid or inactive Admin PIN" });
+    res.status(401).json({ error: "Invalid or inactive PIN" });
     return;
   }
   console.log(`[Security] Refund authorized by admin: ${admin.name} (ID: ${admin.id}) for order ${id}`);
@@ -83946,14 +83951,14 @@ usersRouter.get("/users", requirePermission("users:view"), async (req, res) => {
     const sessionBranchId = sessionUser.branchId;
     const targetBranchId = isAdmin && req.query.branchId && req.query.branchId !== "all" ? parseInt(req.query.branchId) : isAdmin && req.query.branchId === "all" ? null : sessionBranchId;
     const allUsers = targetBranchId ? await db.select().from(usersTable).where(eq(usersTable.branchId, targetBranchId)) : await db.select().from(usersTable);
-    res.json(allUsers.map((u) => UserDetail.parse({
+    res.json(allUsers.map((u) => ListUsersResponseItem2.parse({
       ...u,
+      pin: u.pin,
+      // Explicitly pass pin
       username: u.username ?? `user_${u.id}`,
       isActive: u.isActive ?? true,
       createdAt: u.createdAt ? u.createdAt.toISOString() : (/* @__PURE__ */ new Date()).toISOString(),
-      updatedAt: u.updatedAt ? u.updatedAt.toISOString() : (/* @__PURE__ */ new Date()).toISOString(),
-      permissions: []
-      // We don't load all perms in the list for performance
+      updatedAt: u.updatedAt ? u.updatedAt.toISOString() : (/* @__PURE__ */ new Date()).toISOString()
     })));
     return;
   } catch (error40) {
@@ -83984,6 +83989,7 @@ usersRouter.post("/users", requirePermission("users:create"), async (req, res) =
     const perms = await resolveUserPermissions(newUser.id, newUser.role);
     res.status(201).json(UserDetail.parse({
       ...newUser,
+      pin: newUser.pin,
       username: newUser.username ?? `user_${newUser.id}`,
       isActive: newUser.isActive ?? true,
       createdAt: newUser.createdAt ? newUser.createdAt.toISOString() : (/* @__PURE__ */ new Date()).toISOString(),
@@ -84026,6 +84032,7 @@ usersRouter.patch("/users/:id", requirePermission("users:update"), async (req, r
     const perms = await resolveUserPermissions(updatedUser.id, updatedUser.role);
     res.json(UserDetail.parse({
       ...updatedUser,
+      pin: updatedUser.pin,
       username: updatedUser.username ?? `user_${updatedUser.id}`,
       isActive: updatedUser.isActive ?? true,
       createdAt: updatedUser.createdAt ? updatedUser.createdAt.toISOString() : (/* @__PURE__ */ new Date()).toISOString(),

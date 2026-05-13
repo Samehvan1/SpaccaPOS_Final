@@ -67,6 +67,7 @@ export default function AdminUsers() {
   const [role, setRole] = useState("barista");
   const [isActive, setIsActive] = useState(true);
   const [branchId, setBranchId] = useState<string>("__none__");
+  const [pin, setPin] = useState("");
 
   const { data: users = [], isLoading } = useListUsers();
 
@@ -114,6 +115,7 @@ export default function AdminUsers() {
       setIsActive(user.isActive !== false);
       const bId = (user as any).branch?.id || (user as any).branchId;
       setBranchId(bId ? String(bId) : "__none__");
+      setPin(user.pin || "");
     } else {
       setEditingUser(null);
       setName("");
@@ -122,6 +124,7 @@ export default function AdminUsers() {
       setRole("barista");
       setIsActive(true);
       setBranchId("__none__");
+      setPin("");
     }
     setIsDialogOpen(true);
   };
@@ -177,6 +180,7 @@ export default function AdminUsers() {
       branchId: branchId === "__none__" ? null : parseInt(branchId)
     };
     if (password) payload.password = password;
+    if (pin) payload.pin = pin;
 
     if (editingUser) {
       payload.isActive = isActive;
@@ -260,6 +264,7 @@ export default function AdminUsers() {
               <TableHead>User</TableHead>
               <TableHead>Username</TableHead>
               <TableHead>Role</TableHead>
+              <TableHead>PIN</TableHead>
               <TableHead>Branch</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Actions</TableHead>
@@ -284,6 +289,11 @@ export default function AdminUsers() {
                   <Badge variant="outline" className="px-3 py-1 font-semibold uppercase">
                     {user.role}
                   </Badge>
+                </TableCell>
+                <TableCell>
+                  <div className="font-mono text-xs">
+                    {user.pin ? "••••••" : <span className="text-muted-foreground italic">Not Set</span>}
+                  </div>
                 </TableCell>
                 <TableCell>
                   <div className="text-sm">
@@ -331,6 +341,7 @@ export default function AdminUsers() {
             <div className="grid gap-2"><Label>Full Name</Label><Input value={name} onChange={(e) => setName(e.target.value)} /></div>
             <div className="grid gap-2"><Label>Username</Label><Input value={username} onChange={(e) => setUsername(e.target.value)} /></div>
             <div className="grid gap-2"><Label>Password</Label><Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} /></div>
+            <div className="grid gap-2"><Label>PIN (6 digits)</Label><Input maxLength={6} value={pin} onChange={(e) => setPin(e.target.value)} placeholder="e.g. 123456" /></div>
             <div className="grid gap-2">
               <Label>Role</Label>
               <Select value={role} onValueChange={setRole}>

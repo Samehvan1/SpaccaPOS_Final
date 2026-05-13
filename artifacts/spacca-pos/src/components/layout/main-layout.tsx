@@ -25,6 +25,17 @@ import {
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 
 interface MainLayoutProps {
@@ -37,8 +48,15 @@ export function MainLayout({ children }: MainLayoutProps) {
   const { autoPrintCustomer, setAutoPrintCustomer, autoPrintAgent, setAutoPrintAgent } = useSettings();
   const isOnline = useOnlineStatus();
   const { isInstallable, installApp } = usePWAInstall();
+  const { toast } = useToast();
   useOrderEvents(!!user);
   const [location, setLocation] = useLocation();
+
+  // My Account states
+  const [isAccountDialogOpen, setIsAccountDialogOpen] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [newPin, setNewPin] = useState("");
+  const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
 
   const { data: branches = [] } = useQuery({
     queryKey: ["/api/admin/branches"],
@@ -127,15 +145,31 @@ export function MainLayout({ children }: MainLayoutProps) {
               <span className="hidden sm:inline">Refresh</span>
             </Button>
 
-            <Button
-              variant="ghost"
-              size="sm"
-              className="gap-2 text-muted-foreground hover:text-foreground"
-              onClick={() => { logout(); setLocation("/login"); }}
-            >
-              <LogOut className="h-4 w-4" />
-              <span className="hidden sm:inline">Logout</span>
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="gap-2 text-muted-foreground hover:text-foreground font-bold"
+                >
+                  <User className="h-4 w-4" />
+                  <span className="hidden sm:inline">{user.name}</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => setIsAccountDialogOpen(true)} className="cursor-pointer">
+                  <User className="mr-2 h-4 w-4" />
+                  <span>Change Password & PIN</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => { logout(); setLocation("/login"); }} className="cursor-pointer text-destructive focus:text-destructive">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Logout</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </header>
 
@@ -198,10 +232,27 @@ export function MainLayout({ children }: MainLayoutProps) {
                </Button>
              )}
 
-             <div className="hidden sm:flex flex-col items-end">
-               <span className="text-xs font-bold leading-none">{user.name}</span>
-               <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Terminal ID: {user.id}</span>
-             </div>
+             <DropdownMenu>
+               <DropdownMenuTrigger asChild>
+                 <div className="hidden sm:flex flex-col items-end cursor-pointer hover:opacity-80 transition-opacity">
+                   <span className="text-xs font-bold leading-none">{user.name}</span>
+                   <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Terminal ID: {user.id}</span>
+                 </div>
+               </DropdownMenuTrigger>
+               <DropdownMenuContent align="end" className="w-56">
+                 <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                 <DropdownMenuSeparator />
+                 <DropdownMenuItem onClick={() => setIsAccountDialogOpen(true)} className="cursor-pointer">
+                   <User className="mr-2 h-4 w-4" />
+                   <span>Change Password & PIN</span>
+                 </DropdownMenuItem>
+                 <DropdownMenuSeparator />
+                 <DropdownMenuItem onClick={() => { logout(); setLocation("/login"); }} className="cursor-pointer text-destructive focus:text-destructive">
+                   <LogOut className="mr-2 h-4 w-4" />
+                   <span>Logout</span>
+                 </DropdownMenuItem>
+               </DropdownMenuContent>
+             </DropdownMenu>
              
              <Button 
                variant="ghost" 
@@ -239,6 +290,33 @@ export function MainLayout({ children }: MainLayoutProps) {
       </div>
     );
   }
+
+  const handleProfileUpdate = async () => {
+    if (!newPassword && !newPin) {
+      toast({ variant: "destructive", title: "Error", description: "Please enter a new password or PIN" });
+      return;
+    }
+
+    try {
+      setIsUpdatingProfile(true);
+      const res = await fetch("/api/auth/change-profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: newPassword, pin: newPin })
+      });
+
+      if (!res.ok) throw new Error(await res.text());
+
+      toast({ title: "Success", description: "Profile updated successfully" });
+      setIsAccountDialogOpen(false);
+      setNewPassword("");
+      setNewPin("");
+    } catch (error: any) {
+      toast({ variant: "destructive", title: "Error", description: error.message || "Failed to update profile" });
+    } finally {
+      setIsUpdatingProfile(false);
+    }
+  };
 
   // ─── Front-desk kiosk layout ───────────────────────────────────────────────
   const [expandedMenus, setExpandedMenus] = useState<string[]>(["finance"]);
@@ -374,6 +452,11 @@ export function MainLayout({ children }: MainLayoutProps) {
             <DropdownMenuContent align="end" className="w-56" side="right" sideOffset={10}>
               <DropdownMenuLabel>My Account</DropdownMenuLabel>
               <DropdownMenuSeparator />
+
+              <DropdownMenuItem onClick={() => setIsAccountDialogOpen(true)} className="cursor-pointer">
+                <User className="mr-2 h-4 w-4" />
+                <span>Change Password & PIN</span>
+              </DropdownMenuItem>
               
               <DropdownMenuItem onClick={toggleTheme} className="cursor-pointer">
                 {theme === "dark" ? <Sun className="mr-2 h-4 w-4" /> : <Moon className="mr-2 h-4 w-4" />}
@@ -454,6 +537,44 @@ export function MainLayout({ children }: MainLayoutProps) {
       <main className="flex-1 flex flex-col h-full overflow-y-auto relative">
         {children}
       </main>
+
+      {/* My Account Dialog */}
+      <Dialog open={isAccountDialogOpen} onOpenChange={setIsAccountDialogOpen}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>My Account</DialogTitle>
+            <DialogDescription>Update your login credentials.</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="newPassword">New Password</Label>
+              <Input 
+                id="newPassword" 
+                type="password" 
+                value={newPassword} 
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Leave blank to keep current"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="newPin">New PIN (6 digits)</Label>
+              <Input 
+                id="newPin" 
+                maxLength={6} 
+                value={newPin} 
+                onChange={(e) => setNewPin(e.target.value)}
+                placeholder="Leave blank to keep current"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setIsAccountDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleProfileUpdate} disabled={isUpdatingProfile}>
+              {isUpdatingProfile ? "Updating..." : "Update Profile"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

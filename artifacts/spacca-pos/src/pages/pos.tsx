@@ -1114,8 +1114,8 @@ export default function PosTerminal() {
             </div>
             <div className="grid gap-2">
               <Label>Payment Method</Label>
-              <div className="grid grid-cols-4 gap-2">
-                {["cash", "card", "wallet", "hospitality"].map(method => (
+              <div className="grid grid-cols-3 gap-2">
+                {["cash", "card", "wallet"].map(method => (
                   <Button
                     key={method}
                     variant={paymentMethod === method ? "default" : "outline"}
