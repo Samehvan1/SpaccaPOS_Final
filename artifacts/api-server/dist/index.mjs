@@ -78599,6 +78599,21 @@ var UserDetail = UpdateUserResponse.extend({
   branchId: external_exports2.number().nullable().optional(),
   permissions: external_exports2.array(external_exports2.string()).optional()
 });
+var ListActivityLogsQueryParams2 = ListActivityLogsQueryParams.extend({
+  startDate: external_exports2.string().optional(),
+  endDate: external_exports2.string().optional(),
+  entityType: external_exports2.string().optional(),
+  userName: external_exports2.string().optional()
+});
+var ActivityLog = ListActivityLogsResponseItem.extend({
+  userName: external_exports2.string().nullish()
+});
+var ListActivityLogsResponse2 = external_exports2.object({
+  data: external_exports2.array(ActivityLog),
+  total: external_exports2.number(),
+  limit: external_exports2.number(),
+  offset: external_exports2.number()
+});
 
 // src/routes/health.ts
 var router = (0, import_express.Router)();
@@ -84709,7 +84724,7 @@ router15.get("/cashier/sessions/:id/report", requirePermission("cashier:view_rep
       orderCount: completedOrders.length
     },
     statistics,
-    orders: orders.map((o) => ({
+    orders: completedOrders.map((o) => ({
       ...o,
       total: parseFloat(o.total)
     }))
@@ -84729,17 +84744,38 @@ adminRouter.get("/admin/activity-logs", requirePermission("admin:view_logs"), as
   try {
     const limit = parseInt(req.query.limit) || 50;
     const offset = parseInt(req.query.offset) || 0;
-    const logs = await db.select({
-      id: activityLogsTable.id,
-      userId: activityLogsTable.userId,
-      userName: usersTable.name,
-      action: activityLogsTable.action,
-      entityType: activityLogsTable.entityType,
-      entityId: activityLogsTable.entityId,
-      details: activityLogsTable.details,
-      createdAt: activityLogsTable.createdAt
-    }).from(activityLogsTable).leftJoin(usersTable, eq(activityLogsTable.userId, usersTable.id)).orderBy(desc(activityLogsTable.createdAt)).limit(limit).offset(offset);
-    res.json(logs);
+    const { startDate, endDate, userId, entityType, action, userName } = req.query;
+    const conditions = [];
+    if (userId) conditions.push(eq(activityLogsTable.userId, parseInt(userId)));
+    if (action) conditions.push(ilike(activityLogsTable.action, `%${action}%`));
+    if (entityType) conditions.push(eq(activityLogsTable.entityType, entityType));
+    if (userName) conditions.push(ilike(usersTable.name, `%${userName}%`));
+    if (startDate) conditions.push(gte(activityLogsTable.createdAt, new Date(startDate)));
+    if (endDate) {
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      conditions.push(lte(activityLogsTable.createdAt, end));
+    }
+    const where = conditions.length > 0 ? and(...conditions) : void 0;
+    const [logs, totalCount] = await Promise.all([
+      db.select({
+        id: activityLogsTable.id,
+        userId: activityLogsTable.userId,
+        userName: usersTable.name,
+        action: activityLogsTable.action,
+        entityType: activityLogsTable.entityType,
+        entityId: activityLogsTable.entityId,
+        details: activityLogsTable.details,
+        createdAt: activityLogsTable.createdAt
+      }).from(activityLogsTable).leftJoin(usersTable, eq(activityLogsTable.userId, usersTable.id)).where(where).orderBy(desc(activityLogsTable.createdAt)).limit(limit).offset(offset),
+      db.select({ count: sql`cast(count(*) as int)` }).from(activityLogsTable).leftJoin(usersTable, eq(activityLogsTable.userId, usersTable.id)).where(where)
+    ]);
+    res.json({
+      data: logs,
+      total: totalCount[0].count,
+      limit,
+      offset
+    });
   } catch (error40) {
     console.error("[listActivityLogs] error:", error40);
     res.status(500).json({ error: "Failed to list activity logs" });

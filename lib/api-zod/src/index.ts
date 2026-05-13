@@ -258,7 +258,26 @@ export const UserDetail = api.UpdateUserResponse.extend({
 export type UserDetail = Infer<typeof UserDetail>;
 
 // Admin
-export const ActivityLog = api.ListActivityLogsResponseItem;
-export type ActivityLog = Infer<typeof api.ListActivityLogsResponseItem>;
+export const ListActivityLogsQueryParams = api.ListActivityLogsQueryParams.extend({
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
+  entityType: z.string().optional(),
+  userName: z.string().optional(),
+});
+export type ListActivityLogsQueryParams = Infer<typeof ListActivityLogsQueryParams>;
+
+export const ActivityLog = api.ListActivityLogsResponseItem.extend({
+  userName: z.string().nullish(),
+});
+export type ActivityLog = Infer<typeof ActivityLog>;
+
+export const ListActivityLogsResponse = z.object({
+  data: z.array(ActivityLog),
+  total: z.number(),
+  limit: z.number(),
+  offset: z.number(),
+});
+export type ListActivityLogsResponse = Infer<typeof ListActivityLogsResponse>;
+
 export const Permission = api.ListPermissionsResponseItem;
 export type Permission = Infer<typeof api.ListPermissionsResponseItem>;

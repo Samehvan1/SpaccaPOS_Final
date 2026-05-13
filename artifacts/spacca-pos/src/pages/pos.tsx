@@ -1150,7 +1150,7 @@ export default function PosTerminal() {
             </div>
             {paymentMethod === "hospitality" && (
               <div className="grid gap-2 animate-in fade-in slide-in-from-top-2 duration-300">
-                <Label htmlFor="adminPin" className="text-pink-600 font-bold">Admin Authorization PIN</Label>
+                <Label htmlFor="adminPin" className="text-pink-600 font-bold">Admin/Supervisor Authorization PIN</Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-pink-400" />
                   <Input
@@ -1158,7 +1158,7 @@ export default function PosTerminal() {
                     type="password"
                     value={adminPin}
                     onChange={e => setAdminPin(e.target.value)}
-                    placeholder="Enter Admin PIN"
+                    placeholder="Enter Admin or Supervisor PIN"
                     className="pl-9 border-pink-200 focus-visible:ring-pink-500"
                     autoComplete="off"
                   />

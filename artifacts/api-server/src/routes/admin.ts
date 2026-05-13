@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, activityLogsTable, permissionsTable, usersTable, rolePermissionsTable, branchesTable } from "@workspace/db";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and, gte, lte, ilike, sql } from "drizzle-orm";
 import { exec } from "child_process";
 import path from "path";
 import fs from "fs";
@@ -13,25 +13,59 @@ adminRouter.get("/admin/activity-logs", requirePermission("admin:view_logs"), as
   try {
     const limit = parseInt(req.query.limit as string) || 50;
     const offset = parseInt(req.query.offset as string) || 0;
+    
+    const { startDate, endDate, userId, entityType, action, userName } = req.query as {
+      startDate?: string;
+      endDate?: string;
+      userId?: string;
+      entityType?: string;
+      action?: string;
+      userName?: string;
+    };
 
-    const logs = await db
-      .select({
-        id: activityLogsTable.id,
-        userId: activityLogsTable.userId,
-        userName: usersTable.name,
-        action: activityLogsTable.action,
-        entityType: activityLogsTable.entityType,
-        entityId: activityLogsTable.entityId,
-        details: activityLogsTable.details,
-        createdAt: activityLogsTable.createdAt,
-      })
-      .from(activityLogsTable)
-      .leftJoin(usersTable, eq(activityLogsTable.userId, usersTable.id))
-      .orderBy(desc(activityLogsTable.createdAt))
-      .limit(limit)
-      .offset(offset);
+    const conditions = [];
+    if (userId) conditions.push(eq(activityLogsTable.userId, parseInt(userId)));
+    if (action) conditions.push(ilike(activityLogsTable.action, `%${action}%`));
+    if (entityType) conditions.push(eq(activityLogsTable.entityType, entityType));
+    if (userName) conditions.push(ilike(usersTable.name, `%${userName}%`));
+    if (startDate) conditions.push(gte(activityLogsTable.createdAt, new Date(startDate)));
+    if (endDate) {
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      conditions.push(lte(activityLogsTable.createdAt, end));
+    }
 
-    res.json(logs);
+    const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+    const [logs, totalCount] = await Promise.all([
+      db
+        .select({
+          id: activityLogsTable.id,
+          userId: activityLogsTable.userId,
+          userName: usersTable.name,
+          action: activityLogsTable.action,
+          entityType: activityLogsTable.entityType,
+          entityId: activityLogsTable.entityId,
+          details: activityLogsTable.details,
+          createdAt: activityLogsTable.createdAt,
+        })
+        .from(activityLogsTable)
+        .leftJoin(usersTable, eq(activityLogsTable.userId, usersTable.id))
+        .where(where)
+        .orderBy(desc(activityLogsTable.createdAt))
+        .limit(limit)
+        .offset(offset),
+      db.select({ count: sql<number>`cast(count(*) as int)` }).from(activityLogsTable)
+        .leftJoin(usersTable, eq(activityLogsTable.userId, usersTable.id))
+        .where(where)
+    ]);
+
+    res.json({
+      data: logs,
+      total: totalCount[0].count,
+      limit,
+      offset
+    });
   } catch (error) {
     console.error("[listActivityLogs] error:", error);
     res.status(500).json({ error: "Failed to list activity logs" });

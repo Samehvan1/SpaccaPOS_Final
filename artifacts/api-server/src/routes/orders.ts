@@ -229,7 +229,7 @@ router.post("/orders", async (req, res): Promise<void> => {
   // Hospitality requires admin authorization
   if (parsed.data.paymentMethod === "hospitality") {
     if (!adminPin) {
-      res.status(403).json({ error: "Admin or Cashier PIN required for hospitality orders" });
+      res.status(403).json({ error: "Admin or Supervisor PIN required for hospitality orders" });
       return;
     }
     const [admin] = await db
@@ -238,7 +238,7 @@ router.post("/orders", async (req, res): Promise<void> => {
       .where(
         and(
           eq(usersTable.pin, adminPin),
-          inArray(usersTable.role, ["admin", "cashier"]),
+          inArray(usersTable.role, ["admin", "supervisor"]),
           eq(usersTable.isActive, true)
         )
       )
@@ -584,7 +584,7 @@ router.patch("/orders/:id/status", async (req, res, next): Promise<void> => {
     if (parsed.data.paymentMethod === "hospitality") {
       const adminPin = (parsed.data as any).adminPin;
       if (!adminPin) {
-        res.status(403).json({ error: "Admin or Cashier PIN required for hospitality authorization" });
+        res.status(403).json({ error: "Admin or Supervisor PIN required for hospitality authorization" });
         return;
       }
       const [admin] = await db
@@ -593,7 +593,7 @@ router.patch("/orders/:id/status", async (req, res, next): Promise<void> => {
         .where(
           and(
             eq(usersTable.pin, adminPin),
-            inArray(usersTable.role, ["admin", "cashier"]),
+            inArray(usersTable.role, ["admin", "supervisor"]),
             eq(usersTable.isActive, true)
           )
         )
