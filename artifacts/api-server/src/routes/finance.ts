@@ -438,6 +438,50 @@ router.get("/finance/sales-items", requirePermission("reports:view"), async (req
   res.json(serializeDates(report));
 });
 
+// ── Sales Summary ──────────────────────────────────────────────────────────
+router.get("/finance/sales-summary", requirePermission("reports:view"), async (req, res) => {
+  const { startDate, endDate, branchId } = req.query;
+  const targetBranchId = branchId && branchId !== "all" ? parseInt(branchId as string) : null;
+  const start = startDate ? startOfDay(new Date(startDate as string)) : startOfDay(subDays(new Date(), 30));
+  const end = endDate ? endOfDay(new Date(endDate as string)) : endOfDay(new Date());
+
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+    res.status(400).json({ error: "Invalid date format" });
+    return;
+  }
+
+  const conditions = [
+    gte(ordersTable.createdAt, start),
+    lte(ordersTable.createdAt, end),
+    sql`${ordersTable.status} NOT IN ('cancelled', 'refunded')`,
+  ];
+  if (targetBranchId) conditions.push(eq(ordersTable.branchId, targetBranchId));
+
+  const [summary] = await db
+    .select({
+      revenue: sum(ordersTable.subtotal),
+      discounts: sum(ordersTable.discount),
+      netRevenue: sum(ordersTable.total),
+      count: count(ordersTable.id),
+    })
+    .from(ordersTable)
+    .where(and(...conditions));
+
+  const itemsResult = await db
+    .select({ totalDrinks: sum(orderItemsTable.quantity) })
+    .from(orderItemsTable)
+    .innerJoin(ordersTable, eq(orderItemsTable.orderId, ordersTable.id))
+    .where(and(...conditions));
+
+  res.json({
+    revenue: parseFloat(summary.revenue || "0"),
+    discounts: parseFloat(summary.discounts || "0"),
+    netRevenue: parseFloat(summary.netRevenue || "0"),
+    count: Number(summary.count || 0),
+    drinks: Number(itemsResult[0]?.totalDrinks || 0),
+  });
+});
+
 // ── Customizations Detailed Report ─────────────────────────────────────────
 router.get("/finance/customizations-report", requirePermission("reports:view"), async (req, res) => {
   const { startDate, endDate, branchId } = req.query;

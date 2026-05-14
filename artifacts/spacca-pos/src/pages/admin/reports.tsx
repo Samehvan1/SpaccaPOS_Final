@@ -132,6 +132,21 @@ export default function ReportsPage() {
   const reportTotalDrinks = reportSummary?.reduce((s, c) => s + c.totalDrinks, 0) ?? 0;
   const reportAvgOrder = reportTotalOrders > 0 ? reportTotalRevenue / reportTotalOrders : 0;
 
+  // Sales Range Summary Query (Accurate totals for banner)
+  const { data: rangeSummary, isLoading: loadingRangeSummary } = useQuery({
+    queryKey: ["sales-range-summary", reportStartDate, reportEndDate, selectedBranchId],
+    queryFn: async () => {
+      const url = new URL(`${API_BASE}/finance/sales-summary`, window.location.origin);
+      url.searchParams.set("startDate", reportStartDate);
+      url.searchParams.set("endDate", reportEndDate);
+      if (selectedBranchId) url.searchParams.set("branchId", String(selectedBranchId));
+      
+      const res = await fetch(url.toString());
+      if (!res.ok) throw new Error("Failed to fetch range summary");
+      return res.json();
+    },
+  });
+
   // Daily Summary Query
   const { data: dailySummary, isLoading: loadingDailySummary } = useQuery({
     queryKey: ["sales-by-day", reportStartDate, reportEndDate, selectedBranchId],
@@ -390,12 +405,13 @@ export default function ReportsPage() {
             </Card>
 
             {/* Shared Totals Banner */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
               {[
-                { label: "Range Revenue", value: fmt(reportTotalRevenue), icon: Banknote, loading: loadingReportSummary },
-                { label: "Range Orders", value: reportTotalOrders, icon: Receipt, loading: loadingReportSummary },
-                { label: "Range Drinks", value: reportTotalDrinks, icon: Coffee, loading: loadingReportSummary },
-                { label: "Range Discounts", value: fmt(reportOrders?.reduce((s, o) => s + (o as any).discount, 0) || 0), icon: Tag, loading: loadingReportSummary },
+                { label: "Range Revenue", value: fmt(rangeSummary?.revenue || 0), icon: Banknote, loading: loadingRangeSummary },
+                { label: "Range Net Rev", value: fmt(rangeSummary?.netRevenue || 0), icon: TrendingUp, loading: loadingRangeSummary },
+                { label: "Range Orders", value: rangeSummary?.count || 0, icon: Receipt, loading: loadingRangeSummary },
+                { label: "Range Drinks", value: rangeSummary?.drinks || 0, icon: Coffee, loading: loadingRangeSummary },
+                { label: "Range Discounts", value: fmt(rangeSummary?.discounts || 0), icon: Tag, loading: loadingRangeSummary },
               ].map((stat, i) => (
                 <Card key={i} className="border-none shadow-md bg-card/40 backdrop-blur-sm">
                   <CardContent className="p-4 flex items-center gap-4">

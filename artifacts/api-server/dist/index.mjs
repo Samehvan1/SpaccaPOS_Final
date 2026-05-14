@@ -82434,6 +82434,59 @@ var ingredients_default = router4;
 // src/routes/orders.ts
 var import_express5 = __toESM(require_express2(), 1);
 init_drizzle_orm();
+
+// ../../node_modules/.pnpm/date-fns@3.6.0/node_modules/date-fns/toDate.mjs
+function toDate(argument) {
+  const argStr = Object.prototype.toString.call(argument);
+  if (argument instanceof Date || typeof argument === "object" && argStr === "[object Date]") {
+    return new argument.constructor(+argument);
+  } else if (typeof argument === "number" || argStr === "[object Number]" || typeof argument === "string" || argStr === "[object String]") {
+    return new Date(argument);
+  } else {
+    return /* @__PURE__ */ new Date(NaN);
+  }
+}
+
+// ../../node_modules/.pnpm/date-fns@3.6.0/node_modules/date-fns/constructFrom.mjs
+function constructFrom(date6, value) {
+  if (date6 instanceof Date) {
+    return new date6.constructor(value);
+  } else {
+    return new Date(value);
+  }
+}
+
+// ../../node_modules/.pnpm/date-fns@3.6.0/node_modules/date-fns/addDays.mjs
+function addDays(date6, amount) {
+  const _date2 = toDate(date6);
+  if (isNaN(amount)) return constructFrom(date6, NaN);
+  if (!amount) {
+    return _date2;
+  }
+  _date2.setDate(_date2.getDate() + amount);
+  return _date2;
+}
+
+// ../../node_modules/.pnpm/date-fns@3.6.0/node_modules/date-fns/startOfDay.mjs
+function startOfDay(date6) {
+  const _date2 = toDate(date6);
+  _date2.setHours(0, 0, 0, 0);
+  return _date2;
+}
+
+// ../../node_modules/.pnpm/date-fns@3.6.0/node_modules/date-fns/endOfDay.mjs
+function endOfDay(date6) {
+  const _date2 = toDate(date6);
+  _date2.setHours(23, 59, 59, 999);
+  return _date2;
+}
+
+// ../../node_modules/.pnpm/date-fns@3.6.0/node_modules/date-fns/subDays.mjs
+function subDays(date6, amount) {
+  return addDays(date6, -amount);
+}
+
+// src/routes/orders.ts
 init_sse();
 init_src();
 var router5 = (0, import_express5.Router)();
@@ -82503,18 +82556,16 @@ router5.get("/orders", requirePermission("cashier:view"), async (req, res) => {
     conditions.push(inArray(ordersTable.status, statuses));
   }
   if (params.success && params.data.startDate) {
-    conditions.push(gte(ordersTable.createdAt, new Date(params.data.startDate)));
+    conditions.push(gte(ordersTable.createdAt, startOfDay(new Date(params.data.startDate))));
   }
   if (params.success && params.data.endDate) {
-    const end = new Date(params.data.endDate);
-    end.setHours(23, 59, 59, 999);
-    conditions.push(lte(ordersTable.createdAt, end));
+    conditions.push(lte(ordersTable.createdAt, endOfDay(new Date(params.data.endDate))));
   }
   const limit = params.success && params.data.limit ? params.data.limit : 50;
   const offset = params.success && params.data.offset ? params.data.offset : 0;
-  const query = db.select().from(ordersTable);
+  let query = db.select().from(ordersTable).$dynamic();
   if (conditions.length > 0) {
-    query.where(and(...conditions));
+    query = query.where(and(...conditions));
   }
   const orders = await query.orderBy(desc(ordersTable.createdAt)).limit(limit).offset(offset);
   const orderIds = orders.map((o) => o.id);
@@ -83026,12 +83077,10 @@ router6.get("/stock/movements", async (req, res) => {
       conditions.push(eq(stockMovementsTable.ingredientId, params.data.ingredientId));
     }
     if (params.data.startDate) {
-      conditions.push(gte(stockMovementsTable.createdAt, params.data.startDate));
+      conditions.push(gte(stockMovementsTable.createdAt, startOfDay(new Date(params.data.startDate))));
     }
     if (params.data.endDate) {
-      const end = new Date(params.data.endDate);
-      end.setHours(23, 59, 59, 999);
-      conditions.push(lte(stockMovementsTable.createdAt, end));
+      conditions.push(lte(stockMovementsTable.createdAt, endOfDay(new Date(params.data.endDate))));
     }
   }
   const movements = await db.select().from(stockMovementsTable).where(conditions.length ? and(...conditions) : void 0).orderBy(desc(stockMovementsTable.createdAt));
@@ -83288,12 +83337,10 @@ router7.get("/dashboard/sales-by-category", async (req, res) => {
     conditions.push(eq(ordersTable.branchId, targetBranchId));
   }
   if (params.success && params.data.startDate) {
-    conditions.push(gte(ordersTable.createdAt, new Date(params.data.startDate)));
+    conditions.push(gte(ordersTable.createdAt, startOfDay(new Date(params.data.startDate))));
   }
   if (params.success && params.data.endDate) {
-    const end = new Date(params.data.endDate);
-    end.setHours(23, 59, 59, 999);
-    conditions.push(lte(ordersTable.createdAt, end));
+    conditions.push(lte(ordersTable.createdAt, endOfDay(new Date(params.data.endDate))));
   }
   if (!params.success || !params.data.startDate && !params.data.endDate) {
     const days = params.success && params.data.days ? params.data.days : 30;
@@ -83342,12 +83389,10 @@ router7.get("/dashboard/top-drinks", async (req, res) => {
     conditions.push(eq(ordersTable.branchId, targetBranchId));
   }
   if (params.success && params.data.startDate) {
-    conditions.push(gte(ordersTable.createdAt, new Date(params.data.startDate)));
+    conditions.push(gte(ordersTable.createdAt, startOfDay(new Date(params.data.startDate))));
   }
   if (params.success && params.data.endDate) {
-    const end = new Date(params.data.endDate);
-    end.setHours(23, 59, 59, 999);
-    conditions.push(lte(ordersTable.createdAt, end));
+    conditions.push(lte(ordersTable.createdAt, endOfDay(new Date(params.data.endDate))));
   }
   if (!params.success || !params.data.startDate && !params.data.endDate) {
     const days = params.success && params.data.days ? params.data.days : 30;
@@ -83397,12 +83442,10 @@ router7.get("/dashboard/sales-by-day", async (req, res) => {
     conditions.push(eq(ordersTable.branchId, targetBranchId));
   }
   if (params.success && params.data.startDate) {
-    conditions.push(gte(ordersTable.createdAt, new Date(params.data.startDate)));
+    conditions.push(gte(ordersTable.createdAt, startOfDay(new Date(params.data.startDate))));
   }
   if (params.success && params.data.endDate) {
-    const end = new Date(params.data.endDate);
-    end.setHours(23, 59, 59, 999);
-    conditions.push(lte(ordersTable.createdAt, end));
+    conditions.push(lte(ordersTable.createdAt, endOfDay(new Date(params.data.endDate))));
   }
   const orders = await db.select({
     id: ordersTable.id,
@@ -84620,11 +84663,9 @@ router15.get("/cashier/performance/:cashierId", requirePermission("cashier:view_
   }
   const { startDate, endDate } = req.query;
   const conditions = [eq(ordersTable.cashierId, cashierId)];
-  if (startDate) conditions.push(gte(ordersTable.createdAt, new Date(startDate)));
+  if (startDate) conditions.push(gte(ordersTable.createdAt, startOfDay(new Date(startDate))));
   if (endDate) {
-    const end = new Date(endDate);
-    end.setHours(23, 59, 59, 999);
-    conditions.push(lte(ordersTable.createdAt, end));
+    conditions.push(lte(ordersTable.createdAt, endOfDay(new Date(endDate))));
   }
   const orders = await db.select({
     id: ordersTable.id,
@@ -84655,11 +84696,9 @@ router15.get("/cashier/sessions", requirePermission("cashier:view_reports"), asy
   const { cashierId, startDate, endDate } = req.query;
   const conditions = [];
   if (cashierId) conditions.push(eq(cashierSessionsTable.cashierId, parseInt(cashierId)));
-  if (startDate) conditions.push(gte(cashierSessionsTable.startedAt, new Date(startDate)));
+  if (startDate) conditions.push(gte(cashierSessionsTable.startedAt, startOfDay(new Date(startDate))));
   if (endDate) {
-    const end = new Date(endDate);
-    end.setHours(23, 59, 59, 999);
-    conditions.push(lte(cashierSessionsTable.startedAt, end));
+    conditions.push(lte(cashierSessionsTable.startedAt, endOfDay(new Date(endDate))));
   }
   const sessions = await db.select().from(cashierSessionsTable).where(conditions.length > 0 ? and(...conditions) : void 0).orderBy(desc(cashierSessionsTable.startedAt));
   const cashierIds = [...new Set(sessions.map((s) => s.cashierId))];
@@ -84841,11 +84880,9 @@ adminRouter.get("/admin/activity-logs", requirePermission("admin:view_logs"), as
     if (action) conditions.push(ilike(activityLogsTable.action, `%${action}%`));
     if (entityType) conditions.push(eq(activityLogsTable.entityType, entityType));
     if (userName) conditions.push(ilike(usersTable.name, `%${userName}%`));
-    if (startDate) conditions.push(gte(activityLogsTable.createdAt, new Date(startDate)));
+    if (startDate) conditions.push(gte(activityLogsTable.createdAt, startOfDay(new Date(startDate))));
     if (endDate) {
-      const end = new Date(endDate);
-      end.setHours(23, 59, 59, 999);
-      conditions.push(lte(activityLogsTable.createdAt, end));
+      conditions.push(lte(activityLogsTable.createdAt, endOfDay(new Date(endDate))));
     }
     const where = conditions.length > 0 ? and(...conditions) : void 0;
     const [logs, totalCount] = await Promise.all([
@@ -85449,64 +85486,13 @@ function analyzeCustomization(cust, context) {
   };
 }
 
-// ../../node_modules/.pnpm/date-fns@3.6.0/node_modules/date-fns/toDate.mjs
-function toDate(argument) {
-  const argStr = Object.prototype.toString.call(argument);
-  if (argument instanceof Date || typeof argument === "object" && argStr === "[object Date]") {
-    return new argument.constructor(+argument);
-  } else if (typeof argument === "number" || argStr === "[object Number]" || typeof argument === "string" || argStr === "[object String]") {
-    return new Date(argument);
-  } else {
-    return /* @__PURE__ */ new Date(NaN);
-  }
-}
-
-// ../../node_modules/.pnpm/date-fns@3.6.0/node_modules/date-fns/constructFrom.mjs
-function constructFrom(date6, value) {
-  if (date6 instanceof Date) {
-    return new date6.constructor(value);
-  } else {
-    return new Date(value);
-  }
-}
-
-// ../../node_modules/.pnpm/date-fns@3.6.0/node_modules/date-fns/addDays.mjs
-function addDays(date6, amount) {
-  const _date2 = toDate(date6);
-  if (isNaN(amount)) return constructFrom(date6, NaN);
-  if (!amount) {
-    return _date2;
-  }
-  _date2.setDate(_date2.getDate() + amount);
-  return _date2;
-}
-
-// ../../node_modules/.pnpm/date-fns@3.6.0/node_modules/date-fns/startOfDay.mjs
-function startOfDay(date6) {
-  const _date2 = toDate(date6);
-  _date2.setHours(0, 0, 0, 0);
-  return _date2;
-}
-
-// ../../node_modules/.pnpm/date-fns@3.6.0/node_modules/date-fns/endOfDay.mjs
-function endOfDay(date6) {
-  const _date2 = toDate(date6);
-  _date2.setHours(23, 59, 59, 999);
-  return _date2;
-}
-
-// ../../node_modules/.pnpm/date-fns@3.6.0/node_modules/date-fns/subDays.mjs
-function subDays(date6, amount) {
-  return addDays(date6, -amount);
-}
-
 // src/routes/finance.ts
 var router18 = (0, import_express21.Router)();
 router18.get("/finance/inventory-usage", requirePermission("reports:view"), async (req, res) => {
   const { startDate, endDate, branchId } = req.query;
   const targetBranchId = branchId && branchId !== "all" ? parseInt(branchId) : null;
-  const start = startDate ? new Date(startDate) : new Date((/* @__PURE__ */ new Date()).setDate((/* @__PURE__ */ new Date()).getDate() - 30));
-  const end = endDate ? new Date(endDate) : /* @__PURE__ */ new Date();
+  const start = startDate ? startOfDay(new Date(startDate)) : startOfDay(subDays(/* @__PURE__ */ new Date(), 30));
+  const end = endDate ? endOfDay(new Date(endDate)) : endOfDay(/* @__PURE__ */ new Date());
   if (isNaN(start.getTime()) || isNaN(end.getTime())) {
     res.status(400).json({ error: "Invalid date format" });
     return;
@@ -85551,8 +85537,8 @@ router18.get("/finance/inventory-usage", requirePermission("reports:view"), asyn
 router18.get("/finance/pl-report", requirePermission("reports:view"), async (req, res) => {
   const { startDate, endDate, branchId } = req.query;
   const targetBranchId = branchId && branchId !== "all" ? parseInt(branchId) : null;
-  const start = startDate ? new Date(startDate) : new Date((/* @__PURE__ */ new Date()).setDate((/* @__PURE__ */ new Date()).getDate() - 30));
-  const end = endDate ? new Date(endDate) : /* @__PURE__ */ new Date();
+  const start = startDate ? startOfDay(new Date(startDate)) : startOfDay(subDays(/* @__PURE__ */ new Date(), 30));
+  const end = endDate ? endOfDay(new Date(endDate)) : endOfDay(/* @__PURE__ */ new Date());
   if (isNaN(start.getTime()) || isNaN(end.getTime())) {
     res.status(400).json({ error: "Invalid date format" });
     return;
@@ -85732,8 +85718,8 @@ router18.get("/finance/ingredient-recipes", requirePermission("reports:view"), a
 router18.get("/finance/sales-items", requirePermission("reports:view"), async (req, res) => {
   const { startDate, endDate, branchId } = req.query;
   const targetBranchId = branchId && branchId !== "all" ? parseInt(branchId) : null;
-  const start = startDate ? new Date(startDate) : new Date((/* @__PURE__ */ new Date()).setDate((/* @__PURE__ */ new Date()).getDate() - 30));
-  const end = endDate ? new Date(endDate) : /* @__PURE__ */ new Date();
+  const start = startDate ? startOfDay(new Date(startDate)) : startOfDay(subDays(/* @__PURE__ */ new Date(), 30));
+  const end = endDate ? endOfDay(new Date(endDate)) : endOfDay(/* @__PURE__ */ new Date());
   if (isNaN(start.getTime()) || isNaN(end.getTime())) {
     res.status(400).json({ error: "Invalid date format" });
     return;
@@ -85807,11 +85793,41 @@ router18.get("/finance/sales-items", requirePermission("reports:view"), async (r
   });
   res.json(serializeDates(report));
 });
+router18.get("/finance/sales-summary", requirePermission("reports:view"), async (req, res) => {
+  const { startDate, endDate, branchId } = req.query;
+  const targetBranchId = branchId && branchId !== "all" ? parseInt(branchId) : null;
+  const start = startDate ? startOfDay(new Date(startDate)) : startOfDay(subDays(/* @__PURE__ */ new Date(), 30));
+  const end = endDate ? endOfDay(new Date(endDate)) : endOfDay(/* @__PURE__ */ new Date());
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+    res.status(400).json({ error: "Invalid date format" });
+    return;
+  }
+  const conditions = [
+    gte(ordersTable.createdAt, start),
+    lte(ordersTable.createdAt, end),
+    sql`${ordersTable.status} NOT IN ('cancelled', 'refunded')`
+  ];
+  if (targetBranchId) conditions.push(eq(ordersTable.branchId, targetBranchId));
+  const [summary] = await db.select({
+    revenue: sum(ordersTable.subtotal),
+    discounts: sum(ordersTable.discount),
+    netRevenue: sum(ordersTable.total),
+    count: count(ordersTable.id)
+  }).from(ordersTable).where(and(...conditions));
+  const itemsResult = await db.select({ totalDrinks: sum(orderItemsTable.quantity) }).from(orderItemsTable).innerJoin(ordersTable, eq(orderItemsTable.orderId, ordersTable.id)).where(and(...conditions));
+  res.json({
+    revenue: parseFloat(summary.revenue || "0"),
+    discounts: parseFloat(summary.discounts || "0"),
+    netRevenue: parseFloat(summary.netRevenue || "0"),
+    count: Number(summary.count || 0),
+    drinks: Number(itemsResult[0]?.totalDrinks || 0)
+  });
+});
 router18.get("/finance/customizations-report", requirePermission("reports:view"), async (req, res) => {
   const { startDate, endDate, branchId } = req.query;
   const targetBranchId = branchId && branchId !== "all" ? parseInt(branchId) : null;
-  const start = startDate ? new Date(startDate) : new Date((/* @__PURE__ */ new Date()).setDate((/* @__PURE__ */ new Date()).getDate() - 30));
-  const end = endDate ? new Date(endDate) : /* @__PURE__ */ new Date();
+  const start = startDate ? startOfDay(new Date(startDate)) : startOfDay(subDays(/* @__PURE__ */ new Date(), 30));
+  const end = endDate ? endOfDay(new Date(endDate)) : endOfDay(/* @__PURE__ */ new Date());
   if (isNaN(start.getTime()) || isNaN(end.getTime())) {
     res.status(400).json({ error: "Invalid date format" });
     return;
@@ -85846,8 +85862,8 @@ router18.get("/finance/customizations-report", requirePermission("reports:view")
 router18.get("/finance/customization-analytics", requirePermission("reports:view"), async (req, res) => {
   const { startDate, endDate, branchId } = req.query;
   const targetBranchId = branchId && branchId !== "all" ? parseInt(branchId) : null;
-  const start = startDate ? startOfDay(/* @__PURE__ */ new Date(`${startDate}T00:00:00`)) : startOfDay(subDays(/* @__PURE__ */ new Date(), 30));
-  const end = endDate ? endOfDay(/* @__PURE__ */ new Date(`${endDate}T23:59:59`)) : endOfDay(/* @__PURE__ */ new Date());
+  const start = startDate ? startOfDay(new Date(startDate)) : startOfDay(subDays(/* @__PURE__ */ new Date(), 30));
+  const end = endDate ? endOfDay(new Date(endDate)) : endOfDay(/* @__PURE__ */ new Date());
   if (isNaN(start.getTime()) || isNaN(end.getTime())) {
     res.status(400).json({ error: "Invalid date format" });
     return;

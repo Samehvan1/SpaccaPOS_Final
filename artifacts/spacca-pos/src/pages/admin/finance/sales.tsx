@@ -50,6 +50,7 @@ export default function SalesAnalysisPage() {
   const [dailySummary, setDailySummary] = useState<any[]>([]);
   const [branches, setBranches] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [rangeSummary, setRangeSummary] = useState<any>(null);
   const [selectedOrderDetails, setSelectedOrderDetails] = useState<any>(null);
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
   const [fetchingOrder, setFetchingOrder] = useState(false);
@@ -79,17 +80,20 @@ export default function SalesAnalysisPage() {
       });
       if (selectedBranch !== "all") params.append("branchId", selectedBranch);
 
+      // 1. Always fetch Range Summary for the top cards
+      const rangeData = await api(`/api/finance/sales-summary?${params.toString()}`);
+      setRangeSummary(rangeData);
+
+      // 2. Fetch Tab-specific data
       if (activeTab === "orders") {
         params.append("limit", String(rowsPerPage));
         params.append("offset", String((reportPage - 1) * rowsPerPage));
-        const [orderData, summaryData, branchData] = await Promise.all([
+        const [orderData, summaryData] = await Promise.all([
           api(`/api/orders?${params.toString()}`),
           api(`/api/dashboard/sales-by-category?${params.toString()}`),
-          api("/api/admin/branches")
         ]);
         setOrders(orderData);
         setSummary(summaryData);
-        setBranches(branchData);
 
         if (isDailyGrouped) {
           const dailyData = await api(`/api/dashboard/sales-by-day?${params.toString()}`);
@@ -103,7 +107,7 @@ export default function SalesAnalysisPage() {
         setCustomizations(data);
       }
       
-      // Always load branches for filter
+      // 3. Always load branches for filter if not yet loaded
       if (branches.length === 0) {
         setBranches(await api("/api/admin/branches"));
       }
@@ -119,12 +123,17 @@ export default function SalesAnalysisPage() {
   }, [reportStartDate, reportEndDate, reportPage, isDailyGrouped, selectedBranch, activeTab]);
 
   const totals = useMemo(() => {
-    const revenue = summary?.reduce((s, c) => s + c.totalRevenue, 0) ?? 0;
-    const count = summary?.reduce((s, c) => s + c.totalOrders, 0) ?? 0;
-    const drinks = summary?.reduce((s, c) => s + c.totalDrinks, 0) ?? 0;
-    const discounts = orders?.reduce((s, o) => s + (o as any).discount, 0) || 0;
-    return { revenue, count, drinks, discounts };
-  }, [summary, orders]);
+    if (!rangeSummary) {
+      return { revenue: 0, count: 0, drinks: 0, discounts: 0, netRevenue: 0 };
+    }
+    return { 
+      revenue: rangeSummary.revenue, 
+      count: rangeSummary.count, 
+      drinks: rangeSummary.drinks, 
+      discounts: rangeSummary.discounts,
+      netRevenue: rangeSummary.netRevenue 
+    };
+  }, [rangeSummary]);
 
   const handleExportCSV = () => {
     let headers: string[] = [];
@@ -288,6 +297,28 @@ export default function SalesAnalysisPage() {
           </div>
         </CardContent>
       </Card>
+      
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+        {[
+          { label: "Revenue", value: fmt(totals.revenue), icon: Banknote },
+          { label: "Range Net Rev", value: fmt(totals.netRevenue), icon: TrendingUp },
+          { label: "Orders", value: totals.count, icon: Receipt },
+          { label: "Drinks", value: totals.drinks, icon: Coffee },
+          { label: "Discounts", value: fmt(totals.discounts), icon: Tag },
+        ].map((stat, i) => (
+          <Card key={i}>
+            <CardContent className="p-4 flex items-center gap-4">
+              <div className="p-3 rounded-xl bg-primary/10">
+                <stat.icon className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground font-medium">{stat.label}</p>
+                <p className="text-lg font-bold">{stat.value}</p>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList>
@@ -297,27 +328,6 @@ export default function SalesAnalysisPage() {
         </TabsList>
 
         <TabsContent value="orders" className="space-y-6">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            {[
-              { label: "Revenue", value: fmt(totals.revenue), icon: Banknote },
-              { label: "Orders", value: totals.count, icon: Receipt },
-              { label: "Drinks", value: totals.drinks, icon: Coffee },
-              { label: "Discounts", value: fmt(totals.discounts), icon: Tag },
-            ].map((stat, i) => (
-              <Card key={i}>
-                <CardContent className="p-4 flex items-center gap-4">
-                  <div className="p-3 rounded-xl bg-primary/10">
-                    <stat.icon className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground font-medium">{stat.label}</p>
-                    <p className="text-lg font-bold">{stat.value}</p>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
           <div className="rounded-md border bg-card">
             {isDailyGrouped ? (
               <Table>
