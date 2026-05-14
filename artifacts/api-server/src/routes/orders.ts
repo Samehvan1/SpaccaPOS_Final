@@ -140,10 +140,10 @@ router.get("/orders", requirePermission("cashier:view"), async (req, res): Promi
   // but for the general list, we allow everything unless filtered.
   // However, we'll ensure the conditions are applied at the DB level.
   
-  const query = db.select().from(ordersTable);
+  let query = db.select().from(ordersTable).$dynamic();
   
   if (conditions.length > 0) {
-    query.where(and(...conditions));
+    query = query.where(and(...conditions)) as any;
   }
   
   const orders = await query

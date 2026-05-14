@@ -22,6 +22,7 @@ services:
       DATABASE_URL: postgresql://postgres:mero1901@db:5432/spacca_prod
       PORT: 8080
       NODE_ENV: production
+      TZ: ${TZ:-Africa/Cairo}
     depends_on:
       - db
     volumes:
