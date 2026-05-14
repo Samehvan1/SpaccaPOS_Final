@@ -95,7 +95,7 @@ export default function OperationalDeductionsReport() {
   };
 
   return (
-    <div className="p-4 md:p-8 w-full flex flex-col gap-8 max-w-7xl mx-auto overflow-y-auto">
+    <div className="p-6 w-full flex flex-col gap-6 overflow-y-auto">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-black tracking-tighter uppercase flex items-center gap-3 text-primary">
