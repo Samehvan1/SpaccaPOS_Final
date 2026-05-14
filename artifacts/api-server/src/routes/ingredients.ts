@@ -2,7 +2,7 @@ import { Router, type IRouter } from "express";
 import fs from "fs";
 import path from "path";
 import { eq, and, sql } from "drizzle-orm";
-import { db, ingredientsTable, branchStockTable, ingredientOptionsTable, stockMovementsTable, ingredientTypesTable, drinkIngredientSlotsTable, drinksTable, orderItemCustomizationsTable, orderItemsTable, ordersTable, usersTable } from "@workspace/db";
+import { db, ingredientsTable, branchStockTable, ingredientOptionsTable, ingredientConversionsTable, stockMovementsTable, ingredientTypesTable, drinkIngredientSlotsTable, drinksTable, orderItemCustomizationsTable, orderItemsTable, ordersTable, usersTable } from "@workspace/db";
 import { serializeDates } from "../lib/serialize";
 import { globalCache } from "../lib/cache";
 import { logActivity } from "../lib/activity-logger";
@@ -60,6 +60,11 @@ async function buildIngredientDetail(ingredientId: number, branchId?: number) {
     .where(eq(ingredientOptionsTable.ingredientId, ingredientId))
     .orderBy(ingredientOptionsTable.sortOrder);
 
+  const conversions = await db
+    .select()
+    .from(ingredientConversionsTable)
+    .where(eq(ingredientConversionsTable.ingredientId, ingredientId));
+
   return {
     ...ingredient,
     costPerUnit: parseFloat(ingredient.costPerUnit),
@@ -71,6 +76,10 @@ async function buildIngredientDetail(ingredientId: number, branchId?: number) {
       processedQty: parseFloat(o.processedQty),
       producedQty: parseFloat(o.producedQty),
       extraCost: parseFloat(o.extraCost),
+    })),
+    conversions: conversions.map((c) => ({
+      ...c,
+      conversionFactor: parseFloat(String(c.conversionFactor)),
     })),
   };
 }
@@ -113,6 +122,7 @@ router.post("/ingredients/import-csv", requirePermission("admin:manage_ingredien
     const dataLines = lines.slice(1).filter(line => line.trim() && !line.startsWith("#"));
 
     const slugify = (text: string) => text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+
     const getIngredientType = (name: string): any => {
       const n = name.toLowerCase();
       if (n.includes("tea")) return "tea";
@@ -258,16 +268,23 @@ router.get("/ingredients", requirePermission("inventory:view"), async (req, res)
       ? await query.where(and(...conditions))
       : await query;
 
-    // Get counts of links
-    const [typeLinks, optionLinks, drinkLinks] = await Promise.all([
+    // Get counts of links and conversions
+    const [typeLinks, optionLinks, drinkLinks, allConversions] = await Promise.all([
       db.select({ id: ingredientTypesTable.inventoryIngredientId, count: sql<number>`count(*)` }).from(ingredientTypesTable).groupBy(ingredientTypesTable.inventoryIngredientId),
       db.select({ id: ingredientOptionsTable.linkedIngredientId, count: sql<number>`count(*)` }).from(ingredientOptionsTable).groupBy(ingredientOptionsTable.linkedIngredientId),
       db.select({ id: drinksTable.cupIngredientId, count: sql<number>`count(*)` }).from(drinksTable).groupBy(drinksTable.cupIngredientId),
+      db.select().from(ingredientConversionsTable)
     ]);
 
     const typeCountMap = new Map(typeLinks.map(l => [l.id, Number(l.count)]));
     const optionCountMap = new Map(optionLinks.map(l => [l.id, Number(l.count)]));
     const drinkCountMap = new Map(drinkLinks.map(l => [l.id, Number(l.count)]));
+    
+    const conversionMap = new Map();
+    allConversions.forEach(c => {
+      const existing = conversionMap.get(c.ingredientId) || [];
+      conversionMap.set(c.ingredientId, [...existing, { ...c, conversionFactor: parseFloat(String(c.conversionFactor)) }]);
+    });
 
     const responseBody = ingredientRows.map((i) => {
       return {
@@ -278,6 +295,7 @@ router.get("/ingredients", requirePermission("inventory:view"), async (req, res)
         lowStockThreshold: parseFloat(String(i.lowStockThreshold || "0")) || 0,
         linkedTypeCount: (typeCountMap.get(i.id) || 0) + (optionCountMap.get(i.id) || 0),
         linkedProductCount: drinkCountMap.get(i.id) || 0,
+        conversions: conversionMap.get(i.id) || [],
         createdAt: (i as any).createdAt || new Date(),
         updatedAt: i.updatedAt || (i as any).createdAt || new Date(),
       };
@@ -643,19 +661,39 @@ router.post("/ingredients/:id/restock", requirePermission("inventory:adjust"), a
     .from(branchStockTable)
     .where(and(eq(branchStockTable.ingredientId, params.data.id), eq(branchStockTable.branchId, targetBranchId)));
 
+  const quantityValueBase = parsed.data.quantity;
+  let finalQuantity = quantityValueBase;
+  let selectedUnitName = null;
+
+  if (parsed.data.unitId) {
+    const [conversion] = await db
+      .select()
+      .from(ingredientConversionsTable)
+      .where(and(eq(ingredientConversionsTable.id, parsed.data.unitId), eq(ingredientConversionsTable.ingredientId, params.data.id)));
+    
+    if (conversion) {
+      finalQuantity = quantityValueBase * parseFloat(conversion.conversionFactor);
+      selectedUnitName = conversion.unitName;
+    }
+  }
+
   const currentQty = stock ? parseFloat(stock.stockQuantity) : 0;
-  const newQty = currentQty + parsed.data.quantity;
+  const newQty = currentQty + finalQuantity;
 
   const sessionUserId = ((req.session as unknown as Record<string, unknown>).userId as number) ?? 1;
+
+  const movementNote = selectedUnitName 
+    ? `${parsed.data.note ?? ""} (Converted from ${parsed.data.quantity} ${selectedUnitName})`.trim()
+    : parsed.data.note ?? null;
 
   await db.insert(stockMovementsTable).values({
     branchId: targetBranchId,
     ingredientId: params.data.id,
     orderId: null,
     movementType: "restock",
-    quantity: String(parsed.data.quantity),
+    quantity: String(finalQuantity),
     quantityAfter: String(newQty),
-    note: parsed.data.note ?? null,
+    note: movementNote,
     createdBy: sessionUserId,
   });
 
@@ -686,6 +724,50 @@ router.post("/ingredients/:id/restock", requirePermission("inventory:adjust"), a
   globalCache.clear();
   const { broadcastEvent } = await import("../lib/sse");
   broadcastEvent("inventory_updated", { ingredientId: params.data.id });
+});
+
+router.post("/ingredients/:id/conversions", requirePermission("admin:manage_ingredients"), async (req, res): Promise<void> => {
+  const { unitName, conversionFactor, isDefaultPurchase } = req.body;
+  if (!unitName || !conversionFactor) {
+    res.status(400).json({ error: "unitName and conversionFactor are required" });
+    return;
+  }
+
+  const [conversion] = await db
+    .insert(ingredientConversionsTable)
+    .values({
+      ingredientId: parseInt(String(req.params.id)),
+      unitName,
+      conversionFactor: String(conversionFactor),
+      isDefaultPurchase: isDefaultPurchase ?? false,
+    })
+    .returning();
+
+  res.status(201).json({
+    ...conversion,
+    conversionFactor: parseFloat(conversion.conversionFactor),
+  });
+  globalCache.clear();
+});
+
+router.delete("/ingredients/:id/conversions/:conversionId", requirePermission("admin:manage_ingredients"), async (req, res): Promise<void> => {
+  const [deleted] = await db
+    .delete(ingredientConversionsTable)
+    .where(
+      and(
+        eq(ingredientConversionsTable.id, parseInt(String(req.params.conversionId))),
+        eq(ingredientConversionsTable.ingredientId, parseInt(String(req.params.id)))
+      )
+    )
+    .returning();
+
+  if (!deleted) {
+    res.status(404).json({ error: "Conversion not found" });
+    return;
+  }
+
+  res.sendStatus(204);
+  globalCache.clear();
 });
 
 export default router;

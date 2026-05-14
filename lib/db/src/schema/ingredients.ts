@@ -110,6 +110,16 @@ export const ingredientTypeVolumesTable = pgTable("ingredient_type_volumes", {
   isActive: boolean("is_active").notNull().default(true),
 });
 
+// ── Unit Conversions (e.g., 1 KG = 1000 Grams) ─────────────────────────────
+export const ingredientConversionsTable = pgTable("ingredient_conversions", {
+  id: serial("id").primaryKey(),
+  ingredientId: integer("ingredient_id").notNull().references(() => ingredientsTable.id, { onDelete: "cascade" }),
+  unitName: text("unit_name").notNull(),
+  conversionFactor: numeric("conversion_factor", { precision: 12, scale: 4 }).notNull(),
+  isDefaultPurchase: boolean("is_default_purchase").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 // ── Zod / type exports ─────────────────────────────────────────────────────
 export const insertIngredientSchema = createInsertSchema(ingredientsTable).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertBranchStockSchema = createInsertSchema(branchStockTable).omit({ updatedAt: true });
@@ -118,6 +128,7 @@ export const insertIngredientCategorySchema = createInsertSchema(ingredientCateg
 export const insertIngredientTypeSchema = createInsertSchema(ingredientTypesTable).omit({ id: true, createdAt: true });
 export const insertIngredientVolumeSchema = createInsertSchema(ingredientVolumesTable).omit({ id: true, createdAt: true });
 export const insertIngredientTypeVolumeSchema = createInsertSchema(ingredientTypeVolumesTable).omit({ id: true });
+export const insertIngredientConversionSchema = createInsertSchema(ingredientConversionsTable).omit({ id: true, createdAt: true });
 
 export type InsertIngredient = typeof ingredientsTable.$inferInsert;
 export type InsertBranchStock = typeof branchStockTable.$inferInsert;
@@ -129,3 +140,4 @@ export type IngredientCategory = typeof ingredientCategoriesTable.$inferSelect;
 export type IngredientType = typeof ingredientTypesTable.$inferSelect;
 export type IngredientVolume = typeof ingredientVolumesTable.$inferSelect;
 export type IngredientTypeVolume = typeof ingredientTypeVolumesTable.$inferSelect;
+export type IngredientConversion = typeof ingredientConversionsTable.$inferSelect;

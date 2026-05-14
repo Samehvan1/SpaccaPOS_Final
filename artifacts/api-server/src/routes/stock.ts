@@ -6,6 +6,7 @@ import {
   stockMovementsTable,
   ingredientsTable,
   branchStockTable,
+  ingredientConversionsTable,
   usersTable,
 } from "@workspace/db";
 import {
@@ -104,10 +105,26 @@ router.post("/stock/adjustments", async (req, res): Promise<void> => {
     .from(branchStockTable)
     .where(and(eq(branchStockTable.ingredientId, parsed.data.ingredientId), eq(branchStockTable.branchId, sessionBranchId)));
 
+  const quantityValueBase = parsed.data.quantity;
+  let finalQuantity = quantityValueBase;
+  let selectedUnitName = null;
+
+  if (parsed.data.unitId) {
+    const [conversion] = await db
+      .select()
+      .from(ingredientConversionsTable)
+      .where(and(eq(ingredientConversionsTable.id, parsed.data.unitId), eq(ingredientConversionsTable.ingredientId, parsed.data.ingredientId)));
+    
+    if (conversion) {
+      finalQuantity = quantityValueBase * parseFloat(conversion.conversionFactor);
+      selectedUnitName = conversion.unitName;
+    }
+  }
+
   const currentQty = stock ? parseFloat(stock.stockQuantity) : 0;
   const adjustedQty = (parsed.data.movementType === "waste" || parsed.data.movementType === "calibration")
-    ? currentQty - parsed.data.quantity
-    : currentQty + parsed.data.quantity;
+    ? currentQty - finalQuantity
+    : currentQty + finalQuantity;
 
   const newQty = Math.max(0, adjustedQty);
 
@@ -123,8 +140,12 @@ router.post("/stock/adjustments", async (req, res): Promise<void> => {
       set: { stockQuantity: String(newQty) }
     });
 
-  const quantityValue =
-    (parsed.data.movementType === "waste" || parsed.data.movementType === "calibration") ? -parsed.data.quantity : parsed.data.quantity;
+  const ledgerQuantity =
+    (parsed.data.movementType === "waste" || parsed.data.movementType === "calibration") ? -finalQuantity : finalQuantity;
+
+  const movementNote = selectedUnitName 
+    ? `${parsed.data.note ?? ""} (Converted from ${parsed.data.quantity} ${selectedUnitName})`.trim()
+    : parsed.data.note ?? null;
 
   const [movement] = await db
     .insert(stockMovementsTable)
@@ -133,9 +154,9 @@ router.post("/stock/adjustments", async (req, res): Promise<void> => {
       ingredientId: parsed.data.ingredientId,
       orderId: null,
       movementType: parsed.data.movementType,
-      quantity: String(quantityValue),
+      quantity: String(ledgerQuantity),
       quantityAfter: String(newQty),
-      note: parsed.data.note ?? null,
+      note: movementNote,
       createdBy: sessionUserId,
     })
     .returning();

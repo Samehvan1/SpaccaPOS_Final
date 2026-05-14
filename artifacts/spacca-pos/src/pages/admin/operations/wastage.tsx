@@ -19,7 +19,18 @@ interface WastageItem {
   unit: string;
   reason: string;
   note?: string;
+  unitId?: number;
+  displayUnit: string;
 }
+
+type Ingredient = {
+  id: number;
+  name: string;
+  unit: string;
+  stockQuantity: number;
+  lowStockThreshold: number;
+  conversions: { id: number; unitName: string; conversionFactor: string | number }[];
+};
 
 const WASTE_REASONS = [
   "Expired",
@@ -42,6 +53,7 @@ export default function WastagePage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [wastageList, setWastageList] = useState<WastageItem[]>([]);
   const [selectedIngredient, setSelectedIngredient] = useState<any>(null);
+  const [selectedUnit, setSelectedUnit] = useState<string>("base");
   const [quantityInput, setQuantityInput] = useState("");
   const [reasonInput, setReasonInput] = useState("Expired");
   const [noteInput, setNoteInput] = useState("");
@@ -86,8 +98,23 @@ export default function WastagePage() {
       return;
     }
 
-    // Check if same item with same reason exists
-    const existingIndex = wastageList.findIndex(item => item.ingredientId === selectedIngredient.id && item.reason === reasonInput);
+    let finalUnit = selectedIngredient.unit;
+    let unitId: number | undefined = undefined;
+    if (selectedUnit !== "base") {
+      const conversion = selectedIngredient.conversions.find((c: any) => String(c.id) === selectedUnit);
+      if (conversion) {
+        finalUnit = conversion.unitName;
+        unitId = conversion.id;
+      }
+    }
+
+    // Check if same item with same reason and unit exists
+    const existingIndex = wastageList.findIndex(item => 
+      item.ingredientId === selectedIngredient.id && 
+      item.reason === reasonInput && 
+      item.unitId === unitId
+    );
+
     if (existingIndex > -1) {
       const newList = [...wastageList];
       newList[existingIndex].quantity += qty;
@@ -99,18 +126,21 @@ export default function WastagePage() {
         quantity: qty,
         unit: selectedIngredient.unit,
         reason: reasonInput,
-        note: noteInput
+        note: noteInput,
+        unitId,
+        displayUnit: finalUnit
       }]);
     }
 
     setSelectedIngredient(null);
+    setSelectedUnit("base");
     setQuantityInput("");
     setNoteInput("");
     setSearchQuery("");
   };
 
-  const removeItem = (id: number, reason: string) => {
-    setWastageList(wastageList.filter(item => !(item.ingredientId === id && item.reason === reason)));
+  const removeItem = (id: number, unitId?: number) => {
+    setWastageList(wastageList.filter(item => !(item.ingredientId === id && item.unitId === unitId)));
   };
 
   const handleSubmit = async () => {
@@ -125,6 +155,7 @@ export default function WastagePage() {
             ingredientId: item.ingredientId,
             movementType: "waste",
             quantity: item.quantity,
+            unitId: item.unitId,
             note: `Waste (${item.reason})${item.note ? `: ${item.note}` : ""}`
           }),
         });
@@ -250,15 +281,35 @@ export default function WastagePage() {
                 <div className="p-6 rounded-2xl bg-destructive/5 border border-destructive/10 animate-in fade-in slide-in-from-top-2 duration-300 space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
-                      <Label className="text-[10px] font-black uppercase tracking-widest text-destructive ml-1">Quantity wasted ({selectedIngredient.unit})</Label>
-                      <Input 
-                        type="number"
-                        placeholder="0.00"
-                        className="h-14 text-2xl font-black bg-background border-destructive/20"
-                        value={quantityInput}
-                        onChange={(e) => setQuantityInput(e.target.value)}
-                        autoFocus
-                      />
+                      <Label className="text-[10px] font-black uppercase tracking-widest text-destructive ml-1">Quantity</Label>
+                      <div className="flex gap-2">
+                        <Input 
+                          type="number" 
+                          placeholder="0.00" 
+                          className="h-14 text-2xl font-black bg-background border-destructive/20 flex-1"
+                          value={quantityInput}
+                          onChange={(e) => setQuantityInput(e.target.value)}
+                          autoFocus
+                        />
+                        <div className="w-[120px]">
+                          <Select value={selectedUnit} onValueChange={setSelectedUnit}>
+                            <SelectTrigger className="h-14 font-bold border-destructive/20 bg-background">
+                              <SelectValue placeholder="Unit" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="base" className="font-bold">{selectedIngredient?.unit}</SelectItem>
+                              {selectedIngredient?.conversions?.map((c: any) => (
+                                <SelectItem key={c.id} value={String(c.id)} className="font-bold">{c.unitName}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      {selectedUnit !== "base" && selectedIngredient && quantityInput && (
+                        <p className="text-[10px] font-bold text-muted-foreground ml-1 uppercase tracking-tighter">
+                          Equivalent to: {(parseFloat(quantityInput) * Number(selectedIngredient.conversions.find((c: any) => String(c.id) === selectedUnit)?.conversionFactor || 1)).toFixed(2)} {selectedIngredient.unit}
+                        </p>
+                      )}
                     </div>
                     <div className="space-y-2">
                       <Label className="text-[10px] font-black uppercase tracking-widest text-destructive ml-1">Reason for wastage</Label>
@@ -348,23 +399,23 @@ export default function WastagePage() {
                 ) : (
                   <div className="space-y-3">
                     {wastageList.map((item) => (
-                      <div key={`${item.ingredientId}-${item.reason}`} className="group p-4 rounded-2xl bg-muted/30 border border-transparent hover:border-destructive/20 hover:bg-background transition-all flex items-center justify-between">
+                      <div key={`${item.ingredientId}-${item.reason}-${item.unitId}`} className="group p-4 rounded-2xl bg-muted/30 border border-transparent hover:border-destructive/20 hover:bg-background transition-all flex items-center justify-between">
                         <div>
                           <div className="font-black text-sm">{item.name}</div>
                           <div className="flex items-center gap-2 mt-1">
                             <Badge variant="outline" className="text-[9px] uppercase font-bold border-destructive/20 text-destructive">{item.reason}</Badge>
                             {item.note && <span className="text-[10px] text-muted-foreground italic truncate max-w-[150px]">{item.note}</span>}
                           </div>
-                          <div className="text-lg font-black text-destructive mt-1">-{item.quantity} <span className="text-xs uppercase text-muted-foreground">{item.unit}</span></div>
+                          <div className="text-lg font-black text-destructive mt-1">-{item.quantity} <span className="text-xs uppercase text-muted-foreground">{item.displayUnit}</span></div>
                         </div>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                          onClick={() => removeItem(item.ingredientId, item.reason)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8 text-destructive"
+                            onClick={() => removeItem(item.ingredientId, item.unitId)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                       </div>
                     ))}
                   </div>

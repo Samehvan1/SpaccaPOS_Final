@@ -565,6 +565,7 @@ export const RestockIngredientQueryParams = zod.object({
 
 export const RestockIngredientBody = zod.object({
   quantity: zod.number(),
+  unitId: zod.number().optional(),
   note: zod.string().optional(),
 });
 
@@ -932,6 +933,7 @@ export const CreateStockAdjustmentBody = zod.object({
   ingredientId: zod.number(),
   movementType: zod.enum(["adjustment", "waste", "opening", "calibration"]),
   quantity: zod.number(),
+  unitId: zod.number().optional(),
   note: zod.string().optional(),
 });
 
@@ -1368,3 +1370,12 @@ export const ValidateDiscountResponse = zod.object({
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
+export const IngredientConversion = zod.object({
+  id: zod.number(),
+  ingredientId: zod.number(),
+  unitName: zod.string(),
+  conversionFactor: zod.number(),
+  isDefaultPurchase: zod.boolean(),
+});
+
+export const ListIngredientConversionsResponse = zod.array(IngredientConversion);

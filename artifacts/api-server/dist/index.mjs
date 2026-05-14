@@ -55889,7 +55889,7 @@ var init_users = __esm({
 });
 
 // ../../lib/db/src/schema/ingredients.ts
-var ingredientsTable, branchStockTable, ingredientOptionsTable, ingredientCategoriesTable, ingredientTypesTable, ingredientVolumesTable, ingredientTypeVolumesTable, insertIngredientSchema, insertBranchStockSchema, insertIngredientOptionSchema, insertIngredientCategorySchema, insertIngredientTypeSchema, insertIngredientVolumeSchema, insertIngredientTypeVolumeSchema;
+var ingredientsTable, branchStockTable, ingredientOptionsTable, ingredientCategoriesTable, ingredientTypesTable, ingredientVolumesTable, ingredientTypeVolumesTable, ingredientConversionsTable, insertIngredientSchema, insertBranchStockSchema, insertIngredientOptionSchema, insertIngredientCategorySchema, insertIngredientTypeSchema, insertIngredientVolumeSchema, insertIngredientTypeVolumeSchema, insertIngredientConversionSchema;
 var init_ingredients = __esm({
   "../../lib/db/src/schema/ingredients.ts"() {
     "use strict";
@@ -55977,6 +55977,14 @@ var init_ingredients = __esm({
       sortOrder: integer("sort_order").notNull().default(0),
       isActive: boolean("is_active").notNull().default(true)
     });
+    ingredientConversionsTable = pgTable("ingredient_conversions", {
+      id: serial("id").primaryKey(),
+      ingredientId: integer("ingredient_id").notNull().references(() => ingredientsTable.id, { onDelete: "cascade" }),
+      unitName: text("unit_name").notNull(),
+      conversionFactor: numeric("conversion_factor", { precision: 12, scale: 4 }).notNull(),
+      isDefaultPurchase: boolean("is_default_purchase").notNull().default(false),
+      createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+    });
     insertIngredientSchema = createInsertSchema(ingredientsTable).omit({ id: true, createdAt: true, updatedAt: true });
     insertBranchStockSchema = createInsertSchema(branchStockTable).omit({ updatedAt: true });
     insertIngredientOptionSchema = createInsertSchema(ingredientOptionsTable).omit({ id: true, createdAt: true, updatedAt: true });
@@ -55984,6 +55992,7 @@ var init_ingredients = __esm({
     insertIngredientTypeSchema = createInsertSchema(ingredientTypesTable).omit({ id: true, createdAt: true });
     insertIngredientVolumeSchema = createInsertSchema(ingredientVolumesTable).omit({ id: true, createdAt: true });
     insertIngredientTypeVolumeSchema = createInsertSchema(ingredientTypeVolumesTable).omit({ id: true });
+    insertIngredientConversionSchema = createInsertSchema(ingredientConversionsTable).omit({ id: true, createdAt: true });
   }
 });
 
@@ -56457,6 +56466,7 @@ __export(schema_exports, {
   drinkSlotVolumesTable: () => drinkSlotVolumesTable,
   drinksTable: () => drinksTable,
   ingredientCategoriesTable: () => ingredientCategoriesTable,
+  ingredientConversionsTable: () => ingredientConversionsTable,
   ingredientOptionsTable: () => ingredientOptionsTable,
   ingredientTypeVolumesTable: () => ingredientTypeVolumesTable,
   ingredientTypesTable: () => ingredientTypesTable,
@@ -56472,6 +56482,7 @@ __export(schema_exports, {
   insertDrinkSlotTypeOptionSchema: () => insertDrinkSlotTypeOptionSchema,
   insertDrinkSlotVolumeSchema: () => insertDrinkSlotVolumeSchema,
   insertIngredientCategorySchema: () => insertIngredientCategorySchema,
+  insertIngredientConversionSchema: () => insertIngredientConversionSchema,
   insertIngredientOptionSchema: () => insertIngredientOptionSchema,
   insertIngredientSchema: () => insertIngredientSchema,
   insertIngredientTypeSchema: () => insertIngredientTypeSchema,
@@ -56588,6 +56599,7 @@ __export(src_exports, {
   drinkSlotVolumesTable: () => drinkSlotVolumesTable,
   drinksTable: () => drinksTable,
   ingredientCategoriesTable: () => ingredientCategoriesTable,
+  ingredientConversionsTable: () => ingredientConversionsTable,
   ingredientOptionsTable: () => ingredientOptionsTable,
   ingredientTypeVolumesTable: () => ingredientTypeVolumesTable,
   ingredientTypesTable: () => ingredientTypesTable,
@@ -56603,6 +56615,7 @@ __export(src_exports, {
   insertDrinkSlotTypeOptionSchema: () => insertDrinkSlotTypeOptionSchema,
   insertDrinkSlotVolumeSchema: () => insertDrinkSlotVolumeSchema,
   insertIngredientCategorySchema: () => insertIngredientCategorySchema,
+  insertIngredientConversionSchema: () => insertIngredientConversionSchema,
   insertIngredientOptionSchema: () => insertIngredientOptionSchema,
   insertIngredientSchema: () => insertIngredientSchema,
   insertIngredientTypeSchema: () => insertIngredientTypeSchema,
@@ -77867,6 +77880,7 @@ var RestockIngredientQueryParams = objectType({
 });
 var RestockIngredientBody = objectType({
   quantity: numberType(),
+  unitId: numberType().optional(),
   note: stringType().optional()
 });
 var RestockIngredientResponse = objectType({
@@ -78183,6 +78197,7 @@ var CreateStockAdjustmentBody = objectType({
   ingredientId: numberType(),
   movementType: enumType(["adjustment", "waste", "opening", "calibration"]),
   quantity: numberType(),
+  unitId: numberType().optional(),
   note: stringType().optional()
 });
 var GetDashboardSummaryResponse = objectType({
@@ -78510,6 +78525,14 @@ var ValidateDiscountResponse = objectType({
   createdAt: stringType(),
   updatedAt: stringType()
 });
+var IngredientConversion = objectType({
+  id: numberType(),
+  ingredientId: numberType(),
+  unitName: stringType(),
+  conversionFactor: numberType(),
+  isDefaultPurchase: booleanType()
+});
+var ListIngredientConversionsResponse = arrayType(IngredientConversion);
 
 // ../../lib/api-zod/src/index.ts
 var HealthCheckResponse2 = HealthCheckResponse;
@@ -81874,6 +81897,7 @@ async function buildIngredientDetail(ingredientId, branchId) {
     }
   }
   const options = await db.select().from(ingredientOptionsTable).where(eq(ingredientOptionsTable.ingredientId, ingredientId)).orderBy(ingredientOptionsTable.sortOrder);
+  const conversions = await db.select().from(ingredientConversionsTable).where(eq(ingredientConversionsTable.ingredientId, ingredientId));
   return {
     ...ingredient,
     costPerUnit: parseFloat(ingredient.costPerUnit),
@@ -81885,6 +81909,10 @@ async function buildIngredientDetail(ingredientId, branchId) {
       processedQty: parseFloat(o.processedQty),
       producedQty: parseFloat(o.producedQty),
       extraCost: parseFloat(o.extraCost)
+    })),
+    conversions: conversions.map((c) => ({
+      ...c,
+      conversionFactor: parseFloat(String(c.conversionFactor))
     }))
   };
 }
@@ -82031,14 +82059,20 @@ router4.get("/ingredients", requirePermission("inventory:view"), async (req, res
       conditions.push(eq(ingredientsTable.ingredientType, params.data.type));
     }
     const ingredientRows = conditions.length ? await query.where(and(...conditions)) : await query;
-    const [typeLinks, optionLinks, drinkLinks] = await Promise.all([
+    const [typeLinks, optionLinks, drinkLinks, allConversions] = await Promise.all([
       db.select({ id: ingredientTypesTable.inventoryIngredientId, count: sql`count(*)` }).from(ingredientTypesTable).groupBy(ingredientTypesTable.inventoryIngredientId),
       db.select({ id: ingredientOptionsTable.linkedIngredientId, count: sql`count(*)` }).from(ingredientOptionsTable).groupBy(ingredientOptionsTable.linkedIngredientId),
-      db.select({ id: drinksTable.cupIngredientId, count: sql`count(*)` }).from(drinksTable).groupBy(drinksTable.cupIngredientId)
+      db.select({ id: drinksTable.cupIngredientId, count: sql`count(*)` }).from(drinksTable).groupBy(drinksTable.cupIngredientId),
+      db.select().from(ingredientConversionsTable)
     ]);
     const typeCountMap = new Map(typeLinks.map((l) => [l.id, Number(l.count)]));
     const optionCountMap = new Map(optionLinks.map((l) => [l.id, Number(l.count)]));
     const drinkCountMap = new Map(drinkLinks.map((l) => [l.id, Number(l.count)]));
+    const conversionMap = /* @__PURE__ */ new Map();
+    allConversions.forEach((c) => {
+      const existing = conversionMap.get(c.ingredientId) || [];
+      conversionMap.set(c.ingredientId, [...existing, { ...c, conversionFactor: parseFloat(String(c.conversionFactor)) }]);
+    });
     const responseBody = ingredientRows.map((i) => {
       return {
         ...i,
@@ -82048,6 +82082,7 @@ router4.get("/ingredients", requirePermission("inventory:view"), async (req, res
         lowStockThreshold: parseFloat(String(i.lowStockThreshold || "0")) || 0,
         linkedTypeCount: (typeCountMap.get(i.id) || 0) + (optionCountMap.get(i.id) || 0),
         linkedProductCount: drinkCountMap.get(i.id) || 0,
+        conversions: conversionMap.get(i.id) || [],
         createdAt: i.createdAt || /* @__PURE__ */ new Date(),
         updatedAt: i.updatedAt || i.createdAt || /* @__PURE__ */ new Date()
       };
@@ -82316,17 +82351,28 @@ router4.post("/ingredients/:id/restock", requirePermission("inventory:adjust"), 
     return;
   }
   const [stock] = await db.select().from(branchStockTable).where(and(eq(branchStockTable.ingredientId, params.data.id), eq(branchStockTable.branchId, targetBranchId)));
+  const quantityValueBase = parsed.data.quantity;
+  let finalQuantity = quantityValueBase;
+  let selectedUnitName = null;
+  if (parsed.data.unitId) {
+    const [conversion] = await db.select().from(ingredientConversionsTable).where(and(eq(ingredientConversionsTable.id, parsed.data.unitId), eq(ingredientConversionsTable.ingredientId, params.data.id)));
+    if (conversion) {
+      finalQuantity = quantityValueBase * parseFloat(conversion.conversionFactor);
+      selectedUnitName = conversion.unitName;
+    }
+  }
   const currentQty = stock ? parseFloat(stock.stockQuantity) : 0;
-  const newQty = currentQty + parsed.data.quantity;
+  const newQty = currentQty + finalQuantity;
   const sessionUserId = req.session.userId ?? 1;
+  const movementNote = selectedUnitName ? `${parsed.data.note ?? ""} (Converted from ${parsed.data.quantity} ${selectedUnitName})`.trim() : parsed.data.note ?? null;
   await db.insert(stockMovementsTable).values({
     branchId: targetBranchId,
     ingredientId: params.data.id,
     orderId: null,
     movementType: "restock",
-    quantity: String(parsed.data.quantity),
+    quantity: String(finalQuantity),
     quantityAfter: String(newQty),
-    note: parsed.data.note ?? null,
+    note: movementNote,
     createdBy: sessionUserId
   });
   const [updatedStock] = await db.insert(branchStockTable).values({
@@ -82350,6 +82396,38 @@ router4.post("/ingredients/:id/restock", requirePermission("inventory:adjust"), 
   globalCache.clear();
   const { broadcastEvent: broadcastEvent2 } = await Promise.resolve().then(() => (init_sse(), sse_exports));
   broadcastEvent2("inventory_updated", { ingredientId: params.data.id });
+});
+router4.post("/ingredients/:id/conversions", requirePermission("admin:manage_ingredients"), async (req, res) => {
+  const { unitName, conversionFactor, isDefaultPurchase } = req.body;
+  if (!unitName || !conversionFactor) {
+    res.status(400).json({ error: "unitName and conversionFactor are required" });
+    return;
+  }
+  const [conversion] = await db.insert(ingredientConversionsTable).values({
+    ingredientId: parseInt(String(req.params.id)),
+    unitName,
+    conversionFactor: String(conversionFactor),
+    isDefaultPurchase: isDefaultPurchase ?? false
+  }).returning();
+  res.status(201).json({
+    ...conversion,
+    conversionFactor: parseFloat(conversion.conversionFactor)
+  });
+  globalCache.clear();
+});
+router4.delete("/ingredients/:id/conversions/:conversionId", requirePermission("admin:manage_ingredients"), async (req, res) => {
+  const [deleted] = await db.delete(ingredientConversionsTable).where(
+    and(
+      eq(ingredientConversionsTable.id, parseInt(String(req.params.conversionId))),
+      eq(ingredientConversionsTable.ingredientId, parseInt(String(req.params.id)))
+    )
+  ).returning();
+  if (!deleted) {
+    res.status(404).json({ error: "Conversion not found" });
+    return;
+  }
+  res.sendStatus(204);
+  globalCache.clear();
 });
 var ingredients_default = router4;
 
@@ -82995,8 +83073,18 @@ router6.post("/stock/adjustments", async (req, res) => {
     return;
   }
   const [stock] = await db.select().from(branchStockTable).where(and(eq(branchStockTable.ingredientId, parsed.data.ingredientId), eq(branchStockTable.branchId, sessionBranchId)));
+  const quantityValueBase = parsed.data.quantity;
+  let finalQuantity = quantityValueBase;
+  let selectedUnitName = null;
+  if (parsed.data.unitId) {
+    const [conversion] = await db.select().from(ingredientConversionsTable).where(and(eq(ingredientConversionsTable.id, parsed.data.unitId), eq(ingredientConversionsTable.ingredientId, parsed.data.ingredientId)));
+    if (conversion) {
+      finalQuantity = quantityValueBase * parseFloat(conversion.conversionFactor);
+      selectedUnitName = conversion.unitName;
+    }
+  }
   const currentQty = stock ? parseFloat(stock.stockQuantity) : 0;
-  const adjustedQty = parsed.data.movementType === "waste" || parsed.data.movementType === "calibration" ? currentQty - parsed.data.quantity : currentQty + parsed.data.quantity;
+  const adjustedQty = parsed.data.movementType === "waste" || parsed.data.movementType === "calibration" ? currentQty - finalQuantity : currentQty + finalQuantity;
   const newQty = Math.max(0, adjustedQty);
   await db.insert(branchStockTable).values({
     branchId: sessionBranchId,
@@ -83006,15 +83094,16 @@ router6.post("/stock/adjustments", async (req, res) => {
     target: [branchStockTable.branchId, branchStockTable.ingredientId],
     set: { stockQuantity: String(newQty) }
   });
-  const quantityValue = parsed.data.movementType === "waste" || parsed.data.movementType === "calibration" ? -parsed.data.quantity : parsed.data.quantity;
+  const ledgerQuantity = parsed.data.movementType === "waste" || parsed.data.movementType === "calibration" ? -finalQuantity : finalQuantity;
+  const movementNote = selectedUnitName ? `${parsed.data.note ?? ""} (Converted from ${parsed.data.quantity} ${selectedUnitName})`.trim() : parsed.data.note ?? null;
   const [movement] = await db.insert(stockMovementsTable).values({
     branchId: sessionBranchId,
     ingredientId: parsed.data.ingredientId,
     orderId: null,
     movementType: parsed.data.movementType,
-    quantity: String(quantityValue),
+    quantity: String(ledgerQuantity),
     quantityAfter: String(newQty),
-    note: parsed.data.note ?? null,
+    note: movementNote,
     createdBy: sessionUserId
   }).returning();
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, sessionUserId));

@@ -18,6 +18,16 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 
+type Ingredient = {
+  id: number;
+  name: string;
+  unit: string;
+  ingredientType: string;
+  stockQuantity: number;
+  lowStockThreshold: number;
+  conversions: { id: number; unitName: string; conversionFactor: string | number }[];
+};
+
 export default function StockAdmin() {
   const { selectedBranchId } = useAuth();
   const { data: movements, isLoading, refetch: refetchMovements } = useListStockMovements({ 
@@ -26,17 +36,21 @@ export default function StockAdmin() {
   const { data: lowStock, refetch: refetchLowStock } = useGetLowStockIngredients({ 
     branchId: (selectedBranchId === null || selectedBranchId === undefined) ? 'all' : selectedBranchId 
   } as any);
-  const { data: ingredients, refetch: refetchIngredients } = useListIngredients({ 
+  const { data: ingredientsData, refetch: refetchIngredients } = useListIngredients({ 
     active: true,
     branchId: (selectedBranchId === null || selectedBranchId === undefined) ? 'all' : selectedBranchId 
   } as any);
+  const ingredients = ingredientsData as unknown as Ingredient[];
+
   const { toast } = useToast();
 
   const [isRestockOpen, setIsRestockOpen] = useState(false);
   const [isIngredientOpen, setIsIngredientOpen] = useState(false);
   const [selectedIngredient, setSelectedIngredient] = useState<string>("");
+  const [selectedUnit, setSelectedUnit] = useState<string>("base");
   const [quantity, setQuantity] = useState("");
   const [note, setNote] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Startup stock state: map of ingredientId → input value
   const [startupValues, setStartupValues] = useState<Record<number, string>>({});
@@ -77,6 +91,7 @@ export default function StockAdmin() {
       id: parseInt(selectedIngredient),
       data: {
         quantity: parseFloat(quantity),
+        unitId: selectedUnit === "base" ? undefined : parseInt(selectedUnit),
         note: note || undefined,
         branchId: selectedBranchId
       } as any
@@ -207,7 +222,10 @@ export default function StockAdmin() {
                       className="w-full justify-between"
                     >
                       {selectedIngredient
-                        ? ingredients?.find((ing) => ing.id.toString() === selectedIngredient)?.name + " (" + ingredients?.find((ing) => ing.id.toString() === selectedIngredient)?.unit + ")"
+                        ? (() => {
+                            const ing = ingredients?.find((ing) => ing.id.toString() === selectedIngredient);
+                            return `${ing?.name} (${ing?.unit})`;
+                          })()
                         : "Select ingredient..."}
                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
@@ -224,6 +242,7 @@ export default function StockAdmin() {
                               value={ing.name}
                               onSelect={() => {
                                 setSelectedIngredient(ing.id.toString());
+                                setSelectedUnit("base");
                                 setIsIngredientOpen(false);
                               }}
                             >
@@ -233,7 +252,10 @@ export default function StockAdmin() {
                                   selectedIngredient === ing.id.toString() ? "opacity-100" : "opacity-0"
                                 )}
                               />
-                              {ing.name} ({ing.unit})
+                              <div className="flex flex-col">
+                                <span>{ing.name}</span>
+                                <span className="text-[10px] text-muted-foreground capitalize">{ing.ingredientType} · {ing.unit}</span>
+                              </div>
                             </CommandItem>
                           ))}
                         </CommandGroup>
@@ -244,7 +266,36 @@ export default function StockAdmin() {
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="qty">Quantity Added</Label>
-                <Input id="qty" type="number" step="0.01" value={quantity} onChange={e => setQuantity(e.target.value)} />
+                <div className="flex gap-2">
+                  <Input 
+                    id="qty" 
+                    type="number" 
+                    step="0.01" 
+                    value={quantity} 
+                    onChange={e => setQuantity(e.target.value)} 
+                    className="flex-1"
+                  />
+                  <div className="w-[120px]">
+                    <Select value={selectedUnit} onValueChange={setSelectedUnit}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Unit" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="base">
+                          {selectedIngredient ? ingredients?.find(i => i.id.toString() === selectedIngredient)?.unit : "Unit"}
+                        </SelectItem>
+                        {selectedIngredient && ingredients?.find(i => i.id.toString() === selectedIngredient)?.conversions?.map((c: any) => (
+                          <SelectItem key={c.id} value={String(c.id)}>{c.unitName}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                {selectedUnit !== "base" && selectedIngredient && quantity && (
+                  <p className="text-[10px] font-bold text-muted-foreground ml-1 uppercase tracking-tighter">
+                    Equivalent to: {(parseFloat(quantity) * Number(ingredients?.find(i => i.id.toString() === selectedIngredient)?.conversions?.find((c: any) => String(c.id) === selectedUnit)?.conversionFactor || 1)).toFixed(2)} {ingredients?.find(i => i.id.toString() === selectedIngredient)?.unit}
+                  </p>
+                )}
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="note">Notes (Optional)</Label>

@@ -27,7 +27,9 @@ type Ingredient = {
   id: number; name: string; ingredientType: IngredientType; unit: string;
   costPerUnit: number; stockQuantity: number; startupQuantity: number; lowStockThreshold: number; isActive: boolean;
   linkedTypeCount?: number; linkedProductCount?: number;
+  conversions?: { id: number; unitName: string; conversionFactor: number; isDefaultPurchase: boolean }[];
 };
+type IngredientConversion = { id: number; unitName: string; conversionFactor: number; isDefaultPurchase: boolean };
 type IngredientOption = {
   id: number; ingredientId: number; label: string; extraCost: number; processedQty: number;
   producedQty: number; producedUnit: string; isDefault: boolean; sortOrder: number; linkedIngredientId: number | null;
@@ -1077,6 +1079,13 @@ function InventoryTab() {
   const [newOptProducedQty, setNewOptProducedQty] = useState("1");
   const [newOptProducedUnit, setNewOptProducedUnit] = useState("");
   const [newOptIsDefault, setNewOptIsDefault] = useState(false);
+  
+  const [conversions, setConversions] = useState<IngredientConversion[]>([]);
+  const [showAddConversion, setShowAddConversion] = useState(false);
+  const [newConvUnit, setNewConvUnit] = useState("");
+  const [newConvFactor, setNewConvFactor] = useState("1");
+  const [newConvIsDefault, setNewConvIsDefault] = useState(false);
+  const [isAddingConversion, setIsAddingConversion] = useState(false);
 
   const { mutate: createIngredient, isPending: isCreating } = useCreateIngredient({
     mutation: {
@@ -1099,15 +1108,17 @@ function InventoryTab() {
     },
   });
 
-  const resetForm = () => { setName(""); setType("coffee"); setUnit("g"); setCost(""); setLowThreshold("0"); setStartupQuantity("0"); setIsActive(true); setEditId(null); setOptions([]); setShowAddOption(false); resetNewOption(); };
+  const resetForm = () => { setName(""); setType("coffee"); setUnit("g"); setCost(""); setLowThreshold("0"); setStartupQuantity("0"); setIsActive(true); setEditId(null); setOptions([]); setShowAddOption(false); resetNewOption(); setConversions([]); setShowAddConversion(false); resetNewConversion(); };
   const resetNewOption = () => { setNewOptLabel(""); setNewOptExtraCost("0"); setNewOptLinkedId("none"); setNewOptProcessedQty("1"); setNewOptProducedQty("1"); setNewOptProducedUnit(""); setNewOptIsDefault(false); };
+  const resetNewConversion = () => { setNewConvUnit(""); setNewConvFactor("1"); setNewConvIsDefault(false); };
 
-  const loadOptions = async (id: number) => {
+  const loadDetails = async (id: number) => {
     setIsLoadingOptions(true);
     try {
       const data = await api(`/api/ingredients/${id}`);
       setOptions(data.options ?? []);
-    } catch { toast({ variant: "destructive", title: "Failed to load options" }); }
+      setConversions(data.conversions ?? []);
+    } catch { toast({ variant: "destructive", title: "Failed to load details" }); }
     finally { setIsLoadingOptions(false); }
   };
 
@@ -1117,7 +1128,7 @@ function InventoryTab() {
     setCost(String(ing.costPerUnit)); setLowThreshold(String(ing.lowStockThreshold)); 
     setStartupQuantity(String(ing.startupQuantity ?? 0));
     setIsActive(ing.isActive);
-    setMode("edit"); loadOptions(ing.id);
+    setMode("edit"); loadDetails(ing.id);
   };
 
   const handleSave = () => {
@@ -1151,6 +1162,40 @@ function InventoryTab() {
       toast({ title: "Option removed" }); 
     } catch (err: any) { 
       toast({ variant: "destructive", title: "Failed to delete option", description: err.message }); 
+    }
+  };
+
+  const handleAddConversion = async () => {
+    if (!editId || !newConvUnit || !newConvFactor) return;
+    setIsAddingConversion(true);
+    try {
+      const data = await api(`/api/ingredients/${editId}/conversions`, {
+        method: "POST",
+        body: JSON.stringify({
+          unitName: newConvUnit,
+          conversionFactor: parseFloat(newConvFactor),
+          isDefaultPurchase: newConvIsDefault,
+        }),
+      });
+      setConversions(prev => [...prev, data]);
+      setShowAddConversion(false);
+      resetNewConversion();
+      toast({ title: "Conversion unit added" });
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Failed to add conversion unit" });
+    } finally {
+      setIsAddingConversion(false);
+    }
+  };
+
+  const handleDeleteConversion = async (convId: number) => {
+    if (!editId) return;
+    try {
+      await api(`/api/ingredients/${editId}/conversions/${convId}`, { method: "DELETE" });
+      setConversions(prev => prev.filter(c => c.id !== convId));
+      toast({ title: "Conversion unit removed" });
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Failed to delete conversion unit" });
     }
   };
 
@@ -1449,6 +1494,72 @@ function InventoryTab() {
                       <Button size="sm" className="flex-1" onClick={handleAddOption} disabled={!newOptLabel}>Add Option</Button>
                       <Button size="sm" variant="ghost" onClick={() => { setShowAddOption(false); resetNewOption(); }}>Cancel</Button>
                     </div>
+                  </div>
+                )}
+                <div className="pt-2">
+                  <p className="text-[10px] text-muted-foreground bg-muted p-2 rounded border border-dashed">
+                    Note: Options are used for building complex ingredients (e.g. "Caramel Syrup" option inside "Latte" ingredient). 
+                    This is separate from Unit Conversions below.
+                  </p>
+                </div>
+              </div>
+
+              <Separator className="my-2" />
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="font-semibold text-sm">Unit Conversions</div>
+                    <div className="text-xs text-muted-foreground">Define other units (e.g. Kg, Box) and how they convert to base unit ({unit}).</div>
+                  </div>
+                  <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowAddConversion(v => !v)}>
+                    <Plus className="h-3.5 w-3.5" /> Add Unit
+                  </Button>
+                </div>
+
+                {showAddConversion && (
+                  <div className="p-3 rounded-md bg-muted/40 border space-y-3 animate-in fade-in slide-in-from-top-1">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="grid gap-1">
+                        <Label className="text-xs">Unit Name</Label>
+                        <Input placeholder="e.g. Kg, Box, Bag" value={newConvUnit} onChange={e => setNewConvUnit(e.target.value)} className="h-8" />
+                      </div>
+                      <div className="grid gap-1">
+                        <Label className="text-xs">Conversion Factor</Label>
+                        <Input type="number" step="0.0001" placeholder="Factor" value={newConvFactor} onChange={e => setNewConvFactor(e.target.value)} className="h-8" />
+                        <p className="text-[9px] text-muted-foreground mt-0.5 italic">1 {newConvUnit || "?"} = {newConvFactor || "?"} {unit}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Checkbox id="conv-default" checked={newConvIsDefault} onCheckedChange={(v: boolean) => setNewConvIsDefault(v)} />
+                      <Label htmlFor="conv-default" className="text-xs">Default for purchasing</Label>
+                    </div>
+                    <div className="flex justify-end gap-2 pt-1">
+                      <Button size="sm" variant="ghost" className="h-7" onClick={() => setShowAddConversion(false)}>Cancel</Button>
+                      <Button size="sm" className="h-7" onClick={handleAddConversion} disabled={!newConvUnit || !newConvFactor || isAddingConversion}>
+                        {isAddingConversion ? "Adding..." : "Save Unit"}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {conversions.length === 0 && !showAddConversion ? (
+                  <div className="text-sm text-muted-foreground border border-dashed rounded-md p-4 text-center">No additional units defined.</div>
+                ) : (
+                  <div className="border rounded-md divide-y overflow-hidden">
+                    {conversions.map(conv => (
+                      <div key={conv.id} className="flex items-center justify-between p-3 bg-card hover:bg-muted/30 transition-colors">
+                        <div>
+                          <div className="font-medium text-sm">{conv.unitName}</div>
+                          <div className="text-xs text-muted-foreground">
+                            1 {conv.unitName} = <span className="font-bold text-primary">{conv.conversionFactor}</span> {unit}
+                            {conv.isDefaultPurchase && <Badge variant="secondary" className="ml-2 px-1 py-0 h-4 text-[9px] font-bold uppercase">Purchase Default</Badge>}
+                          </div>
+                        </div>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDeleteConversion(conv.id)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>

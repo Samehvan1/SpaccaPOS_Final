@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Search, Plus, Trash2, CheckCircle2, Lock, Loader2, Beaker, Info } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface AdjustmentItem {
   ingredientId: number;
@@ -17,7 +18,18 @@ interface AdjustmentItem {
   quantity: number;
   unit: string;
   note?: string;
+  unitId?: number;
+  displayUnit: string;
 }
+
+type Ingredient = {
+  id: number;
+  name: string;
+  unit: string;
+  stockQuantity: number;
+  lowStockThreshold: number;
+  conversions: { id: number; unitName: string; conversionFactor: string | number }[];
+};
 
 export default function CalibrationPage() {
   const { user } = useAuth();
@@ -30,6 +42,7 @@ export default function CalibrationPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [adjustmentList, setAdjustmentList] = useState<AdjustmentItem[]>([]);
   const [selectedIngredient, setSelectedIngredient] = useState<any>(null);
+  const [selectedUnit, setSelectedUnit] = useState<string>("base");
   const [quantityInput, setQuantityInput] = useState("");
   const [noteInput, setNoteInput] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -73,7 +86,17 @@ export default function CalibrationPage() {
       return;
     }
 
-    const existingIndex = adjustmentList.findIndex(item => item.ingredientId === selectedIngredient.id);
+    let finalUnit = selectedIngredient.unit;
+    let unitId: number | undefined = undefined;
+    if (selectedUnit !== "base") {
+      const conversion = selectedIngredient.conversions.find((c: any) => String(c.id) === selectedUnit);
+      if (conversion) {
+        finalUnit = conversion.unitName;
+        unitId = conversion.id;
+      }
+    }
+
+    const existingIndex = adjustmentList.findIndex(item => item.ingredientId === selectedIngredient.id && item.unitId === unitId);
     if (existingIndex > -1) {
       const newList = [...adjustmentList];
       newList[existingIndex].quantity += qty;
@@ -84,18 +107,21 @@ export default function CalibrationPage() {
         name: selectedIngredient.name,
         quantity: qty,
         unit: selectedIngredient.unit,
-        note: noteInput
+        note: noteInput,
+        unitId,
+        displayUnit: finalUnit
       }]);
     }
 
     setSelectedIngredient(null);
+    setSelectedUnit("base");
     setQuantityInput("");
     setNoteInput("");
     setSearchQuery("");
   };
 
-  const removeItem = (id: number) => {
-    setAdjustmentList(adjustmentList.filter(item => item.ingredientId !== id));
+  const removeItem = (id: number, unitId?: number) => {
+    setAdjustmentList(adjustmentList.filter(item => !(item.ingredientId === id && item.unitId === unitId)));
   };
 
   const handleSubmit = async () => {
@@ -110,6 +136,7 @@ export default function CalibrationPage() {
             ingredientId: item.ingredientId,
             movementType: "calibration",
             quantity: item.quantity,
+            unitId: item.unitId,
             note: item.note || "Machine calibration/Recipe testing"
           }),
         });
@@ -234,15 +261,35 @@ export default function CalibrationPage() {
                 <div className="p-6 rounded-2xl bg-primary/5 border border-primary/10 animate-in fade-in slide-in-from-top-2 duration-300">
                   <div className="flex flex-col md:flex-row gap-6 items-end">
                     <div className="flex-1 space-y-2">
-                      <Label className="text-[10px] font-black uppercase tracking-widest text-primary ml-1">Quantity to deduct ({selectedIngredient.unit})</Label>
-                      <Input 
-                        type="number"
-                        placeholder="0.00"
-                        className="h-14 text-2xl font-black bg-background border-primary/20"
-                        value={quantityInput}
-                        onChange={(e) => setQuantityInput(e.target.value)}
-                        autoFocus
-                      />
+                      <Label className="text-[10px] font-black uppercase tracking-widest text-primary ml-1">Quantity</Label>
+                      <div className="flex gap-2">
+                        <Input 
+                          type="number" 
+                          placeholder="0.00" 
+                          className="h-14 text-2xl font-black bg-background border-primary/20 flex-1"
+                          value={quantityInput}
+                          onChange={(e) => setQuantityInput(e.target.value)}
+                          autoFocus
+                        />
+                        <div className="w-[120px]">
+                          <Select value={selectedUnit} onValueChange={setSelectedUnit}>
+                            <SelectTrigger className="h-14 font-bold border-primary/20 bg-background">
+                              <SelectValue placeholder="Unit" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="base" className="font-bold">{selectedIngredient?.unit}</SelectItem>
+                              {selectedIngredient?.conversions?.map((c: any) => (
+                                <SelectItem key={c.id} value={String(c.id)} className="font-bold">{c.unitName}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      {selectedUnit !== "base" && selectedIngredient && quantityInput && (
+                        <p className="text-[10px] font-bold text-muted-foreground ml-1 uppercase tracking-tighter">
+                          Equivalent to: {(parseFloat(quantityInput) * Number(selectedIngredient.conversions.find((c: any) => String(c.id) === selectedUnit)?.conversionFactor || 1)).toFixed(2)} {selectedIngredient.unit}
+                        </p>
+                      )}
                     </div>
                     <div className="flex-[2] space-y-2">
                       <Label className="text-[10px] font-black uppercase tracking-widest text-primary ml-1">Notes / Purpose</Label>
@@ -327,13 +374,13 @@ export default function CalibrationPage() {
                         <div>
                           <div className="font-black text-sm">{item.name}</div>
                           {item.note && <div className="text-[10px] text-muted-foreground italic truncate max-w-[200px]">{item.note}</div>}
-                          <div className="text-lg font-black text-primary">-{item.quantity} <span className="text-xs uppercase text-muted-foreground">{item.unit}</span></div>
+                          <div className="text-lg font-black text-primary">-{item.quantity} <span className="text-xs uppercase text-muted-foreground">{item.displayUnit}</span></div>
                         </div>
                         <Button 
                           variant="ghost" 
                           size="icon" 
-                          className="rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                          onClick={() => removeItem(item.ingredientId)}
+                          className="h-8 w-8 text-destructive"
+                          onClick={() => removeItem(item.ingredientId, item.unitId)}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
