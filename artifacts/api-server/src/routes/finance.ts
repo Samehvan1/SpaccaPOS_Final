@@ -33,8 +33,8 @@ const router: IRouter = Router();
 router.get("/finance/inventory-usage", requirePermission("reports:view"), async (req, res) => {
   const { startDate, endDate, branchId } = req.query;
   const targetBranchId = branchId && branchId !== "all" ? parseInt(branchId as string) : null;
-  const start = startDate ? new Date(startDate as string) : new Date(new Date().setDate(new Date().getDate() - 30));
-  const end = endDate ? new Date(endDate as string) : new Date();
+  const start = startDate ? startOfDay(new Date(startDate as string)) : startOfDay(subDays(new Date(), 30));
+  const end = endDate ? endOfDay(new Date(endDate as string)) : endOfDay(new Date());
   
   if (isNaN(start.getTime()) || isNaN(end.getTime())) {
     res.status(400).json({ error: "Invalid date format" });
@@ -102,8 +102,8 @@ router.get("/finance/inventory-usage", requirePermission("reports:view"), async 
 router.get("/finance/pl-report", requirePermission("reports:view"), async (req, res) => {
   const { startDate, endDate, branchId } = req.query;
   const targetBranchId = branchId && branchId !== "all" ? parseInt(branchId as string) : null;
-  const start = startDate ? new Date(startDate as string) : new Date(new Date().setDate(new Date().getDate() - 30));
-  const end = endDate ? new Date(endDate as string) : new Date();
+  const start = startDate ? startOfDay(new Date(startDate as string)) : startOfDay(subDays(new Date(), 30));
+  const end = endDate ? endOfDay(new Date(endDate as string)) : endOfDay(new Date());
   if (isNaN(start.getTime()) || isNaN(end.getTime())) {
     res.status(400).json({ error: "Invalid date format" });
     return;
@@ -337,8 +337,8 @@ router.get("/finance/ingredient-recipes", requirePermission("reports:view"), asy
 router.get("/finance/sales-items", requirePermission("reports:view"), async (req, res) => {
   const { startDate, endDate, branchId } = req.query;
   const targetBranchId = branchId && branchId !== "all" ? parseInt(branchId as string) : null;
-  const start = startDate ? new Date(startDate as string) : new Date(new Date().setDate(new Date().getDate() - 30));
-  const end = endDate ? new Date(endDate as string) : new Date();
+  const start = startDate ? startOfDay(new Date(startDate as string)) : startOfDay(subDays(new Date(), 30));
+  const end = endDate ? endOfDay(new Date(endDate as string)) : endOfDay(new Date());
   
   if (isNaN(start.getTime()) || isNaN(end.getTime())) {
     res.status(400).json({ error: "Invalid date format" });
@@ -442,8 +442,8 @@ router.get("/finance/sales-items", requirePermission("reports:view"), async (req
 router.get("/finance/customizations-report", requirePermission("reports:view"), async (req, res) => {
   const { startDate, endDate, branchId } = req.query;
   const targetBranchId = branchId && branchId !== "all" ? parseInt(branchId as string) : null;
-  const start = startDate ? new Date(startDate as string) : new Date(new Date().setDate(new Date().getDate() - 30));
-  const end = endDate ? new Date(endDate as string) : new Date();
+  const start = startDate ? startOfDay(new Date(startDate as string)) : startOfDay(subDays(new Date(), 30));
+  const end = endDate ? endOfDay(new Date(endDate as string)) : endOfDay(new Date());
   
   if (isNaN(start.getTime()) || isNaN(end.getTime())) {
     res.status(400).json({ error: "Invalid date format" });
@@ -496,8 +496,8 @@ router.get("/finance/customizations-report", requirePermission("reports:view"), 
 router.get("/finance/customization-analytics", requirePermission("reports:view"), async (req, res) => {
   const { startDate, endDate, branchId } = req.query;
   const targetBranchId = branchId && branchId !== "all" ? parseInt(branchId as string) : null;
-  const start = startDate ? startOfDay(new Date(`${startDate}T00:00:00`)) : startOfDay(subDays(new Date(), 30));
-  const end = endDate ? endOfDay(new Date(`${endDate}T23:59:59`)) : endOfDay(new Date());
+  const start = startDate ? startOfDay(new Date(startDate as string)) : startOfDay(subDays(new Date(), 30));
+  const end = endDate ? endOfDay(new Date(endDate as string)) : endOfDay(new Date());
   
   if (isNaN(start.getTime()) || isNaN(end.getTime())) {
     res.status(400).json({ error: "Invalid date format" });

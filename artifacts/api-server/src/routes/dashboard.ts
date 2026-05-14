@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import { gte, sql, eq, and, lte, inArray } from "drizzle-orm";
 import { serializeDates } from "../lib/serialize";
+import { startOfDay, endOfDay, subDays } from "date-fns";
 import {
   db,
   ordersTable,
@@ -256,12 +257,10 @@ router.get("/dashboard/sales-by-category", async (req, res): Promise<void> => {
   }
 
   if (params.success && params.data.startDate) {
-    conditions.push(gte(ordersTable.createdAt, new Date(params.data.startDate)));
+    conditions.push(gte(ordersTable.createdAt, startOfDay(new Date(params.data.startDate))));
   }
   if (params.success && params.data.endDate) {
-    const end = new Date(params.data.endDate);
-    end.setHours(23, 59, 59, 999);
-    conditions.push(lte(ordersTable.createdAt, end));
+    conditions.push(lte(ordersTable.createdAt, endOfDay(new Date(params.data.endDate))));
   }
 
   // Fallback to days if no range provided
@@ -335,12 +334,10 @@ router.get("/dashboard/top-drinks", async (req, res): Promise<void> => {
   }
 
   if (params.success && params.data.startDate) {
-    conditions.push(gte(ordersTable.createdAt, new Date(params.data.startDate)));
+    conditions.push(gte(ordersTable.createdAt, startOfDay(new Date(params.data.startDate))));
   }
   if (params.success && params.data.endDate) {
-    const end = new Date(params.data.endDate);
-    end.setHours(23, 59, 59, 999);
-    conditions.push(lte(ordersTable.createdAt, end));
+    conditions.push(lte(ordersTable.createdAt, endOfDay(new Date(params.data.endDate))));
   }
 
   // Fallback to days if no range provided
@@ -417,12 +414,10 @@ router.get("/dashboard/sales-by-day", async (req, res): Promise<void> => {
   }
 
   if (params.success && params.data.startDate) {
-    conditions.push(gte(ordersTable.createdAt, new Date(params.data.startDate)));
+    conditions.push(gte(ordersTable.createdAt, startOfDay(new Date(params.data.startDate))));
   }
   if (params.success && params.data.endDate) {
-    const end = new Date(params.data.endDate);
-    end.setHours(23, 59, 59, 999);
-    conditions.push(lte(ordersTable.createdAt, end));
+    conditions.push(lte(ordersTable.createdAt, endOfDay(new Date(params.data.endDate))));
   }
 
   // Get orders in range

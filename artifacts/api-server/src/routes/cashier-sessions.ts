@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { eq, and, gte, lte, isNull, desc, sql, inArray } from "drizzle-orm";
 import { db, cashierSessionsTable, usersTable, ordersTable, orderItemsTable, drinksTable, drinkCategoriesTable } from "@workspace/db";
 import { z } from "zod";
+import { startOfDay, endOfDay } from "date-fns";
 
 const router: IRouter = Router();
 
@@ -186,11 +187,9 @@ router.get("/cashier/performance/:cashierId", requirePermission("cashier:view_re
   const { startDate, endDate } = req.query as { startDate?: string; endDate?: string };
 
   const conditions: any[] = [eq(ordersTable.cashierId, cashierId)];
-  if (startDate) conditions.push(gte(ordersTable.createdAt, new Date(startDate)));
+  if (startDate) conditions.push(gte(ordersTable.createdAt, startOfDay(new Date(startDate))));
   if (endDate) {
-    const end = new Date(endDate);
-    end.setHours(23, 59, 59, 999);
-    conditions.push(lte(ordersTable.createdAt, end));
+    conditions.push(lte(ordersTable.createdAt, endOfDay(new Date(endDate))));
   }
 
   const orders = await db
@@ -238,11 +237,9 @@ router.get("/cashier/sessions", requirePermission("cashier:view_reports"), async
 
   const conditions: any[] = [];
   if (cashierId) conditions.push(eq(cashierSessionsTable.cashierId, parseInt(cashierId)));
-  if (startDate) conditions.push(gte(cashierSessionsTable.startedAt, new Date(startDate)));
+  if (startDate) conditions.push(gte(cashierSessionsTable.startedAt, startOfDay(new Date(startDate))));
   if (endDate) {
-    const end = new Date(endDate);
-    end.setHours(23, 59, 59, 999);
-    conditions.push(lte(cashierSessionsTable.startedAt, end));
+    conditions.push(lte(cashierSessionsTable.startedAt, endOfDay(new Date(endDate))));
   }
 
   const sessions = await db

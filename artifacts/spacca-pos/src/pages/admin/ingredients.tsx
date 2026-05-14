@@ -18,7 +18,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { ArrowLeft, Plus, Search, Edit, Trash2, Link2, Star, StarOff, ChevronRight, Package, Tag, Layers, FlaskConical, Check, X, Droplet, Droplets, RefreshCw, CheckCircle2, ChevronsUpDown } from "lucide-react";
 
 const COMMON_UNITS = [
-  "Kg", "Gram", "Liter", "ML", "Box", "Bag", "Bottle", "Case", "Pack", "Gallon", "Cup"
+  "Kg", "Gram", "Liter", "ML", "Box", "Bag", "Bottle", "Cup", "Case", "Pack", "Gallon"
 ];
 
 import { Link } from "wouter";

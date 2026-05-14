@@ -5,6 +5,7 @@ import { exec } from "child_process";
 import path from "path";
 import fs from "fs";
 import { requirePermission } from "../middleware/permissions";
+import { startOfDay, endOfDay } from "date-fns";
 
 const adminRouter = Router();
 
@@ -28,11 +29,9 @@ adminRouter.get("/admin/activity-logs", requirePermission("admin:view_logs"), as
     if (action) conditions.push(ilike(activityLogsTable.action, `%${action}%`));
     if (entityType) conditions.push(eq(activityLogsTable.entityType, entityType));
     if (userName) conditions.push(ilike(usersTable.name, `%${userName}%`));
-    if (startDate) conditions.push(gte(activityLogsTable.createdAt, new Date(startDate)));
+    if (startDate) conditions.push(gte(activityLogsTable.createdAt, startOfDay(new Date(startDate))));
     if (endDate) {
-      const end = new Date(endDate);
-      end.setHours(23, 59, 59, 999);
-      conditions.push(lte(activityLogsTable.createdAt, end));
+      conditions.push(lte(activityLogsTable.createdAt, endOfDay(new Date(endDate))));
     }
 
     const where = conditions.length > 0 ? and(...conditions) : undefined;

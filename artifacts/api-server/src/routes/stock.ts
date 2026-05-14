@@ -1,5 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq, and, inArray, sql, gte, lte, desc, asc } from "drizzle-orm";
+import { startOfDay, endOfDay } from "date-fns";
 import { serializeDates } from "../lib/serialize";
 import {
   db,
@@ -38,12 +39,10 @@ router.get("/stock/movements", async (req, res): Promise<void> => {
       conditions.push(eq(stockMovementsTable.ingredientId, params.data.ingredientId));
     }
     if (params.data.startDate) {
-      conditions.push(gte(stockMovementsTable.createdAt, params.data.startDate));
+      conditions.push(gte(stockMovementsTable.createdAt, startOfDay(new Date(params.data.startDate))));
     }
     if (params.data.endDate) {
-      const end = new Date(params.data.endDate);
-      end.setHours(23, 59, 59, 999);
-      conditions.push(lte(stockMovementsTable.createdAt, end));
+      conditions.push(lte(stockMovementsTable.createdAt, endOfDay(new Date(params.data.endDate))));
     }
   }
 

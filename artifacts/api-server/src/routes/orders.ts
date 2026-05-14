@@ -1,5 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq, and, inArray, gte, lte, sql, desc } from "drizzle-orm";
+import { startOfDay, endOfDay } from "date-fns";
 import { serializeDates } from "../lib/serialize";
 import { broadcastEvent } from "../lib/sse";
 import { logActivity } from "../lib/activity-logger";
@@ -126,12 +127,10 @@ router.get("/orders", requirePermission("cashier:view"), async (req, res): Promi
     conditions.push(inArray(ordersTable.status, statuses));
   }
   if (params.success && params.data.startDate) {
-    conditions.push(gte(ordersTable.createdAt, new Date(params.data.startDate)));
+    conditions.push(gte(ordersTable.createdAt, startOfDay(new Date(params.data.startDate))));
   }
   if (params.success && params.data.endDate) {
-    const end = new Date(params.data.endDate);
-    end.setHours(23, 59, 59, 999);
-    conditions.push(lte(ordersTable.createdAt, end));
+    conditions.push(lte(ordersTable.createdAt, endOfDay(new Date(params.data.endDate))));
   }
 
   const limit = params.success && params.data.limit ? params.data.limit : 50;
