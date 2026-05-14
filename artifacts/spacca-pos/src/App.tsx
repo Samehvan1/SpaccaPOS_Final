@@ -44,6 +44,9 @@ import CashSpotCheckPage from "@/pages/admin/operations/cash-spot-check";
 import ShiftReportPage from "@/pages/admin/operations/shift-report";
 import StockQuantitiesPage from "@/pages/admin/operations/stock-quantities";
 import CustomizationsAnalysisReport from "@/pages/admin/operations/customizations";
+import CalibrationPage from "./pages/admin/operations/calibration";
+import WastagePage from "./pages/admin/operations/wastage";
+import OperationalDeductionsReport from "./pages/admin/operations/deductions-report";
 
 // PWA Helper to update title for "Add to Home Screen"
 function PWAContextHandler() {
@@ -243,6 +246,21 @@ function AppRoutes() {
       <Route path="/admin/operations/customizations">
         <MainLayout>
           <ProtectedRoute component={CustomizationsAnalysisReport} permission="reports:view" />
+        </MainLayout>
+      </Route>
+      <Route path="/admin/operations/calibration">
+        <MainLayout>
+          <ProtectedRoute component={CalibrationPage} permission="admin:view" />
+        </MainLayout>
+      </Route>
+      <Route path="/admin/operations/wastage">
+        <MainLayout>
+          <ProtectedRoute component={WastagePage} permission="admin:view" />
+        </MainLayout>
+      </Route>
+      <Route path="/admin/operations/deductions-report">
+        <MainLayout>
+          <ProtectedRoute component={OperationalDeductionsReport} permission="admin:view" />
         </MainLayout>
       </Route>
 

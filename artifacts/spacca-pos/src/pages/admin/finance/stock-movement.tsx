@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
-import { Search, Download, Filter, ArrowUpRight, ArrowDownLeft, History, Package } from "lucide-react";
+import { Search, Download, Filter, ArrowUpRight, ArrowDownLeft, History, Package, Beaker } from "lucide-react";
 import { format } from "date-fns";
 import { fmt } from "@/lib/currency";
 
@@ -28,6 +28,7 @@ export default function StockMovementPage() {
   // Filters
   const [selectedBranch, setSelectedBranch] = useState<string>("all");
   const [selectedIngredient, setSelectedIngredient] = useState<string>("all");
+  const [selectedType, setSelectedType] = useState<string>("all");
   const [startDate, setStartDate] = useState(format(new Date().setDate(new Date().getDate() - 30), "yyyy-MM-dd"));
   const [endDate, setEndDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [searchTerm, setSearchTerm] = useState("");
@@ -83,11 +84,15 @@ export default function StockMovementPage() {
     document.body.removeChild(link);
   };
 
-  const filteredMovements = movements.filter(m => 
-    m.ingredientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    m.movementType.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (m.note && m.note.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const filteredMovements = movements.filter(m => {
+    const matchesSearch = m.ingredientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      m.movementType.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (m.note && m.note.toLowerCase().includes(searchTerm.toLowerCase()));
+    
+    const matchesType = selectedType === "all" || m.movementType === selectedType;
+    
+    return matchesSearch && matchesType;
+  });
 
   return (
     <div className="space-y-6 p-6">
@@ -142,6 +147,23 @@ export default function StockMovementPage() {
             <div className="space-y-2">
               <label className="text-sm font-medium">To</label>
               <Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Movement Type</label>
+              <Select value={selectedType} onValueChange={setSelectedType}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All Types" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="restock">Restock</SelectItem>
+                  <SelectItem value="sale">Sale</SelectItem>
+                  <SelectItem value="waste">Waste</SelectItem>
+                  <SelectItem value="calibration">Calibration</SelectItem>
+                  <SelectItem value="manual">Manual Adjustment</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">
@@ -210,9 +232,10 @@ export default function StockMovementPage() {
                       m.movementType === "restock" ? "default" :
                       m.movementType === "sale" ? "secondary" :
                       m.movementType === "waste" ? "destructive" : "outline"
-                    } className="capitalize">
+                    } className={`capitalize ${m.movementType === "calibration" ? "border-amber-500 text-amber-600 bg-amber-50" : ""}`}>
                       {m.movementType === "restock" && <ArrowDownLeft className="mr-1 h-3 w-3" />}
                       {m.movementType === "sale" && <ArrowUpRight className="mr-1 h-3 w-3" />}
+                      {m.movementType === "calibration" && <Beaker className="mr-1 h-3 w-3" />}
                       {m.movementType}
                     </Badge>
                   </TableCell>

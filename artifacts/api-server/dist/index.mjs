@@ -56268,7 +56268,7 @@ var init_stock = __esm({
       ingredientId: integer("ingredient_id").notNull().references(() => ingredientsTable.id),
       orderId: integer("order_id").references(() => ordersTable.id, { onDelete: "set null" }),
       movementType: text("movement_type", {
-        enum: ["sale", "restock", "adjustment", "waste", "opening"]
+        enum: ["sale", "restock", "adjustment", "waste", "opening", "calibration"]
       }).notNull(),
       quantity: numeric("quantity", { precision: 12, scale: 4 }).notNull(),
       quantityAfter: numeric("quantity_after", { precision: 12, scale: 4 }).notNull(),
@@ -78168,7 +78168,7 @@ var ListStockMovementsResponseItem = objectType({
   ingredientId: numberType(),
   ingredientName: stringType(),
   orderId: numberType().nullable(),
-  movementType: enumType(["sale", "restock", "adjustment", "waste", "opening"]),
+  movementType: enumType(["sale", "restock", "adjustment", "waste", "opening", "calibration"]),
   quantity: numberType(),
   quantityAfter: numberType(),
   note: stringType().nullable(),
@@ -78181,7 +78181,7 @@ var ListStockMovementsResponse = arrayType(
 );
 var CreateStockAdjustmentBody = objectType({
   ingredientId: numberType(),
-  movementType: enumType(["adjustment", "waste", "opening"]),
+  movementType: enumType(["adjustment", "waste", "opening", "calibration"]),
   quantity: numberType(),
   note: stringType().optional()
 });
@@ -82501,13 +82501,13 @@ router5.post("/orders", async (req, res) => {
   const { items: orderItems, adminPin } = parsed.data;
   if (parsed.data.paymentMethod === "hospitality") {
     if (!adminPin) {
-      res.status(403).json({ error: "Admin or Cashier PIN required for hospitality orders" });
+      res.status(403).json({ error: "Admin or Supervisor PIN required for hospitality orders" });
       return;
     }
     const [admin] = await db.select().from(usersTable).where(
       and(
         eq(usersTable.pin, adminPin),
-        inArray(usersTable.role, ["admin", "cashier"]),
+        inArray(usersTable.role, ["admin", "supervisor"]),
         eq(usersTable.isActive, true)
       )
     ).limit(1);
@@ -82784,13 +82784,13 @@ router5.patch("/orders/:id/status", async (req, res, next) => {
     if (parsed.data.paymentMethod === "hospitality") {
       const adminPin = parsed.data.adminPin;
       if (!adminPin) {
-        res.status(403).json({ error: "Admin or Cashier PIN required for hospitality authorization" });
+        res.status(403).json({ error: "Admin or Supervisor PIN required for hospitality authorization" });
         return;
       }
       const [admin] = await db.select().from(usersTable).where(
         and(
           eq(usersTable.pin, adminPin),
-          inArray(usersTable.role, ["admin", "cashier"]),
+          inArray(usersTable.role, ["admin", "supervisor"]),
           eq(usersTable.isActive, true)
         )
       ).limit(1);
@@ -82951,7 +82951,9 @@ router6.get("/stock/movements", async (req, res) => {
       conditions.push(gte(stockMovementsTable.createdAt, params.data.startDate));
     }
     if (params.data.endDate) {
-      conditions.push(lte(stockMovementsTable.createdAt, params.data.endDate));
+      const end = new Date(params.data.endDate);
+      end.setHours(23, 59, 59, 999);
+      conditions.push(lte(stockMovementsTable.createdAt, end));
     }
   }
   const movements = await db.select().from(stockMovementsTable).where(conditions.length ? and(...conditions) : void 0).orderBy(desc(stockMovementsTable.createdAt));
@@ -82994,7 +82996,7 @@ router6.post("/stock/adjustments", async (req, res) => {
   }
   const [stock] = await db.select().from(branchStockTable).where(and(eq(branchStockTable.ingredientId, parsed.data.ingredientId), eq(branchStockTable.branchId, sessionBranchId)));
   const currentQty = stock ? parseFloat(stock.stockQuantity) : 0;
-  const adjustedQty = parsed.data.movementType === "waste" ? currentQty - parsed.data.quantity : currentQty + parsed.data.quantity;
+  const adjustedQty = parsed.data.movementType === "waste" || parsed.data.movementType === "calibration" ? currentQty - parsed.data.quantity : currentQty + parsed.data.quantity;
   const newQty = Math.max(0, adjustedQty);
   await db.insert(branchStockTable).values({
     branchId: sessionBranchId,
@@ -83004,7 +83006,7 @@ router6.post("/stock/adjustments", async (req, res) => {
     target: [branchStockTable.branchId, branchStockTable.ingredientId],
     set: { stockQuantity: String(newQty) }
   });
-  const quantityValue = parsed.data.movementType === "waste" ? -parsed.data.quantity : parsed.data.quantity;
+  const quantityValue = parsed.data.movementType === "waste" || parsed.data.movementType === "calibration" ? -parsed.data.quantity : parsed.data.quantity;
   const [movement] = await db.insert(stockMovementsTable).values({
     branchId: sessionBranchId,
     ingredientId: parsed.data.ingredientId,

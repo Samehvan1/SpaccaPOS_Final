@@ -40,7 +40,9 @@ router.get("/stock/movements", async (req, res): Promise<void> => {
       conditions.push(gte(stockMovementsTable.createdAt, params.data.startDate));
     }
     if (params.data.endDate) {
-      conditions.push(lte(stockMovementsTable.createdAt, params.data.endDate));
+      const end = new Date(params.data.endDate);
+      end.setHours(23, 59, 59, 999);
+      conditions.push(lte(stockMovementsTable.createdAt, end));
     }
   }
 
@@ -103,7 +105,7 @@ router.post("/stock/adjustments", async (req, res): Promise<void> => {
     .where(and(eq(branchStockTable.ingredientId, parsed.data.ingredientId), eq(branchStockTable.branchId, sessionBranchId)));
 
   const currentQty = stock ? parseFloat(stock.stockQuantity) : 0;
-  const adjustedQty = parsed.data.movementType === "waste"
+  const adjustedQty = (parsed.data.movementType === "waste" || parsed.data.movementType === "calibration")
     ? currentQty - parsed.data.quantity
     : currentQty + parsed.data.quantity;
 
@@ -122,7 +124,7 @@ router.post("/stock/adjustments", async (req, res): Promise<void> => {
     });
 
   const quantityValue =
-    parsed.data.movementType === "waste" ? -parsed.data.quantity : parsed.data.quantity;
+    (parsed.data.movementType === "waste" || parsed.data.movementType === "calibration") ? -parsed.data.quantity : parsed.data.quantity;
 
   const [movement] = await db
     .insert(stockMovementsTable)
