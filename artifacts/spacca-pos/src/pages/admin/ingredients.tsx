@@ -16,6 +16,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { ArrowLeft, Plus, Search, Edit, Trash2, Link2, Star, StarOff, ChevronRight, Package, Tag, Layers, FlaskConical, Check, X, Droplet, Droplets, RefreshCw, CheckCircle2, ChevronsUpDown } from "lucide-react";
+
+const COMMON_UNITS = [
+  "Kg", "Gram", "Liter", "ML", "Box", "Bag", "Bottle", "Case", "Pack", "Gallon", "Cup"
+];
+
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
@@ -1521,7 +1526,23 @@ function InventoryTab() {
                     <div className="grid grid-cols-2 gap-3">
                       <div className="grid gap-1">
                         <Label className="text-xs">Unit Name</Label>
-                        <Input placeholder="e.g. Kg, Box, Bag" value={newConvUnit} onChange={e => setNewConvUnit(e.target.value)} className="h-8" />
+                        <div className="flex gap-1">
+                          <Select value={COMMON_UNITS.includes(newConvUnit) ? newConvUnit : "custom"} onValueChange={(v) => setNewConvUnit(v === "custom" ? "" : v)}>
+                            <SelectTrigger className="h-8 text-xs w-[100px]">
+                              <SelectValue placeholder="Select..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {COMMON_UNITS.map(u => <SelectItem key={u} value={u}>{u}</SelectItem>)}
+                              <SelectItem value="custom">Custom...</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <Input 
+                            placeholder="Unit name..." 
+                            value={newConvUnit} 
+                            onChange={e => setNewConvUnit(e.target.value)} 
+                            className="h-8 flex-1" 
+                          />
+                        </div>
                       </div>
                       <div className="grid gap-1">
                         <Label className="text-xs">Conversion Factor</Label>

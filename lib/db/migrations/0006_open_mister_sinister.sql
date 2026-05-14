@@ -7,5 +7,4 @@ CREATE TABLE "ingredient_conversions" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-ALTER TABLE "branch_stock" ADD COLUMN "startup_quantity" numeric(12, 4) DEFAULT '0' NOT NULL;--> statement-breakpoint
 ALTER TABLE "ingredient_conversions" ADD CONSTRAINT "ingredient_conversions_ingredient_id_ingredients_id_fk" FOREIGN KEY ("ingredient_id") REFERENCES "public"."ingredients"("id") ON DELETE cascade ON UPDATE no action;
