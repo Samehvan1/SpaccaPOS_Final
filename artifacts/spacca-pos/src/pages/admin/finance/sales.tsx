@@ -523,7 +523,7 @@ export default function SalesAnalysisPage() {
                 </div>
                 <div className="space-y-1">
                   <span className="text-xs text-muted-foreground flex items-center gap-1"><MapPin className="h-3 w-3" /> Branch</span>
-                  <p className="font-medium">{branches.find(b => b.id === selectedOrderDetails.branchId)?.name || "Unknown"}</p>
+                  <p className="font-medium">{selectedOrderDetails.branchName || "Unknown"}</p>
                 </div>
                 <div className="space-y-1">
                   <span className="text-xs text-muted-foreground flex items-center gap-1"><Banknote className="h-3 w-3" /> Payment</span>
@@ -532,6 +532,10 @@ export default function SalesAnalysisPage() {
                 <div className="space-y-1">
                   <span className="text-xs text-muted-foreground flex items-center gap-1"><CheckCircle2 className="h-3 w-3" /> Status</span>
                   <Badge variant="secondary" className="capitalize">{selectedOrderDetails.status}</Badge>
+                </div>
+                <div className="space-y-1">
+                  <span className="text-xs text-muted-foreground flex items-center gap-1"><Package className="h-3 w-3" /> Source</span>
+                  <Badge variant="outline" className="capitalize">{selectedOrderDetails.source || "POS"}</Badge>
                 </div>
               </div>
 

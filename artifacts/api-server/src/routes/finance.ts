@@ -646,5 +646,60 @@ router.get("/finance/customization-analytics", requirePermission("reports:view")
   });
 });
 
-export default router;
+// ── Order Statistics Report ────────────────────────────────────────────────
+router.get("/finance/order-stats", requirePermission("reports:view"), async (req, res) => {
+  const { startDate, endDate, branchId } = req.query;
+  const start = startDate ? startOfDay(new Date(startDate as string)) : startOfDay(subDays(new Date(), 30));
+  const end = endDate ? endOfDay(new Date(endDate as string)) : endOfDay(new Date());
+  
+  const bId = String(branchId);
+  const targetBranchId = (branchId && bId !== "all" && bId !== "undefined") ? parseInt(bId) : null;
 
+  const conditions = [
+    gte(ordersTable.createdAt, start),
+    lte(ordersTable.createdAt, end),
+    inArray(ordersTable.status, ["completed", "paid", "ready", "pending", "in_progress"])
+  ];
+  if (targetBranchId && !isNaN(targetBranchId)) {
+    conditions.push(eq(ordersTable.branchId, targetBranchId));
+  }
+
+  const [byDiscount, byPayment, byBranch, bySource] = await Promise.all([
+     // by discount
+     db.select({
+       label: ordersTable.discountCode,
+       count: count(ordersTable.id),
+       revenue: sum(ordersTable.total)
+     }).from(ordersTable).where(and(...conditions)).groupBy(ordersTable.discountCode),
+     // by payment
+     db.select({
+       label: ordersTable.paymentMethod,
+       count: count(ordersTable.id),
+       revenue: sum(ordersTable.total)
+     }).from(ordersTable).where(and(...conditions)).groupBy(ordersTable.paymentMethod),
+     // by branch
+     db.select({
+       label: branchesTable.name,
+       count: count(ordersTable.id),
+       revenue: sum(ordersTable.total)
+     }).from(ordersTable)
+       .innerJoin(branchesTable, eq(ordersTable.branchId, branchesTable.id))
+       .where(and(...conditions))
+       .groupBy(branchesTable.name),
+     // by source
+     db.select({
+       label: ordersTable.source,
+       count: count(ordersTable.id),
+       revenue: sum(ordersTable.total)
+     }).from(ordersTable).where(and(...conditions)).groupBy(ordersTable.source)
+  ]);
+
+  res.json({
+    byDiscount: byDiscount.map(d => ({ ...d, label: d.label || "No Discount", revenue: parseFloat(d.revenue || "0") })),
+    byPayment: byPayment.map(d => ({ ...d, label: d.label || "unknown", revenue: parseFloat(d.revenue || "0") })),
+    byBranch: byBranch.map(d => ({ ...d, label: d.label || "unknown", revenue: parseFloat(d.revenue || "0") })),
+    bySource: bySource.map(d => ({ ...d, label: d.label || "pos", revenue: parseFloat(d.revenue || "0") }))
+  });
+});
+
+export default router;

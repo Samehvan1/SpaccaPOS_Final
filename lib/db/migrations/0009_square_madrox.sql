@@ -1,0 +1,1 @@
+ALTER TABLE "orders" ADD COLUMN IF NOT EXISTS "source" text DEFAULT 'pos' NOT NULL;

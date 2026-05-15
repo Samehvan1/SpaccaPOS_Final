@@ -129,6 +129,8 @@ export type ListOrdersQueryParams = Infer<typeof api.ListOrdersQueryParams>;
 export const ListOrdersResponseItem = ((api.ListOrdersResponseItem as any)._def.left as z.ZodObject<any>)
   .extend({
     discountCode: z.string().nullish(),
+    branchName: z.string().optional(),
+    source: z.enum(["pos", "kiosk", "web", "mobile"]).optional(),
     paymentMethod: z.enum(["cash", "card", "wallet", "hospitality", "split", "refund"]),
   })
   .and(
@@ -153,6 +155,7 @@ export const CreateOrderBody = api.CreateOrderBody.extend({
     amount: z.number(),
     transactionId: z.string().optional(),
   })).optional(),
+  source: z.enum(["pos", "kiosk", "web", "mobile"]).optional(),
 });
 export type CreateOrderBody = Infer<typeof CreateOrderBody>;
 
@@ -161,6 +164,8 @@ export type GetOrderParams = Infer<typeof api.GetOrderParams>;
 export const GetOrderResponse = ((api.GetOrderResponse as any)._def.left as z.ZodObject<any>)
   .extend({
     discountCode: z.string().nullish(),
+    branchName: z.string().optional(),
+    source: z.enum(["pos", "kiosk", "web", "mobile"]).optional(),
     paymentMethod: z.enum(["cash", "card", "wallet", "hospitality", "split"]),
     payments: z.array(z.object({
       id: z.number(),

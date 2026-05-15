@@ -577,7 +577,8 @@ export default function PosTerminal() {
             ingredientTypeId: s.ingredientTypeId || undefined,
           })),
         })),
-      },
+        source: "pos",
+      } as any,
     });
   };
 

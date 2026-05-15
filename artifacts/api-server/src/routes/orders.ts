@@ -28,6 +28,7 @@ import {
   customersTable,
   signaturesTable,
   orderPaymentsTable,
+  branchesTable,
 } from "@workspace/db";
 import {
   ListOrdersQueryParams,
@@ -67,9 +68,10 @@ async function buildOrderDetail(orderId: number) {
   ]);
   if (!order) return null;
 
-  // Fetch barista, customizations, and payments in parallel
-  const [[barista], customizations, payments] = await Promise.all([
+  // Fetch barista, branch, customizations, and payments in parallel
+  const [[barista], [branch], customizations, payments] = await Promise.all([
     db.select().from(usersTable).where(eq(usersTable.id, order.baristaId)),
+    db.select().from(branchesTable).where(eq(branchesTable.id, order.branchId)),
     items.length > 0
       ? db.select().from(orderItemCustomizationsTable)
           .where(inArray(orderItemCustomizationsTable.orderItemId, items.map((i) => i.id)))
@@ -87,6 +89,7 @@ async function buildOrderDetail(orderId: number) {
   return {
     ...order,
     baristaName: barista?.name ?? "Unknown",
+    branchName: branch?.name ?? "Unknown",
     subtotal: parseFloat(order.subtotal),
     discount: parseFloat(order.discount),
     discountId: order.discountId,
@@ -162,7 +165,7 @@ router.get("/orders", requirePermission("cashier:view"), async (req, res): Promi
 
   const orderIds = orders.map((o) => o.id);
 
-  const [items, baristas, payments] = await Promise.all([
+  const [items, baristas, payments, branches] = await Promise.all([
     orderIds.length > 0
       ? db.select().from(orderItemsTable).where(inArray(orderItemsTable.orderId, orderIds))
       : Promise.resolve([]),
@@ -170,6 +173,7 @@ router.get("/orders", requirePermission("cashier:view"), async (req, res): Promi
     orderIds.length > 0
       ? db.select().from(orderPaymentsTable).where(inArray(orderPaymentsTable.orderId, orderIds))
       : Promise.resolve([]),
+    db.select().from(branchesTable), // Fetch all branches for mapping
   ]);
 
   const itemIds = items.map((i) => i.id);
@@ -178,6 +182,7 @@ router.get("/orders", requirePermission("cashier:view"), async (req, res): Promi
     : [];
 
   const baristaMap = Object.fromEntries(baristas.map((b) => [b.id, b.name]));
+  const branchMap = Object.fromEntries(branches.map((b) => [b.id, b.name]));
   const custByItem = new Map<number, any[]>();
   for (const c of customizations) {
     const list = custByItem.get(c.orderItemId) ?? [];
@@ -209,6 +214,7 @@ router.get("/orders", requirePermission("cashier:view"), async (req, res): Promi
       serializeDates(orders.map((o) => ({
         ...o,
         baristaName: baristaMap[o.baristaId] ?? "Unknown",
+        branchName: branchMap[o.branchId] ?? "Unknown",
         subtotal: parseFloat(o.subtotal),
         discount: parseFloat(o.discount),
         discountId: o.discountId,
@@ -408,6 +414,7 @@ router.post("/orders", async (req, res): Promise<void> => {
       discountType,
       total: String(total),
       paymentMethod: parsed.data.paymentMethod,
+      source: (parsed.data as any).source || "pos",
       amountTendered: amountTendered != null ? String(amountTendered) : null,
       changeDue: changeDue != null ? String(changeDue) : null,
       notes: parsed.data.notes ?? null,

@@ -330,7 +330,8 @@ export default function KioskPage() {
             ingredientTypeId: s.ingredientTypeId,
           })),
         })),
-      },
+        source: "kiosk",
+      } as any,
     });
   };
 

@@ -25,6 +25,7 @@ export const ordersTable = pgTable("orders", {
   discountType: text("discount_type", { enum: ["percentage", "fixed"] }),
   total: numeric("total", { precision: 8, scale: 2 }).notNull(),
   paymentMethod: text("payment_method", { enum: ["cash", "card", "wallet", "hospitality", "split", "refund"] }).notNull().default("cash"),
+  source: text("source", { enum: ["pos", "kiosk", "web", "mobile"] }).notNull().default("pos"),
   amountTendered: numeric("amount_tendered", { precision: 8, scale: 2 }),
   changeDue: numeric("change_due", { precision: 8, scale: 2 }),
   notes: text("notes"),

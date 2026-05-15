@@ -19,7 +19,7 @@ import { Switch } from "@/components/ui/switch";
 import { 
   ArrowLeft, BarChart2, TrendingUp, Coffee, Receipt, 
   Banknote, Medal, Calendar, ChevronLeft, ChevronRight,
-  Download, Tag, CheckCircle2, XCircle, FileText, Layers, Clock
+  Download, Tag, CheckCircle2, XCircle, FileText, Layers, Clock, Loader2
 } from "lucide-react";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
@@ -89,6 +89,7 @@ export default function ReportsPage() {
 
   const defaultsMap = useMemo(() => buildDrinkDefaultsMap(drinkDetail?.slots as any[]), [drinkDetail]);
 
+
   // Dashboard Tab Data
   const { data: summary, isLoading: loadingSummary } = useGetDashboardSummary({ branchId: selectedBranchId } as any);
   const { data: dashboardCategorySales, isLoading: loadingDashboardCategory } = useGetSalesByCategory({ days: period.days, branchId: selectedBranchId } as any);
@@ -131,6 +132,22 @@ export default function ReportsPage() {
   const reportTotalOrders = reportSummary?.reduce((s, c) => s + c.totalOrders, 0) ?? 0;
   const reportTotalDrinks = reportSummary?.reduce((s, c) => s + c.totalDrinks, 0) ?? 0;
   const reportAvgOrder = reportTotalOrders > 0 ? reportTotalRevenue / reportTotalOrders : 0;
+
+  // Order Stats Tab Data
+  const { data: orderStats, isLoading: loadingOrderStats } = useQuery<any>({
+    queryKey: ["order-stats", reportStartDate, reportEndDate, selectedBranchId],
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        startDate: reportStartDate,
+        endDate: reportEndDate,
+        branchId: String(selectedBranchId || "all")
+      });
+      const res = await fetch(`${API_BASE}/finance/order-stats?${params.toString()}`);
+      if (!res.ok) throw new Error("Failed to fetch order stats");
+      return res.json();
+    },
+    enabled: activeTab === "stats"
+  });
 
   // Sales Range Summary Query (Accurate totals for banner)
   const { data: rangeSummary, isLoading: loadingRangeSummary } = useQuery({
@@ -349,10 +366,11 @@ export default function ReportsPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4 mb-8 h-12">
+        <TabsList className="grid w-full grid-cols-5 mb-8 h-12">
           <TabsTrigger value="dashboard" className="text-base font-semibold">Dashboard</TabsTrigger>
           <TabsTrigger value="sales" className="text-base font-semibold">Sales Report</TabsTrigger>
           <TabsTrigger value="drinks" className="text-base font-semibold">Drinks Report</TabsTrigger>
+          <TabsTrigger value="stats" className="text-base font-semibold">Order Statistics</TabsTrigger>
           <TabsTrigger value="performance" className="text-base font-semibold">Performance</TabsTrigger>
         </TabsList>
 
@@ -405,31 +423,33 @@ export default function ReportsPage() {
             </Card>
 
             {/* Shared Totals Banner */}
-            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-              {[
-                { label: "Range Revenue", value: fmt(rangeSummary?.revenue || 0), icon: Banknote, loading: loadingRangeSummary },
-                { label: "Range Net Rev", value: fmt(rangeSummary?.netRevenue || 0), icon: TrendingUp, loading: loadingRangeSummary },
-                { label: "Range Orders", value: rangeSummary?.count || 0, icon: Receipt, loading: loadingRangeSummary },
-                { label: "Range Drinks", value: rangeSummary?.drinks || 0, icon: Coffee, loading: loadingRangeSummary },
-                { label: "Range Discounts", value: fmt(rangeSummary?.discounts || 0), icon: Tag, loading: loadingRangeSummary },
-              ].map((stat, i) => (
-                <Card key={i} className="border-none shadow-md bg-card/40 backdrop-blur-sm">
-                  <CardContent className="p-4 flex items-center gap-4">
-                    <div className="p-3 rounded-xl bg-primary/10">
-                      <stat.icon className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground font-medium">{stat.label}</p>
-                      {stat.loading ? (
-                        <div className="h-6 w-16 bg-muted animate-pulse rounded mt-1" />
-                      ) : (
-                        <p className="text-lg font-bold">{stat.value}</p>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+            {activeTab !== "stats" && (
+              <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+                {[
+                  { label: "Range Revenue", value: fmt(rangeSummary?.revenue || 0), icon: Banknote, loading: loadingRangeSummary },
+                  { label: "Range Net Rev", value: fmt(rangeSummary?.netRevenue || 0), icon: TrendingUp, loading: loadingRangeSummary },
+                  { label: "Range Orders", value: rangeSummary?.count || 0, icon: Receipt, loading: loadingRangeSummary },
+                  { label: "Range Drinks", value: rangeSummary?.drinks || 0, icon: Coffee, loading: loadingRangeSummary },
+                  { label: "Range Discounts", value: fmt(rangeSummary?.discounts || 0), icon: Tag, loading: loadingRangeSummary },
+                ].map((stat, i) => (
+                  <Card key={i} className="border-none shadow-md bg-card/40 backdrop-blur-sm">
+                    <CardContent className="p-4 flex items-center gap-4">
+                      <div className="p-3 rounded-xl bg-primary/10">
+                        <stat.icon className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground font-medium">{stat.label}</p>
+                        {stat.loading ? (
+                          <div className="h-6 w-16 bg-muted animate-pulse rounded mt-1" />
+                        ) : (
+                          <p className="text-lg font-bold">{stat.value}</p>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -1070,6 +1090,204 @@ export default function ReportsPage() {
           </Card>
         </TabsContent>
 
+        <TabsContent value="stats" className="flex flex-col gap-6 animate-in fade-in duration-500">
+          {loadingOrderStats ? (
+            <div className="flex flex-col items-center justify-center h-64">
+              <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+              <p className="text-muted-foreground animate-pulse font-medium">Crunching order statistics...</p>
+            </div>
+          ) : (!orderStats || (orderStats.byDiscount.length === 0 && orderStats.byPayment.length === 0)) ? (
+            <Card className="border-none shadow-xl bg-card/50 backdrop-blur-sm p-12 text-center">
+              <BarChart2 className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-20" />
+              <p className="text-muted-foreground">No statistics available for this period.</p>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Payment Methods */}
+              <Card className="border-none shadow-xl bg-card/50 backdrop-blur-sm">
+                <CardHeader>
+                  <CardTitle className="text-lg font-bold flex items-center gap-2 italic uppercase tracking-tighter">
+                    <Banknote className="h-5 w-5 text-primary" />
+                    By Payment Method
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="h-[300px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={orderStats.byPayment}
+                          dataKey="count"
+                          nameKey="label"
+                          cx="50%"
+                          cy="50%"
+                          outerRadius={80}
+                          label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                        >
+                          {orderStats.byPayment.map((entry: any, index: number) => (
+                            <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip 
+                          formatter={(value: any, name: any) => [`${value} Orders`, name]}
+                          contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                        />
+                        <Legend verticalAlign="bottom" height={36}/>
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Method</TableHead>
+                        <TableHead className="text-center">Orders</TableHead>
+                        <TableHead className="text-right">Revenue</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {orderStats.byPayment.map((d: any, i: number) => (
+                        <TableRow key={i}>
+                          <TableCell className="font-bold capitalize italic tracking-tight">{d.label}</TableCell>
+                          <TableCell className="text-center font-mono">{d.count}</TableCell>
+                          <TableCell className="text-right font-bold text-primary">{fmt(d.revenue)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+
+              {/* Order Sources */}
+              <Card className="border-none shadow-xl bg-card/50 backdrop-blur-sm">
+                <CardHeader>
+                  <CardTitle className="text-lg font-bold flex items-center gap-2 italic uppercase tracking-tighter">
+                    <Layers className="h-5 w-5 text-primary" />
+                    By Order Source
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="h-[300px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={orderStats.bySource} layout="vertical">
+                        <CartesianGrid strokeDasharray="3 3" horizontal={false} opacity={0.1} />
+                        <XAxis type="number" hide />
+                        <YAxis dataKey="label" type="category" width={80} axisLine={false} tickLine={false} className="font-bold uppercase italic text-[10px]" />
+                        <Tooltip 
+                          formatter={(value: any) => [`${value} Orders`, 'Volume']}
+                          contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                        />
+                        <Bar dataKey="count" fill="#BCD991" radius={[0, 4, 4, 0]} barSize={30} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Source</TableHead>
+                        <TableHead className="text-center">Orders</TableHead>
+                        <TableHead className="text-right">Revenue</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {orderStats.bySource.map((d: any, i: number) => (
+                        <TableRow key={i}>
+                          <TableCell className="font-bold capitalize italic tracking-tight">{d.label}</TableCell>
+                          <TableCell className="text-center font-mono">{d.count}</TableCell>
+                          <TableCell className="text-right font-bold text-primary">{fmt(d.revenue)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+
+              {/* Discounts Usage */}
+              <Card className="border-none shadow-xl bg-card/50 backdrop-blur-sm lg:col-span-2">
+                <CardHeader>
+                  <CardTitle className="text-lg font-bold flex items-center gap-2 italic uppercase tracking-tighter">
+                    <Tag className="h-5 w-5 text-primary" />
+                    By Discount Usage
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Discount Code</TableHead>
+                        <TableHead className="text-center">Times Used</TableHead>
+                        <TableHead className="text-right">Total Discount Value</TableHead>
+                        <TableHead className="text-right">Total Revenue</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {orderStats.byDiscount.map((d: any, i: number) => (
+                        <TableRow key={i}>
+                          <TableCell>
+                            <Badge variant={d.label === "No Discount" ? "outline" : "default"} className="font-mono">
+                              {d.label}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-center font-bold">{d.count}</TableCell>
+                          <TableCell className="text-right text-destructive font-mono">
+                            {/* Note: We use revenue here as a placeholder for discount value if not explicitly tracked in grouping */}
+                            {d.label === "No Discount" ? "—" : "Varies"}
+                          </TableCell>
+                          <TableCell className="text-right font-black text-primary text-lg">{fmt(d.revenue)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+
+              {!selectedBranchId && (
+                <Card className="border-none shadow-xl bg-card/50 backdrop-blur-sm lg:col-span-2">
+                  <CardHeader>
+                    <CardTitle className="text-lg font-bold flex items-center gap-2 italic uppercase tracking-tighter">
+                      <TrendingUp className="h-5 w-5 text-primary" />
+                      Revenue By Branch
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-[300px] w-full mb-8">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={orderStats.byBranch}>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.1} />
+                          <XAxis dataKey="label" axisLine={false} tickLine={false} className="font-bold text-[10px]" />
+                          <YAxis axisLine={false} tickLine={false} className="text-[10px]" tickFormatter={(v) => pure(v)} />
+                          <Tooltip 
+                            formatter={(value: any) => [fmt(value), 'Revenue']}
+                            contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                          />
+                          <Bar dataKey="revenue" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Branch Name</TableHead>
+                          <TableHead className="text-center">Total Orders</TableHead>
+                          <TableHead className="text-right">Total Revenue</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {orderStats.byBranch.map((d: any, i: number) => (
+                          <TableRow key={i}>
+                            <TableCell className="font-black italic text-lg">{d.label}</TableCell>
+                            <TableCell className="text-center font-mono text-xl">{d.count}</TableCell>
+                            <TableCell className="text-right font-black text-2xl text-primary">{fmt(d.revenue)}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          )}
+        </TabsContent>
+
         <TabsContent value="performance" className="flex flex-col gap-6 animate-in fade-in duration-500">
           <Card className="border-none shadow-xl bg-card/50 backdrop-blur-sm overflow-hidden">
             <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b">
@@ -1234,10 +1452,11 @@ export default function ReportsPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-muted/30 p-3 rounded-lg border">
                 <p className="text-[10px] uppercase font-bold text-muted-foreground mb-1">Status & Payment</p>
-                <div className="flex items-center gap-2">
-                   <Badge variant="outline" className="capitalize">{selectedOrderDetails?.status}</Badge>
-                   <Badge variant="outline" className="capitalize bg-primary/5">{selectedOrderDetails?.paymentMethod}</Badge>
-                </div>
+                 <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant="outline" className="capitalize">{selectedOrderDetails?.status}</Badge>
+                    <Badge variant="outline" className="capitalize bg-primary/5">{selectedOrderDetails?.paymentMethod}</Badge>
+                    <Badge variant="outline" className="capitalize border-primary/20 text-primary">{selectedOrderDetails?.source || "POS"}</Badge>
+                 </div>
               </div>
               <div className="bg-muted/30 p-3 rounded-lg border">
                 <p className="text-[10px] uppercase font-bold text-muted-foreground mb-1">Completion Duration</p>

@@ -56199,6 +56199,7 @@ var init_orders = __esm({
       discountType: text("discount_type", { enum: ["percentage", "fixed"] }),
       total: numeric("total", { precision: 8, scale: 2 }).notNull(),
       paymentMethod: text("payment_method", { enum: ["cash", "card", "wallet", "hospitality", "split", "refund"] }).notNull().default("cash"),
+      source: text("source", { enum: ["pos", "kiosk", "web", "mobile"] }).notNull().default("pos"),
       amountTendered: numeric("amount_tendered", { precision: 8, scale: 2 }),
       changeDue: numeric("change_due", { precision: 8, scale: 2 }),
       notes: text("notes"),
@@ -78646,6 +78647,8 @@ var RestockIngredientResponse2 = RestockIngredientResponse;
 var ListOrdersQueryParams2 = ListOrdersQueryParams;
 var ListOrdersResponseItem2 = ListOrdersResponseItem._def.left.extend({
   discountCode: external_exports2.string().nullish(),
+  branchName: external_exports2.string().optional(),
+  source: external_exports2.enum(["pos", "kiosk", "web", "mobile"]).optional(),
   paymentMethod: external_exports2.enum(["cash", "card", "wallet", "hospitality", "split", "refund"])
 }).and(
   ListOrdersResponseItem._def.right.extend({
@@ -78666,11 +78669,14 @@ var CreateOrderBody2 = CreateOrderBody.extend({
     paymentMethod: external_exports2.enum(["cash", "card", "wallet", "hospitality", "refund"]),
     amount: external_exports2.number(),
     transactionId: external_exports2.string().optional()
-  })).optional()
+  })).optional(),
+  source: external_exports2.enum(["pos", "kiosk", "web", "mobile"]).optional()
 });
 var GetOrderParams2 = GetOrderParams;
 var GetOrderResponse2 = GetOrderResponse._def.left.extend({
   discountCode: external_exports2.string().nullish(),
+  branchName: external_exports2.string().optional(),
+  source: external_exports2.enum(["pos", "kiosk", "web", "mobile"]).optional(),
   paymentMethod: external_exports2.enum(["cash", "card", "wallet", "hospitality", "split"]),
   payments: external_exports2.array(external_exports2.object({
     id: external_exports2.number(),
@@ -82616,8 +82622,9 @@ async function buildOrderDetail(orderId) {
     db.select().from(orderItemsTable).where(eq(orderItemsTable.orderId, orderId))
   ]);
   if (!order) return null;
-  const [[barista], customizations, payments] = await Promise.all([
+  const [[barista], [branch], customizations, payments] = await Promise.all([
     db.select().from(usersTable).where(eq(usersTable.id, order.baristaId)),
+    db.select().from(branchesTable).where(eq(branchesTable.id, order.branchId)),
     items.length > 0 ? db.select().from(orderItemCustomizationsTable).where(inArray(orderItemCustomizationsTable.orderItemId, items.map((i) => i.id))) : Promise.resolve([]),
     db.select().from(orderPaymentsTable).where(eq(orderPaymentsTable.orderId, orderId))
   ]);
@@ -82630,6 +82637,7 @@ async function buildOrderDetail(orderId) {
   return {
     ...order,
     baristaName: barista?.name ?? "Unknown",
+    branchName: branch?.name ?? "Unknown",
     subtotal: parseFloat(order.subtotal),
     discount: parseFloat(order.discount),
     discountId: order.discountId,
@@ -82686,15 +82694,18 @@ router5.get("/orders", requirePermission("cashier:view"), async (req, res) => {
   }
   const orders = await query.orderBy(desc(ordersTable.createdAt)).limit(limit).offset(offset);
   const orderIds = orders.map((o) => o.id);
-  const [items, baristas, payments] = await Promise.all([
+  const [items, baristas, payments, branches] = await Promise.all([
     orderIds.length > 0 ? db.select().from(orderItemsTable).where(inArray(orderItemsTable.orderId, orderIds)) : Promise.resolve([]),
     db.select().from(usersTable),
     // Fetch all baristas for mapping
-    orderIds.length > 0 ? db.select().from(orderPaymentsTable).where(inArray(orderPaymentsTable.orderId, orderIds)) : Promise.resolve([])
+    orderIds.length > 0 ? db.select().from(orderPaymentsTable).where(inArray(orderPaymentsTable.orderId, orderIds)) : Promise.resolve([]),
+    db.select().from(branchesTable)
+    // Fetch all branches for mapping
   ]);
   const itemIds = items.map((i) => i.id);
   const customizations = itemIds.length > 0 ? await db.select().from(orderItemCustomizationsTable).where(inArray(orderItemCustomizationsTable.orderItemId, itemIds)) : [];
   const baristaMap = Object.fromEntries(baristas.map((b) => [b.id, b.name]));
+  const branchMap = Object.fromEntries(branches.map((b) => [b.id, b.name]));
   const custByItem = /* @__PURE__ */ new Map();
   for (const c of customizations) {
     const list = custByItem.get(c.orderItemId) ?? [];
@@ -82723,6 +82734,7 @@ router5.get("/orders", requirePermission("cashier:view"), async (req, res) => {
       serializeDates(orders.map((o) => ({
         ...o,
         baristaName: baristaMap[o.baristaId] ?? "Unknown",
+        branchName: branchMap[o.branchId] ?? "Unknown",
         subtotal: parseFloat(o.subtotal),
         discount: parseFloat(o.discount),
         discountId: o.discountId,
@@ -82873,6 +82885,7 @@ router5.post("/orders", async (req, res) => {
       discountType,
       total: String(total),
       paymentMethod: parsed.data.paymentMethod,
+      source: parsed.data.source || "pos",
       amountTendered: amountTendered != null ? String(amountTendered) : null,
       changeDue: changeDue != null ? String(changeDue) : null,
       notes: parsed.data.notes ?? null
@@ -86250,6 +86263,53 @@ router18.get("/finance/customization-analytics", requirePermission("reports:view
     drinks: drinksReport,
     slots: slotsReport,
     options: optionsReport
+  });
+});
+router18.get("/finance/order-stats", requirePermission("reports:view"), async (req, res) => {
+  const { startDate, endDate, branchId } = req.query;
+  const start = startDate ? startOfDay(new Date(startDate)) : startOfDay(subDays(/* @__PURE__ */ new Date(), 30));
+  const end = endDate ? endOfDay(new Date(endDate)) : endOfDay(/* @__PURE__ */ new Date());
+  const bId = String(branchId);
+  const targetBranchId = branchId && bId !== "all" && bId !== "undefined" ? parseInt(bId) : null;
+  const conditions = [
+    gte(ordersTable.createdAt, start),
+    lte(ordersTable.createdAt, end),
+    inArray(ordersTable.status, ["completed", "paid", "ready", "pending", "in_progress"])
+  ];
+  if (targetBranchId && !isNaN(targetBranchId)) {
+    conditions.push(eq(ordersTable.branchId, targetBranchId));
+  }
+  const [byDiscount, byPayment, byBranch, bySource] = await Promise.all([
+    // by discount
+    db.select({
+      label: ordersTable.discountCode,
+      count: count(ordersTable.id),
+      revenue: sum(ordersTable.total)
+    }).from(ordersTable).where(and(...conditions)).groupBy(ordersTable.discountCode),
+    // by payment
+    db.select({
+      label: ordersTable.paymentMethod,
+      count: count(ordersTable.id),
+      revenue: sum(ordersTable.total)
+    }).from(ordersTable).where(and(...conditions)).groupBy(ordersTable.paymentMethod),
+    // by branch
+    db.select({
+      label: branchesTable.name,
+      count: count(ordersTable.id),
+      revenue: sum(ordersTable.total)
+    }).from(ordersTable).innerJoin(branchesTable, eq(ordersTable.branchId, branchesTable.id)).where(and(...conditions)).groupBy(branchesTable.name),
+    // by source
+    db.select({
+      label: ordersTable.source,
+      count: count(ordersTable.id),
+      revenue: sum(ordersTable.total)
+    }).from(ordersTable).where(and(...conditions)).groupBy(ordersTable.source)
+  ]);
+  res.json({
+    byDiscount: byDiscount.map((d) => ({ ...d, label: d.label || "No Discount", revenue: parseFloat(d.revenue || "0") })),
+    byPayment: byPayment.map((d) => ({ ...d, label: d.label || "unknown", revenue: parseFloat(d.revenue || "0") })),
+    byBranch: byBranch.map((d) => ({ ...d, label: d.label || "unknown", revenue: parseFloat(d.revenue || "0") })),
+    bySource: bySource.map((d) => ({ ...d, label: d.label || "pos", revenue: parseFloat(d.revenue || "0") }))
   });
 });
 var finance_default = router18;

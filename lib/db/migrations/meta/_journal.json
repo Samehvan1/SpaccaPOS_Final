@@ -64,6 +64,13 @@
       "when": 1778859767228,
       "tag": "0008_eager_magik",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1778864292163,
+      "tag": "0009_square_madrox",
+      "breakpoints": true
     }
   ]
 }
