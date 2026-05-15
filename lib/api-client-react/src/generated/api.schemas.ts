@@ -140,7 +140,6 @@ export interface Ingredient {
   unit: string;
   costPerUnit: number;
   stockQuantity: number;
-  startupQuantity: number;
   lowStockThreshold: number;
   isActive: boolean;
   linkedTypeCount?: number;
@@ -190,7 +189,6 @@ export interface CreateIngredientBody {
   unit: string;
   costPerUnit: number;
   stockQuantity?: number;
-  startupQuantity?: number;
   lowStockThreshold?: number;
   isActive?: boolean;
 }
@@ -218,7 +216,6 @@ export interface UpdateIngredientBody {
   unit?: string;
   costPerUnit?: number;
   stockQuantity?: number;
-  startupQuantity?: number;
   lowStockThreshold?: number;
   isActive?: boolean;
 }
@@ -454,12 +451,12 @@ export interface Order {
   status: OrderStatus;
   /** @nullable */
   customerName?: string | null;
+  /** @nullable */
+  customerPhone?: string | null;
   subtotal: number;
   discount: number;
   /** @nullable */
   discountId?: number | null;
-  /** @nullable */
-  discountCode?: string | null;
   /** @nullable */
   discountValue?: number | null;
   /** @nullable */
@@ -519,6 +516,7 @@ export type CreateOrderBodyItemsItem = {
 export interface CreateOrderBody {
   branchId?: number;
   customerName?: string;
+  customerPhone?: string;
   paymentMethod: CreateOrderBodyPaymentMethod;
   amountTendered?: number;
   notes?: string;
@@ -813,6 +811,11 @@ export type UpdateOrderStatusParams = {
   branchId?: number;
 };
 
+export type SaveOrderSignatureBody = {
+  /** Base64 encoded signature image */
+  signatureData: string;
+};
+
 export type MarkOrderItemReadyParams = {
   branchId?: number;
 };
@@ -844,6 +847,12 @@ export type UpdateUserParams = {
 
 export type DeleteUserParams = {
   branchId?: number;
+};
+
+export type GetCustomerPoints200 = {
+  points: number;
+  /** @nullable */
+  name?: string | null;
 };
 
 export type ListActivityLogsParams = {

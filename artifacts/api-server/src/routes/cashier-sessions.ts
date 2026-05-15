@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq, and, gte, lte, isNull, desc, sql, inArray } from "drizzle-orm";
-import { db, cashierSessionsTable, usersTable, ordersTable, orderItemsTable, drinksTable, drinkCategoriesTable } from "@workspace/db";
+import { db, cashierSessionsTable, usersTable, ordersTable, orderItemsTable, drinksTable, drinkCategoriesTable, orderPaymentsTable } from "@workspace/db";
 import { z } from "zod";
 import { startOfDay, endOfDay } from "date-fns";
 
@@ -205,10 +205,23 @@ router.get("/cashier/performance/:cashierId", requirePermission("cashier:view_re
 
   const completedOrders = orders.filter(o => o.status === "completed" || o.status === "paid" || o.status === "ready" || o.status === "in_progress");
   const totalRevenue = completedOrders.reduce((sum, o) => sum + parseFloat(o.total as any), 0);
-  const cashRevenue = completedOrders.filter(o => o.paymentMethod === "cash").reduce((sum, o) => sum + parseFloat(o.total as any), 0);
-  const cardRevenue = completedOrders.filter(o => o.paymentMethod === "card").reduce((sum, o) => sum + parseFloat(o.total as any), 0);
-  const walletRevenue = completedOrders.filter(o => o.paymentMethod === "wallet").reduce((sum, o) => sum + parseFloat(o.total as any), 0);
-  const hospitalityRevenue = completedOrders.filter(o => o.paymentMethod === "hospitality").reduce((sum, o) => sum + parseFloat(o.total as any), 0);
+  const orderIds = completedOrders.map(o => o.id);
+  let cashRevenue = 0, cardRevenue = 0, walletRevenue = 0, hospitalityRevenue = 0;
+
+  if (orderIds.length > 0) {
+    const payments = await db
+      .select({ paymentMethod: orderPaymentsTable.paymentMethod, amount: orderPaymentsTable.amount })
+      .from(orderPaymentsTable)
+      .where(inArray(orderPaymentsTable.orderId, orderIds));
+    
+    for (const p of payments) {
+      const amt = parseFloat(p.amount);
+      if (p.paymentMethod === "cash") cashRevenue += amt;
+      else if (p.paymentMethod === "card") cardRevenue += amt;
+      else if (p.paymentMethod === "wallet") walletRevenue += amt;
+      else if (p.paymentMethod === "hospitality") hospitalityRevenue += amt;
+    }
+  }
 
   const [cashier] = await db
     .select({ id: usersTable.id, name: usersTable.name })
@@ -291,25 +304,38 @@ router.get("/cashier/sessions/:id/performance", requirePermission("cashier:view_
   const start = session.startedAt;
   const end = session.endedAt || new Date();
 
-  const orders = await db
-    .select({
-      total: ordersTable.total,
-      paymentMethod: ordersTable.paymentMethod,
-      status: ordersTable.status,
-    })
-    .from(ordersTable)
-    .where(and(
-      eq(ordersTable.cashierId, session.cashierId),
-      gte(sql`COALESCE(${ordersTable.paidAt}, ${ordersTable.createdAt})`, start),
-      lte(sql`COALESCE(${ordersTable.paidAt}, ${ordersTable.createdAt})`, end)
-    ));
+    const ordersResult = await db
+      .select({
+        id: ordersTable.id,
+        total: ordersTable.total,
+        status: ordersTable.status,
+      })
+      .from(ordersTable)
+      .where(and(
+        eq(ordersTable.cashierId, session.cashierId),
+        gte(sql`COALESCE(${ordersTable.paidAt}, ${ordersTable.createdAt})`, start),
+        lte(sql`COALESCE(${ordersTable.paidAt}, ${ordersTable.createdAt})`, end)
+      ));
 
-  const completedOrders = orders.filter(o => ["completed", "paid", "ready", "in_progress"].includes(o.status));
-  const totalRevenue = completedOrders.reduce((sum, o) => sum + parseFloat(o.total as any), 0);
-  const cashRevenue = completedOrders.filter(o => o.paymentMethod === "cash").reduce((sum, o) => sum + parseFloat(o.total as any), 0);
-  const cardRevenue = completedOrders.filter(o => o.paymentMethod === "card").reduce((sum, o) => sum + parseFloat(o.total as any), 0);
-  const walletRevenue = completedOrders.filter(o => o.paymentMethod === "wallet").reduce((sum, o) => sum + parseFloat(o.total as any), 0);
-  const hospitalityRevenue = completedOrders.filter(o => o.paymentMethod === "hospitality").reduce((sum, o) => sum + parseFloat(o.total as any), 0);
+    const completedOrders = ordersResult.filter(o => ["completed", "paid", "ready", "in_progress"].includes(o.status));
+    const orderIds = completedOrders.map(o => o.id);
+    const totalRevenue = completedOrders.reduce((sum, o) => sum + parseFloat(o.total as any), 0);
+
+    let cashRevenue = 0, cardRevenue = 0, walletRevenue = 0, hospitalityRevenue = 0;
+    if (orderIds.length > 0) {
+      const payments = await db
+        .select({ method: orderPaymentsTable.paymentMethod, amount: orderPaymentsTable.amount })
+        .from(orderPaymentsTable)
+        .where(inArray(orderPaymentsTable.orderId, orderIds));
+      
+      for (const p of payments) {
+        const amt = parseFloat(p.amount);
+        if (p.method === "cash") cashRevenue += amt;
+        else if (p.method === "card") cardRevenue += amt;
+        else if (p.method === "wallet") walletRevenue += amt;
+        else if (p.method === "hospitality") hospitalityRevenue += amt;
+      }
+    }
 
   const [cashier] = await db
     .select({ name: usersTable.name })
@@ -370,13 +396,26 @@ router.get("/cashier/sessions/:id/report", requirePermission("cashier:view_repor
     .orderBy(desc(ordersTable.createdAt));
 
   const completedOrders = orders.filter(o => ["completed", "paid", "ready", "in_progress"].includes(o.status));
+  const orderIds = completedOrders.map(o => o.id);
   
   // Main Totals
   const totalRevenue = completedOrders.reduce((sum, o) => sum + parseFloat(o.total as any), 0);
-  const cashRevenue = completedOrders.filter(o => o.paymentMethod === "cash").reduce((sum, o) => sum + parseFloat(o.total as any), 0);
-  const cardRevenue = completedOrders.filter(o => o.paymentMethod === "card").reduce((sum, o) => sum + parseFloat(o.total as any), 0);
-  const walletRevenue = completedOrders.filter(o => o.paymentMethod === "wallet").reduce((sum, o) => sum + parseFloat(o.total as any), 0);
-  const hospitalityRevenue = completedOrders.filter(o => o.paymentMethod === "hospitality").reduce((sum, o) => sum + parseFloat(o.total as any), 0);
+  
+  let cashRevenue = 0, cardRevenue = 0, walletRevenue = 0, hospitalityRevenue = 0;
+  if (orderIds.length > 0) {
+    const payments = await db
+      .select({ method: orderPaymentsTable.paymentMethod, amount: orderPaymentsTable.amount })
+      .from(orderPaymentsTable)
+      .where(inArray(orderPaymentsTable.orderId, orderIds));
+    
+    for (const p of payments) {
+      const amt = parseFloat(p.amount);
+      if (p.method === "cash") cashRevenue += amt;
+      else if (p.method === "card") cardRevenue += amt;
+      else if (p.method === "wallet") walletRevenue += amt;
+      else if (p.method === "hospitality") hospitalityRevenue += amt;
+    }
+  }
 
   // Statistics: Top 5 Orders by Price
   const topOrdersByPrice = [...completedOrders]
@@ -396,7 +435,6 @@ router.get("/cashier/sessions/:id/report", requirePermission("cashier:view_repor
 
   // Statistics: Top 5 Drinks
   // We need to fetch items for all completed orders
-  const orderIds = completedOrders.map(o => o.id);
   let topDrinks: any[] = [];
   
   if (orderIds.length > 0) {

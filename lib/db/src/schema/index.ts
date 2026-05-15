@@ -11,3 +11,5 @@ export * from "./permissions";
 export * from "./activity-logs";
 export * from "./sessions";
 export * from "./stock-audit";
+export * from "./customers";
+export * from "./signatures";

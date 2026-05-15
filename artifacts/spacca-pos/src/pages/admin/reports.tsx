@@ -236,8 +236,8 @@ export default function ReportsPage() {
         totalPrice.toFixed(2),
         beforeTax.toFixed(2),
         taxAmount.toFixed(2),
-        order.discountCode || "None",
-        order.discountValue ? (order.discountType === "percentage" ? `${order.discountValue}%` : `EGP ${order.discountValue}`) : "0",
+        (order as any).discountCode || "None",
+        (order as any).discountValue ? ((order as any).discountType === "percentage" ? `${(order as any).discountValue}%` : `EGP ${(order as any).discountValue}`) : "0",
         discountAmt.toFixed(2),
         finalPrice.toFixed(2),
         order.status,
@@ -1263,9 +1263,12 @@ export default function ReportsPage() {
                 </TableHeader>
                 <TableBody>
                   {selectedOrderDetails?.items?.map((item: any, i: number) => (
-                    <TableRow key={i} className="hover:bg-transparent">
+                    <TableRow key={i} className={`hover:bg-transparent ${item.status === 'refunded' ? "opacity-50 line-through bg-red-500/5" : ""}`}>
                       <TableCell className="py-3">
-                        <p className="font-bold">{item.drinkName}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-bold">{item.drinkName}</p>
+                          {item.status === 'refunded' && <Badge variant="destructive" className="text-[8px] h-4">REFUNDED</Badge>}
+                        </div>
                         {item.customizations?.length > 0 && (
                           <p className="text-[10px] text-muted-foreground mt-0.5">
                             {item.customizations.map((c: any) => c.optionLabel).join(", ")}
@@ -1290,6 +1293,22 @@ export default function ReportsPage() {
                   </TableRow>
                 </TableBody>
               </Table>
+              <div className="mt-4 p-3 rounded-xl border border-dashed border-muted-foreground/20 space-y-2">
+                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Payment Breakdown</p>
+                {selectedOrderDetails?.payments && selectedOrderDetails.payments.length > 0 ? (
+                  selectedOrderDetails.payments.map((p: any) => (
+                    <div key={p.id} className="flex justify-between items-center text-xs">
+                      <span className="capitalize font-bold text-muted-foreground">{p.paymentMethod}</span>
+                      <span className="font-black text-foreground">{fmt(p.amount)}</span>
+                    </div>
+                  ))
+                ) : (
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="capitalize font-bold text-muted-foreground">{selectedOrderDetails?.paymentMethod}</span>
+                    <span className="font-black text-foreground">{fmt(selectedOrderDetails?.total)}</span>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
           

@@ -126,28 +126,70 @@ export type RestockIngredientResponse = Infer<
 // Orders
 export const ListOrdersQueryParams = api.ListOrdersQueryParams;
 export type ListOrdersQueryParams = Infer<typeof api.ListOrdersQueryParams>;
-export const ListOrdersResponseItem = api.ListOrdersResponseItem.and(z.object({
-  discountCode: z.string().nullish(),
-}));
+export const ListOrdersResponseItem = ((api.ListOrdersResponseItem as any)._def.left as z.ZodObject<any>)
+  .extend({
+    discountCode: z.string().nullish(),
+    paymentMethod: z.enum(["cash", "card", "wallet", "hospitality", "split", "refund"]),
+  })
+  .and(
+    ((api.ListOrdersResponseItem as any)._def.right as z.ZodObject<any>).extend({
+      items: z.array(z.any()), // Allow updated item fields like status: 'refunded'
+      payments: z.array(z.object({
+        id: z.number(),
+        paymentMethod: z.string(),
+        amount: z.number(),
+        transactionId: z.string().nullish(),
+        createdAt: z.string(),
+      })).optional(),
+    })
+  );
 export type ListOrdersResponseItem = Infer<typeof ListOrdersResponseItem>;
 export const ListOrdersResponse = z.array(ListOrdersResponseItem);
 export type ListOrdersResponse = Infer<typeof ListOrdersResponse>;
 
-export const CreateOrderBody = api.CreateOrderBody;
-export type CreateOrderBody = Infer<typeof api.CreateOrderBody>;
+export const CreateOrderBody = api.CreateOrderBody.extend({
+  payments: z.array(z.object({
+    paymentMethod: z.enum(["cash", "card", "wallet", "hospitality", "refund"]),
+    amount: z.number(),
+    transactionId: z.string().optional(),
+  })).optional(),
+});
+export type CreateOrderBody = Infer<typeof CreateOrderBody>;
 
 export const GetOrderParams = api.GetOrderParams;
 export type GetOrderParams = Infer<typeof api.GetOrderParams>;
-export const GetOrderResponse = api.GetOrderResponse.and(z.object({
-  discountCode: z.string().nullish(),
-}));
+export const GetOrderResponse = ((api.GetOrderResponse as any)._def.left as z.ZodObject<any>)
+  .extend({
+    discountCode: z.string().nullish(),
+    paymentMethod: z.enum(["cash", "card", "wallet", "hospitality", "split"]),
+    payments: z.array(z.object({
+      id: z.number(),
+      paymentMethod: z.string(),
+      amount: z.number(),
+      transactionId: z.string().nullish(),
+      createdAt: z.string(),
+    })).optional(),
+  })
+  .and(
+    ((api.GetOrderResponse as any)._def.right as z.ZodObject<any>).extend({
+      items: z.array(z.any()), // Override to allow updated item fields
+    })
+  );
 export type GetOrderResponse = Infer<typeof GetOrderResponse>;
 
 export const UpdateOrderStatusParams = api.UpdateOrderStatusParams;
 export type UpdateOrderStatusParams = Infer<typeof api.UpdateOrderStatusParams>;
-export const UpdateOrderStatusBody = api.UpdateOrderStatusBody;
-export type UpdateOrderStatusBody = Infer<typeof api.UpdateOrderStatusBody>;
-export const UpdateOrderStatusResponse = api.UpdateOrderStatusResponse;
+export const UpdateOrderStatusBody = api.UpdateOrderStatusBody.extend({
+  payments: z.array(z.object({
+    paymentMethod: z.enum(["cash", "card", "wallet", "hospitality", "refund"]),
+    amount: z.number(),
+    transactionId: z.string().optional(),
+  })).optional(),
+  paymentMethod: z.enum(["cash", "card", "wallet", "hospitality", "split", "refund"]).optional(),
+  adminPin: z.string().optional(),
+});
+export type UpdateOrderStatusBody = Infer<typeof UpdateOrderStatusBody>;
+export const UpdateOrderStatusResponse = GetOrderResponse;
 export type UpdateOrderStatusResponse = Infer<
   typeof api.UpdateOrderStatusResponse
 >;
@@ -177,10 +219,12 @@ export const GetDashboardSummaryResponse = api.GetDashboardSummaryResponse;
 export type GetDashboardSummaryResponse = Infer<
   typeof api.GetDashboardSummaryResponse
 >;
-export const GetActiveOrdersResponseItem = api.GetActiveOrdersResponseItem.and(z.object({
-  items: z.array(z.any()), // Allow extra fields in items like kitchenStationId
-  discountCode: z.string().nullish(),
-}));
+export const GetActiveOrdersResponseItem = api.GetActiveOrdersResponseItem.and(
+  z.object({
+    items: z.array(z.any()), // Allow extra fields in items like kitchenStationId
+    discountCode: z.string().nullish(),
+  }),
+);
 export type GetActiveOrdersResponseItem = Infer<
   typeof GetActiveOrdersResponseItem
 >;
@@ -258,13 +302,16 @@ export const UserDetail = api.UpdateUserResponse.extend({
 export type UserDetail = Infer<typeof UserDetail>;
 
 // Admin
-export const ListActivityLogsQueryParams = api.ListActivityLogsQueryParams.extend({
-  startDate: z.string().optional(),
-  endDate: z.string().optional(),
-  entityType: z.string().optional(),
-  userName: z.string().optional(),
-});
-export type ListActivityLogsQueryParams = Infer<typeof ListActivityLogsQueryParams>;
+export const ListActivityLogsQueryParams =
+  api.ListActivityLogsQueryParams.extend({
+    startDate: z.string().optional(),
+    endDate: z.string().optional(),
+    entityType: z.string().optional(),
+    userName: z.string().optional(),
+  });
+export type ListActivityLogsQueryParams = Infer<
+  typeof ListActivityLogsQueryParams
+>;
 
 export const ActivityLog = api.ListActivityLogsResponseItem.extend({
   userName: z.string().nullish(),

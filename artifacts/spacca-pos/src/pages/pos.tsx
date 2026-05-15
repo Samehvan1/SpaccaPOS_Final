@@ -443,6 +443,10 @@ export default function PosTerminal() {
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "card" | "wallet" | "hospitality">("cash");
   const [adminPin, setAdminPin] = useState("");
   const [amountTendered, setAmountTendered] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
+  const [isLoyaltyDialogOpen, setIsLoyaltyDialogOpen] = useState(false);
+  const [loyaltyPoints, setLoyaltyPoints] = useState<number | null>(null);
+  const [createdOrder, setCreatedOrder] = useState<any>(null);
 
   const cartSubtotal = cart.reduce((sum, item) => sum + item.totalPrice * item.quantity, 0);
   const discountAmount = useMemo(() => {
@@ -483,14 +487,29 @@ export default function PosTerminal() {
 
   const { mutate: createOrder, isPending: isCreatingOrder } = useCreateOrder({
     mutation: {
-      onSuccess: (data) => {
-        toast({ title: "Order Created", description: `Order #${data.orderNumber} sent for cashier approval.` });
+      onSuccess: async (data) => {
+        setCreatedOrder(data);
+        if (customerPhone) {
+          try {
+            const res = await fetch(`${API_BASE}/customers/points/${customerPhone}`);
+            if (res.ok) {
+              const pointsData = await res.json();
+              setLoyaltyPoints(pointsData.points);
+            }
+          } catch (e) {
+            console.error("Failed to fetch loyalty points", e);
+          }
+          setIsLoyaltyDialogOpen(true);
+        } else {
+          toast({ title: "Order Created", description: `Order #${data.orderNumber} sent for cashier approval.` });
+        }
+        
         setCart([]);
         setAppliedDiscount(null);
         setDiscountCode("");
         setIsCartOpen(false);
         setIsCheckoutOpen(false);
-        setCustomerName("");
+        // We keep customerPhone and customerName until the loyalty dialog is closed or next order
         setAmountTendered("");
         setPaymentMethod("cash");
         setAdminPin("");
@@ -500,6 +519,28 @@ export default function PosTerminal() {
       },
     },
   });
+  
+  const handleSaveSignature = async (signatureData: string) => {
+    if (!createdOrder) return;
+    try {
+      const res = await fetch(`${API_BASE}/orders/${createdOrder.id}/signature`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ signatureData }),
+      });
+      if (res.ok) {
+        toast({ title: "Signature Saved", description: "Thank you!" });
+        setIsLoyaltyDialogOpen(false);
+        setCustomerName("");
+        setCustomerPhone("");
+        setCreatedOrder(null);
+      } else {
+        throw new Error("Failed to save signature");
+      }
+    } catch (e) {
+      toast({ variant: "destructive", title: "Error", description: "Failed to save signature." });
+    }
+  };
 
   const handleCheckout = () => {
     if (cart.length === 0) return;
@@ -518,6 +559,7 @@ export default function PosTerminal() {
       data: {
         branchId: selectedBranchId || undefined,
         customerName: customerName || undefined,
+        customerPhone: customerPhone || undefined,
         paymentMethod,
         amountTendered: paymentMethod === "cash" && amountTendered ? parseFloat(amountTendered) : undefined,
         adminPin: paymentMethod === "hospitality" ? adminPin : undefined,
@@ -1131,6 +1173,18 @@ export default function PosTerminal() {
               />
             </div>
             <div className="grid gap-2">
+              <Label htmlFor="phone">Customer Phone (Loyalty)</Label>
+              <Input
+                id="phone"
+                value={customerPhone}
+                onChange={e => setCustomerPhone(e.target.value)}
+                placeholder="Phone for loyalty points"
+              />
+              <p className="text-[10px] text-muted-foreground italic">
+                Enter phone for loyalty points and future health tracking system.
+              </p>
+            </div>
+            <div className="grid gap-2">
               <Label>Payment Method</Label>
               <div className="grid grid-cols-3 gap-2">
                 {["cash", "card", "wallet"].map(method => (
@@ -1304,6 +1358,147 @@ export default function PosTerminal() {
           </div>
         </div>
       )}
+
+      {/* Loyalty & Signature Dialog */}
+      <Dialog open={isLoyaltyDialogOpen} onOpenChange={(open) => {
+        if (!open) {
+          setIsLoyaltyDialogOpen(false);
+          setCustomerName("");
+          setCustomerPhone("");
+          setCreatedOrder(null);
+        }
+      }}>
+        <DialogContent className="sm:max-w-[450px]">
+          <DialogHeader>
+            <DialogTitle className="text-2xl text-center">Loyalty Status</DialogTitle>
+          </DialogHeader>
+          <div className="py-6 space-y-6">
+            <div className="text-center space-y-2">
+              <p className="text-muted-foreground uppercase tracking-widest text-xs font-bold">Total Loyalty Points</p>
+              <div className="text-5xl font-black text-primary italic">
+                {loyaltyPoints !== null ? loyaltyPoints : "..."}
+              </div>
+              <p className="text-sm font-medium">Points earned from this order: {createdOrder ? Math.floor((parseFloat(createdOrder.subtotal) / 1.14) / 10) : 0}</p>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <div className="h-px flex-1 bg-muted" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Confirm with Signature</span>
+                <div className="h-px flex-1 bg-muted" />
+              </div>
+              <SignaturePad onSave={handleSaveSignature} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => {
+              setIsLoyaltyDialogOpen(false);
+              setCustomerName("");
+              setCustomerPhone("");
+              setCreatedOrder(null);
+            }} className="w-full">
+              Skip Signature
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+function SignaturePad({ onSave }: { onSave: (data: string) => void }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [isDrawing, setIsDrawing] = useState(false);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.strokeStyle = "#000";
+    ctx.lineWidth = 3;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+  }, []);
+
+  const getPointerPos = (e: any) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return { x: 0, y: 0 };
+    const rect = canvas.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    return {
+      x: clientX - rect.left,
+      y: clientY - rect.top
+    };
+  };
+
+  const startDrawing = (e: any) => {
+    setIsDrawing(true);
+    const { x, y } = getPointerPos(e);
+    const ctx = canvasRef.current?.getContext("2d");
+    if (ctx) {
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+    }
+  };
+
+  const draw = (e: any) => {
+    if (!isDrawing) return;
+    const { x, y } = getPointerPos(e);
+    const ctx = canvasRef.current?.getContext("2d");
+    if (ctx) {
+      ctx.lineTo(x, y);
+      ctx.stroke();
+    }
+  };
+
+  const stopDrawing = () => {
+    setIsDrawing(false);
+  };
+
+  const clear = () => {
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext("2d");
+    if (canvas && ctx) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+  };
+
+  const save = () => {
+    const canvas = canvasRef.current;
+    if (canvas) {
+      // Check if canvas is empty (basic check)
+      const data = canvas.toDataURL("image/png");
+      onSave(data);
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="border-2 border-stone-200 rounded-2xl bg-white overflow-hidden shadow-inner">
+        <canvas
+          ref={canvasRef}
+          width={400}
+          height={200}
+          className="w-full h-44 touch-none cursor-crosshair"
+          onMouseDown={startDrawing}
+          onMouseMove={draw}
+          onMouseUp={stopDrawing}
+          onMouseLeave={stopDrawing}
+          onTouchStart={startDrawing}
+          onTouchMove={draw}
+          onTouchEnd={stopDrawing}
+        />
+      </div>
+      <div className="flex gap-2">
+        <Button variant="outline" onClick={clear} className="flex-1 rounded-xl h-12 font-bold uppercase tracking-widest text-xs">
+          Clear
+        </Button>
+        <Button onClick={save} className="flex-1 rounded-xl h-12 font-bold uppercase tracking-widest text-xs">
+          Confirm
+        </Button>
+      </div>
     </div>
   );
 }

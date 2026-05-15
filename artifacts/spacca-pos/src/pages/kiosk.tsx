@@ -56,6 +56,10 @@ export default function KioskPage() {
     return saved ? parseInt(saved) : null;
   });
   const [orderNumber, setOrderNumber] = useState<string | null>(null);
+  const [customerPhone, setCustomerPhone] = useState("");
+  const [customerName, setCustomerName] = useState("");
+  const [loyaltyPoints, setLoyaltyPoints] = useState<number | null>(null);
+  const [createdOrder, setCreatedOrder] = useState<any>(null);
 
   const { data: branches = [] } = useQuery<any[]>({
     queryKey: ["branches"],
@@ -284,9 +288,24 @@ export default function KioskPage() {
   // --- Order Creation ---
   const { mutate: createOrder, isPending: isCreatingOrder } = useCreateOrder({
     mutation: {
-      onSuccess: (data) => {
+      onSuccess: async (data) => {
+        setCreatedOrder(data);
         setOrderNumber(data.orderNumber);
-        setStep("success");
+        
+        if (customerPhone) {
+          try {
+            const res = await fetch(`${API_BASE}/customers/points/${customerPhone}`);
+            if (res.ok) {
+              const pointsData = await res.json();
+              setLoyaltyPoints(pointsData.points);
+            }
+          } catch (e) {
+            console.error("Failed to fetch loyalty points", e);
+          }
+          setStep("loyalty" as any);
+        } else {
+          setStep("success");
+        }
         setCart([]);
       },
     },
@@ -296,6 +315,8 @@ export default function KioskPage() {
     createOrder({
       data: {
         branchId: selectedBranchId || undefined,
+        customerName: customerName || undefined,
+        customerPhone: customerPhone || undefined,
         paymentMethod: "card", // Default to card for Kiosk
         items: cart.map(item => ({
           drinkId: item.drinkId,
@@ -311,6 +332,27 @@ export default function KioskPage() {
         })),
       },
     });
+  };
+
+  const handleSaveSignature = async (signatureData: string) => {
+    if (!createdOrder) return;
+    try {
+      const res = await fetch(`${API_BASE}/orders/${createdOrder.id}/signature`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ signatureData }),
+      });
+      if (res.ok) {
+        setStep("success");
+        setCustomerName("");
+        setCustomerPhone("");
+        setCreatedOrder(null);
+      } else {
+        throw new Error("Failed to save signature");
+      }
+    } catch (e) {
+      console.error("Failed to save signature", e);
+    }
   };
 
   // --- Start Step ---
@@ -684,6 +726,33 @@ export default function KioskPage() {
                   <span className="text-xs text-muted-foreground uppercase tracking-widest font-bold">Total Amount</span>
                   <div className="text-4xl font-black text-primary italic">{fmt(cartTotal)}</div>
                 </div>
+
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-xs font-black uppercase tracking-widest opacity-60">Customer Name (Optional)</Label>
+                  <input 
+                    type="text" 
+                    value={customerName}
+                    onChange={(e) => setCustomerName(e.target.value)}
+                    placeholder="Enter your name"
+                    className="w-full h-16 rounded-2xl px-6 bg-white/5 border border-white/10 text-xl font-bold focus:border-primary outline-none transition-colors"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-black uppercase tracking-widest opacity-60">Customer Phone (Loyalty)</Label>
+                  <input 
+                    type="tel" 
+                    value={customerPhone}
+                    onChange={(e) => setCustomerPhone(e.target.value)}
+                    placeholder="Enter phone for points"
+                    className="w-full h-16 rounded-2xl px-6 bg-white/5 border border-white/10 text-xl font-bold focus:border-primary outline-none transition-colors"
+                  />
+                  <p className="text-[10px] text-muted-foreground italic px-2">
+                    Enter phone for loyalty points and future health tracking system.
+                  </p>
+                </div>
+              </div>
+
               <Button 
                 className="w-full h-24 rounded-[2rem] text-2xl font-black uppercase tracking-[0.2em] shadow-2xl"
                 onClick={handleFinish}
@@ -691,6 +760,44 @@ export default function KioskPage() {
               >
                 {isCreatingOrder ? "Sending..." : "Finish Order"}
               </Button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Loyalty Step */}
+      <AnimatePresence>
+        {(step as string) === "loyalty" && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="fixed inset-0 z-[70] bg-[#0a0a0a] text-white flex flex-col items-center justify-center p-12 text-center"
+          >
+            <div className="w-full max-w-xl space-y-12">
+              <div className="space-y-4">
+                <p className="text-sm opacity-60 uppercase tracking-[0.4em] font-black">Loyalty Balance</p>
+                <h2 className="text-8xl font-black text-primary italic leading-none">
+                  {loyaltyPoints !== null ? loyaltyPoints : "..."}
+                </h2>
+                <p className="text-xl font-bold opacity-80">Points earned from this order: {createdOrder ? Math.floor((parseFloat(createdOrder.subtotal) / 1.14) / 10) : 0}</p>
+              </div>
+
+              <div className="space-y-6">
+                <div className="flex items-center gap-4">
+                   <div className="h-px flex-1 bg-white/10" />
+                   <span className="text-xs font-black uppercase tracking-widest opacity-40">Confirm with Signature</span>
+                   <div className="h-px flex-1 bg-white/10" />
+                </div>
+                
+                <SignaturePad onSave={handleSaveSignature} darkMode />
+
+                <button 
+                  onClick={() => setStep("success")}
+                  className="text-white/40 hover:text-white underline underline-offset-8 font-bold uppercase tracking-widest text-xs"
+                >
+                  Skip Signature
+                </button>
+              </div>
             </div>
           </motion.div>
         )}
@@ -731,6 +838,102 @@ export default function KioskPage() {
           </motion.div>
         )}
       </AnimatePresence>
+    </div>
+  );
+}
+
+function SignaturePad({ onSave, darkMode = false }: { onSave: (data: string) => void, darkMode?: boolean }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [isDrawing, setIsDrawing] = useState(false);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.strokeStyle = darkMode ? "#fff" : "#000";
+    ctx.lineWidth = 4;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+  }, [darkMode]);
+
+  const getPointerPos = (e: any) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return { x: 0, y: 0 };
+    const rect = canvas.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    return {
+      x: clientX - rect.left,
+      y: clientY - rect.top
+    };
+  };
+
+  const startDrawing = (e: any) => {
+    setIsDrawing(true);
+    const { x, y } = getPointerPos(e);
+    const ctx = canvasRef.current?.getContext("2d");
+    if (ctx) {
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+    }
+  };
+
+  const draw = (e: any) => {
+    if (!isDrawing) return;
+    const { x, y } = getPointerPos(e);
+    const ctx = canvasRef.current?.getContext("2d");
+    if (ctx) {
+      ctx.lineTo(x, y);
+      ctx.stroke();
+    }
+  };
+
+  const stopDrawing = () => {
+    setIsDrawing(false);
+  };
+
+  const clear = () => {
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext("2d");
+    if (canvas && ctx) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+  };
+
+  const save = () => {
+    const canvas = canvasRef.current;
+    if (canvas) {
+      const data = canvas.toDataURL("image/png");
+      onSave(data);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className={`border-4 ${darkMode ? "border-white/10 bg-white/5" : "border-stone-200 bg-white"} rounded-[2.5rem] overflow-hidden shadow-2xl`}>
+        <canvas
+          ref={canvasRef}
+          width={600}
+          height={300}
+          className="w-full h-64 touch-none cursor-crosshair"
+          onMouseDown={startDrawing}
+          onMouseMove={draw}
+          onMouseUp={stopDrawing}
+          onMouseLeave={stopDrawing}
+          onTouchStart={startDrawing}
+          onTouchMove={draw}
+          onTouchEnd={stopDrawing}
+        />
+      </div>
+      <div className="flex gap-4">
+        <Button variant="outline" onClick={clear} className="flex-1 h-20 rounded-full font-black uppercase tracking-widest text-sm border-2">
+          Clear
+        </Button>
+        <Button onClick={save} className="flex-1 h-20 rounded-full font-black uppercase tracking-widest text-sm shadow-xl shadow-primary/20">
+          Confirm
+        </Button>
+      </div>
     </div>
   );
 }

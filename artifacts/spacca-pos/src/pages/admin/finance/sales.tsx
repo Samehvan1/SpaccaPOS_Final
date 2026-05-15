@@ -174,8 +174,8 @@ export default function SalesAnalysisPage() {
           grossPrice.toFixed(2),
           netPrice.toFixed(2),
           taxValue.toFixed(2),
-          o.discountCode || "-",
-          o.discountValue ? (o.discountType === 'percentage' ? `${o.discountValue}%` : o.discountValue.toFixed(2)) : "0",
+          (o as any).discountCode || "-",
+          (o as any).discountValue ? ((o as any).discountType === 'percentage' ? `${(o as any).discountValue}%` : (o as any).discountValue.toFixed(2)) : "0",
           discountAmount.toFixed(2),
           finalPrice.toFixed(2),
           o.status,
@@ -550,8 +550,13 @@ export default function SalesAnalysisPage() {
                     <TableBody>
                       {selectedOrderDetails.items.map((item: any) => (
                         <>
-                          <TableRow key={item.id}>
-                            <TableCell className="font-medium">{item.drinkName}</TableCell>
+                          <TableRow key={item.id} className={item.status === 'refunded' ? "opacity-50 line-through bg-red-500/5" : ""}>
+                            <TableCell className="font-medium">
+                              <div className="flex items-center gap-2">
+                                {item.drinkName}
+                                {item.status === 'refunded' && <Badge variant="destructive" className="text-[8px] h-4">REFUNDED</Badge>}
+                              </div>
+                            </TableCell>
                             <TableCell className="text-right">{item.quantity}</TableCell>
                             <TableCell className="text-right">{fmt(item.unitPrice)}</TableCell>
                             <TableCell className="text-right font-bold">{fmt(item.lineTotal)}</TableCell>
@@ -592,6 +597,22 @@ export default function SalesAnalysisPage() {
                   <div className="flex justify-between text-lg font-bold border-t pt-2 mt-2">
                     <span>Total</span>
                     <span className="text-primary">{fmt(selectedOrderDetails.total)}</span>
+                  </div>
+                  <div className="pt-4 space-y-1">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 mb-2">Payment Details</p>
+                    {selectedOrderDetails.payments && selectedOrderDetails.payments.length > 0 ? (
+                      selectedOrderDetails.payments.map((p: any) => (
+                        <div key={p.id} className="flex justify-between text-[11px] font-bold">
+                          <span className="capitalize text-muted-foreground">{p.paymentMethod}</span>
+                          <span>{fmt(p.amount)}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="flex justify-between text-[11px] font-bold">
+                        <span className="capitalize text-muted-foreground">Payment Method</span>
+                        <span>{selectedOrderDetails.paymentMethod}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

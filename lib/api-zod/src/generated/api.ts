@@ -312,7 +312,6 @@ export const ListIngredientsResponseItem = zod.object({
   unit: zod.string(),
   costPerUnit: zod.number(),
   stockQuantity: zod.number(),
-  startupQuantity: zod.number().optional(),
   lowStockThreshold: zod.number(),
   isActive: zod.boolean(),
   linkedTypeCount: zod.number().optional(),
@@ -343,7 +342,6 @@ export const CreateIngredientBody = zod.object({
   unit: zod.string(),
   costPerUnit: zod.number(),
   stockQuantity: zod.number().optional(),
-  startupQuantity: zod.number().optional(),
   lowStockThreshold: zod.number().optional(),
   isActive: zod.boolean().optional(),
 });
@@ -380,7 +378,6 @@ export const GetIngredientResponse = zod
     unit: zod.string(),
     costPerUnit: zod.number(),
     stockQuantity: zod.number(),
-    startupQuantity: zod.number().optional(),
     lowStockThreshold: zod.number(),
     isActive: zod.boolean(),
     linkedTypeCount: zod.number().optional(),
@@ -438,7 +435,6 @@ export const UpdateIngredientBody = zod.object({
   unit: zod.string().optional(),
   costPerUnit: zod.number().optional(),
   stockQuantity: zod.number().optional(),
-  startupQuantity: zod.number().optional(),
   lowStockThreshold: zod.number().optional(),
   isActive: zod.boolean().optional(),
 });
@@ -565,7 +561,6 @@ export const RestockIngredientQueryParams = zod.object({
 
 export const RestockIngredientBody = zod.object({
   quantity: zod.number(),
-  unitId: zod.number().optional(),
   note: zod.string().optional(),
 });
 
@@ -625,6 +620,7 @@ export const ListOrdersResponseItem = zod
       "refunded",
     ]),
     customerName: zod.string().nullish(),
+    customerPhone: zod.string().nullish(),
     subtotal: zod.number(),
     discount: zod.number(),
     discountId: zod.number().nullish(),
@@ -683,6 +679,7 @@ export const ListOrdersResponse = zod.array(ListOrdersResponseItem);
 export const CreateOrderBody = zod.object({
   branchId: zod.number().optional(),
   customerName: zod.string().optional(),
+  customerPhone: zod.string().optional(),
   paymentMethod: zod.enum(["cash", "card", "wallet", "hospitality"]),
   amountTendered: zod.number().optional(),
   notes: zod.string().optional(),
@@ -738,6 +735,7 @@ export const GetOrderResponse = zod
       "refunded",
     ]),
     customerName: zod.string().nullish(),
+    customerPhone: zod.string().nullish(),
     subtotal: zod.number(),
     discount: zod.number(),
     discountId: zod.number().nullish(),
@@ -836,6 +834,7 @@ export const UpdateOrderStatusResponse = zod.object({
     "refunded",
   ]),
   customerName: zod.string().nullish(),
+  customerPhone: zod.string().nullish(),
   subtotal: zod.number(),
   discount: zod.number(),
   discountId: zod.number().nullish(),
@@ -852,6 +851,17 @@ export const UpdateOrderStatusResponse = zod.object({
   readyAt: zod.string().nullish(),
   completedAt: zod.string().nullish(),
   cancelledAt: zod.string().nullish(),
+});
+
+/**
+ * @summary Save order digital signature
+ */
+export const SaveOrderSignatureParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const SaveOrderSignatureBody = zod.object({
+  signatureData: zod.string().describe("Base64 encoded signature image"),
 });
 
 /**
@@ -880,6 +890,7 @@ export const MarkOrderItemReadyResponse = zod.object({
     "refunded",
   ]),
   customerName: zod.string().nullish(),
+  customerPhone: zod.string().nullish(),
   subtotal: zod.number(),
   discount: zod.number(),
   discountId: zod.number().nullish(),
@@ -903,8 +914,6 @@ export const MarkOrderItemReadyResponse = zod.object({
  */
 export const ListStockMovementsQueryParams = zod.object({
   ingredientId: zod.coerce.number().optional(),
-  startDate: zod.coerce.date().optional(),
-  endDate: zod.coerce.date().optional(),
   limit: zod.coerce.number().optional(),
   offset: zod.coerce.number().optional(),
 });
@@ -914,7 +923,7 @@ export const ListStockMovementsResponseItem = zod.object({
   ingredientId: zod.number(),
   ingredientName: zod.string(),
   orderId: zod.number().nullable(),
-  movementType: zod.enum(["sale", "restock", "adjustment", "waste", "opening", "calibration"]),
+  movementType: zod.enum(["sale", "restock", "adjustment", "waste", "opening"]),
   quantity: zod.number(),
   quantityAfter: zod.number(),
   note: zod.string().nullable(),
@@ -931,9 +940,8 @@ export const ListStockMovementsResponse = zod.array(
  */
 export const CreateStockAdjustmentBody = zod.object({
   ingredientId: zod.number(),
-  movementType: zod.enum(["adjustment", "waste", "opening", "calibration"]),
+  movementType: zod.enum(["adjustment", "waste", "opening"]),
   quantity: zod.number(),
-  unitId: zod.number().optional(),
   note: zod.string().optional(),
 });
 
@@ -975,6 +983,7 @@ export const GetActiveOrdersResponseItem = zod
       "refunded",
     ]),
     customerName: zod.string().nullish(),
+    customerPhone: zod.string().nullish(),
     subtotal: zod.number(),
     discount: zod.number(),
     discountId: zod.number().nullish(),
@@ -1135,6 +1144,18 @@ export const DeleteUserParams = zod.object({
 
 export const DeleteUserQueryParams = zod.object({
   branchId: zod.coerce.number().optional(),
+});
+
+/**
+ * @summary Get customer loyalty points by phone number
+ */
+export const GetCustomerPointsParams = zod.object({
+  phone: zod.coerce.string(),
+});
+
+export const GetCustomerPointsResponse = zod.object({
+  points: zod.number(),
+  name: zod.string().nullish(),
 });
 
 /**
@@ -1370,12 +1391,3 @@ export const ValidateDiscountResponse = zod.object({
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
-export const IngredientConversion = zod.object({
-  id: zod.number(),
-  ingredientId: zod.number(),
-  unitName: zod.string(),
-  conversionFactor: zod.number(),
-  isDefaultPurchase: zod.boolean(),
-});
-
-export const ListIngredientConversionsResponse = zod.array(IngredientConversion);

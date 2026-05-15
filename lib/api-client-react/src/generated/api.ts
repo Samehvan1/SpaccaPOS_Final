@@ -39,6 +39,7 @@ import type {
   Drink,
   DrinkDetail,
   GetActiveOrdersParams,
+  GetCustomerPoints200,
   GetDrinkParams,
   GetIngredientParams,
   GetOrderParams,
@@ -64,6 +65,7 @@ import type {
   PriceCalculationBody,
   RestockBody,
   RestockIngredientParams,
+  SaveOrderSignatureBody,
   Setting,
   StockAdjustmentBody,
   StockMovement,
@@ -2473,6 +2475,93 @@ export const useUpdateOrderStatus = <
 };
 
 /**
+ * @summary Save order digital signature
+ */
+export const getSaveOrderSignatureUrl = (id: number) => {
+  return `/api/orders/${id}/signature`;
+};
+
+export const saveOrderSignature = async (
+  id: number,
+  saveOrderSignatureBody: SaveOrderSignatureBody,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getSaveOrderSignatureUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(saveOrderSignatureBody),
+  });
+};
+
+export const getSaveOrderSignatureMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof saveOrderSignature>>,
+    TError,
+    { id: number; data: BodyType<SaveOrderSignatureBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof saveOrderSignature>>,
+  TError,
+  { id: number; data: BodyType<SaveOrderSignatureBody> },
+  TContext
+> => {
+  const mutationKey = ["saveOrderSignature"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof saveOrderSignature>>,
+    { id: number; data: BodyType<SaveOrderSignatureBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return saveOrderSignature(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SaveOrderSignatureMutationResult = NonNullable<
+  Awaited<ReturnType<typeof saveOrderSignature>>
+>;
+export type SaveOrderSignatureMutationBody = BodyType<SaveOrderSignatureBody>;
+export type SaveOrderSignatureMutationError = ErrorType<void>;
+
+/**
+ * @summary Save order digital signature
+ */
+export const useSaveOrderSignature = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof saveOrderSignature>>,
+    TError,
+    { id: number; data: BodyType<SaveOrderSignatureBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof saveOrderSignature>>,
+  TError,
+  { id: number; data: BodyType<SaveOrderSignatureBody> },
+  TContext
+> => {
+  return useMutation(getSaveOrderSignatureMutationOptions(options));
+};
+
+/**
  * @summary Mark a specific order item as ready
  */
 export const getMarkOrderItemReadyUrl = (
@@ -3349,6 +3438,94 @@ export const useDeleteUser = <
 > => {
   return useMutation(getDeleteUserMutationOptions(options));
 };
+
+/**
+ * @summary Get customer loyalty points by phone number
+ */
+export const getGetCustomerPointsUrl = (phone: string) => {
+  return `/api/customers/points/${phone}`;
+};
+
+export const getCustomerPoints = async (
+  phone: string,
+  options?: RequestInit,
+): Promise<GetCustomerPoints200> => {
+  return customFetch<GetCustomerPoints200>(getGetCustomerPointsUrl(phone), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetCustomerPointsQueryKey = (phone: string) => {
+  return [`/api/customers/points/${phone}`] as const;
+};
+
+export const getGetCustomerPointsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCustomerPoints>>,
+  TError = ErrorType<void>,
+>(
+  phone: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getCustomerPoints>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetCustomerPointsQueryKey(phone);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getCustomerPoints>>
+  > = ({ signal }) => getCustomerPoints(phone, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!phone,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getCustomerPoints>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetCustomerPointsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCustomerPoints>>
+>;
+export type GetCustomerPointsQueryError = ErrorType<void>;
+
+/**
+ * @summary Get customer loyalty points by phone number
+ */
+
+export function useGetCustomerPoints<
+  TData = Awaited<ReturnType<typeof getCustomerPoints>>,
+  TError = ErrorType<void>,
+>(
+  phone: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getCustomerPoints>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetCustomerPointsQueryOptions(phone, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
 
 /**
  * @summary List activity logs

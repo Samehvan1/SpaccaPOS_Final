@@ -25,6 +25,9 @@ import {
   ingredientVolumesTable,
   discountsTable,
   kitchenStationsTable,
+  customersTable,
+  signaturesTable,
+  orderPaymentsTable,
 } from "@workspace/db";
 import {
   ListOrdersQueryParams,
@@ -64,13 +67,14 @@ async function buildOrderDetail(orderId: number) {
   ]);
   if (!order) return null;
 
-  // Fetch barista + all customizations in parallel
-  const [[barista], customizations] = await Promise.all([
+  // Fetch barista, customizations, and payments in parallel
+  const [[barista], customizations, payments] = await Promise.all([
     db.select().from(usersTable).where(eq(usersTable.id, order.baristaId)),
     items.length > 0
       ? db.select().from(orderItemCustomizationsTable)
           .where(inArray(orderItemCustomizationsTable.orderItemId, items.map((i) => i.id)))
       : Promise.resolve([]),
+    db.select().from(orderPaymentsTable).where(eq(orderPaymentsTable.orderId, orderId)),
   ]);
 
   const custByItem = new Map<number, typeof customizations>();
@@ -92,11 +96,16 @@ async function buildOrderDetail(orderId: number) {
     total: parseFloat(order.total),
     amountTendered: order.amountTendered ? parseFloat(order.amountTendered) : null,
     changeDue: order.changeDue ? parseFloat(order.changeDue) : null,
+    payments: payments.map(p => ({
+      ...p,
+      amount: parseFloat(p.amount),
+    })),
     items: items.map((item) => ({
       ...item,
-      status: item.status as "pending" | "ready",
+      status: item.status as "pending" | "ready" | "refunded" | "cancelled",
       unitPrice: parseFloat(item.unitPrice),
       lineTotal: parseFloat(item.lineTotal),
+      refundedAmount: item.refundedAmount ? parseFloat(item.refundedAmount) : null,
       customizations: (custByItem.get(item.id) ?? []).map((c) => ({
         ...c,
         consumedQty: parseFloat(c.consumedQty),
@@ -153,12 +162,14 @@ router.get("/orders", requirePermission("cashier:view"), async (req, res): Promi
 
   const orderIds = orders.map((o) => o.id);
 
-  // Bulk fetch items and customizations
-  const [items, baristas] = await Promise.all([
+  const [items, baristas, payments] = await Promise.all([
     orderIds.length > 0
       ? db.select().from(orderItemsTable).where(inArray(orderItemsTable.orderId, orderIds))
       : Promise.resolve([]),
     db.select().from(usersTable), // Fetch all baristas for mapping
+    orderIds.length > 0
+      ? db.select().from(orderPaymentsTable).where(inArray(orderPaymentsTable.orderId, orderIds))
+      : Promise.resolve([]),
   ]);
 
   const itemIds = items.map((i) => i.id);
@@ -172,6 +183,13 @@ router.get("/orders", requirePermission("cashier:view"), async (req, res): Promi
     const list = custByItem.get(c.orderItemId) ?? [];
     list.push({ ...c, consumedQty: parseFloat(c.consumedQty), producedQty: parseFloat((c as any).producedQty), addedCost: parseFloat(c.addedCost) });
     custByItem.set(c.orderItemId, list);
+  }
+
+  const paymentsByOrder = new Map<number, any[]>();
+  for (const p of payments) {
+    const list = paymentsByOrder.get(p.orderId) ?? [];
+    list.push({ ...p, amount: parseFloat(p.amount) });
+    paymentsByOrder.set(p.orderId, list);
   }
 
   const itemsByOrder = new Map<number, any[]>();
@@ -200,6 +218,7 @@ router.get("/orders", requirePermission("cashier:view"), async (req, res): Promi
         total: parseFloat(o.total),
         amountTendered: o.amountTendered ? parseFloat(o.amountTendered) : null,
         changeDue: o.changeDue ? parseFloat(o.changeDue) : null,
+        payments: paymentsByOrder.get(o.id) ?? [],
         items: itemsByOrder.get(o.id) ?? [],
       })))
     )
@@ -380,6 +399,7 @@ router.post("/orders", async (req, res): Promise<void> => {
       baristaId: sessionUserId,
       status: "pending",
       customerName: parsed.data.customerName ?? null,
+      customerPhone: parsed.data.customerPhone ?? null,
       subtotal: String(subtotal),
       discount: String(discountAmount),
       discountId: discountIdToSave,
@@ -392,6 +412,32 @@ router.post("/orders", async (req, res): Promise<void> => {
       changeDue: changeDue != null ? String(changeDue) : null,
       notes: parsed.data.notes ?? null,
     }).returning();
+
+    // ── Loyalty Points Logic ────────────────────────────────────────────────
+    if (parsed.data.customerPhone) {
+      // 1 point per 10 currency units before tax (14% tax assumed)
+      const pointsToEarn = Math.floor((subtotal / 1.14) / 10);
+      if (pointsToEarn > 0) {
+        await tx.insert(customersTable)
+          .values({
+            phone: parsed.data.customerPhone,
+            name: parsed.data.customerName || "Customer",
+            points: pointsToEarn,
+            totalSpent: String(total),
+            visitCount: 1,
+          })
+          .onConflictDoUpdate({
+            target: [customersTable.phone],
+            set: {
+              points: sql`${customersTable.points} + ${pointsToEarn}`,
+              totalSpent: sql`${customersTable.totalSpent} + ${total}`,
+              visitCount: sql`${customersTable.visitCount} + 1`,
+              updatedAt: new Date(),
+            }
+          });
+        console.log(`[loyalty] Awarded ${pointsToEarn} points to ${parsed.data.customerPhone}`);
+      }
+    }
 
     // Pre-fetch ingredient stock levels for all ingredients in one query for this branch
     const allIngredientIds = [
@@ -482,6 +528,30 @@ router.post("/orders", async (req, res): Promise<void> => {
       }
 
       savedItems.push({ ...orderItem, customizations: item.customizations, kitchenStation: orderItem.kitchenStation });
+    }
+
+    // ── Save Payments ──────────────────────────────────────────────────────
+    const orderPayments = parsed.data.payments || [];
+    if (orderPayments.length > 0) {
+      await tx.insert(orderPaymentsTable).values(
+        orderPayments.map((p) => ({
+          orderId: order.id,
+          paymentMethod: p.paymentMethod,
+          amount: String(p.amount),
+          transactionId: p.transactionId ?? null,
+        }))
+      );
+      // Update main order paymentMethod to 'split' if multiple, or the single method
+      await tx.update(ordersTable).set({ 
+        paymentMethod: (orderPayments.length > 1 ? "split" : orderPayments[0].paymentMethod) as any
+      }).where(eq(ordersTable.id, order.id));
+    } else if (parsed.data.paymentMethod) {
+      // Fallback for backward compatibility if payments array is missing
+      await tx.insert(orderPaymentsTable).values({
+        orderId: order.id,
+        paymentMethod: parsed.data.paymentMethod,
+        amount: String(total),
+      });
     }
 
     return { order, savedItems };
@@ -623,12 +693,52 @@ router.patch("/orders/:id/status", async (req, res, next): Promise<void> => {
     const cashierId = (req.body as any).cashierId ?? (req.session as any).cashierId ?? null;
     if (cashierId) updateData.cashierId = cashierId;
     updateData.paidAt = now;
+    
+    // ── Update/Save Payments ──────────────────────────────────────────────
+    if (parsed.data.payments && parsed.data.payments.length > 0) {
+      await db.transaction(async (tx) => {
+        // Delete existing payments for this order and replace with new ones
+        await tx.delete(orderPaymentsTable).where(eq(orderPaymentsTable.orderId, params.data.id));
+        await tx.insert(orderPaymentsTable).values(
+          parsed.data.payments!.map((p) => ({
+            orderId: params.data.id,
+            paymentMethod: p.paymentMethod,
+            amount: String(p.amount),
+            transactionId: p.transactionId ?? null,
+          }))
+        );
+      });
+    }
   } else if (parsed.data.status === "ready") {
     updateData.readyAt = now;
   } else if (parsed.data.status === "completed") {
     updateData.completedAt = now;
   } else if (parsed.data.status === "cancelled" || parsed.data.status === "refunded") {
     updateData.cancelledAt = now;
+  }
+  
+  // ── Handle Payment Method Change After Approval ─────────────────────────
+  // If the status is NOT changing, but payments are provided, it means we are changing payment method
+  if (!parsed.data.status || parsed.data.status === (await db.select({status: ordersTable.status}).from(ordersTable).where(eq(ordersTable.id, params.data.id)).limit(1))[0]?.status) {
+    if (parsed.data.payments && parsed.data.payments.length > 0) {
+       await db.transaction(async (tx) => {
+        await tx.delete(orderPaymentsTable).where(eq(orderPaymentsTable.orderId, params.data.id));
+        await tx.insert(orderPaymentsTable).values(
+          parsed.data.payments!.map((p) => ({
+            orderId: params.data.id,
+            paymentMethod: p.paymentMethod,
+            amount: String(p.amount),
+            transactionId: p.transactionId ?? null,
+          }))
+        );
+        // Also update the main order's paymentMethod for legacy/summary
+        if (parsed.data.payments!.length === 1) {
+          await tx.update(ordersTable).set({ paymentMethod: parsed.data.payments![0].paymentMethod as any }).where(eq(ordersTable.id, params.data.id));
+        } else {
+          await tx.update(ordersTable).set({ paymentMethod: "split" }).where(eq(ordersTable.id, params.data.id));
+        }
+      });
+    }
   }
 
   const [order] = await db
@@ -712,7 +822,10 @@ router.patch("/order-items/:id/ready", requirePermission("kitchen:mark_ready"), 
 
 router.post("/orders/:id/refund", requirePermission("cashier:refund_order"), async (req, res): Promise<void> => {
   const { id } = req.params;
-  const { adminPin, returnToStockItems } = req.body as { adminPin: string; returnToStockItems?: number[] };
+  const { adminPin, refundItems, returnToStockItems } = req.body as { adminPin: string; refundItems?: number[]; returnToStockItems?: number[] };
+  
+  // Backward compatibility: if refundItems is missing but returnToStockItems is present, refund all in returnToStockItems
+  const itemsToRefund = refundItems || returnToStockItems || [];
 
   if (!adminPin) {
     res.status(400).json({ error: "Admin or Cashier PIN is required" });
@@ -746,56 +859,146 @@ router.post("/orders/:id/refund", requirePermission("cashier:refund_order"), asy
     return;
   }
 
-  // 1. Return to stock logic if items provided
-  console.log(`[Refund-Debug] Order ${orderId}, Return Items:`, returnToStockItems);
-  if (returnToStockItems && returnToStockItems.length > 0) {
+  // 1. Process refunds logic
+  console.log(`[Refund-Debug] Order ${orderId}, Refund Items:`, itemsToRefund, "Return to Stock:", returnToStockItems);
+  if (itemsToRefund.length > 0) {
     await db.transaction(async (tx) => {
-      for (const itemId of returnToStockItems) {
-        const customizations = await tx
-          .select()
-          .from(orderItemCustomizationsTable)
-          .where(eq(orderItemCustomizationsTable.orderItemId, itemId));
+      for (const itemId of itemsToRefund) {
+        const shouldReturnToStock = returnToStockItems?.includes(itemId);
+        
+        if (shouldReturnToStock) {
+          const customizations = await tx
+            .select()
+            .from(orderItemCustomizationsTable)
+            .where(eq(orderItemCustomizationsTable.orderItemId, itemId));
 
-        console.log(`[Refund-Debug] Item ${itemId} has ${customizations.length} customizations`);
+          console.log(`[Refund-Debug] Returning stock for item ${itemId}`);
 
-        for (const cust of customizations) {
-          if (cust.ingredientId) {
-            const consumed = parseFloat(cust.consumedQty as string);
-            console.log(`[Refund-Debug] Returning Ingredient ${cust.ingredientId}, Qty ${consumed} to Branch ${order.branchId}`);
-            if (consumed > 0) {
-              // Increment stock for this branch
-              const result = await tx
-                .update(branchStockTable)
-                .set({
-                  stockQuantity: sql`${branchStockTable.stockQuantity} + ${consumed}`,
-                  updatedAt: new Date(),
-                })
-                .where(
-                  and(
-                    eq(branchStockTable.ingredientId, cust.ingredientId),
-                    eq(branchStockTable.branchId, order.branchId)
-                  )
-                );
-              console.log(`[Refund-Debug] Update result:`, result);
+          for (const cust of customizations) {
+            if (cust.ingredientId) {
+              const consumed = parseFloat(cust.consumedQty as string);
+              if (consumed > 0) {
+                await tx
+                  .update(branchStockTable)
+                  .set({
+                    stockQuantity: sql`${branchStockTable.stockQuantity} + ${consumed}`,
+                    updatedAt: new Date(),
+                  })
+                  .where(
+                    and(
+                      eq(branchStockTable.ingredientId, cust.ingredientId),
+                      eq(branchStockTable.branchId, order.branchId)
+                    )
+                  );
+              }
             }
-          } else {
-            console.log(`[Refund-Debug] Skipping customization ${cust.id} (No ingredientId)`);
           }
+        }
+        
+        // Update item status to refunded
+        const [item] = await tx.select().from(orderItemsTable).where(eq(orderItemsTable.id, itemId)).limit(1);
+        if (item) {
+          await tx.update(orderItemsTable)
+            .set({ 
+              status: "refunded", 
+              refundedAt: new Date(),
+              refundedAmount: item.lineTotal
+            })
+            .where(eq(orderItemsTable.id, itemId));
         }
       }
     });
   }
 
-  // 2. Update order status
+  // 2. Recalculate order totals based on remaining (non-refunded) items
+  const allItems = await db.select().from(orderItemsTable).where(eq(orderItemsTable.orderId, orderId));
+  const activeItems = allItems.filter(i => i.status !== "refunded" && i.status !== "cancelled");
+  const allRefunded = allItems.every(i => i.status === "refunded" || i.status === "cancelled");
+  const anyRefunded = allItems.some(i => i.status === "refunded");
+
+  let nextSubtotal = 0;
+  for (const item of activeItems) {
+    nextSubtotal += parseFloat(item.lineTotal as string);
+  }
+
+  let nextDiscount = 0;
+  if (order.discountValue && order.discountType) {
+    if (order.discountType === "percentage") {
+      const beforeTax = nextSubtotal / 1.14;
+      nextDiscount = (beforeTax * parseFloat(order.discountValue)) / 100;
+    } else {
+      // For fixed discount, we keep it as is unless it exceeds the subtotal
+      nextDiscount = Math.min(nextSubtotal, parseFloat(order.discountValue));
+    }
+  }
+
+  // Hospitality orders always have 100% discount
+  if (order.discountCode === "HOSPITALITY") {
+    nextDiscount = nextSubtotal;
+  }
+
+  const nextTotal = Math.max(0, nextSubtotal - nextDiscount);
+
+  let nextStatus = order.status;
+  if (allRefunded) {
+    nextStatus = "refunded";
+  } else if (anyRefunded && nextStatus !== "refunded") {
+    // If some items are refunded but not all, we keep the original status (paid/completed/ready)
+    // but the total is updated.
+  }
+
+  const refundAmount = parseFloat(order.total) - nextTotal;
+  if (refundAmount > 0) {
+    await db.insert(orderPaymentsTable).values({
+      orderId,
+      paymentMethod: "refund",
+      amount: String(-refundAmount),
+      transactionId: `REFUND-${orderId}-${Date.now()}`,
+    });
+  }
+
   const [updatedOrder] = await db
     .update(ordersTable)
-    .set({ status: "refunded", cancelledAt: new Date() })
+    .set({ 
+      status: nextStatus as any, 
+      subtotal: String(nextSubtotal),
+      discount: String(nextDiscount),
+      total: String(nextTotal),
+      ...(allRefunded ? { cancelledAt: new Date() } : {})
+    })
     .where(eq(ordersTable.id, orderId))
     .returning();
 
-  broadcastEvent("order_updated", { orderId: updatedOrder.id, status: "refunded" });
-  await logActivity(req, "REFUND_ORDER", "order", updatedOrder.id, { returnToStockItems });
-  res.json({ message: "Order refunded successfully", orderId: updatedOrder.id });
+  broadcastEvent("order_updated", { orderId: updatedOrder.id, status: updatedOrder.status });
+  await logActivity(req, "REFUND_ORDER", "order", updatedOrder.id, { returnToStockItems, refundItems: itemsToRefund });
+  res.json({ 
+    message: allRefunded ? "Order refunded successfully" : "Item(s) refunded successfully", 
+    orderId: updatedOrder.id,
+    newTotal: updatedOrder.total
+  });
+});
+
+router.post("/orders/:id/signature", async (req, res): Promise<void> => {
+  const orderId = parseInt(req.params.id);
+  const { signatureData, orderItemId } = req.body;
+
+  if (!signatureData) {
+    res.status(400).json({ error: "Signature data is required" });
+    return;
+  }
+
+  try {
+    const [signature] = await db.insert(signaturesTable).values({
+      orderId,
+      orderItemId: orderItemId || null,
+      signatureData,
+    }).returning();
+
+    res.status(201).json({ signature });
+  } catch (e: any) {
+    console.error("[orders/signature] error:", e?.message);
+    res.status(500).json({ error: "Failed to save signature" });
+  }
 });
 
 export default router;

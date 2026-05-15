@@ -1,6 +1,6 @@
 import { pgTable, serial, text, numeric, integer, timestamp, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
-import { z } from "zod/v4";
+import { z } from "zod";
 import { usersTable } from "./users";
 import { drinksTable, kitchenStationsTable } from "./drinks";
 import { ingredientsTable, ingredientOptionsTable } from "./ingredients";
@@ -16,6 +16,7 @@ export const ordersTable = pgTable("orders", {
     enum: ["pending", "paid", "in_progress", "ready", "completed", "cancelled", "refunded"],
   }).notNull().default("pending"),
   customerName: text("customer_name"),
+  customerPhone: text("customer_phone"),
   subtotal: numeric("subtotal", { precision: 8, scale: 2 }).notNull(),
   discount: numeric("discount", { precision: 8, scale: 2 }).notNull().default("0"),
   discountId: integer("discount_id").references(() => discountsTable.id),
@@ -23,7 +24,7 @@ export const ordersTable = pgTable("orders", {
   discountValue: numeric("discount_value", { precision: 8, scale: 2 }),
   discountType: text("discount_type", { enum: ["percentage", "fixed"] }),
   total: numeric("total", { precision: 8, scale: 2 }).notNull(),
-  paymentMethod: text("payment_method", { enum: ["cash", "card", "wallet", "hospitality"] }).notNull().default("cash"),
+  paymentMethod: text("payment_method", { enum: ["cash", "card", "wallet", "hospitality", "split", "refund"] }).notNull().default("cash"),
   amountTendered: numeric("amount_tendered", { precision: 8, scale: 2 }),
   changeDue: numeric("change_due", { precision: 8, scale: 2 }),
   notes: text("notes"),
@@ -52,7 +53,9 @@ export const orderItemsTable = pgTable("order_items", {
   specialNotes: text("special_notes"),
   kitchenStation: text("kitchen_station").notNull().default("main"),
   kitchenStationId: integer("kitchen_station_id").references(() => kitchenStationsTable.id),
-  status: text("status", { enum: ["pending", "ready"] }).notNull().default("pending"),
+  status: text("status", { enum: ["pending", "ready", "refunded", "cancelled"] }).notNull().default("pending"),
+  refundedAt: timestamp("refunded_at", { withTimezone: true }),
+  refundedAmount: numeric("refunded_amount", { precision: 8, scale: 2 }),
   readyAt: timestamp("ready_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
@@ -82,7 +85,20 @@ export const orderItemCustomizationsTable = pgTable("order_item_customizations",
   };
 });
 
-export const insertOrderSchema = createInsertSchema(ordersTable).omit({ id: true, createdAt: true, updatedAt: true });
+export const orderPaymentsTable = pgTable("order_payments", {
+  id: serial("id").primaryKey(),
+  orderId: integer("order_id").notNull().references(() => ordersTable.id, { onDelete: "cascade" }),
+  paymentMethod: text("payment_method", { enum: ["cash", "card", "wallet", "hospitality", "refund"] }).notNull(),
+  amount: numeric("amount", { precision: 8, scale: 2 }).notNull(),
+  transactionId: text("transaction_id"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => {
+  return {
+    orderIdIdx: index("order_payments_order_id_idx").on(table.orderId),
+  };
+});
+
+export const insertOrderSchema = createInsertSchema(ordersTable).omit({ id: true, createdAt: true, updatedAt: true }) as any;
 export type InsertOrder = z.infer<typeof insertOrderSchema>;
 export type Order = typeof ordersTable.$inferSelect;
 export type OrderItem = typeof orderItemsTable.$inferSelect;

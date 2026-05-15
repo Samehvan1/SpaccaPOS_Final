@@ -50,6 +50,20 @@
       "when": 1778759116147,
       "tag": "0006_open_mister_sinister",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1778780092980,
+      "tag": "0007_neat_odin",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1778859767228,
+      "tag": "0008_eager_magik",
+      "breakpoints": true
     }
   ]
 }

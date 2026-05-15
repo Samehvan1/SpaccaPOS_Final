@@ -25,6 +25,8 @@ tags:
     description: Application settings management
   - name: discounts
     description: Discount and coupon management
+  - name: customers
+    description: Customer and loyalty management
 
 paths:
   /healthz:
@@ -585,6 +587,34 @@ paths:
               schema:
                 $ref: "#/components/schemas/Order"
 
+  /orders/{id}/signature:
+    post:
+      operationId: saveOrderSignature
+      tags: [orders]
+      summary: Save order digital signature
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                signatureData:
+                  type: string
+                  description: Base64 encoded signature image
+              required: [signatureData]
+      responses:
+        "200":
+          description: Signature saved
+        "404":
+          description: Order not found
+
   /order-items/{id}/ready:
     patch:
       operationId: markOrderItemReady
@@ -785,6 +815,33 @@ paths:
       responses:
         "204":
           description: Deleted
+
+  /customers/points/{phone}:
+    get:
+      operationId: getCustomerPoints
+      tags: [customers]
+      summary: Get customer loyalty points by phone number
+      parameters:
+        - in: path
+          name: phone
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Customer loyalty data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  points:
+                    type: integer
+                  name:
+                    type: ["string", "null"]
+                required: [points]
+        "404":
+          description: Customer not found
 
   /admin/activity-logs:
     get:
@@ -1792,6 +1849,8 @@ components:
           enum: [pending, paid, in_progress, ready, completed, cancelled, refunded]
         customerName:
           type: ["string", "null"]
+        customerPhone:
+          type: ["string", "null"]
         subtotal:
           type: number
         discount:
@@ -1855,6 +1914,8 @@ components:
         branchId:
           type: integer
         customerName:
+          type: string
+        customerPhone:
           type: string
         paymentMethod:
           type: string

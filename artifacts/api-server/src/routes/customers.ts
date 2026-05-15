@@ -217,4 +217,23 @@ router.get("/admin/customers", async (req, res): Promise<void> => {
   }
 });
 
+// ── Loyalty Points Lookup ───────────────────────────────────────────────────
+router.get("/customers/points/:phone", async (req, res): Promise<void> => {
+  const { phone } = req.params;
+  try {
+    const result = await db.execute(sql`
+      SELECT points, name FROM customers WHERE phone = ${phone} LIMIT 1
+    `);
+    const customer = (result.rows as any[])[0];
+    if (!customer) {
+      res.json({ points: 0, name: null });
+    } else {
+      res.json({ points: customer.points, name: customer.name });
+    }
+  } catch (e: any) {
+    console.error("[customers/points] error:", e?.message);
+    res.status(500).json({ error: "Failed to fetch loyalty points" });
+  }
+});
+
 export default router;

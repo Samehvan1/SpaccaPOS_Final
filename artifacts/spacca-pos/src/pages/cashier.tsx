@@ -8,12 +8,13 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/componen
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Check, X, Loader2, Calculator, ClipboardList, User, ListChecks, CreditCard, Banknote, Wallet, Receipt, Printer, FileText, LogOut, Clock, ShoppingBag, TrendingUp, Lock, RotateCcw, Search, History, Gift, Tag } from "lucide-react";
+import { Check, X, Loader2, Calculator, ClipboardList, User, ListChecks, CreditCard, Banknote, Wallet, Receipt, Printer, FileText, LogOut, Clock, ShoppingBag, TrendingUp, Lock, RotateCcw, Search, History, Gift, Tag, Plus, Trash2, LayoutGrid } from "lucide-react";
 import { fmt } from "@/lib/currency";
 import { printCustomerReceipt, printAgentReceipts } from "@/components/receipt-printer";
 import { useSettings } from "@/hooks/use-settings";
 import { useGetActiveOrders, useUpdateOrderStatus, useListOrders } from "@workspace/api-client-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import PosTerminal from "./pos";
 import { useOrderEvents } from "@/hooks/use-order-events";
 
@@ -161,6 +162,12 @@ export default function CashierPage() {
   const [recentSearch, setRecentSearch] = useState("");
   // Local payment method overrides — never hit the API until Approve is clicked
   const [localPaymentMethods, setLocalPaymentMethods] = useState<Map<number, string>>(new Map());
+  const [multiPayments, setMultiPayments] = useState<Map<number, { method: string, amount: number }[]>>(new Map());
+  const [isMultiPaymentOpen, setIsMultiPaymentOpen] = useState(false);
+  const [activeMultiOrder, setActiveMultiOrder] = useState<any>(null);
+  const [multiPaymentEntries, setMultiPaymentEntries] = useState<{method: string, amount: number}[]>([]);
+  const [refundItemSelection, setRefundItemSelection] = useState<Set<number>>(new Set());
+  const [returnToStockSelection, setReturnToStockSelection] = useState<Set<number>>(new Set());
   const { session, loading: sessionLoading, endSession, refetch } = useCashierSession();
   const [now, setNow] = useState(Date.now());
 
@@ -238,16 +245,19 @@ export default function CashierPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           adminPin, 
-          returnToStockItems: Array.from(selectedRefundItems) 
+          // New logic: refund specific items, and specify which ones return to stock
+          refundItems: Array.from(refundItemSelection),
+          returnToStockItems: Array.from(returnToStockSelection) 
         }),
         credentials: "include",
       });
       if (!res.ok) throw new Error((await res.json()).error ?? "Refund failed");
-      toast({ title: "Order Refunded", description: "The order has been marked as refunded." });
+      toast({ title: "Refund Complete", description: "The selected items have been refunded." });
       setIsRefundItemsOpen(false);
       setAdminPin("");
       setAuthAction(null);
-      setSelectedRefundItems(new Set());
+      setRefundItemSelection(new Set());
+      setReturnToStockSelection(new Set());
       refetchRecent();
     } catch (e: any) {
       toast({ variant: "destructive", title: "Refund Error", description: e.message });
@@ -256,9 +266,41 @@ export default function CashierPage() {
     }
   };
 
-  /**
-   * selectLocalPaymentMethod — updates client-side state only, no API call.
-   * For hospitality, triggers PIN dialog first.
+  const openMultiPayment = (order: any) => {
+    setActiveMultiOrder(order);
+    const existing = multiPayments.get(order.id) || (order.payments && order.payments.length > 0 ? order.payments.map((p: any) => ({ method: p.paymentMethod, amount: p.amount })) : null);
+    if (existing) {
+      setMultiPaymentEntries(existing);
+    } else {
+      // Default to one entry with full amount, ensure we don't use 'split' as a method
+      const defaultMethod = order.paymentMethod === 'split' ? 'cash' : order.paymentMethod;
+      setMultiPaymentEntries([{ method: defaultMethod, amount: Number(order.total) }]);
+    }
+    setIsMultiPaymentOpen(true);
+  };
+
+  const saveMultiPayment = () => {
+    if (!activeMultiOrder) return;
+    const totalEntries = multiPaymentEntries.reduce((sum, e) => sum + e.amount, 0);
+    if (Math.abs(totalEntries - Number(activeMultiOrder.total)) > 0.01) {
+      toast({ variant: "destructive", title: "Invalid Total", description: `Total must equal ${fmt(activeMultiOrder.total)}` });
+      return;
+    }
+    
+    if (activeMultiOrder.status !== 'pending') {
+        handleUpdateStatus(activeMultiOrder.id, activeMultiOrder.status, multiPaymentEntries);
+        setIsMultiPaymentOpen(false);
+    } else {
+        setMultiPayments(prev => {
+          const n = new Map(prev);
+          n.set(activeMultiOrder.id, multiPaymentEntries);
+          return n;
+        });
+        setIsMultiPaymentOpen(false);
+        toast({ title: "Split Payment Saved", description: "Payment methods updated for this order." });
+    }
+  };
+   /* For hospitality, triggers PIN dialog first.
    */
   const selectLocalPaymentMethod = (orderId: number, method: string) => {
     if (method === 'hospitality') {
@@ -286,13 +328,13 @@ export default function CashierPage() {
     });
   };
 
-  const handleUpdateStatus = (orderId: any, status: string) => {
+  const handleUpdateStatus = (orderId: any, status: string, overridePayments?: any[]) => {
     const id = Number(orderId);
     if (isNaN(id)) {
       toast({ variant: "destructive", title: "Error", description: "Invalid Order ID" });
       return;
     }
-    const currentOrder = orders.find((o: any) => o.id === id);
+    const currentOrder = orders.find((o: any) => o.id === id) || recentOrders.find((o: any) => o.id === id);
 
     // Resolve the payment method: local override takes priority
     let rawLocal = localPaymentMethods.get(id);
@@ -304,10 +346,16 @@ export default function CashierPage() {
       resolvedAdminPin = rawLocal.split(':')[1];
     }
 
+    const payments = (overridePayments || multiPayments.get(id))?.map(p => ({
+      paymentMethod: p.method,
+      amount: p.amount,
+      transactionId: (p as any).transactionId
+    }));
+
     const payload = { 
       status: status as any, 
       cashierId: session?.cashier?.id,
-      ...(resolvedPaymentMethod ? { paymentMethod: resolvedPaymentMethod as any } : {}),
+      ...(payments && payments.length > 0 ? { payments } : (resolvedPaymentMethod ? { paymentMethod: resolvedPaymentMethod as any } : {})),
       ...(resolvedAdminPin ? { adminPin: resolvedAdminPin } : {}),
     };
 
@@ -320,6 +368,7 @@ export default function CashierPage() {
           console.log(`[Cashier] Update success:`, data);
           queryClient.invalidateQueries({ queryKey: ["/api/dashboard/active-orders"] });
           setLocalPaymentMethods(prev => { const m = new Map(prev); m.delete(id); return m; });
+          setMultiPayments(prev => { const m = new Map(prev); m.delete(id); return m; });
           if (status === "paid") {
             toast({ title: "Order Approved", description: `Order ${data.orderNumber || currentOrder?.orderNumber} approved.` });
             const fullOrderData = { ...currentOrder, ...data, items: (data as any).items || currentOrder?.items || [] };
@@ -462,15 +511,15 @@ export default function CashierPage() {
                                   <label className="text-[10px] font-black text-neon-green uppercase tracking-[0.2em] mb-1 block">Amount Due</label>
                                   <div className="text-4xl font-black tracking-tighter text-neon-green">{fmt(heroOrder.total)}</div>
                                 </div>
-                                {heroOrder.discountCode && (heroOrder.discount as any) > 0 && (
+                                {((heroOrder as any).discountCode) && ((heroOrder as any).discount as any) > 0 && (
                                   <div>
                                     <label className="text-[10px] font-black text-amber-400 uppercase tracking-[0.2em] mb-1 block">Applied Discount</label>
                                     <div className="text-xl font-black text-amber-400 flex items-center gap-1.5 italic">
                                       <Tag className="h-4 w-4" />
-                                      {heroOrder.discountCode}
-                                      {heroOrder.discountValue && (
+                                      {(heroOrder as any).discountCode}
+                                      {(heroOrder as any).discountValue && (
                                         <span className="text-xs font-bold bg-amber-400/10 px-1.5 py-0.5 rounded border border-amber-400/20">
-                                          {heroOrder.discountType === 'percentage' ? `${heroOrder.discountValue}%` : fmt(Number(heroOrder.discountValue))}
+                                          {(heroOrder as any).discountType === 'percentage' ? `${(heroOrder as any).discountValue}%` : fmt(Number((heroOrder as any).discountValue))}
                                         </span>
                                       )}
                                     </div>
@@ -489,11 +538,14 @@ export default function CashierPage() {
                                     ].map((m) => {
                                       const rawLocal = localPaymentMethods.get(heroOrder.id);
                                       const effectiveMethod = rawLocal?.startsWith('hospitality:') ? 'hospitality' : (rawLocal ?? heroOrder.paymentMethod);
-                                      const isActive = effectiveMethod === m.id;
+                                      const isActive = effectiveMethod === m.id && !multiPayments.has(heroOrder.id);
                                       return (
                                         <button
                                           key={m.id}
-                                          onClick={() => selectLocalPaymentMethod(heroOrder.id, m.id)}
+                                          onClick={() => {
+                                            selectLocalPaymentMethod(heroOrder.id, m.id);
+                                            setMultiPayments(prev => { const n = new Map(prev); n.delete(heroOrder.id); return n; });
+                                          }}
                                           className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all ${
                                             isActive 
                                               ? "bg-white/10 border-white/20 ring-1 ring-white/10" 
@@ -505,6 +557,17 @@ export default function CashierPage() {
                                         </button>
                                       );
                                     })}
+                                    <button
+                                      onClick={() => openMultiPayment(heroOrder)}
+                                      className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all ${
+                                        multiPayments.has(heroOrder.id)
+                                          ? "bg-neon-cyan/20 border-neon-cyan/40 text-neon-cyan ring-1 ring-neon-cyan/10"
+                                          : "bg-white/5 border-transparent opacity-40 hover:opacity-100"
+                                      }`}
+                                    >
+                                      <LayoutGrid className="h-4 w-4" />
+                                      <span className="text-[10px] font-black uppercase tracking-tight">SPLIT</span>
+                                    </button>
                                   </div>
                                 </div>
                                 <div className="hidden md:block w-[1px] h-12 bg-white/10 self-center" />
@@ -564,22 +627,26 @@ export default function CashierPage() {
                                 </div>
                                 <div className="text-right">
                                   <div className="text-2xl font-black text-neon-green">{fmt(order.total)}</div>
-                                  {order.discountCode && (order.discount as any) > 0 && (
+                                  {((order as any).discountCode) && ((order as any).discount as any) > 0 && (
                                     <div className="text-[10px] font-bold text-amber-400 flex items-center justify-end gap-1 mt-0.5">
                                       <Tag className="h-2.5 w-2.5" />
-                                      {order.discountCode} ({order.discountType === 'percentage' ? `${order.discountValue}%` : fmt(Number(order.discountValue))})
+                                      {(order as any).discountCode} ({(order as any).discountType === 'percentage' ? `${(order as any).discountValue}%` : fmt(Number((order as any).discountValue))})
                                     </div>
                                   )}
                                   <div className="flex flex-wrap gap-1 justify-end mt-1">
                                     {["cash", "card", "wallet", "hospitality"].map(m => {
                                       const rawLocal = localPaymentMethods.get(order.id);
                                       const effectiveMethod = rawLocal?.startsWith('hospitality:') ? 'hospitality' : (rawLocal ?? order.paymentMethod);
+                                      const isActive = effectiveMethod === m && !multiPayments.has(order.id);
                                       return (
                                         <button 
                                           key={m}
-                                          onClick={() => selectLocalPaymentMethod(order.id, m)}
+                                          onClick={() => {
+                                            selectLocalPaymentMethod(order.id, m);
+                                            setMultiPayments(prev => { const n = new Map(prev); n.delete(order.id); return n; });
+                                          }}
                                           className={`px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase border transition-all ${
-                                            effectiveMethod === m 
+                                            isActive 
                                               ? "border-neon-cyan/50 bg-neon-cyan/10 text-neon-cyan" 
                                               : "border-white/10 bg-white/5 text-muted-foreground opacity-40 hover:opacity-100"
                                           }`}
@@ -588,6 +655,16 @@ export default function CashierPage() {
                                         </button>
                                       );
                                     })}
+                                    <button 
+                                      onClick={() => openMultiPayment(order)}
+                                      className={`px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase border transition-all ${
+                                        multiPayments.has(order.id)
+                                          ? "border-neon-cyan/50 bg-neon-cyan/10 text-neon-cyan" 
+                                          : "border-white/10 bg-white/5 text-muted-foreground opacity-40 hover:opacity-100"
+                                      }`}
+                                    >
+                                      SPLIT
+                                    </button>
                                   </div>
                                 </div>
                               </div>
@@ -682,10 +759,10 @@ export default function CashierPage() {
                         }`}>
                           {order.status}
                         </Badge>
-                        {order.discountCode && (order.discount as any) > 0 && (
+                        {((order as any).discountCode) && ((order as any).discount as any) > 0 && (
                           <div className="mt-1 text-[9px] font-bold text-amber-400 flex items-center justify-end gap-1">
                             <Tag className="h-2.5 w-2.5" />
-                            {order.discountCode}
+                            {(order as any).discountCode}
                           </div>
                         )}
                       </div>
@@ -693,6 +770,11 @@ export default function CashierPage() {
                         <Button variant="outline" size="sm" className="h-10 px-3 border-white/10 hover:bg-neon-cyan/10 hover:text-neon-cyan gap-2 rounded-xl" onClick={() => handlePrintAll(order)}>
                           <Printer className="h-4 w-4" /> <span className="text-xs font-bold">Reprint</span>
                         </Button>
+                        {order.status !== 'refunded' && (
+                          <Button variant="outline" size="sm" className="h-10 px-3 border-white/10 hover:bg-neon-cyan/10 hover:text-neon-cyan gap-2 rounded-xl" onClick={() => openMultiPayment(order)}>
+                            <CreditCard className="h-4 w-4" /> <span className="text-xs font-bold">Payment</span>
+                          </Button>
+                        )}
                         {order.status !== 'refunded' && (
                           <Button variant="outline" size="sm" className="h-10 px-3 border-red-500/20 text-red-400 hover:bg-red-500/10 gap-2 rounded-xl" onClick={() => { setAuthAction({ type: 'refund', orderId: order.id }); }}>
                             <RotateCcw className="h-4 w-4" /> <span className="text-xs font-bold">Refund</span>
@@ -823,6 +905,94 @@ export default function CashierPage() {
         </DialogContent>
       </Dialog>
 
+      {/* Multi-Payment (Split) Dialog */}
+      <Dialog open={isMultiPaymentOpen} onOpenChange={setIsMultiPaymentOpen}>
+        <DialogContent className="sm:max-w-[500px] bg-[#0A0A0B] border-white/10 text-white">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-xl font-black uppercase tracking-tighter">
+              <LayoutGrid className="h-6 w-6 text-neon-cyan" />
+              Split Payment #{activeMultiOrder?.orderNumber}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-4 space-y-6">
+            <div className="flex justify-between items-center p-4 rounded-2xl bg-white/5 border border-white/10">
+              <div>
+                <div className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Total Due</div>
+                <div className="text-2xl font-black text-neon-green">{fmt(activeMultiOrder?.total || 0)}</div>
+              </div>
+              <div className="text-right">
+                <div className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Remaining</div>
+                <div className={`text-2xl font-black ${Math.abs(Number(activeMultiOrder?.total || 0) - multiPaymentEntries.reduce((s, e) => s + e.amount, 0)) < 0.01 ? "text-neon-cyan" : "text-red-500"}`}>
+                  {fmt(Number(activeMultiOrder?.total || 0) - multiPaymentEntries.reduce((s, e) => s + e.amount, 0))}
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              {multiPaymentEntries.map((entry, idx) => (
+                <div key={idx} className="flex gap-3 items-end animate-in fade-in slide-in-from-top-2">
+                  <div className="flex-1 space-y-2">
+                    <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">Method</label>
+                    <Select value={entry.method} onValueChange={(v) => {
+                      const next = [...multiPaymentEntries];
+                      next[idx].method = v;
+                      setMultiPaymentEntries(next);
+                    }}>
+                      <SelectTrigger className="bg-white/5 border-white/10 h-12 rounded-xl">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-[#0A0A0B] border-white/10">
+                        <SelectItem value="cash">Cash</SelectItem>
+                        <SelectItem value="card">Card</SelectItem>
+                        <SelectItem value="wallet">Wallet</SelectItem>
+                        <SelectItem value="hospitality">Hospitality</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="w-32 space-y-2">
+                    <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">Amount</label>
+                    <Input 
+                      type="number" 
+                      value={entry.amount} 
+                      onChange={(e) => {
+                        const next = [...multiPaymentEntries];
+                        next[idx].amount = Number(e.target.value);
+                        setMultiPaymentEntries(next);
+                      }}
+                      className="bg-white/5 border-white/10 h-12 rounded-xl text-right font-bold"
+                    />
+                  </div>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-12 w-12 rounded-xl text-red-400 hover:bg-red-500/10"
+                    onClick={() => setMultiPaymentEntries(prev => prev.filter((_, i) => i !== idx))}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+              
+              <Button 
+                variant="outline" 
+                className="w-full h-12 border-dashed border-white/20 hover:border-neon-cyan/50 hover:bg-neon-cyan/5 rounded-xl gap-2 text-xs font-bold"
+                onClick={() => setMultiPaymentEntries(prev => [...prev, { method: "cash", amount: 0 }])}
+              >
+                <Plus className="h-4 w-4" /> ADD PAYMENT METHOD
+              </Button>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              className="w-full h-14 text-base font-black uppercase tracking-widest rounded-2xl bg-neon-cyan hover:bg-neon-cyan/80 text-background border-none shadow-lg shadow-neon-cyan/20"
+              onClick={saveMultiPayment}
+            >
+              Confirm Split
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Admin Auth for Refunds */}
       <Dialog open={!!authAction && !isRefundItemsOpen} onOpenChange={(open) => !open && setAuthAction(null)}>
         <DialogContent className="sm:max-w-[400px] bg-[#0A0A0B] border-white/10 text-white">
@@ -877,44 +1047,86 @@ export default function CashierPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-xl font-black uppercase tracking-tighter">
               <RotateCcw className="h-6 w-6 text-neon-cyan" />
-              Return to Stock
+              Granular Refund
             </DialogTitle>
           </DialogHeader>
           <div className="py-4 space-y-6">
-            <p className="text-sm text-muted-foreground font-medium">Select items that should be <span className="text-neon-green">returned to stock</span>. Unchecked items will be marked as <span className="text-red-400">Waste</span>.</p>
+            <p className="text-sm text-muted-foreground font-medium">Select items to <span className="text-red-400">Refund</span>. For each refunded item, choose if it should be <span className="text-neon-green">Returned to Stock</span>.</p>
             
             <div className="max-h-[55vh] overflow-y-auto pr-1 space-y-3">
                 {recentOrders.find(o => o.id === authAction?.orderId)?.items.map((item: any) => {
-                  const isSelected = selectedRefundItems.has(item.id);
+                  const isRefunded = refundItemSelection.has(item.id);
+                  const isReturned = returnToStockSelection.has(item.id);
+                  const alreadyRefunded = item.status === 'refunded';
+
                   return (
                     <div 
                       key={item.id} 
-                      onClick={() => {
-                        const next = new Set(selectedRefundItems);
-                        if (next.has(item.id)) next.delete(item.id);
-                        else next.add(item.id);
-                        setSelectedRefundItems(next);
-                      }}
-                      className={`p-4 rounded-2xl border-2 cursor-pointer transition-all flex items-center justify-between ${
-                        isSelected 
-                          ? "border-neon-green bg-neon-green/10" 
-                          : "border-white/10 bg-white/5 opacity-60 hover:opacity-100"
+                      className={`p-4 rounded-2xl border-2 transition-all flex flex-col gap-3 ${
+                        isRefunded 
+                          ? "border-red-500/50 bg-red-500/5" 
+                          : alreadyRefunded 
+                            ? "border-white/5 bg-white/5 opacity-40 grayscale"
+                            : "border-white/10 bg-white/5"
                       }`}
                     >
-                      <div className="flex items-center gap-4">
-                        <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${
-                          isSelected ? "bg-neon-green border-neon-green text-background" : "border-white/20"
-                        }`}>
-                          {isSelected && <Check className="h-4 w-4 stroke-[4]" />}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <button 
+                            disabled={alreadyRefunded}
+                            onClick={() => {
+                              const next = new Set(refundItemSelection);
+                              if (next.has(item.id)) {
+                                next.delete(item.id);
+                                // Also remove from return to stock if un-refunding
+                                const nextReturn = new Set(returnToStockSelection);
+                                nextReturn.delete(item.id);
+                                setReturnToStockSelection(nextReturn);
+                              }
+                              else next.add(item.id);
+                              setRefundItemSelection(next);
+                            }}
+                            className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${
+                              isRefunded ? "bg-red-500 border-red-500 text-white" : "border-white/20"
+                            }`}
+                          >
+                            {isRefunded && <Check className="h-4 w-4 stroke-[4]" />}
+                          </button>
+                          <div>
+                            <div className="font-bold flex items-center gap-2">
+                              {item.drinkName}
+                              {alreadyRefunded && <Badge variant="outline" className="text-[8px] h-4">ALREADY REFUNDED</Badge>}
+                            </div>
+                            <div className="text-[10px] uppercase font-black tracking-widest opacity-60">Qty: {item.quantity} · {fmt(item.lineTotal)}</div>
+                          </div>
                         </div>
-                        <div>
-                          <div className="font-bold">{item.drinkName}</div>
-                          <div className="text-[10px] uppercase font-black tracking-widest opacity-60">Qty: {item.quantity}</div>
+                        {isRefunded && (
+                          <div className="text-xs font-black uppercase tracking-widest text-red-500 animate-in fade-in zoom-in">
+                            REFUNDING
+                          </div>
+                        )}
+                      </div>
+
+                      {isRefunded && (
+                        <div className="flex items-center justify-between pt-2 border-t border-white/5 animate-in slide-in-from-top-2">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Return to stock?</span>
+                          <button
+                            onClick={() => {
+                              const next = new Set(returnToStockSelection);
+                              if (next.has(item.id)) next.delete(item.id);
+                              else next.add(item.id);
+                              setReturnToStockSelection(next);
+                            }}
+                            className={`flex items-center gap-2 px-3 py-1 rounded-full text-[9px] font-black uppercase transition-all ${
+                              isReturned 
+                                ? "bg-neon-green text-background" 
+                                : "bg-white/10 text-white hover:bg-white/20"
+                            }`}
+                          >
+                            {isReturned ? <><Check className="h-3 w-3" /> YES</> : "NO (WASTE)"}
+                          </button>
                         </div>
-                      </div>
-                      <div className="text-xs font-black uppercase tracking-widest">
-                        {isSelected ? <span className="text-neon-green">Return</span> : <span className="text-red-400">Waste</span>}
-                      </div>
+                      )}
                     </div>
                   );
                 })}
@@ -922,11 +1134,11 @@ export default function CashierPage() {
           </div>
           <DialogFooter>
             <Button 
-              className="w-full h-14 text-base font-black uppercase tracking-widest rounded-2xl bg-neon-cyan hover:bg-neon-cyan/80 text-background border-none shadow-lg shadow-neon-cyan/20"
-              disabled={isRefunding}
+              className="w-full h-14 text-base font-black uppercase tracking-widest rounded-2xl bg-red-500 hover:bg-red-600 text-white border-none shadow-lg shadow-red-500/20"
+              disabled={isRefunding || refundItemSelection.size === 0}
               onClick={handleFinalRefund}
             >
-              {isRefunding ? <Loader2 className="h-5 w-5 animate-spin" /> : "Complete Refund"}
+              {isRefunding ? <Loader2 className="h-5 w-5 animate-spin" /> : `Refund ${refundItemSelection.size} Item(s)`}
             </Button>
           </DialogFooter>
         </DialogContent>

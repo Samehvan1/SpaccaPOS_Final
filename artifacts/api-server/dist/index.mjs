@@ -56170,7 +56170,7 @@ var init_discounts = __esm({
 });
 
 // ../../lib/db/src/schema/orders.ts
-var ordersTable, orderItemsTable, orderItemCustomizationsTable, insertOrderSchema;
+var ordersTable, orderItemsTable, orderItemCustomizationsTable, orderPaymentsTable, insertOrderSchema;
 var init_orders = __esm({
   "../../lib/db/src/schema/orders.ts"() {
     "use strict";
@@ -56190,6 +56190,7 @@ var init_orders = __esm({
         enum: ["pending", "paid", "in_progress", "ready", "completed", "cancelled", "refunded"]
       }).notNull().default("pending"),
       customerName: text("customer_name"),
+      customerPhone: text("customer_phone"),
       subtotal: numeric("subtotal", { precision: 8, scale: 2 }).notNull(),
       discount: numeric("discount", { precision: 8, scale: 2 }).notNull().default("0"),
       discountId: integer("discount_id").references(() => discountsTable.id),
@@ -56197,7 +56198,7 @@ var init_orders = __esm({
       discountValue: numeric("discount_value", { precision: 8, scale: 2 }),
       discountType: text("discount_type", { enum: ["percentage", "fixed"] }),
       total: numeric("total", { precision: 8, scale: 2 }).notNull(),
-      paymentMethod: text("payment_method", { enum: ["cash", "card", "wallet", "hospitality"] }).notNull().default("cash"),
+      paymentMethod: text("payment_method", { enum: ["cash", "card", "wallet", "hospitality", "split", "refund"] }).notNull().default("cash"),
       amountTendered: numeric("amount_tendered", { precision: 8, scale: 2 }),
       changeDue: numeric("change_due", { precision: 8, scale: 2 }),
       notes: text("notes"),
@@ -56225,7 +56226,9 @@ var init_orders = __esm({
       specialNotes: text("special_notes"),
       kitchenStation: text("kitchen_station").notNull().default("main"),
       kitchenStationId: integer("kitchen_station_id").references(() => kitchenStationsTable.id),
-      status: text("status", { enum: ["pending", "ready"] }).notNull().default("pending"),
+      status: text("status", { enum: ["pending", "ready", "refunded", "cancelled"] }).notNull().default("pending"),
+      refundedAt: timestamp("refunded_at", { withTimezone: true }),
+      refundedAmount: numeric("refunded_amount", { precision: 8, scale: 2 }),
       readyAt: timestamp("ready_at", { withTimezone: true }),
       createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
       updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => /* @__PURE__ */ new Date())
@@ -56254,6 +56257,18 @@ var init_orders = __esm({
     }, (table) => {
       return {
         orderItemIdIdx: index("order_item_customizations_item_id_idx").on(table.orderItemId)
+      };
+    });
+    orderPaymentsTable = pgTable("order_payments", {
+      id: serial("id").primaryKey(),
+      orderId: integer("order_id").notNull().references(() => ordersTable.id, { onDelete: "cascade" }),
+      paymentMethod: text("payment_method", { enum: ["cash", "card", "wallet", "hospitality", "refund"] }).notNull(),
+      amount: numeric("amount", { precision: 8, scale: 2 }).notNull(),
+      transactionId: text("transaction_id"),
+      createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+    }, (table) => {
+      return {
+        orderIdIdx: index("order_payments_order_id_idx").on(table.orderId)
       };
     });
     insertOrderSchema = createInsertSchema(ordersTable).omit({ id: true, createdAt: true, updatedAt: true });
@@ -56452,6 +56467,49 @@ var init_stock_audit = __esm({
   }
 });
 
+// ../../lib/db/src/schema/customers.ts
+var customersTable;
+var init_customers = __esm({
+  "../../lib/db/src/schema/customers.ts"() {
+    "use strict";
+    init_pg_core();
+    customersTable = pgTable("customers", {
+      id: serial("id").primaryKey(),
+      name: text("name").notNull(),
+      phone: text("phone").notNull().unique(),
+      email: text("email"),
+      passwordHash: text("password_hash"),
+      // Optional if created from POS
+      points: integer("points").notNull().default(0),
+      totalSpent: numeric("total_spent", { precision: 12, scale: 2 }).notNull().default("0"),
+      visitCount: integer("visit_count").notNull().default(0),
+      notes: text("notes"),
+      isActive: boolean("is_active").notNull().default(true),
+      createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+      updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => /* @__PURE__ */ new Date())
+    });
+  }
+});
+
+// ../../lib/db/src/schema/signatures.ts
+var signaturesTable;
+var init_signatures = __esm({
+  "../../lib/db/src/schema/signatures.ts"() {
+    "use strict";
+    init_pg_core();
+    init_orders();
+    signaturesTable = pgTable("signatures", {
+      id: serial("id").primaryKey(),
+      orderId: integer("order_id").notNull().references(() => ordersTable.id, { onDelete: "cascade" }),
+      orderItemId: integer("order_item_id").references(() => orderItemsTable.id, { onDelete: "cascade" }),
+      // For phase 2 (per drink)
+      signatureData: text("signature_data").notNull(),
+      // Base64 image data or SVG path
+      createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+    });
+  }
+});
+
 // ../../lib/db/src/schema/index.ts
 var schema_exports = {};
 __export(schema_exports, {
@@ -56459,6 +56517,7 @@ __export(schema_exports, {
   branchStockTable: () => branchStockTable,
   branchesTable: () => branchesTable,
   cashierSessionsTable: () => cashierSessionsTable,
+  customersTable: () => customersTable,
   discountsTable: () => discountsTable,
   drinkCategoriesTable: () => drinkCategoriesTable,
   drinkIngredientSlotsTable: () => drinkIngredientSlotsTable,
@@ -56503,6 +56562,7 @@ __export(schema_exports, {
   kitchenStationsTable: () => kitchenStationsTable,
   orderItemCustomizationsTable: () => orderItemCustomizationsTable,
   orderItemsTable: () => orderItemsTable,
+  orderPaymentsTable: () => orderPaymentsTable,
   ordersTable: () => ordersTable,
   permissionsTable: () => permissionsTable,
   predefinedSlotTypeOptionsTable: () => predefinedSlotTypeOptionsTable,
@@ -56512,6 +56572,7 @@ __export(schema_exports, {
   rolesTable: () => rolesTable,
   sessionsTable: () => sessionsTable,
   settingsTable: () => settingsTable,
+  signaturesTable: () => signaturesTable,
   stockAuditItemsTable: () => stockAuditItemsTable,
   stockAuditsTable: () => stockAuditsTable,
   stockMovementsTable: () => stockMovementsTable,
@@ -56534,6 +56595,8 @@ var init_schema2 = __esm({
     init_activity_logs();
     init_sessions();
     init_stock_audit();
+    init_customers();
+    init_signatures();
   }
 });
 
@@ -56591,6 +56654,7 @@ __export(src_exports, {
   branchStockTable: () => branchStockTable,
   branchesTable: () => branchesTable,
   cashierSessionsTable: () => cashierSessionsTable,
+  customersTable: () => customersTable,
   db: () => db,
   discountsTable: () => discountsTable,
   drinkCategoriesTable: () => drinkCategoriesTable,
@@ -56636,6 +56700,7 @@ __export(src_exports, {
   kitchenStationsTable: () => kitchenStationsTable,
   orderItemCustomizationsTable: () => orderItemCustomizationsTable,
   orderItemsTable: () => orderItemsTable,
+  orderPaymentsTable: () => orderPaymentsTable,
   ordersTable: () => ordersTable,
   permissionsTable: () => permissionsTable,
   pool: () => pool,
@@ -56647,6 +56712,7 @@ __export(src_exports, {
   runMigrations: () => runMigrations,
   sessionsTable: () => sessionsTable,
   settingsTable: () => settingsTable,
+  signaturesTable: () => signaturesTable,
   stockAuditItemsTable: () => stockAuditItemsTable,
   stockAuditsTable: () => stockAuditsTable,
   stockMovementsTable: () => stockMovementsTable,
@@ -77677,7 +77743,6 @@ var ListIngredientsResponseItem = objectType({
   unit: stringType(),
   costPerUnit: numberType(),
   stockQuantity: numberType(),
-  startupQuantity: numberType().optional(),
   lowStockThreshold: numberType(),
   isActive: booleanType(),
   linkedTypeCount: numberType().optional(),
@@ -77704,7 +77769,6 @@ var CreateIngredientBody = objectType({
   unit: stringType(),
   costPerUnit: numberType(),
   stockQuantity: numberType().optional(),
-  startupQuantity: numberType().optional(),
   lowStockThreshold: numberType().optional(),
   isActive: booleanType().optional()
 });
@@ -77734,7 +77798,6 @@ var GetIngredientResponse = objectType({
   unit: stringType(),
   costPerUnit: numberType(),
   stockQuantity: numberType(),
-  startupQuantity: numberType().optional(),
   lowStockThreshold: numberType(),
   isActive: booleanType(),
   linkedTypeCount: numberType().optional(),
@@ -77783,7 +77846,6 @@ var UpdateIngredientBody = objectType({
   unit: stringType().optional(),
   costPerUnit: numberType().optional(),
   stockQuantity: numberType().optional(),
-  startupQuantity: numberType().optional(),
   lowStockThreshold: numberType().optional(),
   isActive: booleanType().optional()
 });
@@ -77880,7 +77942,6 @@ var RestockIngredientQueryParams = objectType({
 });
 var RestockIngredientBody = objectType({
   quantity: numberType(),
-  unitId: numberType().optional(),
   note: stringType().optional()
 });
 var RestockIngredientResponse = objectType({
@@ -77933,6 +77994,7 @@ var ListOrdersResponseItem = objectType({
     "refunded"
   ]),
   customerName: stringType().nullish(),
+  customerPhone: stringType().nullish(),
   subtotal: numberType(),
   discount: numberType(),
   discountId: numberType().nullish(),
@@ -77986,6 +78048,7 @@ var ListOrdersResponse = arrayType(ListOrdersResponseItem);
 var CreateOrderBody = objectType({
   branchId: numberType().optional(),
   customerName: stringType().optional(),
+  customerPhone: stringType().optional(),
   paymentMethod: enumType(["cash", "card", "wallet", "hospitality"]),
   amountTendered: numberType().optional(),
   notes: stringType().optional(),
@@ -78031,6 +78094,7 @@ var GetOrderResponse = objectType({
     "refunded"
   ]),
   customerName: stringType().nullish(),
+  customerPhone: stringType().nullish(),
   subtotal: numberType(),
   discount: numberType(),
   discountId: numberType().nullish(),
@@ -78115,6 +78179,7 @@ var UpdateOrderStatusResponse = objectType({
     "refunded"
   ]),
   customerName: stringType().nullish(),
+  customerPhone: stringType().nullish(),
   subtotal: numberType(),
   discount: numberType(),
   discountId: numberType().nullish(),
@@ -78131,6 +78196,12 @@ var UpdateOrderStatusResponse = objectType({
   readyAt: stringType().nullish(),
   completedAt: stringType().nullish(),
   cancelledAt: stringType().nullish()
+});
+var SaveOrderSignatureParams = objectType({
+  id: coerce.number()
+});
+var SaveOrderSignatureBody = objectType({
+  signatureData: stringType().describe("Base64 encoded signature image")
 });
 var MarkOrderItemReadyParams = objectType({
   id: coerce.number()
@@ -78153,6 +78224,7 @@ var MarkOrderItemReadyResponse = objectType({
     "refunded"
   ]),
   customerName: stringType().nullish(),
+  customerPhone: stringType().nullish(),
   subtotal: numberType(),
   discount: numberType(),
   discountId: numberType().nullish(),
@@ -78172,8 +78244,6 @@ var MarkOrderItemReadyResponse = objectType({
 });
 var ListStockMovementsQueryParams = objectType({
   ingredientId: coerce.number().optional(),
-  startDate: coerce.date().optional(),
-  endDate: coerce.date().optional(),
   limit: coerce.number().optional(),
   offset: coerce.number().optional()
 });
@@ -78182,7 +78252,7 @@ var ListStockMovementsResponseItem = objectType({
   ingredientId: numberType(),
   ingredientName: stringType(),
   orderId: numberType().nullable(),
-  movementType: enumType(["sale", "restock", "adjustment", "waste", "opening", "calibration"]),
+  movementType: enumType(["sale", "restock", "adjustment", "waste", "opening"]),
   quantity: numberType(),
   quantityAfter: numberType(),
   note: stringType().nullable(),
@@ -78195,9 +78265,8 @@ var ListStockMovementsResponse = arrayType(
 );
 var CreateStockAdjustmentBody = objectType({
   ingredientId: numberType(),
-  movementType: enumType(["adjustment", "waste", "opening", "calibration"]),
+  movementType: enumType(["adjustment", "waste", "opening"]),
   quantity: numberType(),
-  unitId: numberType().optional(),
   note: stringType().optional()
 });
 var GetDashboardSummaryResponse = objectType({
@@ -78229,6 +78298,7 @@ var GetActiveOrdersResponseItem = objectType({
     "refunded"
   ]),
   customerName: stringType().nullish(),
+  customerPhone: stringType().nullish(),
   subtotal: numberType(),
   discount: numberType(),
   discountId: numberType().nullish(),
@@ -78362,6 +78432,13 @@ var DeleteUserParams = objectType({
 });
 var DeleteUserQueryParams = objectType({
   branchId: coerce.number().optional()
+});
+var GetCustomerPointsParams = objectType({
+  phone: coerce.string()
+});
+var GetCustomerPointsResponse = objectType({
+  points: numberType(),
+  name: stringType().nullish()
 });
 var ListActivityLogsQueryParams = objectType({
   userId: coerce.number().optional(),
@@ -78525,14 +78602,6 @@ var ValidateDiscountResponse = objectType({
   createdAt: stringType(),
   updatedAt: stringType()
 });
-var IngredientConversion = objectType({
-  id: numberType(),
-  ingredientId: numberType(),
-  unitName: stringType(),
-  conversionFactor: numberType(),
-  isDefaultPurchase: booleanType()
-});
-var ListIngredientConversionsResponse = arrayType(IngredientConversion);
 
 // ../../lib/api-zod/src/index.ts
 var HealthCheckResponse2 = HealthCheckResponse;
@@ -78575,27 +78644,69 @@ var DeleteIngredientOptionParams2 = DeleteIngredientOptionParams;
 var RestockIngredientBody2 = RestockIngredientBody;
 var RestockIngredientResponse2 = RestockIngredientResponse;
 var ListOrdersQueryParams2 = ListOrdersQueryParams;
-var ListOrdersResponseItem2 = ListOrdersResponseItem.and(external_exports2.object({
-  discountCode: external_exports2.string().nullish()
-}));
+var ListOrdersResponseItem2 = ListOrdersResponseItem._def.left.extend({
+  discountCode: external_exports2.string().nullish(),
+  paymentMethod: external_exports2.enum(["cash", "card", "wallet", "hospitality", "split", "refund"])
+}).and(
+  ListOrdersResponseItem._def.right.extend({
+    items: external_exports2.array(external_exports2.any()),
+    // Allow updated item fields like status: 'refunded'
+    payments: external_exports2.array(external_exports2.object({
+      id: external_exports2.number(),
+      paymentMethod: external_exports2.string(),
+      amount: external_exports2.number(),
+      transactionId: external_exports2.string().nullish(),
+      createdAt: external_exports2.string()
+    })).optional()
+  })
+);
 var ListOrdersResponse2 = external_exports2.array(ListOrdersResponseItem2);
-var CreateOrderBody2 = CreateOrderBody;
+var CreateOrderBody2 = CreateOrderBody.extend({
+  payments: external_exports2.array(external_exports2.object({
+    paymentMethod: external_exports2.enum(["cash", "card", "wallet", "hospitality", "refund"]),
+    amount: external_exports2.number(),
+    transactionId: external_exports2.string().optional()
+  })).optional()
+});
 var GetOrderParams2 = GetOrderParams;
-var GetOrderResponse2 = GetOrderResponse.and(external_exports2.object({
-  discountCode: external_exports2.string().nullish()
-}));
+var GetOrderResponse2 = GetOrderResponse._def.left.extend({
+  discountCode: external_exports2.string().nullish(),
+  paymentMethod: external_exports2.enum(["cash", "card", "wallet", "hospitality", "split"]),
+  payments: external_exports2.array(external_exports2.object({
+    id: external_exports2.number(),
+    paymentMethod: external_exports2.string(),
+    amount: external_exports2.number(),
+    transactionId: external_exports2.string().nullish(),
+    createdAt: external_exports2.string()
+  })).optional()
+}).and(
+  GetOrderResponse._def.right.extend({
+    items: external_exports2.array(external_exports2.any())
+    // Override to allow updated item fields
+  })
+);
 var UpdateOrderStatusParams2 = UpdateOrderStatusParams;
-var UpdateOrderStatusBody2 = UpdateOrderStatusBody;
-var UpdateOrderStatusResponse2 = UpdateOrderStatusResponse;
+var UpdateOrderStatusBody2 = UpdateOrderStatusBody.extend({
+  payments: external_exports2.array(external_exports2.object({
+    paymentMethod: external_exports2.enum(["cash", "card", "wallet", "hospitality", "refund"]),
+    amount: external_exports2.number(),
+    transactionId: external_exports2.string().optional()
+  })).optional(),
+  paymentMethod: external_exports2.enum(["cash", "card", "wallet", "hospitality", "split", "refund"]).optional(),
+  adminPin: external_exports2.string().optional()
+});
+var UpdateOrderStatusResponse2 = GetOrderResponse2;
 var ListStockMovementsQueryParams2 = ListStockMovementsQueryParams;
 var ListStockMovementsResponse2 = ListStockMovementsResponse;
 var CreateStockAdjustmentBody2 = CreateStockAdjustmentBody;
 var GetDashboardSummaryResponse2 = GetDashboardSummaryResponse;
-var GetActiveOrdersResponseItem2 = GetActiveOrdersResponseItem.and(external_exports2.object({
-  items: external_exports2.array(external_exports2.any()),
-  // Allow extra fields in items like kitchenStationId
-  discountCode: external_exports2.string().nullish()
-}));
+var GetActiveOrdersResponseItem2 = GetActiveOrdersResponseItem.and(
+  external_exports2.object({
+    items: external_exports2.array(external_exports2.any()),
+    // Allow extra fields in items like kitchenStationId
+    discountCode: external_exports2.string().nullish()
+  })
+);
 var GetActiveOrdersResponse2 = external_exports2.array(GetActiveOrdersResponseItem2);
 var GetLowStockIngredientsResponse2 = GetLowStockIngredientsResponse;
 var GetSalesByCategoryQueryParams2 = GetSalesByCategoryQueryParams;
@@ -82505,9 +82616,10 @@ async function buildOrderDetail(orderId) {
     db.select().from(orderItemsTable).where(eq(orderItemsTable.orderId, orderId))
   ]);
   if (!order) return null;
-  const [[barista], customizations] = await Promise.all([
+  const [[barista], customizations, payments] = await Promise.all([
     db.select().from(usersTable).where(eq(usersTable.id, order.baristaId)),
-    items.length > 0 ? db.select().from(orderItemCustomizationsTable).where(inArray(orderItemCustomizationsTable.orderItemId, items.map((i) => i.id))) : Promise.resolve([])
+    items.length > 0 ? db.select().from(orderItemCustomizationsTable).where(inArray(orderItemCustomizationsTable.orderItemId, items.map((i) => i.id))) : Promise.resolve([]),
+    db.select().from(orderPaymentsTable).where(eq(orderPaymentsTable.orderId, orderId))
   ]);
   const custByItem = /* @__PURE__ */ new Map();
   for (const c of customizations) {
@@ -82527,11 +82639,16 @@ async function buildOrderDetail(orderId) {
     total: parseFloat(order.total),
     amountTendered: order.amountTendered ? parseFloat(order.amountTendered) : null,
     changeDue: order.changeDue ? parseFloat(order.changeDue) : null,
+    payments: payments.map((p) => ({
+      ...p,
+      amount: parseFloat(p.amount)
+    })),
     items: items.map((item) => ({
       ...item,
       status: item.status,
       unitPrice: parseFloat(item.unitPrice),
       lineTotal: parseFloat(item.lineTotal),
+      refundedAmount: item.refundedAmount ? parseFloat(item.refundedAmount) : null,
       customizations: (custByItem.get(item.id) ?? []).map((c) => ({
         ...c,
         consumedQty: parseFloat(c.consumedQty),
@@ -82569,10 +82686,11 @@ router5.get("/orders", requirePermission("cashier:view"), async (req, res) => {
   }
   const orders = await query.orderBy(desc(ordersTable.createdAt)).limit(limit).offset(offset);
   const orderIds = orders.map((o) => o.id);
-  const [items, baristas] = await Promise.all([
+  const [items, baristas, payments] = await Promise.all([
     orderIds.length > 0 ? db.select().from(orderItemsTable).where(inArray(orderItemsTable.orderId, orderIds)) : Promise.resolve([]),
-    db.select().from(usersTable)
+    db.select().from(usersTable),
     // Fetch all baristas for mapping
+    orderIds.length > 0 ? db.select().from(orderPaymentsTable).where(inArray(orderPaymentsTable.orderId, orderIds)) : Promise.resolve([])
   ]);
   const itemIds = items.map((i) => i.id);
   const customizations = itemIds.length > 0 ? await db.select().from(orderItemCustomizationsTable).where(inArray(orderItemCustomizationsTable.orderItemId, itemIds)) : [];
@@ -82582,6 +82700,12 @@ router5.get("/orders", requirePermission("cashier:view"), async (req, res) => {
     const list = custByItem.get(c.orderItemId) ?? [];
     list.push({ ...c, consumedQty: parseFloat(c.consumedQty), producedQty: parseFloat(c.producedQty), addedCost: parseFloat(c.addedCost) });
     custByItem.set(c.orderItemId, list);
+  }
+  const paymentsByOrder = /* @__PURE__ */ new Map();
+  for (const p of payments) {
+    const list = paymentsByOrder.get(p.orderId) ?? [];
+    list.push({ ...p, amount: parseFloat(p.amount) });
+    paymentsByOrder.set(p.orderId, list);
   }
   const itemsByOrder = /* @__PURE__ */ new Map();
   for (const i of items) {
@@ -82608,6 +82732,7 @@ router5.get("/orders", requirePermission("cashier:view"), async (req, res) => {
         total: parseFloat(o.total),
         amountTendered: o.amountTendered ? parseFloat(o.amountTendered) : null,
         changeDue: o.changeDue ? parseFloat(o.changeDue) : null,
+        payments: paymentsByOrder.get(o.id) ?? [],
         items: itemsByOrder.get(o.id) ?? []
       })))
     )
@@ -82739,6 +82864,7 @@ router5.post("/orders", async (req, res) => {
       baristaId: sessionUserId,
       status: "pending",
       customerName: parsed.data.customerName ?? null,
+      customerPhone: parsed.data.customerPhone ?? null,
       subtotal: String(subtotal),
       discount: String(discountAmount),
       discountId: discountIdToSave,
@@ -82751,6 +82877,27 @@ router5.post("/orders", async (req, res) => {
       changeDue: changeDue != null ? String(changeDue) : null,
       notes: parsed.data.notes ?? null
     }).returning();
+    if (parsed.data.customerPhone) {
+      const pointsToEarn = Math.floor(subtotal / 1.14 / 10);
+      if (pointsToEarn > 0) {
+        await tx.insert(customersTable).values({
+          phone: parsed.data.customerPhone,
+          name: parsed.data.customerName || "Customer",
+          points: pointsToEarn,
+          totalSpent: String(total),
+          visitCount: 1
+        }).onConflictDoUpdate({
+          target: [customersTable.phone],
+          set: {
+            points: sql`${customersTable.points} + ${pointsToEarn}`,
+            totalSpent: sql`${customersTable.totalSpent} + ${total}`,
+            visitCount: sql`${customersTable.visitCount} + 1`,
+            updatedAt: /* @__PURE__ */ new Date()
+          }
+        });
+        console.log(`[loyalty] Awarded ${pointsToEarn} points to ${parsed.data.customerPhone}`);
+      }
+    }
     const allIngredientIds = [
       ...new Set(itemDetails.flatMap((d) => d.customizations.map((c) => c.ingredientId).filter((id) => id !== null)))
     ];
@@ -82826,6 +82973,26 @@ router5.post("/orders", async (req, res) => {
         );
       }
       savedItems2.push({ ...orderItem, customizations: item.customizations, kitchenStation: orderItem.kitchenStation });
+    }
+    const orderPayments = parsed.data.payments || [];
+    if (orderPayments.length > 0) {
+      await tx.insert(orderPaymentsTable).values(
+        orderPayments.map((p) => ({
+          orderId: order2.id,
+          paymentMethod: p.paymentMethod,
+          amount: String(p.amount),
+          transactionId: p.transactionId ?? null
+        }))
+      );
+      await tx.update(ordersTable).set({
+        paymentMethod: orderPayments.length > 1 ? "split" : orderPayments[0].paymentMethod
+      }).where(eq(ordersTable.id, order2.id));
+    } else if (parsed.data.paymentMethod) {
+      await tx.insert(orderPaymentsTable).values({
+        orderId: order2.id,
+        paymentMethod: parsed.data.paymentMethod,
+        amount: String(total)
+      });
     }
     return { order: order2, savedItems: savedItems2 };
   });
@@ -82943,12 +83110,45 @@ router5.patch("/orders/:id/status", async (req, res, next) => {
     const cashierId = req.body.cashierId ?? req.session.cashierId ?? null;
     if (cashierId) updateData.cashierId = cashierId;
     updateData.paidAt = now;
+    if (parsed.data.payments && parsed.data.payments.length > 0) {
+      await db.transaction(async (tx) => {
+        await tx.delete(orderPaymentsTable).where(eq(orderPaymentsTable.orderId, params.data.id));
+        await tx.insert(orderPaymentsTable).values(
+          parsed.data.payments.map((p) => ({
+            orderId: params.data.id,
+            paymentMethod: p.paymentMethod,
+            amount: String(p.amount),
+            transactionId: p.transactionId ?? null
+          }))
+        );
+      });
+    }
   } else if (parsed.data.status === "ready") {
     updateData.readyAt = now;
   } else if (parsed.data.status === "completed") {
     updateData.completedAt = now;
   } else if (parsed.data.status === "cancelled" || parsed.data.status === "refunded") {
     updateData.cancelledAt = now;
+  }
+  if (!parsed.data.status || parsed.data.status === (await db.select({ status: ordersTable.status }).from(ordersTable).where(eq(ordersTable.id, params.data.id)).limit(1))[0]?.status) {
+    if (parsed.data.payments && parsed.data.payments.length > 0) {
+      await db.transaction(async (tx) => {
+        await tx.delete(orderPaymentsTable).where(eq(orderPaymentsTable.orderId, params.data.id));
+        await tx.insert(orderPaymentsTable).values(
+          parsed.data.payments.map((p) => ({
+            orderId: params.data.id,
+            paymentMethod: p.paymentMethod,
+            amount: String(p.amount),
+            transactionId: p.transactionId ?? null
+          }))
+        );
+        if (parsed.data.payments.length === 1) {
+          await tx.update(ordersTable).set({ paymentMethod: parsed.data.payments[0].paymentMethod }).where(eq(ordersTable.id, params.data.id));
+        } else {
+          await tx.update(ordersTable).set({ paymentMethod: "split" }).where(eq(ordersTable.id, params.data.id));
+        }
+      });
+    }
   }
   const [order] = await db.update(ordersTable).set(updateData).where(eq(ordersTable.id, params.data.id)).returning();
   if (!order) {
@@ -82997,7 +83197,8 @@ router5.patch("/order-items/:id/ready", requirePermission("kitchen:mark_ready"),
 });
 router5.post("/orders/:id/refund", requirePermission("cashier:refund_order"), async (req, res) => {
   const { id } = req.params;
-  const { adminPin, returnToStockItems } = req.body;
+  const { adminPin, refundItems, returnToStockItems } = req.body;
+  const itemsToRefund = refundItems || returnToStockItems || [];
   if (!adminPin) {
     res.status(400).json({ error: "Admin or Cashier PIN is required" });
     return;
@@ -83021,39 +83222,110 @@ router5.post("/orders/:id/refund", requirePermission("cashier:refund_order"), as
     res.status(404).json({ error: "Order not found" });
     return;
   }
-  console.log(`[Refund-Debug] Order ${orderId}, Return Items:`, returnToStockItems);
-  if (returnToStockItems && returnToStockItems.length > 0) {
+  console.log(`[Refund-Debug] Order ${orderId}, Refund Items:`, itemsToRefund, "Return to Stock:", returnToStockItems);
+  if (itemsToRefund.length > 0) {
     await db.transaction(async (tx) => {
-      for (const itemId of returnToStockItems) {
-        const customizations = await tx.select().from(orderItemCustomizationsTable).where(eq(orderItemCustomizationsTable.orderItemId, itemId));
-        console.log(`[Refund-Debug] Item ${itemId} has ${customizations.length} customizations`);
-        for (const cust of customizations) {
-          if (cust.ingredientId) {
-            const consumed = parseFloat(cust.consumedQty);
-            console.log(`[Refund-Debug] Returning Ingredient ${cust.ingredientId}, Qty ${consumed} to Branch ${order.branchId}`);
-            if (consumed > 0) {
-              const result = await tx.update(branchStockTable).set({
-                stockQuantity: sql`${branchStockTable.stockQuantity} + ${consumed}`,
-                updatedAt: /* @__PURE__ */ new Date()
-              }).where(
-                and(
-                  eq(branchStockTable.ingredientId, cust.ingredientId),
-                  eq(branchStockTable.branchId, order.branchId)
-                )
-              );
-              console.log(`[Refund-Debug] Update result:`, result);
+      for (const itemId of itemsToRefund) {
+        const shouldReturnToStock = returnToStockItems?.includes(itemId);
+        if (shouldReturnToStock) {
+          const customizations = await tx.select().from(orderItemCustomizationsTable).where(eq(orderItemCustomizationsTable.orderItemId, itemId));
+          console.log(`[Refund-Debug] Returning stock for item ${itemId}`);
+          for (const cust of customizations) {
+            if (cust.ingredientId) {
+              const consumed = parseFloat(cust.consumedQty);
+              if (consumed > 0) {
+                await tx.update(branchStockTable).set({
+                  stockQuantity: sql`${branchStockTable.stockQuantity} + ${consumed}`,
+                  updatedAt: /* @__PURE__ */ new Date()
+                }).where(
+                  and(
+                    eq(branchStockTable.ingredientId, cust.ingredientId),
+                    eq(branchStockTable.branchId, order.branchId)
+                  )
+                );
+              }
             }
-          } else {
-            console.log(`[Refund-Debug] Skipping customization ${cust.id} (No ingredientId)`);
           }
+        }
+        const [item] = await tx.select().from(orderItemsTable).where(eq(orderItemsTable.id, itemId)).limit(1);
+        if (item) {
+          await tx.update(orderItemsTable).set({
+            status: "refunded",
+            refundedAt: /* @__PURE__ */ new Date(),
+            refundedAmount: item.lineTotal
+          }).where(eq(orderItemsTable.id, itemId));
         }
       }
     });
   }
-  const [updatedOrder] = await db.update(ordersTable).set({ status: "refunded", cancelledAt: /* @__PURE__ */ new Date() }).where(eq(ordersTable.id, orderId)).returning();
-  broadcastEvent("order_updated", { orderId: updatedOrder.id, status: "refunded" });
-  await logActivity(req, "REFUND_ORDER", "order", updatedOrder.id, { returnToStockItems });
-  res.json({ message: "Order refunded successfully", orderId: updatedOrder.id });
+  const allItems = await db.select().from(orderItemsTable).where(eq(orderItemsTable.orderId, orderId));
+  const activeItems = allItems.filter((i) => i.status !== "refunded" && i.status !== "cancelled");
+  const allRefunded = allItems.every((i) => i.status === "refunded" || i.status === "cancelled");
+  const anyRefunded = allItems.some((i) => i.status === "refunded");
+  let nextSubtotal = 0;
+  for (const item of activeItems) {
+    nextSubtotal += parseFloat(item.lineTotal);
+  }
+  let nextDiscount = 0;
+  if (order.discountValue && order.discountType) {
+    if (order.discountType === "percentage") {
+      const beforeTax = nextSubtotal / 1.14;
+      nextDiscount = beforeTax * parseFloat(order.discountValue) / 100;
+    } else {
+      nextDiscount = Math.min(nextSubtotal, parseFloat(order.discountValue));
+    }
+  }
+  if (order.discountCode === "HOSPITALITY") {
+    nextDiscount = nextSubtotal;
+  }
+  const nextTotal = Math.max(0, nextSubtotal - nextDiscount);
+  let nextStatus = order.status;
+  if (allRefunded) {
+    nextStatus = "refunded";
+  } else if (anyRefunded && nextStatus !== "refunded") {
+  }
+  const refundAmount = parseFloat(order.total) - nextTotal;
+  if (refundAmount > 0) {
+    await db.insert(orderPaymentsTable).values({
+      orderId,
+      paymentMethod: "refund",
+      amount: String(-refundAmount),
+      transactionId: `REFUND-${orderId}-${Date.now()}`
+    });
+  }
+  const [updatedOrder] = await db.update(ordersTable).set({
+    status: nextStatus,
+    subtotal: String(nextSubtotal),
+    discount: String(nextDiscount),
+    total: String(nextTotal),
+    ...allRefunded ? { cancelledAt: /* @__PURE__ */ new Date() } : {}
+  }).where(eq(ordersTable.id, orderId)).returning();
+  broadcastEvent("order_updated", { orderId: updatedOrder.id, status: updatedOrder.status });
+  await logActivity(req, "REFUND_ORDER", "order", updatedOrder.id, { returnToStockItems, refundItems: itemsToRefund });
+  res.json({
+    message: allRefunded ? "Order refunded successfully" : "Item(s) refunded successfully",
+    orderId: updatedOrder.id,
+    newTotal: updatedOrder.total
+  });
+});
+router5.post("/orders/:id/signature", async (req, res) => {
+  const orderId = parseInt(req.params.id);
+  const { signatureData, orderItemId } = req.body;
+  if (!signatureData) {
+    res.status(400).json({ error: "Signature data is required" });
+    return;
+  }
+  try {
+    const [signature] = await db.insert(signaturesTable).values({
+      orderId,
+      orderItemId: orderItemId || null,
+      signatureData
+    }).returning();
+    res.status(201).json({ signature });
+  } catch (e) {
+    console.error("[orders/signature] error:", e?.message);
+    res.status(500).json({ error: "Failed to save signature" });
+  }
 });
 var orders_default = router5;
 
@@ -84547,6 +84819,23 @@ router14.get("/admin/customers", async (req, res) => {
     res.status(500).json({ error: "Failed to list customers" });
   }
 });
+router14.get("/customers/points/:phone", async (req, res) => {
+  const { phone } = req.params;
+  try {
+    const result = await db.execute(sql`
+      SELECT points, name FROM customers WHERE phone = ${phone} LIMIT 1
+    `);
+    const customer = result.rows[0];
+    if (!customer) {
+      res.json({ points: 0, name: null });
+    } else {
+      res.json({ points: customer.points, name: customer.name });
+    }
+  } catch (e) {
+    console.error("[customers/points] error:", e?.message);
+    res.status(500).json({ error: "Failed to fetch loyalty points" });
+  }
+});
 var customers_default = router14;
 
 // src/routes/cashier-sessions.ts
@@ -84676,10 +84965,18 @@ router15.get("/cashier/performance/:cashierId", requirePermission("cashier:view_
   }).from(ordersTable).where(and(...conditions));
   const completedOrders = orders.filter((o) => o.status === "completed" || o.status === "paid" || o.status === "ready" || o.status === "in_progress");
   const totalRevenue = completedOrders.reduce((sum2, o) => sum2 + parseFloat(o.total), 0);
-  const cashRevenue = completedOrders.filter((o) => o.paymentMethod === "cash").reduce((sum2, o) => sum2 + parseFloat(o.total), 0);
-  const cardRevenue = completedOrders.filter((o) => o.paymentMethod === "card").reduce((sum2, o) => sum2 + parseFloat(o.total), 0);
-  const walletRevenue = completedOrders.filter((o) => o.paymentMethod === "wallet").reduce((sum2, o) => sum2 + parseFloat(o.total), 0);
-  const hospitalityRevenue = completedOrders.filter((o) => o.paymentMethod === "hospitality").reduce((sum2, o) => sum2 + parseFloat(o.total), 0);
+  const orderIds = completedOrders.map((o) => o.id);
+  let cashRevenue = 0, cardRevenue = 0, walletRevenue = 0, hospitalityRevenue = 0;
+  if (orderIds.length > 0) {
+    const payments = await db.select({ paymentMethod: orderPaymentsTable.paymentMethod, amount: orderPaymentsTable.amount }).from(orderPaymentsTable).where(inArray(orderPaymentsTable.orderId, orderIds));
+    for (const p of payments) {
+      const amt = parseFloat(p.amount);
+      if (p.paymentMethod === "cash") cashRevenue += amt;
+      else if (p.paymentMethod === "card") cardRevenue += amt;
+      else if (p.paymentMethod === "wallet") walletRevenue += amt;
+      else if (p.paymentMethod === "hospitality") hospitalityRevenue += amt;
+    }
+  }
   const [cashier] = await db.select({ id: usersTable.id, name: usersTable.name }).from(usersTable).where(eq(usersTable.id, cashierId));
   res.json({
     cashier: cashier ?? null,
@@ -84726,21 +85023,29 @@ router15.get("/cashier/sessions/:id/performance", requirePermission("cashier:vie
   }
   const start = session2.startedAt;
   const end = session2.endedAt || /* @__PURE__ */ new Date();
-  const orders = await db.select({
+  const ordersResult = await db.select({
+    id: ordersTable.id,
     total: ordersTable.total,
-    paymentMethod: ordersTable.paymentMethod,
     status: ordersTable.status
   }).from(ordersTable).where(and(
     eq(ordersTable.cashierId, session2.cashierId),
     gte(sql`COALESCE(${ordersTable.paidAt}, ${ordersTable.createdAt})`, start),
     lte(sql`COALESCE(${ordersTable.paidAt}, ${ordersTable.createdAt})`, end)
   ));
-  const completedOrders = orders.filter((o) => ["completed", "paid", "ready", "in_progress"].includes(o.status));
+  const completedOrders = ordersResult.filter((o) => ["completed", "paid", "ready", "in_progress"].includes(o.status));
+  const orderIds = completedOrders.map((o) => o.id);
   const totalRevenue = completedOrders.reduce((sum2, o) => sum2 + parseFloat(o.total), 0);
-  const cashRevenue = completedOrders.filter((o) => o.paymentMethod === "cash").reduce((sum2, o) => sum2 + parseFloat(o.total), 0);
-  const cardRevenue = completedOrders.filter((o) => o.paymentMethod === "card").reduce((sum2, o) => sum2 + parseFloat(o.total), 0);
-  const walletRevenue = completedOrders.filter((o) => o.paymentMethod === "wallet").reduce((sum2, o) => sum2 + parseFloat(o.total), 0);
-  const hospitalityRevenue = completedOrders.filter((o) => o.paymentMethod === "hospitality").reduce((sum2, o) => sum2 + parseFloat(o.total), 0);
+  let cashRevenue = 0, cardRevenue = 0, walletRevenue = 0, hospitalityRevenue = 0;
+  if (orderIds.length > 0) {
+    const payments = await db.select({ method: orderPaymentsTable.paymentMethod, amount: orderPaymentsTable.amount }).from(orderPaymentsTable).where(inArray(orderPaymentsTable.orderId, orderIds));
+    for (const p of payments) {
+      const amt = parseFloat(p.amount);
+      if (p.method === "cash") cashRevenue += amt;
+      else if (p.method === "card") cardRevenue += amt;
+      else if (p.method === "wallet") walletRevenue += amt;
+      else if (p.method === "hospitality") hospitalityRevenue += amt;
+    }
+  }
   const [cashier] = await db.select({ name: usersTable.name }).from(usersTable).where(eq(usersTable.id, session2.cashierId));
   res.json({
     cashierName: cashier?.name ?? "Unknown",
@@ -84781,11 +85086,19 @@ router15.get("/cashier/sessions/:id/report", requirePermission("cashier:view_rep
     lte(sql`COALESCE(${ordersTable.paidAt}, ${ordersTable.createdAt})`, end)
   )).orderBy(desc(ordersTable.createdAt));
   const completedOrders = orders.filter((o) => ["completed", "paid", "ready", "in_progress"].includes(o.status));
+  const orderIds = completedOrders.map((o) => o.id);
   const totalRevenue = completedOrders.reduce((sum2, o) => sum2 + parseFloat(o.total), 0);
-  const cashRevenue = completedOrders.filter((o) => o.paymentMethod === "cash").reduce((sum2, o) => sum2 + parseFloat(o.total), 0);
-  const cardRevenue = completedOrders.filter((o) => o.paymentMethod === "card").reduce((sum2, o) => sum2 + parseFloat(o.total), 0);
-  const walletRevenue = completedOrders.filter((o) => o.paymentMethod === "wallet").reduce((sum2, o) => sum2 + parseFloat(o.total), 0);
-  const hospitalityRevenue = completedOrders.filter((o) => o.paymentMethod === "hospitality").reduce((sum2, o) => sum2 + parseFloat(o.total), 0);
+  let cashRevenue = 0, cardRevenue = 0, walletRevenue = 0, hospitalityRevenue = 0;
+  if (orderIds.length > 0) {
+    const payments = await db.select({ method: orderPaymentsTable.paymentMethod, amount: orderPaymentsTable.amount }).from(orderPaymentsTable).where(inArray(orderPaymentsTable.orderId, orderIds));
+    for (const p of payments) {
+      const amt = parseFloat(p.amount);
+      if (p.method === "cash") cashRevenue += amt;
+      else if (p.method === "card") cardRevenue += amt;
+      else if (p.method === "wallet") walletRevenue += amt;
+      else if (p.method === "hospitality") hospitalityRevenue += amt;
+    }
+  }
   const topOrdersByPrice = [...completedOrders].sort((a, b) => parseFloat(b.total) - parseFloat(a.total)).slice(0, 5);
   const rushByHour = {};
   for (const o of completedOrders) {
@@ -84796,7 +85109,6 @@ router15.get("/cashier/sessions/:id/report", requirePermission("cashier:view_rep
     hour: parseInt(hour),
     count: count2
   })).sort((a, b) => a.hour - b.hour);
-  const orderIds = completedOrders.map((o) => o.id);
   let topDrinks = [];
   if (orderIds.length > 0) {
     const items = await db.select({

@@ -17,6 +17,8 @@ export interface Order {
   status: OrderStatus;
   /** @nullable */
   customerName?: string | null;
+  /** @nullable */
+  customerPhone?: string | null;
   subtotal: number;
   discount: number;
   /** @nullable */

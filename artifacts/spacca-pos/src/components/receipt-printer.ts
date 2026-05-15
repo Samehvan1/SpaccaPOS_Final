@@ -20,6 +20,7 @@ interface OrderItem {
   unitPrice: number;
   lineTotal: number;
   specialNotes?: string | null;
+  status: "pending" | "ready" | "refunded" | "cancelled";
   customizations: Customization[];
 }
 
@@ -38,6 +39,7 @@ interface CompletedOrder {
   amountTendered?: number | null;
   changeDue?: number | null;
   createdAt: string;
+  payments?: { paymentMethod: string; amount: number }[];
   items: OrderItem[];
 }
 
@@ -54,6 +56,7 @@ const BASE_STYLE = `
   .row .value { text-align: right; white-space: nowrap; margin-left: 8px; }
   .indent { padding-left: 12px; color: #333; margin: 1px 0; }
   .note { padding-left: 12px; font-style: italic; color: #555; }
+  .refunded { text-decoration: line-through; opacity: 0.6; }
   .section-title { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #555; margin: 4px 0 2px; }
   @media print { @page { margin: 0; size: 80mm auto; } }
 `;
@@ -91,6 +94,7 @@ export function printCustomerReceipt(order: CompletedOrder) {
   const payLabel = order.paymentMethod.charAt(0).toUpperCase() + order.paymentMethod.slice(1);
 
   const itemRows = order.items.map(item => {
+    const isRefunded = item.status === "refunded" || item.status === "cancelled";
     const customs = (item.customizations ?? [])
       .filter(c => (c.customerSortOrder ?? 1) > 0 && c.optionLabel?.toLowerCase() !== "none")
       .sort((a, b) => (a.customerSortOrder ?? 1) - (b.customerSortOrder ?? 1))
@@ -99,10 +103,14 @@ export function printCustomerReceipt(order: CompletedOrder) {
       ).join("");
     const notes = item.specialNotes ? `<div class="note">  "${item.specialNotes}"</div>` : "";
     const qty = item.quantity > 1 ? ` x${item.quantity}` : "";
+    
     return `
-      <div class="row bold"><span class="label">${item.drinkName}${qty}</span><span class="value">${fmt(item.lineTotal)}</span></div>
-      ${customs}
-      ${notes}
+      <div class="row bold ${isRefunded ? 'refunded' : ''}">
+        <span class="label">${item.drinkName}${qty} ${isRefunded ? '[REFUNDED]' : ''}</span>
+        <span class="value">${fmt(item.lineTotal)}</span>
+      </div>
+      ${!isRefunded ? customs : ''}
+      ${!isRefunded ? notes : ''}
     `;
   }).join('<div style="margin-bottom:4px"></div>');
 
@@ -139,7 +147,13 @@ export function printCustomerReceipt(order: CompletedOrder) {
     <div class="row"><span class="label">Tax Amount (14%):</span><span class="value">${fmt(vatAmount)}</span></div>
     <div class="divider"></div>
     <div class="row bold big"><span class="label">TOTAL:</span><span class="value">${fmt(order.total)}</span></div>
-    <div class="row"><span class="label">Payment:</span><span class="value">${payLabel}</span></div>
+    <div class="divider"></div>
+    ${order.payments && order.payments.length > 0 
+      ? `<div class="section-title">Payments</div>` + order.payments.map(p => 
+          `<div class="row"><span class="label">${p.paymentMethod.charAt(0).toUpperCase() + p.paymentMethod.slice(1)}:</span><span class="value">${fmt(p.amount)}</span></div>`
+        ).join("")
+      : `<div class="row"><span class="label">Payment:</span><span class="value">${payLabel}</span></div>`
+    }
     ${tendered}
     ${change}
     <div class="divider"></div>
@@ -151,10 +165,11 @@ export function printCustomerReceipt(order: CompletedOrder) {
 
 export function printAgentReceipts(order: CompletedOrder) {
   if (!order.items) return;
-  const totalItems = order.items.reduce((s, i) => s + i.quantity, 0);
+  const activeItems = order.items.filter(i => i.status !== "refunded" && i.status !== "cancelled");
+  const totalItems = activeItems.reduce((s, i) => s + i.quantity, 0);
   let ticketNum = 0;
 
-  const pages = order.items.flatMap(item => {
+  const pages = activeItems.flatMap(item => {
     const copies: string[] = [];
     for (let q = 0; q < item.quantity; q++) {
       ticketNum++;
