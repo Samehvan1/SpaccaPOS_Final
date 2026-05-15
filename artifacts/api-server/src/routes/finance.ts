@@ -669,7 +669,10 @@ router.get("/finance/order-stats", requirePermission("reports:view"), async (req
      db.select({
        label: ordersTable.discountCode,
        count: count(ordersTable.id),
-       revenue: sum(ordersTable.total)
+       totalDiscount: sql<string>`coalesce(sum(${ordersTable.discount}), 0)`,
+       revenue: sql<string>`coalesce(sum(${ordersTable.total}), 0)`,
+       discountValue: sql<string>`coalesce(max(${ordersTable.discountValue}), 0)`,
+       discountType: sql<string>`max(${ordersTable.discountType})`
      }).from(ordersTable).where(and(...conditions)).groupBy(ordersTable.discountCode),
      // by payment
      db.select({
@@ -695,7 +698,14 @@ router.get("/finance/order-stats", requirePermission("reports:view"), async (req
   ]);
 
   res.json({
-    byDiscount: byDiscount.map(d => ({ ...d, label: d.label || "No Discount", revenue: parseFloat(d.revenue || "0") })),
+    byDiscount: byDiscount.map(d => ({ 
+      ...d, 
+      label: d.label || "No Discount", 
+      revenue: parseFloat(d.revenue || "0"),
+      totalDiscount: d.totalDiscount != null ? parseFloat(d.totalDiscount) : 0,
+      discountValue: d.discountValue != null ? parseFloat(d.discountValue) : 0,
+      discountType: d.discountType
+    })),
     byPayment: byPayment.map(d => ({ ...d, label: d.label || "unknown", revenue: parseFloat(d.revenue || "0") })),
     byBranch: byBranch.map(d => ({ ...d, label: d.label || "unknown", revenue: parseFloat(d.revenue || "0") })),
     bySource: bySource.map(d => ({ ...d, label: d.label || "pos", revenue: parseFloat(d.revenue || "0") }))

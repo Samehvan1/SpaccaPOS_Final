@@ -1214,6 +1214,7 @@ export default function ReportsPage() {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Discount Code</TableHead>
+                        <TableHead>Config</TableHead>
                         <TableHead className="text-center">Times Used</TableHead>
                         <TableHead className="text-right">Total Discount Value</TableHead>
                         <TableHead className="text-right">Total Revenue</TableHead>
@@ -1221,16 +1222,24 @@ export default function ReportsPage() {
                     </TableHeader>
                     <TableBody>
                       {orderStats.byDiscount.map((d: any, i: number) => (
+                          console.log('Order received:', d),
                         <TableRow key={i}>
                           <TableCell>
                             <Badge variant={d.label === "No Discount" ? "outline" : "default"} className="font-mono">
                               {d.label}
                             </Badge>
                           </TableCell>
+                          <TableCell className="text-xs font-medium">
+                            {d.label === "No Discount" ? "—" : (
+                              <span className="flex items-center gap-1">
+                                {typeof d.discountValue === 'number' ? d.discountValue : (d.discountValue || 0)}
+                                {d.discountType === "percentage" ? "%" : " " + CURRENCY}
+                              </span>
+                            )}
+                          </TableCell>
                           <TableCell className="text-center font-bold">{d.count}</TableCell>
                           <TableCell className="text-right text-destructive font-mono">
-                            {/* Note: We use revenue here as a placeholder for discount value if not explicitly tracked in grouping */}
-                            {d.label === "No Discount" ? "—" : "Varies"}
+                            {d.label === "No Discount" ? "—" : fmt(d.totalDiscount)}
                           </TableCell>
                           <TableCell className="text-right font-black text-primary text-lg">{fmt(d.revenue)}</TableCell>
                         </TableRow>
