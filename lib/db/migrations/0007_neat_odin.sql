@@ -1,4 +1,4 @@
-CREATE TABLE "customers" (
+CREATE TABLE IF NOT EXISTS "customers" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"name" text NOT NULL,
 	"phone" text NOT NULL,
@@ -14,7 +14,7 @@ CREATE TABLE "customers" (
 	CONSTRAINT "customers_phone_unique" UNIQUE("phone")
 );
 --> statement-breakpoint
-CREATE TABLE "signatures" (
+CREATE TABLE IF NOT EXISTS "signatures" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"order_id" integer NOT NULL,
 	"order_item_id" integer,
@@ -22,6 +22,19 @@ CREATE TABLE "signatures" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-ALTER TABLE "orders" ADD COLUMN "customer_phone" text;--> statement-breakpoint
-ALTER TABLE "signatures" ADD CONSTRAINT "signatures_order_id_orders_id_fk" FOREIGN KEY ("order_id") REFERENCES "public"."orders"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "signatures" ADD CONSTRAINT "signatures_order_item_id_order_items_id_fk" FOREIGN KEY ("order_item_id") REFERENCES "public"."order_items"("id") ON DELETE cascade ON UPDATE no action;
+DO $$ 
+BEGIN 
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='orders' AND column_name='customer_phone') THEN
+        ALTER TABLE "orders" ADD COLUMN "customer_phone" text;
+    END IF;
+END $$;
+--> statement-breakpoint
+DO $$ 
+BEGIN 
+    IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE constraint_name='signatures_order_id_orders_id_fk') THEN
+        ALTER TABLE "signatures" ADD CONSTRAINT "signatures_order_id_orders_id_fk" FOREIGN KEY ("order_id") REFERENCES "public"."orders"("id") ON DELETE cascade ON UPDATE no action;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE constraint_name='signatures_order_item_id_order_items_id_fk') THEN
+        ALTER TABLE "signatures" ADD CONSTRAINT "signatures_order_item_id_order_items_id_fk" FOREIGN KEY ("order_item_id") REFERENCES "public"."order_items"("id") ON DELETE cascade ON UPDATE no action;
+    END IF;
+END $$;

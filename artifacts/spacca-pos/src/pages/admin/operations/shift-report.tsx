@@ -343,7 +343,17 @@ export default function ShiftReportPage() {
                 </div>
                 <div>
                   <span className="text-muted-foreground block">Payment</span>
-                  <Badge className="capitalize">{selectedOrder.paymentMethod}</Badge>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {selectedOrder.payments && selectedOrder.payments.length > 0 ? (
+                      selectedOrder.payments.map((p: any) => (
+                        <Badge key={p.id} variant="secondary" className="text-[10px]">
+                          {p.paymentMethod}: EGP {p.amount.toFixed(2)}
+                        </Badge>
+                      ))
+                    ) : (
+                      <Badge className="capitalize">{selectedOrder.paymentMethod}</Badge>
+                    )}
+                  </div>
                 </div>
                 <div>
                   <span className="text-muted-foreground block">Status</span>
@@ -354,11 +364,14 @@ export default function ShiftReportPage() {
               <div className="border rounded-lg p-3 space-y-3">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Drinks</h4>
                 {selectedOrder.items?.map((item: any) => (
-                  <div key={item.id} className="flex justify-between items-start">
+                  <div key={item.id} className={`flex justify-between items-start ${item.status === 'refunded' ? 'opacity-50 line-through' : ''}`}>
                     <div className="flex gap-2">
                       <span className="font-bold text-primary">{item.quantity}x</span>
                       <div>
-                        <div className="font-bold text-sm">{item.drinkName}</div>
+                        <div className="font-bold text-sm flex items-center gap-2">
+                          {item.drinkName}
+                          {item.status === 'refunded' && <Badge variant="destructive" className="text-[8px] h-3 px-1 uppercase">Refunded</Badge>}
+                        </div>
                         {item.customizations?.map((c: any) => (
                           <div key={c.id} className="text-[10px] text-muted-foreground">
                             • {c.slotLabel}: {c.optionLabel}
@@ -366,7 +379,9 @@ export default function ShiftReportPage() {
                         ))}
                       </div>
                     </div>
-                    <div className="text-sm font-medium">EGP {(item.lineTotal || 0).toFixed(2)}</div>
+                    <div className="text-sm font-medium">
+                      {item.status === 'refunded' ? `-EGP ${item.refundedAmount || item.lineTotal}` : `EGP ${(item.lineTotal || 0).toFixed(2)}`}
+                    </div>
                   </div>
                 ))}
               </div>
