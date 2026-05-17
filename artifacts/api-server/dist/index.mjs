@@ -84650,7 +84650,7 @@ async function ensureCustomersTable() {
         name          TEXT NOT NULL,
         phone         TEXT NOT NULL UNIQUE,
         email         TEXT,
-        password_hash TEXT NOT NULL,
+        password_hash TEXT,
         points        INTEGER NOT NULL DEFAULT 0,
         total_spent   NUMERIC(10,2) NOT NULL DEFAULT 0,
         visit_count   INTEGER NOT NULL DEFAULT 0,
@@ -84659,6 +84659,9 @@ async function ensureCustomersTable() {
         created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
       )
+    `);
+    await db.execute(sql`
+      ALTER TABLE customers ALTER COLUMN password_hash DROP NOT NULL;
     `);
     console.log("[customers] Table ready");
   } catch (e) {
