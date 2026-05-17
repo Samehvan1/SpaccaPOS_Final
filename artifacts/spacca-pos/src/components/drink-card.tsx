@@ -90,13 +90,13 @@ export function DrinkCard({ drink, onClick, variant }: DrinkCardProps) {
           </div>
         )}
 
-        <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
-        <div className="absolute bottom-4 inset-x-4 bg-black/40 backdrop-blur-md border border-white/10 rounded-[1.5rem] p-3.5 flex flex-col justify-end text-left transition-all duration-300 group-hover:bg-black/60 group-hover:border-white/20">
-           <p className="text-white/40 font-black text-[8px] uppercase tracking-[0.25em] mb-1">{(drink as any).category}</p>
+        <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-transparent" />
+        <div className="absolute bottom-6 left-6 text-left max-w-[85%]">
+           <p className="text-white/60 font-bold text-[9px] uppercase tracking-[0.2em] mb-1">{(drink as any).category}</p>
            <h3 className="text-white font-black text-base capitalize italic leading-tight tracking-tight line-clamp-2">{drink.name}</h3>
         </div>
         {!showOutOfStock && (
-          <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md border border-white/15 text-primary font-black px-3.5 py-1.5 rounded-full text-xs shadow-xl italic tracking-tight">
+          <div className="absolute top-4 right-4 bg-primary text-white font-black px-4 py-1.5 rounded-full text-xs shadow-xl italic tracking-tight">
              {fmt((drink as any).defaultPrice || drink.basePrice)}
           </div>
         )}

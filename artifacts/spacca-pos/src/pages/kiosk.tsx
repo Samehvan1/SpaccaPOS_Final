@@ -539,7 +539,7 @@ export default function KioskPage() {
       </div>
 
       <Dialog open={isCustomizing} onOpenChange={(open) => { if (!open) setIsCustomizing(false); }}>
-        <DialogContent className="sm:max-w-[500px] h-[95vh] flex flex-col p-0 gap-0 overflow-hidden bg-background">
+        <DialogContent className="sm:max-w-[750px] h-[95vh] flex flex-col p-0 gap-0 overflow-hidden bg-background">
           <DialogHeader className="px-8 pt-10 pb-8 border-b shrink-0 bg-muted/20 relative">
              <div className="flex flex-col items-center text-center">
                <div className="w-full flex justify-between items-start mb-6">
@@ -589,7 +589,7 @@ export default function KioskPage() {
                   return (
                     <div key={slot.id} className="space-y-4 p-5 rounded-[2rem] border border-white/10 bg-white/[0.02]">
                       <Label className="text-xs font-black uppercase tracking-[0.3em] text-muted-foreground">{slot.slotLabel}</Label>
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-3 gap-3">
                         {options.map((opt: any) => {
                           const id = slot.slotStyle === "typed" ? opt.ingredientTypeId : opt.id;
                           const isSelected = selections[slot.id] === id;
@@ -654,7 +654,7 @@ export default function KioskPage() {
                         return (
                           <div className="mt-4 pl-6 border-l-4 border-primary/20 space-y-3">
                             <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Choose Variant</p>
-                            <div className="grid grid-cols-2 gap-2">
+                            <div className="grid grid-cols-3 gap-2">
                               {subOptions.map((sub: any) => {
                                 const isSubSelected = subSelections[slot.id] === sub.id;
                                 const isSubOut = !allowNoStockSell && (sub.isAvailable === false || (sub.processedQty && (slot.typeOptions?.find((to:any)=>to.ingredientTypeId === selectedId)?.stockQuantity ?? 0) < sub.processedQty));
@@ -668,7 +668,7 @@ export default function KioskPage() {
                                       isSubSelected ? "border-primary bg-primary text-white shadow-lg" : "border-muted bg-muted/30 text-muted-foreground"
                                     } ${isSubOut ? "opacity-30 grayscale pointer-events-none" : ""}`}
                                   >
-                                    <div className="font-bold text-[10px] uppercase truncate">{sub.volumeName || sub.label}</div>
+                                    <div className="font-black text-xs uppercase truncate">{sub.volumeName || sub.label}</div>
                                     {!isSubOut && sub.extraCost > 0 && <div className={`text-[9px] ${isSubSelected ? "text-white/70" : "text-primary"}`}>+{fmt(sub.extraCost)}</div>}
                                   </button>
                                 );
