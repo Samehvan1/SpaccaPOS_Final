@@ -436,7 +436,7 @@ router.post("/orders", async (req, res): Promise<void> => {
           .onConflictDoUpdate({
             target: [customersTable.phone],
             set: {
-              points: sql`${customersTable.points} + ${pointsToEarn}`,
+              points: sql`${customersTable.points} + cast(${pointsToEarn} as integer)`,
               totalSpent: sql`${customersTable.totalSpent} + cast(${String(total)} as numeric)`,
               visitCount: sql`${customersTable.visitCount} + 1`,
               updatedAt: new Date(),

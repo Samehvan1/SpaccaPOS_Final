@@ -79,6 +79,7 @@
   "dependencies": {
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.6.0",
-    "three": "^0.184.0"
+    "three": "^0.184.0",
+    "workbox-window": "^7.4.1"
   }
 }

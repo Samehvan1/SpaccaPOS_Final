@@ -7,6 +7,7 @@ import { ThemeProvider } from "@/hooks/use-theme";
 import { SettingsProvider } from "@/hooks/use-settings";
 import { MainLayout } from "@/components/layout/main-layout";
 import { useEffect } from "react";
+import { PWAUpdater } from "@/components/pwa-updater";
 
 import Login from "@/pages/login";
 import PosTerminal from "@/pages/pos";
@@ -384,6 +385,7 @@ function App() {
             <CustomerAuthProvider>
               <SettingsProvider>
                 <TooltipProvider>
+                  <PWAUpdater />
                   <PWAContextHandler />
                   <AppRoutes />
                   <Toaster />
