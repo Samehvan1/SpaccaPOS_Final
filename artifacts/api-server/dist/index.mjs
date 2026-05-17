@@ -82903,7 +82903,7 @@ router5.post("/orders", async (req, res) => {
           target: [customersTable.phone],
           set: {
             points: sql`${customersTable.points} + ${pointsToEarn}`,
-            totalSpent: sql`${customersTable.totalSpent} + ${total}`,
+            totalSpent: sql`${customersTable.totalSpent} + cast(${String(total)} as numeric)`,
             visitCount: sql`${customersTable.visitCount} + 1`,
             updatedAt: /* @__PURE__ */ new Date()
           }
@@ -83248,7 +83248,7 @@ router5.post("/orders/:id/refund", requirePermission("cashier:refund_order"), as
               const consumed = parseFloat(cust.consumedQty);
               if (consumed > 0) {
                 await tx.update(branchStockTable).set({
-                  stockQuantity: sql`${branchStockTable.stockQuantity} + ${consumed}`,
+                  stockQuantity: sql`${branchStockTable.stockQuantity} + cast(${String(consumed)} as numeric)`,
                   updatedAt: /* @__PURE__ */ new Date()
                 }).where(
                   and(

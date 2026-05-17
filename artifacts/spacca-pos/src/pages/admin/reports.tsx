@@ -1222,7 +1222,6 @@ export default function ReportsPage() {
                     </TableHeader>
                     <TableBody>
                       {orderStats.byDiscount.map((d: any, i: number) => (
-                          console.log('Order received:', d),
                         <TableRow key={i}>
                           <TableCell>
                             <Badge variant={d.label === "No Discount" ? "outline" : "default"} className="font-mono">

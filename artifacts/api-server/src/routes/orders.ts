@@ -437,7 +437,7 @@ router.post("/orders", async (req, res): Promise<void> => {
             target: [customersTable.phone],
             set: {
               points: sql`${customersTable.points} + ${pointsToEarn}`,
-              totalSpent: sql`${customersTable.totalSpent} + ${total}`,
+              totalSpent: sql`${customersTable.totalSpent} + cast(${String(total)} as numeric)`,
               visitCount: sql`${customersTable.visitCount} + 1`,
               updatedAt: new Date(),
             }
@@ -888,7 +888,7 @@ router.post("/orders/:id/refund", requirePermission("cashier:refund_order"), asy
                 await tx
                   .update(branchStockTable)
                   .set({
-                    stockQuantity: sql`${branchStockTable.stockQuantity} + ${consumed}`,
+                    stockQuantity: sql`${branchStockTable.stockQuantity} + cast(${String(consumed)} as numeric)`,
                     updatedAt: new Date(),
                   })
                   .where(
