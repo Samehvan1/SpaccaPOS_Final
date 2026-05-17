@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { useOrderEvents } from "@/hooks/use-order-events";
 import { useAuth } from "@/hooks/use-auth";
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "/api";
 
@@ -195,7 +196,8 @@ export default function KitchenDisplay() {
               ? (activeOrders?.length ?? 0)
               : (stationCounts[station.value] ?? 0);
             const isActive = activeStation === station.value;
-            return (
+
+            const buttonEl = (
               <button
                 key={station.value}
                 onClick={() => setActiveStation(station.value)}
@@ -205,7 +207,7 @@ export default function KitchenDisplay() {
                     : "bg-white/5 text-muted-foreground border-white/10 hover:border-neon-cyan/40 hover:bg-white/10"
                 }`}
               >
-                {station.label === "Global View" ? < Zap className="h-4 w-4" /> : <Flame className="h-4 w-4" />}
+                {station.label === "Global View" ? <Zap className="h-4 w-4" /> : <Flame className="h-4 w-4" />}
                 {station.label}
                 {count > 0 && (
                   <span className={`ml-1 px-2 py-0.5 rounded-full text-[10px] font-black ${
@@ -216,6 +218,84 @@ export default function KitchenDisplay() {
                 )}
               </button>
             );
+
+            if (station.value === "all") {
+              const globalOrders = (activeOrders as any[])?.filter(order => {
+                return order.status === "paid" || order.status === "in_progress";
+              }) ?? [];
+
+              return (
+                <TooltipProvider key={station.value} delayDuration={100}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      {buttonEl}
+                    </TooltipTrigger>
+                    <TooltipContent 
+                      side="bottom" 
+                      align="start"
+                      className="w-80 p-4 rounded-xl border border-white/10 bg-[#0c0c0e]/95 backdrop-blur-md shadow-[0_10px_30px_rgba(0,0,0,0.8),0_0_15px_rgba(0,243,255,0.05)] text-foreground"
+                    >
+                      <div className="flex flex-col gap-2">
+                        <div className="flex items-center justify-between pb-2 border-b border-white/10">
+                          <span className="font-black text-[10px] uppercase tracking-widest text-muted-foreground">Active Queue</span>
+                          <Badge variant="outline" className="text-[10px] font-black bg-neon-cyan/10 text-neon-cyan border-neon-cyan/20 px-2 py-0.5">
+                            {globalOrders.length} {globalOrders.length === 1 ? 'Order' : 'Orders'}
+                          </Badge>
+                        </div>
+                        {globalOrders.length === 0 ? (
+                          <div className="py-4 text-center text-xs text-muted-foreground font-medium uppercase tracking-wider">
+                            No Active Orders
+                          </div>
+                        ) : (
+                          <div className="max-h-60 overflow-y-auto pr-1 flex flex-col gap-2 no-scrollbar">
+                            {globalOrders.map((order: any) => {
+                              const uniqueStations = Array.from(
+                                new Set(
+                                  order.items
+                                    .map((item: any) => {
+                                      const matchedStation = stations.find((s: any) => slugifyStation(s.name) === slugifyStation(item.kitchenStation));
+                                      return matchedStation?.name ?? stationLabel(item.kitchenStation);
+                                    })
+                                    .filter(Boolean)
+                                )
+                              );
+
+                              return (
+                                <div key={order.id} className="flex items-center justify-between py-1.5 border-b border-white/5 last:border-b-0 gap-4">
+                                  <div className="flex items-center gap-2 min-w-0">
+                                    <span className="font-extrabold text-neon-cyan text-sm">#{order.orderNumber}</span>
+                                    <span className="text-[10px] text-white/50 truncate font-semibold">
+                                      {order.customerName || "Walk-in"}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-2 shrink-0">
+                                    <span className={`w-1.5 h-1.5 rounded-full ${
+                                      order.status === "in_progress" 
+                                        ? "bg-neon-yellow shadow-[0_0_6px_rgba(255,234,0,0.8)] animate-pulse" 
+                                        : "bg-neon-cyan shadow-[0_0_6px_rgba(0,243,255,0.8)] animate-pulse"
+                                    }`} />
+                                    <span className="text-[9px] uppercase tracking-wider font-extrabold text-white/70">
+                                      {order.status === "in_progress" ? "Prep" : "Paid"}
+                                    </span>
+                                    {uniqueStations.length > 0 && (
+                                      <span className="text-[8px] text-white/40 uppercase font-black tracking-widest border border-white/10 px-1.5 py-0.5 rounded bg-white/5 max-w-[100px] truncate">
+                                        {uniqueStations.join(", ")}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              );
+            }
+
+            return buttonEl;
           })}
         </div>
       </div>

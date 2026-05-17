@@ -281,6 +281,10 @@ export default function CashierPage() {
 
   const saveMultiPayment = () => {
     if (!activeMultiOrder) return;
+    if (multiPaymentEntries.length === 0) {
+      toast({ variant: "destructive", title: "Missing Payment", description: "You must add at least one payment method." });
+      return;
+    }
     const totalEntries = multiPaymentEntries.reduce((sum, e) => sum + e.amount, 0);
     if (Math.abs(totalEntries - Number(activeMultiOrder.total)) > 0.01) {
       toast({ variant: "destructive", title: "Invalid Total", description: `Total must equal ${fmt(activeMultiOrder.total)}` });
@@ -973,6 +977,12 @@ export default function CashierPage() {
                 </div>
               ))}
               
+              {multiPaymentEntries.length === 0 && (
+                <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-bold text-center uppercase tracking-wider animate-in zoom-in duration-300">
+                  No payment methods added. Please add at least one payment method to save.
+                </div>
+              )}
+
               <Button 
                 variant="outline" 
                 className="w-full h-12 border-dashed border-white/20 hover:border-neon-cyan/50 hover:bg-neon-cyan/5 rounded-xl gap-2 text-xs font-bold"
@@ -984,8 +994,13 @@ export default function CashierPage() {
           </div>
           <DialogFooter>
             <Button 
-              className="w-full h-14 text-base font-black uppercase tracking-widest rounded-2xl bg-neon-cyan hover:bg-neon-cyan/80 text-background border-none shadow-lg shadow-neon-cyan/20"
+              className={`w-full h-14 text-base font-black uppercase tracking-widest rounded-2xl transition-all duration-300 ${
+                multiPaymentEntries.length === 0
+                  ? "bg-white/5 text-muted-foreground/40 border border-white/10 cursor-not-allowed"
+                  : "bg-neon-cyan hover:bg-neon-cyan/80 text-background border-none shadow-lg shadow-neon-cyan/20"
+              }`}
               onClick={saveMultiPayment}
+              disabled={multiPaymentEntries.length === 0}
             >
               Confirm Split
             </Button>

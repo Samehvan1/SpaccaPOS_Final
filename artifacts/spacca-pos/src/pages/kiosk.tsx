@@ -103,6 +103,16 @@ export default function KioskPage() {
   const [subSelections, setSubSelections] = useState<Record<number, number>>({});
   const [notes, setNotes] = useState("");
 
+  useEffect(() => {
+    if (!isCustomizing) {
+      setActiveDrink(null);
+      setSelections({});
+      setSubSelections({});
+      setSimulatorLayers([]);
+      setLastCalculatedPrice(null);
+    }
+  }, [isCustomizing]);
+
   const applyDefaults = () => {
     if (drinkDetail) {
       const initial: Record<number, number> = {};
@@ -186,6 +196,14 @@ export default function KioskPage() {
 
   const { mutate: calculatePrice, data: priceBreakdown, isPending: isCalculating } = useCalculateDrinkPrice();
   
+  const [lastCalculatedPrice, setLastCalculatedPrice] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (priceBreakdown?.total !== undefined) {
+      setLastCalculatedPrice(priceBreakdown.total);
+    }
+  }, [priceBreakdown?.total]);
+
   useEffect(() => {
     if (activeDrink && currentSelectionsArray.length > 0) {
       calculatePrice({ 
@@ -200,9 +218,10 @@ export default function KioskPage() {
 
   const displayPrice = useMemo(() => {
     if (priceBreakdown?.total !== undefined) return priceBreakdown.total;
+    if (lastCalculatedPrice !== null) return lastCalculatedPrice;
     if (activeDrink) return (activeDrink as any).defaultPrice ?? activeDrink.basePrice ?? 0;
     return 0;
-  }, [priceBreakdown?.total, activeDrink]);
+  }, [priceBreakdown?.total, lastCalculatedPrice, activeDrink]);
 
   const [simulatorLayers, setSimulatorLayers] = useState<CupLayer[]>([]);
 

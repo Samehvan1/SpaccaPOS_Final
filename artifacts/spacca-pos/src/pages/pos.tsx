@@ -249,13 +249,22 @@ export default function PosTerminal() {
   const calcRef = useRef(calculatePrice);
   calcRef.current = calculatePrice;
 
+  const [lastCalculatedPrice, setLastCalculatedPrice] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (priceBreakdown?.total !== undefined) {
+      setLastCalculatedPrice(priceBreakdown.total);
+    }
+  }, [priceBreakdown?.total]);
+
   // displayPrice instantly reflects the pre-calculated default price from the server,
   // then updates once the actual breakdown comes in.
   const displayPrice = useMemo(() => {
     if (priceBreakdown?.total !== undefined) return priceBreakdown.total;
+    if (lastCalculatedPrice !== null) return lastCalculatedPrice;
     if (activeDrink) return (activeDrink as any).defaultPrice ?? activeDrink.basePrice ?? 0;
     return 0;
-  }, [priceBreakdown?.total, activeDrink]);
+  }, [priceBreakdown?.total, lastCalculatedPrice, activeDrink]);
 
   const [simulatorLayers, setSimulatorLayers] = useState<CupLayer[]>([]);
 
@@ -339,6 +348,7 @@ export default function PosTerminal() {
     setSubSelections({});
     setSimulatorLayers([]);
     setNotes("");
+    setLastCalculatedPrice(null);
   };
 
   // Cart
