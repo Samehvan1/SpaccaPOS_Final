@@ -844,19 +844,18 @@ export default function PosTerminal() {
         </div>
       </>
 
-      {/* Customization Dialog */}
       <Dialog open={isCustomizing} onOpenChange={(open) => { if (!open) handleCloseCustomization(); }}>
-        <DialogContent className="sm:max-w-[420px] max-h-[85vh] flex flex-col p-0 gap-0">
+        <DialogContent className="sm:max-w-[550px] max-h-[85vh] flex flex-col p-0 gap-0">
           <DialogHeader className="px-5 pt-5 pb-5 border-b shrink-0 flex-row items-center gap-4">
             <div className="flex-1 min-w-0 pb-1">
-              <DialogTitle className="text-xl truncate mb-1 capitalize">{activeDrink?.name}</DialogTitle>
+              <DialogTitle className="text-2xl truncate mb-1 capitalize">{activeDrink?.name}</DialogTitle>
               {drinkDetail?.description && (
-                <p className="text-[11px] text-muted-foreground line-clamp-2 mb-2 leading-tight">
+                <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2 mb-2 leading-normal">
                   {drinkDetail.description}
                 </p>
               )}
               <div className="flex items-center gap-3">
-                <div className={`text-2xl font-bold text-primary transition-opacity ${isCalculating ? "opacity-60" : "opacity-100"}`}>
+                <div className={`text-3xl font-bold text-primary transition-opacity ${isCalculating ? "opacity-60" : "opacity-100"}`}>
                   {fmt(displayPrice)}
                 </div>
                 {drinkDetail && (
@@ -864,7 +863,7 @@ export default function PosTerminal() {
                     variant="ghost" 
                     size="sm" 
                     onClick={applyDefaults}
-                    className="h-7 px-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:text-primary hover:bg-primary/10 gap-1.5"
+                    className="h-8 px-2 text-xs font-bold uppercase tracking-wider text-muted-foreground hover:text-primary hover:bg-primary/10 gap-1.5"
                   >
                     <RotateCcw className="h-3 w-3" />
                     Reset
@@ -882,7 +881,7 @@ export default function PosTerminal() {
               </div>
             )}
           </DialogHeader>
-
+ 
           <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4">
             {isLoadingDrinkDetail ? (
               <div className="space-y-4">
@@ -902,14 +901,14 @@ export default function PosTerminal() {
                     const activeTypeOpt = typeOptions.find((to: any) => to.ingredientTypeId === selectedTypeId) ?? typeOptions[0];
                     const activeVolumes: any[] = activeTypeOpt?.volumes ?? [];
                     const multiType = typeOptions.length > 1;
-
+ 
                     return (
                       <div key={slot.id} className="space-y-3 p-3 rounded-xl border-2 border-primary/15 bg-muted/10 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.1)] dark:bg-muted/5">
                         <div className="flex items-center gap-2">
-                          <Label className="text-[11px] font-black uppercase tracking-[0.15em] text-primary/70 flex items-center gap-2">
+                          <Label className="text-xs sm:text-sm font-black uppercase tracking-[0.15em] text-primary/70 flex items-center gap-2">
                             <span>{slot.slotLabel}</span>
                             {activeTypeOpt?.pricingMode === "unit" && (
-                              <Badge variant="outline" className="h-4 px-1 text-[8px] border-primary/20 bg-primary/5 text-primary font-black tracking-widest uppercase">
+                              <Badge variant="outline" className="h-4 px-1 text-[9px] border-primary/20 bg-primary/5 text-primary font-black tracking-widest uppercase">
                                 Fixed Price
                               </Badge>
                             )}
@@ -919,7 +918,7 @@ export default function PosTerminal() {
                               const defVol = defTypeOpt?.volumes?.find((v: any) => v.isDefault) ?? defTypeOpt?.volumes?.[0];
                               const defaultLabel = defTypeOpt ? `${defTypeOpt.typeName}${defVol?.volumeName ? ` · ${defVol.volumeName}` : ""}` : "";
                               return defaultLabel && (
-                                <span className="normal-case font-medium text-[9px] text-muted-foreground/60 tracking-normal italic">
+                                <span className="normal-case font-semibold text-[10px] sm:text-xs text-muted-foreground/60 tracking-normal italic">
                                   (Default: {defaultLabel})
                                 </span>
                               );
@@ -927,7 +926,7 @@ export default function PosTerminal() {
                           </Label>
                           <div className="flex-1 h-px bg-gradient-to-r from-primary/10 to-transparent" />
                         </div>
-
+ 
                         {/* Level 1: Type option buttons (only shown if more than one type) */}
                         {multiType && (
                           <div className="grid grid-cols-3 gap-1">
@@ -948,30 +947,30 @@ export default function PosTerminal() {
                                       return next;
                                     });
                                   }}
-                                  className={`px-2 py-1.5 rounded-md border text-left transition-all text-[11px] ${selectedTypeId === typeOpt.ingredientTypeId
+                                  className={`px-3 py-2 rounded-md border text-left transition-all text-xs sm:text-sm ${selectedTypeId === typeOpt.ingredientTypeId
                                       ? "bg-primary text-primary-foreground border-primary shadow-sm"
                                       : "bg-background border-border hover:border-primary/50"
                                     } ${isOutOfStock ? "opacity-40 grayscale pointer-events-none" : ""}`}
                                 >
                                   <div className="font-semibold truncate">{typeOpt.typeName}</div>
-                                  {isOutOfStock && <div className="text-[9px] font-bold text-destructive uppercase">Out of Stock</div>}
+                                  {isOutOfStock && <div className="text-[10px] font-bold text-destructive uppercase">Out of Stock</div>}
                                 </button>
                               );
                             })}
                           </div>
                         )}
-
+ 
                         {/* Level 1.5: Status text for single type slots */}
                         {!multiType && activeTypeOpt && (
-                          <div className="text-sm font-semibold text-primary/80 mb-1 px-1">
+                          <div className="text-sm sm:text-base font-semibold text-primary/80 mb-1 px-1">
                             {activeTypeOpt.typeName}
                           </div>
                         )}
-
+ 
                         {/* Level 2: Volume buttons for the selected type */}
                         <div className={multiType ? "pl-3 border-l-2 border-primary/30" : ""}>
                           {multiType && (
-                            <div className="text-xs text-muted-foreground mb-1.5 font-medium">Volume</div>
+                            <div className="text-xs sm:text-sm text-muted-foreground mb-1.5 font-medium">Volume</div>
                           )}
                           <div className="grid grid-cols-3 gap-1">
                             {activeVolumes.map((vol: any) => {
@@ -981,16 +980,16 @@ export default function PosTerminal() {
                                   key={vol.id}
                                   disabled={isVolOutOfStock}
                                   onClick={() => setSubSelections(prev => ({ ...prev, [slot.id]: vol.id }))}
-                                  className={`px-2 py-1.5 rounded-md border text-left transition-all text-[11px] ${subSelections[slot.id] === vol.id
+                                  className={`px-3 py-2 rounded-md border text-left transition-all text-xs sm:text-sm ${subSelections[slot.id] === vol.id
                                       ? "bg-primary text-primary-foreground border-primary shadow-sm"
                                       : "bg-background border-border hover:border-primary/50"
                                     } ${isVolOutOfStock ? "opacity-40 grayscale pointer-events-none" : ""}`}
                                 >
                                   <div className="font-semibold truncate">{vol.volumeName}</div>
                                   {isVolOutOfStock ? (
-                                    <div className="text-[9px] font-bold text-destructive uppercase">No Stock</div>
+                                    <div className="text-[10px] font-bold text-destructive uppercase">No Stock</div>
                                   ) : vol.extraCost > 0 && (
-                                    <div className={`text-[10px] mt-0.5 ${subSelections[slot.id] === vol.id ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
+                                    <div className={`text-xs mt-0.5 ${subSelections[slot.id] === vol.id ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
                                       +{fmt(vol.extraCost)}
                                     </div>
                                   )}
@@ -1002,23 +1001,23 @@ export default function PosTerminal() {
                       </div>
                     );
                   }
-
+ 
                   // ── Legacy slot: show ingredient options ───────────────────
                   const options: any[] = slot.ingredient?.options ?? [];
                   const isLinked = options.some(o => o.linkedIngredientId);
                   const selectedTypeOpt = isLinked ? options.find(o => o.id === selections[slot.id]) : null;
                   const subOptions: any[] = selectedTypeOpt?.linkedIngredient?.options ?? [];
-
+ 
                   return (
                     <div key={slot.id} className="space-y-3 p-3 rounded-xl border-2 border-primary/15 bg-muted/10 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.1)] dark:bg-muted/5">
                       <div className="flex items-center gap-2">
-                        <Label className="text-[11px] font-black uppercase tracking-[0.15em] text-primary/70 flex items-center gap-2">
+                        <Label className="text-xs sm:text-sm font-black uppercase tracking-[0.15em] text-primary/70 flex items-center gap-2">
                           <span>{slot.slotLabel}</span>
                           {(() => {
                             const options: any[] = slot.ingredient?.options ?? [];
                             const defOpt = options.find((o: any) => o.id === slot.defaultOptionId) || options[0];
                             return defOpt && (
-                              <span className="normal-case font-medium text-[9px] text-muted-foreground/60 tracking-normal italic">
+                              <span className="normal-case font-semibold text-[10px] sm:text-xs text-muted-foreground/60 tracking-normal italic">
                                 (Default: {defOpt.label})
                               </span>
                             );
@@ -1026,7 +1025,7 @@ export default function PosTerminal() {
                         </Label>
                         <div className="flex-1 h-px bg-gradient-to-r from-primary/10 to-transparent" />
                       </div>
-
+ 
                       {/* Type picker (or regular option picker) */}
                       <div className="grid grid-cols-3 gap-1">
                         {options.map(option => {
@@ -1051,16 +1050,16 @@ export default function PosTerminal() {
                                   });
                                 }
                               }}
-                              className={`px-2 py-1.5 rounded-md border text-left transition-all text-[11px] ${selections[slot.id] === option.id
+                              className={`px-3 py-2 rounded-md border text-left transition-all text-xs sm:text-sm ${selections[slot.id] === option.id
                                   ? "bg-primary text-primary-foreground border-primary shadow-sm"
                                   : "bg-background border-border hover:border-primary/50"
                                 } ${isOutOfStock ? "opacity-40 grayscale pointer-events-none" : ""}`}
                             >
                               <div className="font-semibold truncate">{option.label}</div>
                               {isOutOfStock ? (
-                                <div className="text-[9px] font-bold text-destructive uppercase">No Stock</div>
+                                <div className="text-[10px] font-bold text-destructive uppercase">No Stock</div>
                               ) : !isLinked && option.extraCost > 0 && (
-                                <div className={`text-[10px] mt-0.5 ${selections[slot.id] === option.id ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
+                                <div className={`text-xs mt-0.5 ${selections[slot.id] === option.id ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
                                   +{fmt(option.extraCost)}
                                 </div>
                               )}
@@ -1068,11 +1067,11 @@ export default function PosTerminal() {
                           );
                         })}
                       </div>
-
+ 
                       {/* Sub-option picker — volume / size (shown when type has linked ingredient) */}
                       {isLinked && subOptions.length > 0 && (
                         <div className="mt-2.5 pl-3 border-l-2 border-primary/30">
-                          <div className="text-xs text-muted-foreground mb-1.5 font-medium">Volume</div>
+                          <div className="text-xs sm:text-sm text-muted-foreground mb-1.5 font-medium">Volume</div>
                           <div className="grid grid-cols-3 gap-1.5">
                             {subOptions.map(subOpt => {
                               const isSubOutOfStock = !allowNoStockSell && !subOpt.isAvailable;
@@ -1081,14 +1080,14 @@ export default function PosTerminal() {
                                   key={subOpt.id}
                                   disabled={isSubOutOfStock}
                                   onClick={() => setSubSelections(prev => ({ ...prev, [slot.id]: subOpt.id }))}
-                                  className={`px-2 py-2 rounded-lg border text-center transition-all text-xs ${subSelections[slot.id] === subOpt.id
+                                  className={`px-3 py-2 rounded-lg border text-center transition-all text-xs sm:text-sm ${subSelections[slot.id] === subOpt.id
                                       ? "bg-primary text-primary-foreground border-primary shadow-sm"
                                       : "bg-background border-border hover:border-primary/50"
                                     } ${isSubOutOfStock ? "opacity-40 grayscale pointer-events-none" : ""}`}
                                 >
                                   <div className="font-medium leading-tight">{subOpt.label}</div>
                                   {isSubOutOfStock ? (
-                                    <div className="text-[9px] font-bold text-destructive uppercase">No Stock</div>
+                                    <div className="text-[10px] font-bold text-destructive uppercase">No Stock</div>
                                   ) : subOpt.extraCost > 0 && (
                                     <div className={`text-xs mt-0.5 ${subSelections[slot.id] === subOpt.id ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
                                       +{fmt(subOpt.extraCost)}
@@ -1103,27 +1102,27 @@ export default function PosTerminal() {
                     </div>
                   );
                 })}
-
+ 
                 {/* Dynamic ingredient indicator */}
                 {priceBreakdown?.dynamicInfo && (
                   <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800">
                     <Droplets className="h-4 w-4 text-blue-500 shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                      <span className="text-sm sm:text-base font-medium text-blue-700 dark:text-blue-300">
                         {priceBreakdown.dynamicInfo.ingredientName}
                       </span>
-                      <span className="text-xs text-blue-500 ml-1.5">
+                      <span className="text-xs sm:text-sm text-blue-500 ml-1.5">
                         ingredient added
                       </span>
                     </div>
-                    <span className="text-sm font-semibold text-blue-600 dark:text-blue-400 shrink-0">
+                    <span className="text-sm sm:text-base font-semibold text-blue-600 dark:text-blue-400 shrink-0">
                       +{fmt(priceBreakdown.dynamicInfo.cost)}
                     </span>
                   </div>
                 )}
-
+ 
                 <div className="pt-2 border-t">
-                  <Label htmlFor="notes" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  <Label htmlFor="notes" className="text-xs sm:text-sm font-bold uppercase tracking-wider text-muted-foreground">
                     Special Notes
                   </Label>
                   <Input
@@ -1131,16 +1130,16 @@ export default function PosTerminal() {
                     value={notes}
                     onChange={e => setNotes(e.target.value)}
                     placeholder="e.g., Extra hot, no foam"
-                    className="mt-2"
+                    className="mt-2 text-sm sm:text-base"
                   />
                 </div>
               </div>
             )}
           </div>
-
+ 
           <div className="px-5 pb-5 pt-3 border-t shrink-0">
             <Button
-              className="w-full h-12 text-base font-bold shadow-md"
+              className="w-full h-12 text-base sm:text-lg font-bold shadow-md"
               onClick={handleAddToCart}
               disabled={isCalculating || isLoadingDrinkDetail}
             >
