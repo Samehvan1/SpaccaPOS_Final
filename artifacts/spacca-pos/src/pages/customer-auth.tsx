@@ -86,7 +86,7 @@ export default function CustomerAuth() {
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col items-center justify-center bg-background p-4">
+    <div className="min-h-screen w-full flex flex-col items-center justify-start sm:justify-center bg-background py-10 px-4 overflow-y-auto">
       {/* Subtle background blobs using theme primary */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-96 h-96 bg-primary/10 rounded-full blur-3xl" />

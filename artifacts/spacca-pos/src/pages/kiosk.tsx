@@ -579,12 +579,15 @@ export default function KioskPage() {
                </div>
             ) : (
               <div className="space-y-10">
-                {(drinkDetail?.slots as any[])?.map(slot => {
+                {(drinkDetail?.slots as any[])
+                  ?.filter(s => (s.customerSortOrder ?? s.sortOrder ?? 1) > 0)
+                  ?.sort((a, b) => (a.customerSortOrder ?? a.sortOrder ?? 1) - (b.customerSortOrder ?? b.sortOrder ?? 1))
+                  ?.map(slot => {
                   const options = slot.slotStyle === "typed" ? slot.typeOptions : slot.ingredient?.options;
                   if (!options?.length) return null;
 
                   return (
-                    <div key={slot.id} className="space-y-4">
+                    <div key={slot.id} className="space-y-4 p-5 rounded-[2rem] border border-white/10 bg-white/[0.02]">
                       <Label className="text-xs font-black uppercase tracking-[0.3em] text-muted-foreground">{slot.slotLabel}</Label>
                       <div className="grid grid-cols-2 gap-3">
                         {options.map((opt: any) => {
@@ -618,14 +621,14 @@ export default function KioskPage() {
                                 }
                               }}
                               className={`p-4 rounded-3xl border-2 text-left transition-all relative ${
-                                isSelected ? "border-primary bg-primary/5 shadow-inner" : "border-muted bg-card"
+                                isSelected ? "border-primary bg-primary text-white shadow-lg" : "border-muted bg-muted/30 text-muted-foreground"
                               } ${isOutOfStock ? "opacity-40 grayscale pointer-events-none" : ""}`}
                             >
                               <div className="font-black uppercase text-xs tracking-wide">{opt.typeName || opt.label}</div>
                               {isOutOfStock ? (
                                 <div className="text-[10px] text-destructive font-bold uppercase mt-1">Sold Out</div>
                               ) : opt.extraCost > 0 && (
-                                <div className="text-[10px] text-primary font-bold">+{fmt(opt.extraCost)}</div>
+                                <div className={`text-[10px] font-bold ${isSelected ? "text-white/80" : "text-primary"}`}>+{fmt(opt.extraCost)}</div>
                               )}
                             </button>
                           );

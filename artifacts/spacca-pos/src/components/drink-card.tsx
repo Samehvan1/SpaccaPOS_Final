@@ -26,7 +26,7 @@ export function DrinkCard({ drink, onClick, variant }: DrinkCardProps) {
         onClick={onClick}
         disabled={showOutOfStock}
         title={tooltipText}
-        className={`flex flex-col rounded-lg border bg-card text-card-foreground transition-all h-40 overflow-hidden group w-full relative ${
+        className={`flex flex-col rounded-2xl border bg-card text-card-foreground transition-all h-52 overflow-hidden group w-full relative ${
           showOutOfStock 
             ? "opacity-90 cursor-not-allowed" 
             : "hover:border-primary/50 hover:shadow-md active:scale-95"
@@ -48,12 +48,12 @@ export function DrinkCard({ drink, onClick, variant }: DrinkCardProps) {
               onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
             />
           ) : (
-            <Coffee className="h-7 w-7 text-primary/80 shrink-0" />
+            <Coffee className="h-9 w-9 text-primary/80 shrink-0" />
           )}
         </div>
-        <div className="flex flex-col items-center px-2 py-1.5 border-t bg-slate-100/5 shrink-0">
-          <span className="font-semibold text-[10px] sm:text-xs leading-tight line-clamp-2 w-full text-center capitalize">{drink.name}</span>
-          <span className="text-[10px] sm:text-xs text-primary font-bold leading-tight">{fmt((drink as any).defaultPrice ?? drink.basePrice)}</span>
+        <div className="flex flex-col items-center px-3 py-2.5 border-t bg-slate-100/5 shrink-0 w-full">
+          <span className="font-bold text-xs sm:text-sm leading-tight line-clamp-2 w-full text-center capitalize mb-1">{drink.name}</span>
+          <span className="text-xs sm:text-sm text-primary font-black leading-tight">{fmt((drink as any).defaultPrice ?? drink.basePrice)}</span>
         </div>
       </button>
     );
