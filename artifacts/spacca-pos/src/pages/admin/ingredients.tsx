@@ -1058,7 +1058,7 @@ function InventoryTab() {
   const [searchTerm, setSearchTerm] = useState("");
   const { selectedBranchId } = useAuth();
   const { data: ingredients, isLoading, refetch } = useListIngredients({ 
-    active: !showInactive,
+    active: showInactive ? undefined : true,
     branchId: selectedBranchId 
   } as any);
   const [importing, setImporting] = useState(false);
