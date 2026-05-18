@@ -53,7 +53,14 @@ export async function calculateDrinkData(drinkId: number, selections: any[], bra
   const customizations: CustomizationData[] = [];
   let totalExtras = 0;
   let usedVolumeMl = 0;
-  let dynamicInfo: { slotLabel: string; ingredientName: string; filledMl: number; cost: number } | null = null;
+  let dynamicInfo: { 
+    slotLabel: string; 
+    ingredientName: string; 
+    filledMl: number; 
+    cost: number;
+    ingredientId?: number | null;
+    consumedQty?: number;
+  } | null = null;
 
   // Process all non-dynamic slots
   for (const slot of slots) {
@@ -383,7 +390,14 @@ export async function calculateDrinkData(drinkId: number, selections: any[], bra
 
         totalExtras += cost;
         const ingredientName = ingredientType?.name ?? "Dynamic";
-        dynamicInfo = { slotLabel: dynamicSlot.slotLabel, ingredientName, filledMl, cost };
+        dynamicInfo = { 
+          slotLabel: dynamicSlot.slotLabel, 
+          ingredientName, 
+          filledMl, 
+          cost, 
+          ingredientId: inventoryId ? Number(inventoryId) : null, 
+          consumedQty 
+        };
         
         customizations.push({
           ingredientId: inventoryId ? Number(inventoryId) : null,
@@ -428,7 +442,14 @@ export async function calculateDrinkData(drinkId: number, selections: any[], bra
         }
 
         totalExtras += cost;
-        dynamicInfo = { slotLabel: dynamicSlot.slotLabel, ingredientName, filledMl, cost };
+        dynamicInfo = { 
+          slotLabel: dynamicSlot.slotLabel, 
+          ingredientName, 
+          filledMl, 
+          cost, 
+          ingredientId: dynamicSlot.ingredientId, 
+          consumedQty 
+        };
 
         customizations.push({
           ingredientId: dynamicSlot.ingredientId,

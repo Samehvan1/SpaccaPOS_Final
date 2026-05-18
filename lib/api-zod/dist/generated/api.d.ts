@@ -676,45 +676,59 @@ export declare const CalculateDrinkPriceBody: zod.ZodObject<{
 export declare const CalculateDrinkPriceResponse: zod.ZodObject<{
     basePrice: zod.ZodNumber;
     extras: zod.ZodArray<zod.ZodObject<{
-        ingredientId: zod.ZodNumber;
+        ingredientId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
+        ingredientTypeId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
         slotLabel: zod.ZodString;
         optionLabel: zod.ZodString;
         extraCost: zod.ZodNumber;
+        consumedQty: zod.ZodOptional<zod.ZodNumber>;
     }, "strip", zod.ZodTypeAny, {
-        ingredientId: number;
         slotLabel: string;
         optionLabel: string;
         extraCost: number;
+        ingredientId?: number | null | undefined;
+        ingredientTypeId?: number | null | undefined;
+        consumedQty?: number | undefined;
     }, {
-        ingredientId: number;
         slotLabel: string;
         optionLabel: string;
         extraCost: number;
+        ingredientId?: number | null | undefined;
+        ingredientTypeId?: number | null | undefined;
+        consumedQty?: number | undefined;
     }>, "many">;
     dynamicInfo: zod.ZodOptional<zod.ZodObject<{
         slotLabel: zod.ZodString;
         ingredientName: zod.ZodString;
         filledMl: zod.ZodNumber;
         cost: zod.ZodNumber;
+        ingredientId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
+        consumedQty: zod.ZodOptional<zod.ZodNumber>;
     }, "strip", zod.ZodTypeAny, {
         slotLabel: string;
         ingredientName: string;
         filledMl: number;
         cost: number;
+        ingredientId?: number | null | undefined;
+        consumedQty?: number | undefined;
     }, {
         slotLabel: string;
         ingredientName: string;
         filledMl: number;
         cost: number;
+        ingredientId?: number | null | undefined;
+        consumedQty?: number | undefined;
     }>>;
     total: zod.ZodNumber;
 }, "strip", zod.ZodTypeAny, {
     basePrice: number;
     extras: {
-        ingredientId: number;
         slotLabel: string;
         optionLabel: string;
         extraCost: number;
+        ingredientId?: number | null | undefined;
+        ingredientTypeId?: number | null | undefined;
+        consumedQty?: number | undefined;
     }[];
     total: number;
     dynamicInfo?: {
@@ -722,14 +736,18 @@ export declare const CalculateDrinkPriceResponse: zod.ZodObject<{
         ingredientName: string;
         filledMl: number;
         cost: number;
+        ingredientId?: number | null | undefined;
+        consumedQty?: number | undefined;
     } | undefined;
 }, {
     basePrice: number;
     extras: {
-        ingredientId: number;
         slotLabel: string;
         optionLabel: string;
         extraCost: number;
+        ingredientId?: number | null | undefined;
+        ingredientTypeId?: number | null | undefined;
+        consumedQty?: number | undefined;
     }[];
     total: number;
     dynamicInfo?: {
@@ -737,6 +755,8 @@ export declare const CalculateDrinkPriceResponse: zod.ZodObject<{
         ingredientName: string;
         filledMl: number;
         cost: number;
+        ingredientId?: number | null | undefined;
+        consumedQty?: number | undefined;
     } | undefined;
 }>;
 /**
@@ -1645,8 +1665,8 @@ export declare const ListOrdersResponseItem: zod.ZodIntersection<zod.ZodObject<{
             id: number;
             slotLabel: string;
             optionLabel: string;
-            orderItemId: number;
             consumedQty: number;
+            orderItemId: number;
             addedCost: number;
             ingredientId?: number | null | undefined;
             baristaSortOrder?: number | null | undefined;
@@ -1657,8 +1677,8 @@ export declare const ListOrdersResponseItem: zod.ZodIntersection<zod.ZodObject<{
             id: number;
             slotLabel: string;
             optionLabel: string;
-            orderItemId: number;
             consumedQty: number;
+            orderItemId: number;
             addedCost: number;
             ingredientId?: number | null | undefined;
             baristaSortOrder?: number | null | undefined;
@@ -1681,8 +1701,8 @@ export declare const ListOrdersResponseItem: zod.ZodIntersection<zod.ZodObject<{
             id: number;
             slotLabel: string;
             optionLabel: string;
-            orderItemId: number;
             consumedQty: number;
+            orderItemId: number;
             addedCost: number;
             ingredientId?: number | null | undefined;
             baristaSortOrder?: number | null | undefined;
@@ -1705,8 +1725,8 @@ export declare const ListOrdersResponseItem: zod.ZodIntersection<zod.ZodObject<{
             id: number;
             slotLabel: string;
             optionLabel: string;
-            orderItemId: number;
             consumedQty: number;
+            orderItemId: number;
             addedCost: number;
             ingredientId?: number | null | undefined;
             baristaSortOrder?: number | null | undefined;
@@ -1731,8 +1751,8 @@ export declare const ListOrdersResponseItem: zod.ZodIntersection<zod.ZodObject<{
             id: number;
             slotLabel: string;
             optionLabel: string;
-            orderItemId: number;
             consumedQty: number;
+            orderItemId: number;
             addedCost: number;
             ingredientId?: number | null | undefined;
             baristaSortOrder?: number | null | undefined;
@@ -1757,8 +1777,8 @@ export declare const ListOrdersResponseItem: zod.ZodIntersection<zod.ZodObject<{
             id: number;
             slotLabel: string;
             optionLabel: string;
-            orderItemId: number;
             consumedQty: number;
+            orderItemId: number;
             addedCost: number;
             ingredientId?: number | null | undefined;
             baristaSortOrder?: number | null | undefined;
@@ -1868,8 +1888,8 @@ export declare const ListOrdersResponse: zod.ZodArray<zod.ZodIntersection<zod.Zo
             id: number;
             slotLabel: string;
             optionLabel: string;
-            orderItemId: number;
             consumedQty: number;
+            orderItemId: number;
             addedCost: number;
             ingredientId?: number | null | undefined;
             baristaSortOrder?: number | null | undefined;
@@ -1880,8 +1900,8 @@ export declare const ListOrdersResponse: zod.ZodArray<zod.ZodIntersection<zod.Zo
             id: number;
             slotLabel: string;
             optionLabel: string;
-            orderItemId: number;
             consumedQty: number;
+            orderItemId: number;
             addedCost: number;
             ingredientId?: number | null | undefined;
             baristaSortOrder?: number | null | undefined;
@@ -1904,8 +1924,8 @@ export declare const ListOrdersResponse: zod.ZodArray<zod.ZodIntersection<zod.Zo
             id: number;
             slotLabel: string;
             optionLabel: string;
-            orderItemId: number;
             consumedQty: number;
+            orderItemId: number;
             addedCost: number;
             ingredientId?: number | null | undefined;
             baristaSortOrder?: number | null | undefined;
@@ -1928,8 +1948,8 @@ export declare const ListOrdersResponse: zod.ZodArray<zod.ZodIntersection<zod.Zo
             id: number;
             slotLabel: string;
             optionLabel: string;
-            orderItemId: number;
             consumedQty: number;
+            orderItemId: number;
             addedCost: number;
             ingredientId?: number | null | undefined;
             baristaSortOrder?: number | null | undefined;
@@ -1954,8 +1974,8 @@ export declare const ListOrdersResponse: zod.ZodArray<zod.ZodIntersection<zod.Zo
             id: number;
             slotLabel: string;
             optionLabel: string;
-            orderItemId: number;
             consumedQty: number;
+            orderItemId: number;
             addedCost: number;
             ingredientId?: number | null | undefined;
             baristaSortOrder?: number | null | undefined;
@@ -1980,8 +2000,8 @@ export declare const ListOrdersResponse: zod.ZodArray<zod.ZodIntersection<zod.Zo
             id: number;
             slotLabel: string;
             optionLabel: string;
-            orderItemId: number;
             consumedQty: number;
+            orderItemId: number;
             addedCost: number;
             ingredientId?: number | null | undefined;
             baristaSortOrder?: number | null | undefined;
@@ -2219,8 +2239,8 @@ export declare const GetOrderResponse: zod.ZodIntersection<zod.ZodObject<{
             id: number;
             slotLabel: string;
             optionLabel: string;
-            orderItemId: number;
             consumedQty: number;
+            orderItemId: number;
             addedCost: number;
             ingredientId?: number | null | undefined;
             baristaSortOrder?: number | null | undefined;
@@ -2231,8 +2251,8 @@ export declare const GetOrderResponse: zod.ZodIntersection<zod.ZodObject<{
             id: number;
             slotLabel: string;
             optionLabel: string;
-            orderItemId: number;
             consumedQty: number;
+            orderItemId: number;
             addedCost: number;
             ingredientId?: number | null | undefined;
             baristaSortOrder?: number | null | undefined;
@@ -2255,8 +2275,8 @@ export declare const GetOrderResponse: zod.ZodIntersection<zod.ZodObject<{
             id: number;
             slotLabel: string;
             optionLabel: string;
-            orderItemId: number;
             consumedQty: number;
+            orderItemId: number;
             addedCost: number;
             ingredientId?: number | null | undefined;
             baristaSortOrder?: number | null | undefined;
@@ -2279,8 +2299,8 @@ export declare const GetOrderResponse: zod.ZodIntersection<zod.ZodObject<{
             id: number;
             slotLabel: string;
             optionLabel: string;
-            orderItemId: number;
             consumedQty: number;
+            orderItemId: number;
             addedCost: number;
             ingredientId?: number | null | undefined;
             baristaSortOrder?: number | null | undefined;
@@ -2305,8 +2325,8 @@ export declare const GetOrderResponse: zod.ZodIntersection<zod.ZodObject<{
             id: number;
             slotLabel: string;
             optionLabel: string;
-            orderItemId: number;
             consumedQty: number;
+            orderItemId: number;
             addedCost: number;
             ingredientId?: number | null | undefined;
             baristaSortOrder?: number | null | undefined;
@@ -2331,8 +2351,8 @@ export declare const GetOrderResponse: zod.ZodIntersection<zod.ZodObject<{
             id: number;
             slotLabel: string;
             optionLabel: string;
-            orderItemId: number;
             consumedQty: number;
+            orderItemId: number;
             addedCost: number;
             ingredientId?: number | null | undefined;
             baristaSortOrder?: number | null | undefined;
@@ -2817,8 +2837,8 @@ export declare const GetActiveOrdersResponseItem: zod.ZodIntersection<zod.ZodObj
             id: number;
             slotLabel: string;
             optionLabel: string;
-            orderItemId: number;
             consumedQty: number;
+            orderItemId: number;
             addedCost: number;
             ingredientId?: number | null | undefined;
             baristaSortOrder?: number | null | undefined;
@@ -2829,8 +2849,8 @@ export declare const GetActiveOrdersResponseItem: zod.ZodIntersection<zod.ZodObj
             id: number;
             slotLabel: string;
             optionLabel: string;
-            orderItemId: number;
             consumedQty: number;
+            orderItemId: number;
             addedCost: number;
             ingredientId?: number | null | undefined;
             baristaSortOrder?: number | null | undefined;
@@ -2853,8 +2873,8 @@ export declare const GetActiveOrdersResponseItem: zod.ZodIntersection<zod.ZodObj
             id: number;
             slotLabel: string;
             optionLabel: string;
-            orderItemId: number;
             consumedQty: number;
+            orderItemId: number;
             addedCost: number;
             ingredientId?: number | null | undefined;
             baristaSortOrder?: number | null | undefined;
@@ -2877,8 +2897,8 @@ export declare const GetActiveOrdersResponseItem: zod.ZodIntersection<zod.ZodObj
             id: number;
             slotLabel: string;
             optionLabel: string;
-            orderItemId: number;
             consumedQty: number;
+            orderItemId: number;
             addedCost: number;
             ingredientId?: number | null | undefined;
             baristaSortOrder?: number | null | undefined;
@@ -2903,8 +2923,8 @@ export declare const GetActiveOrdersResponseItem: zod.ZodIntersection<zod.ZodObj
             id: number;
             slotLabel: string;
             optionLabel: string;
-            orderItemId: number;
             consumedQty: number;
+            orderItemId: number;
             addedCost: number;
             ingredientId?: number | null | undefined;
             baristaSortOrder?: number | null | undefined;
@@ -2929,8 +2949,8 @@ export declare const GetActiveOrdersResponseItem: zod.ZodIntersection<zod.ZodObj
             id: number;
             slotLabel: string;
             optionLabel: string;
-            orderItemId: number;
             consumedQty: number;
+            orderItemId: number;
             addedCost: number;
             ingredientId?: number | null | undefined;
             baristaSortOrder?: number | null | undefined;
@@ -3040,8 +3060,8 @@ export declare const GetActiveOrdersResponse: zod.ZodArray<zod.ZodIntersection<z
             id: number;
             slotLabel: string;
             optionLabel: string;
-            orderItemId: number;
             consumedQty: number;
+            orderItemId: number;
             addedCost: number;
             ingredientId?: number | null | undefined;
             baristaSortOrder?: number | null | undefined;
@@ -3052,8 +3072,8 @@ export declare const GetActiveOrdersResponse: zod.ZodArray<zod.ZodIntersection<z
             id: number;
             slotLabel: string;
             optionLabel: string;
-            orderItemId: number;
             consumedQty: number;
+            orderItemId: number;
             addedCost: number;
             ingredientId?: number | null | undefined;
             baristaSortOrder?: number | null | undefined;
@@ -3076,8 +3096,8 @@ export declare const GetActiveOrdersResponse: zod.ZodArray<zod.ZodIntersection<z
             id: number;
             slotLabel: string;
             optionLabel: string;
-            orderItemId: number;
             consumedQty: number;
+            orderItemId: number;
             addedCost: number;
             ingredientId?: number | null | undefined;
             baristaSortOrder?: number | null | undefined;
@@ -3100,8 +3120,8 @@ export declare const GetActiveOrdersResponse: zod.ZodArray<zod.ZodIntersection<z
             id: number;
             slotLabel: string;
             optionLabel: string;
-            orderItemId: number;
             consumedQty: number;
+            orderItemId: number;
             addedCost: number;
             ingredientId?: number | null | undefined;
             baristaSortOrder?: number | null | undefined;
@@ -3126,8 +3146,8 @@ export declare const GetActiveOrdersResponse: zod.ZodArray<zod.ZodIntersection<z
             id: number;
             slotLabel: string;
             optionLabel: string;
-            orderItemId: number;
             consumedQty: number;
+            orderItemId: number;
             addedCost: number;
             ingredientId?: number | null | undefined;
             baristaSortOrder?: number | null | undefined;
@@ -3152,8 +3172,8 @@ export declare const GetActiveOrdersResponse: zod.ZodArray<zod.ZodIntersection<z
             id: number;
             slotLabel: string;
             optionLabel: string;
-            orderItemId: number;
             consumedQty: number;
+            orderItemId: number;
             addedCost: number;
             ingredientId?: number | null | undefined;
             baristaSortOrder?: number | null | undefined;

@@ -6,9 +6,11 @@
  * OpenAPI spec version: 0.1.0
  */
 export interface PriceBreakdownExtrasItem {
-    ingredientId: number;
+    ingredientId?: number | null;
+    ingredientTypeId?: number | null;
     slotLabel: string;
     optionLabel: string;
     extraCost: number;
+    consumedQty?: number;
 }
 //# sourceMappingURL=priceBreakdownExtrasItem.d.ts.map

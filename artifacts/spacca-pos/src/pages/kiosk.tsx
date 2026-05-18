@@ -16,6 +16,7 @@ import { CupSimulator, type CupLayer } from "@/components/cup-simulator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
 
 import { useSettings } from "@/hooks/use-settings";
 import { useOrderEvents } from "@/hooks/use-order-events";
@@ -42,8 +43,50 @@ function useDrinkCategories() {
   });
 }
 
+const checkCartStock = (
+  tempCart: any[],
+  ingredientsList: any[],
+  allowNoStockSell: boolean
+): { isValid: boolean; errorMsg?: string } => {
+  if (allowNoStockSell) return { isValid: true };
+
+  const requiredQty: Record<number, number> = {};
+  const ingredientNames: Record<number, string> = {};
+
+  for (const item of tempCart) {
+    const requirements = item.ingredientsRequirement || [];
+    for (const req of requirements) {
+      if (req.ingredientId && req.consumedQty > 0) {
+        requiredQty[req.ingredientId] = (requiredQty[req.ingredientId] || 0) + (req.consumedQty * item.quantity);
+        ingredientNames[req.ingredientId] = req.name;
+      }
+    }
+  }
+
+  const insufficient: string[] = [];
+  for (const [ingIdStr, reqQty] of Object.entries(requiredQty)) {
+    const ingId = parseInt(ingIdStr);
+    const ing = ingredientsList?.find(i => i.id === ingId);
+    const stock = ing ? ing.stockQuantity : 0;
+    if (reqQty > stock) {
+      const name = ing ? ing.name : (ingredientNames[ingId] || `Ingredient #${ingId}`);
+      insufficient.push(`${name} (Required: ${reqQty.toFixed(1)}, Available: ${stock.toFixed(1)})`);
+    }
+  }
+
+  if (insufficient.length > 0) {
+    return {
+      isValid: false,
+      errorMsg: `Insufficient stock for: ${insufficient.join(", ")}`,
+    };
+  }
+
+  return { isValid: true };
+};
+
 export default function KioskPage() {
   const { allowNoStockSell } = useSettings();
+  const { toast } = useToast();
   useOrderEvents();
   const [step, setStep] = useState<"start" | "menu" | "checkout" | "success">("start");
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
@@ -55,6 +98,17 @@ export default function KioskPage() {
     const saved = localStorage.getItem("kiosk_branch_id");
     return saved ? parseInt(saved) : null;
   });
+
+  const { data: ingredients = [] } = useQuery<any[]>({
+    queryKey: ["kiosk-ingredients", selectedBranchId],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/ingredients?branchId=${selectedBranchId || ""}`);
+      if (!res.ok) throw new Error("Failed to fetch ingredients");
+      return res.json();
+    },
+    enabled: !!selectedBranchId,
+  });
+
   const [orderNumber, setOrderNumber] = useState<string | null>(null);
   const [customerPhone, setCustomerPhone] = useState("");
   const [customerName, setCustomerName] = useState("");
@@ -289,7 +343,45 @@ export default function KioskPage() {
       };
     }).filter(s => s !== null);
 
-    setCart(prev => [...prev, {
+    const ingredientsRequirement: { ingredientId: number; name: string; consumedQty: number }[] = [];
+
+    // Add cup ingredient requirement if present on drink
+    if (activeDrink.cupIngredientId) {
+      ingredientsRequirement.push({
+        ingredientId: activeDrink.cupIngredientId,
+        name: "Cup/Glass",
+        consumedQty: 1,
+      });
+    }
+
+    // Add all customizations from priceBreakdown.extras
+    if (priceBreakdown.extras && Array.isArray(priceBreakdown.extras)) {
+      priceBreakdown.extras.forEach((ext: any) => {
+        if (ext.ingredientId && ext.consumedQty > 0) {
+          ingredientsRequirement.push({
+            ingredientId: ext.ingredientId,
+            name: ext.optionLabel || "Ingredient",
+            consumedQty: ext.consumedQty,
+          });
+        }
+      });
+    }
+
+    // Add dynamic info if present
+    if (
+      priceBreakdown.dynamicInfo && 
+      priceBreakdown.dynamicInfo.ingredientId && 
+      priceBreakdown.dynamicInfo.consumedQty !== undefined && 
+      priceBreakdown.dynamicInfo.consumedQty > 0
+    ) {
+      ingredientsRequirement.push({
+        ingredientId: priceBreakdown.dynamicInfo.ingredientId,
+        name: priceBreakdown.dynamicInfo.ingredientName,
+        consumedQty: priceBreakdown.dynamicInfo.consumedQty,
+      });
+    }
+
+    const nextCartItem = {
       id: Math.random().toString(36).substring(7),
       drinkId: activeDrink.id,
       drinkName: activeDrink.name,
@@ -298,8 +390,21 @@ export default function KioskPage() {
       totalPrice: priceBreakdown.total,
       selections: formattedSelections,
       image: (activeDrink as any).imageUrl,
-    }]);
+      ingredientsRequirement,
+    };
 
+    const testCart = [...cart, nextCartItem];
+    const stockCheck = checkCartStock(testCart, ingredients, allowNoStockSell);
+    if (!stockCheck.isValid) {
+      toast({
+        variant: "destructive",
+        title: "Insufficient Stock",
+        description: stockCheck.errorMsg,
+      });
+      return;
+    }
+
+    setCart(testCart);
     setIsCustomizing(false);
     setActiveDrink(null);
   };
@@ -730,7 +835,17 @@ export default function KioskPage() {
                       </Button>
                       <span className="font-black text-2xl w-8 text-center">{item.quantity}</span>
                       <Button variant="outline" size="icon" className="rounded-full h-12 w-12 border-2" onClick={() => {
-                        setCart(prev => prev.map(i => i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i));
+                        const simulatedCart = cart.map(i => i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i);
+                        const stockCheck = checkCartStock(simulatedCart, ingredients, allowNoStockSell);
+                        if (!stockCheck.isValid) {
+                          toast({
+                            variant: "destructive",
+                            title: "Insufficient Stock",
+                            description: stockCheck.errorMsg,
+                          });
+                          return;
+                        }
+                        setCart(simulatedCart);
                       }}>
                         <Plus className="h-5 w-5" />
                       </Button>

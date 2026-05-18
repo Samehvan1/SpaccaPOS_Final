@@ -77706,17 +77706,21 @@ var CalculateDrinkPriceResponse = objectType({
   basePrice: numberType(),
   extras: arrayType(
     objectType({
-      ingredientId: numberType(),
+      ingredientId: numberType().nullish(),
+      ingredientTypeId: numberType().nullish(),
       slotLabel: stringType(),
       optionLabel: stringType(),
-      extraCost: numberType()
+      extraCost: numberType(),
+      consumedQty: numberType().optional()
     })
   ),
   dynamicInfo: objectType({
     slotLabel: stringType(),
     ingredientName: stringType(),
     filledMl: numberType(),
-    cost: numberType()
+    cost: numberType(),
+    ingredientId: numberType().nullish(),
+    consumedQty: numberType().optional()
   }).optional(),
   total: numberType()
 });
@@ -81143,7 +81147,14 @@ async function calculateDrinkData(drinkId, selections, branchId = null) {
         }
         totalExtras += cost;
         const ingredientName = ingredientType?.name ?? "Dynamic";
-        dynamicInfo = { slotLabel: dynamicSlot.slotLabel, ingredientName, filledMl, cost };
+        dynamicInfo = {
+          slotLabel: dynamicSlot.slotLabel,
+          ingredientName,
+          filledMl,
+          cost,
+          ingredientId: inventoryId ? Number(inventoryId) : null,
+          consumedQty
+        };
         customizations.push({
           ingredientId: inventoryId ? Number(inventoryId) : null,
           optionId: null,
@@ -81181,7 +81192,14 @@ async function calculateDrinkData(drinkId, selections, branchId = null) {
           }
         }
         totalExtras += cost;
-        dynamicInfo = { slotLabel: dynamicSlot.slotLabel, ingredientName, filledMl, cost };
+        dynamicInfo = {
+          slotLabel: dynamicSlot.slotLabel,
+          ingredientName,
+          filledMl,
+          cost,
+          ingredientId: dynamicSlot.ingredientId,
+          consumedQty
+        };
         customizations.push({
           ingredientId: dynamicSlot.ingredientId,
           optionId,
@@ -81947,7 +81965,8 @@ router3.post("/drinks/:id/price", async (req, res) => {
       optionLabel: c.optionLabel,
       extraCost: c.addedCost,
       producedQty: c.producedQty,
-      color: c.color
+      color: c.color,
+      consumedQty: c.consumedQty
     }));
     res.json({
       basePrice: data.basePrice,
@@ -82932,6 +82951,43 @@ router5.post("/orders", async (req, res) => {
         return;
       }
       throw e;
+    }
+  }
+  const requiredStockMap = /* @__PURE__ */ new Map();
+  for (const item of itemDetails) {
+    for (const c of item.customizations) {
+      if (c.ingredientId && c.consumedQty > 0) {
+        const currentReq = requiredStockMap.get(c.ingredientId) ?? 0;
+        requiredStockMap.set(c.ingredientId, currentReq + c.consumedQty);
+      }
+    }
+  }
+  if (requiredStockMap.size > 0) {
+    const [allowNoStockSellRow] = await db.select().from(settingsTable).where(and(eq(settingsTable.scope, "global"), eq(settingsTable.key, "allowNoStockSell"))).limit(1);
+    const allowNoStockSell = allowNoStockSellRow ? allowNoStockSellRow.value === "true" : false;
+    if (!allowNoStockSell) {
+      const allReqIngredientIds = Array.from(requiredStockMap.keys());
+      const stockRows = await db.select({
+        ingredientId: branchStockTable.ingredientId,
+        stockQuantity: branchStockTable.stockQuantity,
+        name: ingredientsTable.name
+      }).from(branchStockTable).innerJoin(ingredientsTable, eq(ingredientsTable.id, branchStockTable.ingredientId)).where(and(eq(branchStockTable.branchId, targetBranchId), inArray(branchStockTable.ingredientId, allReqIngredientIds)));
+      const stockMap = new Map(stockRows.map((r) => [r.ingredientId, { stock: parseFloat(r.stockQuantity), name: r.name }]));
+      const insufficientStockItems = [];
+      for (const [ingId, reqQty] of requiredStockMap.entries()) {
+        const stockInfo = stockMap.get(ingId);
+        const availableStock = stockInfo ? stockInfo.stock : 0;
+        if (reqQty > availableStock) {
+          const ingName = stockInfo ? stockInfo.name : `Ingredient #${ingId}`;
+          insufficientStockItems.push(`${ingName} (Required: ${reqQty.toFixed(1)}, Available: ${availableStock.toFixed(1)})`);
+        }
+      }
+      if (insufficientStockItems.length > 0) {
+        res.status(400).json({
+          error: `Insufficient stock for the following: ${insufficientStockItems.join(", ")}`
+        });
+        return;
+      }
     }
   }
   let discountAmount = parsed.data.discount ?? 0;

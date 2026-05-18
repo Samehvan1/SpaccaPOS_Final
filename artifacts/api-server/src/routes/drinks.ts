@@ -937,7 +937,8 @@ router.post("/drinks/:id/price", async (req, res): Promise<void> => {
       optionLabel: c.optionLabel,
       extraCost: c.addedCost,
       producedQty: c.producedQty,
-      color: c.color
+      color: c.color,
+      consumedQty: c.consumedQty
     }));
 
     res.json({ 

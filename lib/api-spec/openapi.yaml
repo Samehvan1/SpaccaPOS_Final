@@ -1777,6 +1777,11 @@ components:
           type: number
         cost:
           type: number
+        ingredientId:
+          type: integer
+          nullable: true
+        consumedQty:
+          type: number
       required:
         - slotLabel
         - ingredientName
@@ -1788,14 +1793,19 @@ components:
       properties:
         ingredientId:
           type: integer
+          nullable: true
+        ingredientTypeId:
+          type: integer
+          nullable: true
         slotLabel:
           type: string
         optionLabel:
           type: string
         extraCost:
           type: number
+        consumedQty:
+          type: number
       required:
-        - ingredientId
         - slotLabel
         - optionLabel
         - extraCost

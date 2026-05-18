@@ -7,8 +7,10 @@
  */
 
 export interface PriceBreakdownExtrasItem {
-  ingredientId: number;
+  ingredientId?: number | null;
+  ingredientTypeId?: number | null;
   slotLabel: string;
   optionLabel: string;
   extraCost: number;
+  consumedQty?: number;
 }

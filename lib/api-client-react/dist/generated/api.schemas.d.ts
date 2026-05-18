@@ -316,16 +316,20 @@ export interface PriceCalculationBody {
     selections: PriceCalculationBodySelectionsItem[];
 }
 export interface PriceBreakdownExtrasItem {
-    ingredientId: number;
+    ingredientId?: number | null;
+    ingredientTypeId?: number | null;
     slotLabel: string;
     optionLabel: string;
     extraCost: number;
+    consumedQty?: number;
 }
 export interface PriceBreakdownDynamicInfo {
     slotLabel: string;
     ingredientName: string;
     filledMl: number;
     cost: number;
+    ingredientId?: number | null;
+    consumedQty?: number;
 }
 export interface PriceBreakdown {
     basePrice: number;

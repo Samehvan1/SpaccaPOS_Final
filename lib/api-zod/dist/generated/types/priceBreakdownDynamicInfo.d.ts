@@ -10,5 +10,7 @@ export interface PriceBreakdownDynamicInfo {
     ingredientName: string;
     filledMl: number;
     cost: number;
+    ingredientId?: number | null;
+    consumedQty?: number;
 }
 //# sourceMappingURL=priceBreakdownDynamicInfo.d.ts.map

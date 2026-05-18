@@ -267,10 +267,12 @@ export const CalculateDrinkPriceResponse = zod.object({
   basePrice: zod.number(),
   extras: zod.array(
     zod.object({
-      ingredientId: zod.number(),
+      ingredientId: zod.number().nullish(),
+      ingredientTypeId: zod.number().nullish(),
       slotLabel: zod.string(),
       optionLabel: zod.string(),
       extraCost: zod.number(),
+      consumedQty: zod.number().optional(),
     }),
   ),
   dynamicInfo: zod
@@ -279,6 +281,8 @@ export const CalculateDrinkPriceResponse = zod.object({
       ingredientName: zod.string(),
       filledMl: zod.number(),
       cost: zod.number(),
+      ingredientId: zod.number().nullish(),
+      consumedQty: zod.number().optional(),
     })
     .optional(),
   total: zod.number(),

@@ -65,6 +65,11 @@ type CartItem = {
     extraCost: number;
   }[];
   specialNotes?: string;
+  ingredientsRequirement?: {
+    ingredientId: number;
+    name: string;
+    consumedQty: number;
+  }[];
 };
 
 
@@ -76,6 +81,47 @@ function detectSubcategory(name: string): string {
 
 // Smart categorization disabled as per user request
 
+const checkCartStock = (
+  tempCart: CartItem[],
+  ingredientsList: any[],
+  allowNoStockSell: boolean
+): { isValid: boolean; errorMsg?: string } => {
+  if (allowNoStockSell) return { isValid: true };
+
+  const requiredQty: Record<number, number> = {};
+  const ingredientNames: Record<number, string> = {};
+
+  for (const item of tempCart) {
+    const requirements = item.ingredientsRequirement || [];
+    for (const req of requirements) {
+      if (req.ingredientId && req.consumedQty > 0) {
+        requiredQty[req.ingredientId] = (requiredQty[req.ingredientId] || 0) + (req.consumedQty * item.quantity);
+        ingredientNames[req.ingredientId] = req.name;
+      }
+    }
+  }
+
+  const insufficient: string[] = [];
+  for (const [ingIdStr, reqQty] of Object.entries(requiredQty)) {
+    const ingId = parseInt(ingIdStr);
+    const ing = ingredientsList?.find(i => i.id === ingId);
+    const stock = ing ? ing.stockQuantity : 0;
+    if (reqQty > stock) {
+      const name = ing ? ing.name : (ingredientNames[ingId] || `Ingredient #${ingId}`);
+      insufficient.push(`${name} (Required: ${reqQty.toFixed(1)}, Available: ${stock.toFixed(1)})`);
+    }
+  }
+
+  if (insufficient.length > 0) {
+    return {
+      isValid: false,
+      errorMsg: `Insufficient stock for: ${insufficient.join(", ")}`,
+    };
+  }
+
+  return { isValid: true };
+};
+
 export default function PosTerminal() {
   const { user, selectedBranchId, setSelectedBranchId } = useAuth();
   const { toast } = useToast();
@@ -84,6 +130,16 @@ export default function PosTerminal() {
   const { data: branches = [], isLoading: isLoadingBranches } = useListBranches();
   const { data: drinks, isLoading: isLoadingDrinks } = useListDrinks({ active: true, branchId: selectedBranchId || undefined });
   const { data: allCategories = [] } = useDrinkCategories();
+
+  const { data: ingredients = [] } = useQuery<any[]>({
+    queryKey: ["pos-ingredients", selectedBranchId],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/ingredients?branchId=${selectedBranchId || ""}`);
+      if (!res.ok) throw new Error("Failed to fetch ingredients");
+      return res.json();
+    },
+    enabled: !!selectedBranchId,
+  });
 
   // Only show active categories that have the sort order from admin
   const categories = useMemo(() => {
@@ -323,7 +379,16 @@ export default function PosTerminal() {
     if (drink.isCustomizable === false) {
       // Finished Good: add directly to cart with default options
       // We can use the defaultPrice that was pre-computed by the server
-      setCart(prev => [...prev, {
+      const requirements: { ingredientId: number; name: string; consumedQty: number }[] = [];
+      if (drink.cupIngredientId) {
+        requirements.push({
+          ingredientId: drink.cupIngredientId,
+          name: "Cup/Glass",
+          consumedQty: 1,
+        });
+      }
+
+      const nextCartItem: CartItem = {
         id: Math.random().toString(36).substring(7),
         drinkId: drink.id,
         drinkName: drink.name,
@@ -332,7 +397,21 @@ export default function PosTerminal() {
         totalPrice: (drink as any).defaultPrice ?? drink.basePrice,
         selections: [], // Empty selections = use defaults on server
         specialNotes: undefined,
-      }]);
+        ingredientsRequirement: requirements,
+      };
+
+      const testCart = [...cart, nextCartItem];
+      const stockCheck = checkCartStock(testCart, ingredients, allowNoStockSell);
+      if (!stockCheck.isValid) {
+        toast({
+          variant: "destructive",
+          title: "Insufficient Stock",
+          description: stockCheck.errorMsg,
+        });
+        return;
+      }
+
+      setCart(testCart);
       setIsCartOpen(true);
       toast({ title: "Added to cart", description: `${drink.name} added.` });
     } else {
@@ -422,7 +501,36 @@ export default function PosTerminal() {
       };
     }).filter((s): s is NonNullable<typeof s> => s !== null);
 
-    setCart(prev => [...prev, {
+    const ingredientsRequirement: { ingredientId: number; name: string; consumedQty: number }[] = [];
+
+    // Add all customizations from priceBreakdown.extras
+    if (priceBreakdown.extras && Array.isArray(priceBreakdown.extras)) {
+      priceBreakdown.extras.forEach((ext: any) => {
+        if (ext.ingredientId && ext.consumedQty > 0) {
+          ingredientsRequirement.push({
+            ingredientId: ext.ingredientId,
+            name: ext.optionLabel || "Ingredient",
+            consumedQty: ext.consumedQty,
+          });
+        }
+      });
+    }
+
+    // Add dynamic info if present
+    if (
+      priceBreakdown.dynamicInfo && 
+      priceBreakdown.dynamicInfo.ingredientId && 
+      priceBreakdown.dynamicInfo.consumedQty !== undefined && 
+      priceBreakdown.dynamicInfo.consumedQty > 0
+    ) {
+      ingredientsRequirement.push({
+        ingredientId: priceBreakdown.dynamicInfo.ingredientId,
+        name: priceBreakdown.dynamicInfo.ingredientName,
+        consumedQty: priceBreakdown.dynamicInfo.consumedQty,
+      });
+    }
+
+    const nextCartItem: CartItem = {
       id: Math.random().toString(36).substring(7),
       drinkId: activeDrink.id,
       drinkName: activeDrink.name,
@@ -431,13 +539,40 @@ export default function PosTerminal() {
       totalPrice: priceBreakdown.total,
       selections: formattedSelections,
       specialNotes: notes || undefined,
-    }]);
+      ingredientsRequirement,
+    };
 
+    const testCart = [...cart, nextCartItem];
+    const stockCheck = checkCartStock(testCart, ingredients, allowNoStockSell);
+    if (!stockCheck.isValid) {
+      toast({
+        variant: "destructive",
+        title: "Insufficient Stock",
+        description: stockCheck.errorMsg,
+      });
+      return;
+    }
+
+    setCart(testCart);
     handleCloseCustomization();
     setIsCartOpen(true);
   };
 
   const updateCartQuantity = (id: string, delta: number) => {
+    if (delta > 0) {
+      const simulatedCart = cart.map(item =>
+        item.id === id ? { ...item, quantity: item.quantity + 1 } : item
+      );
+      const stockCheck = checkCartStock(simulatedCart, ingredients, allowNoStockSell);
+      if (!stockCheck.isValid) {
+        toast({
+          variant: "destructive",
+          title: "Insufficient Stock",
+          description: stockCheck.errorMsg,
+        });
+        return;
+      }
+    }
     setCart(prev => prev.map(item =>
       item.id === id ? { ...item, quantity: Math.max(1, item.quantity + delta) } : item
     ));
