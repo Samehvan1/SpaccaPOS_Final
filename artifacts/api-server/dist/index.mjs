@@ -77744,10 +77744,21 @@ var ListIngredientsResponseItem = objectType({
   unit: stringType(),
   costPerUnit: numberType(),
   stockQuantity: numberType(),
+  startupQuantity: numberType(),
   lowStockThreshold: numberType(),
   isActive: booleanType(),
   linkedTypeCount: numberType().optional(),
   linkedProductCount: numberType().optional(),
+  conversions: arrayType(
+    objectType({
+      id: numberType(),
+      ingredientId: numberType(),
+      unitName: stringType(),
+      conversionFactor: numberType(),
+      isDefaultPurchase: booleanType(),
+      createdAt: stringType().optional()
+    })
+  ).optional(),
   createdAt: stringType(),
   updatedAt: stringType()
 });
@@ -77770,6 +77781,7 @@ var CreateIngredientBody = objectType({
   unit: stringType(),
   costPerUnit: numberType(),
   stockQuantity: numberType().optional(),
+  startupQuantity: numberType().optional(),
   lowStockThreshold: numberType().optional(),
   isActive: booleanType().optional()
 });
@@ -77799,10 +77811,21 @@ var GetIngredientResponse = objectType({
   unit: stringType(),
   costPerUnit: numberType(),
   stockQuantity: numberType(),
+  startupQuantity: numberType(),
   lowStockThreshold: numberType(),
   isActive: booleanType(),
   linkedTypeCount: numberType().optional(),
   linkedProductCount: numberType().optional(),
+  conversions: arrayType(
+    objectType({
+      id: numberType(),
+      ingredientId: numberType(),
+      unitName: stringType(),
+      conversionFactor: numberType(),
+      isDefaultPurchase: booleanType(),
+      createdAt: stringType().optional()
+    })
+  ).optional(),
   createdAt: stringType(),
   updatedAt: stringType()
 }).and(
@@ -77847,6 +77870,7 @@ var UpdateIngredientBody = objectType({
   unit: stringType().optional(),
   costPerUnit: numberType().optional(),
   stockQuantity: numberType().optional(),
+  startupQuantity: numberType().optional(),
   lowStockThreshold: numberType().optional(),
   isActive: booleanType().optional()
 });
@@ -77870,10 +77894,21 @@ var UpdateIngredientResponse = objectType({
   unit: stringType(),
   costPerUnit: numberType(),
   stockQuantity: numberType(),
+  startupQuantity: numberType(),
   lowStockThreshold: numberType(),
   isActive: booleanType(),
   linkedTypeCount: numberType().optional(),
   linkedProductCount: numberType().optional(),
+  conversions: arrayType(
+    objectType({
+      id: numberType(),
+      ingredientId: numberType(),
+      unitName: stringType(),
+      conversionFactor: numberType(),
+      isDefaultPurchase: booleanType(),
+      createdAt: stringType().optional()
+    })
+  ).optional(),
   createdAt: stringType(),
   updatedAt: stringType()
 });
@@ -77943,6 +77978,7 @@ var RestockIngredientQueryParams = objectType({
 });
 var RestockIngredientBody = objectType({
   quantity: numberType(),
+  unitId: numberType().nullish(),
   note: stringType().optional()
 });
 var RestockIngredientResponse = objectType({
@@ -77965,10 +78001,21 @@ var RestockIngredientResponse = objectType({
   unit: stringType(),
   costPerUnit: numberType(),
   stockQuantity: numberType(),
+  startupQuantity: numberType(),
   lowStockThreshold: numberType(),
   isActive: booleanType(),
   linkedTypeCount: numberType().optional(),
   linkedProductCount: numberType().optional(),
+  conversions: arrayType(
+    objectType({
+      id: numberType(),
+      ingredientId: numberType(),
+      unitName: stringType(),
+      conversionFactor: numberType(),
+      isDefaultPurchase: booleanType(),
+      createdAt: stringType().optional()
+    })
+  ).optional(),
   createdAt: stringType(),
   updatedAt: stringType()
 });
@@ -78246,14 +78293,23 @@ var MarkOrderItemReadyResponse = objectType({
 var ListStockMovementsQueryParams = objectType({
   ingredientId: coerce.number().optional(),
   limit: coerce.number().optional(),
-  offset: coerce.number().optional()
+  offset: coerce.number().optional(),
+  startDate: coerce.string().optional(),
+  endDate: coerce.string().optional()
 });
 var ListStockMovementsResponseItem = objectType({
   id: numberType(),
   ingredientId: numberType(),
   ingredientName: stringType(),
   orderId: numberType().nullable(),
-  movementType: enumType(["sale", "restock", "adjustment", "waste", "opening"]),
+  movementType: enumType([
+    "sale",
+    "restock",
+    "adjustment",
+    "waste",
+    "opening",
+    "calibration"
+  ]),
   quantity: numberType(),
   quantityAfter: numberType(),
   note: stringType().nullable(),
@@ -78266,8 +78322,9 @@ var ListStockMovementsResponse = arrayType(
 );
 var CreateStockAdjustmentBody = objectType({
   ingredientId: numberType(),
-  movementType: enumType(["adjustment", "waste", "opening"]),
+  movementType: enumType(["adjustment", "waste", "opening", "calibration"]),
   quantity: numberType(),
+  unitId: numberType().nullish(),
   note: stringType().optional()
 });
 var GetDashboardSummaryResponse = objectType({
@@ -78370,10 +78427,21 @@ var GetLowStockIngredientsResponseItem = objectType({
   unit: stringType(),
   costPerUnit: numberType(),
   stockQuantity: numberType(),
+  startupQuantity: numberType(),
   lowStockThreshold: numberType(),
   isActive: booleanType(),
   linkedTypeCount: numberType().optional(),
   linkedProductCount: numberType().optional(),
+  conversions: arrayType(
+    objectType({
+      id: numberType(),
+      ingredientId: numberType(),
+      unitName: stringType(),
+      conversionFactor: numberType(),
+      isDefaultPurchase: booleanType(),
+      createdAt: stringType().optional()
+    })
+  ).optional(),
   createdAt: stringType(),
   updatedAt: stringType()
 });
@@ -78649,27 +78717,46 @@ var ListOrdersResponseItem2 = ListOrdersResponseItem._def.left.extend({
   discountCode: external_exports2.string().nullish(),
   branchName: external_exports2.string().optional(),
   source: external_exports2.enum(["pos", "kiosk", "web", "mobile"]).optional(),
-  paymentMethod: external_exports2.enum(["cash", "card", "wallet", "hospitality", "split", "refund"])
+  paymentMethod: external_exports2.enum([
+    "cash",
+    "card",
+    "wallet",
+    "hospitality",
+    "split",
+    "refund"
+  ])
 }).and(
-  ListOrdersResponseItem._def.right.extend({
-    items: external_exports2.array(external_exports2.any()),
-    // Allow updated item fields like status: 'refunded'
-    payments: external_exports2.array(external_exports2.object({
-      id: external_exports2.number(),
-      paymentMethod: external_exports2.string(),
-      amount: external_exports2.number(),
-      transactionId: external_exports2.string().nullish(),
-      createdAt: external_exports2.string()
-    })).optional()
-  })
+  ListOrdersResponseItem._def.right.extend(
+    {
+      items: external_exports2.array(external_exports2.any()),
+      // Allow updated item fields like status: 'refunded'
+      payments: external_exports2.array(
+        external_exports2.object({
+          id: external_exports2.number(),
+          paymentMethod: external_exports2.string(),
+          amount: external_exports2.number(),
+          transactionId: external_exports2.string().nullish(),
+          createdAt: external_exports2.string()
+        })
+      ).optional()
+    }
+  )
 );
 var ListOrdersResponse2 = external_exports2.array(ListOrdersResponseItem2);
 var CreateOrderBody2 = CreateOrderBody.extend({
-  payments: external_exports2.array(external_exports2.object({
-    paymentMethod: external_exports2.enum(["cash", "card", "wallet", "hospitality", "refund"]),
-    amount: external_exports2.number(),
-    transactionId: external_exports2.string().optional()
-  })).optional(),
+  payments: external_exports2.array(
+    external_exports2.object({
+      paymentMethod: external_exports2.enum([
+        "cash",
+        "card",
+        "wallet",
+        "hospitality",
+        "refund"
+      ]),
+      amount: external_exports2.number(),
+      transactionId: external_exports2.string().optional()
+    })
+  ).optional(),
   source: external_exports2.enum(["pos", "kiosk", "web", "mobile"]).optional()
 });
 var GetOrderParams2 = GetOrderParams;
@@ -78678,13 +78765,15 @@ var GetOrderResponse2 = GetOrderResponse._def.left.extend({
   branchName: external_exports2.string().optional(),
   source: external_exports2.enum(["pos", "kiosk", "web", "mobile"]).optional(),
   paymentMethod: external_exports2.enum(["cash", "card", "wallet", "hospitality", "split"]),
-  payments: external_exports2.array(external_exports2.object({
-    id: external_exports2.number(),
-    paymentMethod: external_exports2.string(),
-    amount: external_exports2.number(),
-    transactionId: external_exports2.string().nullish(),
-    createdAt: external_exports2.string()
-  })).optional()
+  payments: external_exports2.array(
+    external_exports2.object({
+      id: external_exports2.number(),
+      paymentMethod: external_exports2.string(),
+      amount: external_exports2.number(),
+      transactionId: external_exports2.string().nullish(),
+      createdAt: external_exports2.string()
+    })
+  ).optional()
 }).and(
   GetOrderResponse._def.right.extend({
     items: external_exports2.array(external_exports2.any())
@@ -78693,11 +78782,19 @@ var GetOrderResponse2 = GetOrderResponse._def.left.extend({
 );
 var UpdateOrderStatusParams2 = UpdateOrderStatusParams;
 var UpdateOrderStatusBody2 = UpdateOrderStatusBody.extend({
-  payments: external_exports2.array(external_exports2.object({
-    paymentMethod: external_exports2.enum(["cash", "card", "wallet", "hospitality", "refund"]),
-    amount: external_exports2.number(),
-    transactionId: external_exports2.string().optional()
-  })).optional(),
+  payments: external_exports2.array(
+    external_exports2.object({
+      paymentMethod: external_exports2.enum([
+        "cash",
+        "card",
+        "wallet",
+        "hospitality",
+        "refund"
+      ]),
+      amount: external_exports2.number(),
+      transactionId: external_exports2.string().optional()
+    })
+  ).optional(),
   paymentMethod: external_exports2.enum(["cash", "card", "wallet", "hospitality", "split", "refund"]).optional(),
   adminPin: external_exports2.string().optional()
 });
@@ -82175,7 +82272,7 @@ router4.get("/ingredients", requirePermission("inventory:view"), async (req, res
     if (params.success && params.data.type) {
       conditions.push(eq(ingredientsTable.ingredientType, params.data.type));
     }
-    const ingredientRows = conditions.length ? await query.where(and(...conditions)) : await query;
+    const ingredientRows = conditions.length ? await query.where(and(...conditions)).orderBy(asc(ingredientsTable.ingredientType), asc(ingredientsTable.name)) : await query.orderBy(asc(ingredientsTable.ingredientType), asc(ingredientsTable.name));
     const [typeLinks, optionLinks, drinkLinks, allConversions] = await Promise.all([
       db.select({ id: ingredientTypesTable.inventoryIngredientId, count: sql`count(*)` }).from(ingredientTypesTable).groupBy(ingredientTypesTable.inventoryIngredientId),
       db.select({ id: ingredientOptionsTable.linkedIngredientId, count: sql`count(*)` }).from(ingredientOptionsTable).groupBy(ingredientOptionsTable.linkedIngredientId),

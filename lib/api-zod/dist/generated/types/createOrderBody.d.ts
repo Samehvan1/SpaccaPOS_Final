@@ -10,6 +10,7 @@ import type { CreateOrderBodyPaymentMethod } from "./createOrderBodyPaymentMetho
 export interface CreateOrderBody {
     branchId?: number;
     customerName?: string;
+    customerPhone?: string;
     paymentMethod: CreateOrderBodyPaymentMethod;
     amountTendered?: number;
     notes?: string;

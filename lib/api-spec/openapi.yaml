@@ -656,6 +656,14 @@ paths:
           name: offset
           schema:
             type: integer
+        - in: query
+          name: startDate
+          schema:
+            type: string
+        - in: query
+          name: endDate
+          schema:
+            type: string
       responses:
         "200":
           description: Stock movements
@@ -1322,6 +1330,28 @@ components:
         isActive:
           type: boolean
 
+    IngredientConversion:
+      type: object
+      properties:
+        id:
+          type: integer
+        ingredientId:
+          type: integer
+        unitName:
+          type: string
+        conversionFactor:
+          type: number
+        isDefaultPurchase:
+          type: boolean
+        createdAt:
+          type: string
+      required:
+        - id
+        - ingredientId
+        - unitName
+        - conversionFactor
+        - isDefaultPurchase
+
     Ingredient:
       type: object
       properties:
@@ -1340,6 +1370,8 @@ components:
           type: number
         stockQuantity:
           type: number
+        startupQuantity:
+          type: number
         lowStockThreshold:
           type: number
         isActive:
@@ -1348,6 +1380,10 @@ components:
           type: integer
         linkedProductCount:
           type: integer
+        conversions:
+          type: array
+          items:
+            $ref: "#/components/schemas/IngredientConversion"
         createdAt:
           type: string
         updatedAt:
@@ -1360,6 +1396,7 @@ components:
         - unit
         - costPerUnit
         - stockQuantity
+        - startupQuantity
         - lowStockThreshold
         - isActive
         - createdAt
@@ -1425,6 +1462,8 @@ components:
           type: number
         stockQuantity:
           type: number
+        startupQuantity:
+          type: number
         lowStockThreshold:
           type: number
         isActive:
@@ -1448,6 +1487,8 @@ components:
         costPerUnit:
           type: number
         stockQuantity:
+          type: number
+        startupQuantity:
           type: number
         lowStockThreshold:
           type: number
@@ -1999,7 +2040,7 @@ components:
           type: ["integer", "null"]
         movementType:
           type: string
-          enum: [sale, restock, adjustment, waste, opening]
+          enum: [sale, restock, adjustment, waste, opening, calibration]
         quantity:
           type: number
         quantityAfter:
@@ -2030,6 +2071,8 @@ components:
       properties:
         quantity:
           type: number
+        unitId:
+          type: ["integer", "null"]
         note:
           type: string
       required:
@@ -2042,9 +2085,11 @@ components:
           type: integer
         movementType:
           type: string
-          enum: [adjustment, waste, opening]
+          enum: [adjustment, waste, opening, calibration]
         quantity:
           type: number
+        unitId:
+          type: ["integer", "null"]
         note:
           type: string
       required:

@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import fs from "fs";
 import path from "path";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, sql, asc } from "drizzle-orm";
 import { db, ingredientsTable, branchStockTable, ingredientOptionsTable, ingredientConversionsTable, stockMovementsTable, ingredientTypesTable, drinkIngredientSlotsTable, drinksTable, orderItemCustomizationsTable, orderItemsTable, ordersTable, usersTable } from "@workspace/db";
 import { serializeDates } from "../lib/serialize";
 import { globalCache } from "../lib/cache";
@@ -265,8 +265,8 @@ router.get("/ingredients", requirePermission("inventory:view"), async (req, res)
     }
 
     const ingredientRows = conditions.length 
-      ? await query.where(and(...conditions))
-      : await query;
+      ? await query.where(and(...conditions)).orderBy(asc(ingredientsTable.ingredientType), asc(ingredientsTable.name))
+      : await query.orderBy(asc(ingredientsTable.ingredientType), asc(ingredientsTable.name));
 
     // Get counts of links and conversions
     const [typeLinks, optionLinks, drinkLinks, allConversions] = await Promise.all([

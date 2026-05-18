@@ -312,10 +312,23 @@ export const ListIngredientsResponseItem = zod.object({
   unit: zod.string(),
   costPerUnit: zod.number(),
   stockQuantity: zod.number(),
+  startupQuantity: zod.number(),
   lowStockThreshold: zod.number(),
   isActive: zod.boolean(),
   linkedTypeCount: zod.number().optional(),
   linkedProductCount: zod.number().optional(),
+  conversions: zod
+    .array(
+      zod.object({
+        id: zod.number(),
+        ingredientId: zod.number(),
+        unitName: zod.string(),
+        conversionFactor: zod.number(),
+        isDefaultPurchase: zod.boolean(),
+        createdAt: zod.string().optional(),
+      }),
+    )
+    .optional(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
@@ -342,6 +355,7 @@ export const CreateIngredientBody = zod.object({
   unit: zod.string(),
   costPerUnit: zod.number(),
   stockQuantity: zod.number().optional(),
+  startupQuantity: zod.number().optional(),
   lowStockThreshold: zod.number().optional(),
   isActive: zod.boolean().optional(),
 });
@@ -378,10 +392,23 @@ export const GetIngredientResponse = zod
     unit: zod.string(),
     costPerUnit: zod.number(),
     stockQuantity: zod.number(),
+    startupQuantity: zod.number(),
     lowStockThreshold: zod.number(),
     isActive: zod.boolean(),
     linkedTypeCount: zod.number().optional(),
     linkedProductCount: zod.number().optional(),
+    conversions: zod
+      .array(
+        zod.object({
+          id: zod.number(),
+          ingredientId: zod.number(),
+          unitName: zod.string(),
+          conversionFactor: zod.number(),
+          isDefaultPurchase: zod.boolean(),
+          createdAt: zod.string().optional(),
+        }),
+      )
+      .optional(),
     createdAt: zod.string(),
     updatedAt: zod.string(),
   })
@@ -435,6 +462,7 @@ export const UpdateIngredientBody = zod.object({
   unit: zod.string().optional(),
   costPerUnit: zod.number().optional(),
   stockQuantity: zod.number().optional(),
+  startupQuantity: zod.number().optional(),
   lowStockThreshold: zod.number().optional(),
   isActive: zod.boolean().optional(),
 });
@@ -459,10 +487,23 @@ export const UpdateIngredientResponse = zod.object({
   unit: zod.string(),
   costPerUnit: zod.number(),
   stockQuantity: zod.number(),
+  startupQuantity: zod.number(),
   lowStockThreshold: zod.number(),
   isActive: zod.boolean(),
   linkedTypeCount: zod.number().optional(),
   linkedProductCount: zod.number().optional(),
+  conversions: zod
+    .array(
+      zod.object({
+        id: zod.number(),
+        ingredientId: zod.number(),
+        unitName: zod.string(),
+        conversionFactor: zod.number(),
+        isDefaultPurchase: zod.boolean(),
+        createdAt: zod.string().optional(),
+      }),
+    )
+    .optional(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
@@ -561,6 +602,7 @@ export const RestockIngredientQueryParams = zod.object({
 
 export const RestockIngredientBody = zod.object({
   quantity: zod.number(),
+  unitId: zod.number().nullish(),
   note: zod.string().optional(),
 });
 
@@ -584,10 +626,23 @@ export const RestockIngredientResponse = zod.object({
   unit: zod.string(),
   costPerUnit: zod.number(),
   stockQuantity: zod.number(),
+  startupQuantity: zod.number(),
   lowStockThreshold: zod.number(),
   isActive: zod.boolean(),
   linkedTypeCount: zod.number().optional(),
   linkedProductCount: zod.number().optional(),
+  conversions: zod
+    .array(
+      zod.object({
+        id: zod.number(),
+        ingredientId: zod.number(),
+        unitName: zod.string(),
+        conversionFactor: zod.number(),
+        isDefaultPurchase: zod.boolean(),
+        createdAt: zod.string().optional(),
+      }),
+    )
+    .optional(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
@@ -916,6 +971,8 @@ export const ListStockMovementsQueryParams = zod.object({
   ingredientId: zod.coerce.number().optional(),
   limit: zod.coerce.number().optional(),
   offset: zod.coerce.number().optional(),
+  startDate: zod.coerce.string().optional(),
+  endDate: zod.coerce.string().optional(),
 });
 
 export const ListStockMovementsResponseItem = zod.object({
@@ -923,7 +980,14 @@ export const ListStockMovementsResponseItem = zod.object({
   ingredientId: zod.number(),
   ingredientName: zod.string(),
   orderId: zod.number().nullable(),
-  movementType: zod.enum(["sale", "restock", "adjustment", "waste", "opening"]),
+  movementType: zod.enum([
+    "sale",
+    "restock",
+    "adjustment",
+    "waste",
+    "opening",
+    "calibration",
+  ]),
   quantity: zod.number(),
   quantityAfter: zod.number(),
   note: zod.string().nullable(),
@@ -940,8 +1004,9 @@ export const ListStockMovementsResponse = zod.array(
  */
 export const CreateStockAdjustmentBody = zod.object({
   ingredientId: zod.number(),
-  movementType: zod.enum(["adjustment", "waste", "opening"]),
+  movementType: zod.enum(["adjustment", "waste", "opening", "calibration"]),
   quantity: zod.number(),
+  unitId: zod.number().nullish(),
   note: zod.string().optional(),
 });
 
@@ -1059,10 +1124,23 @@ export const GetLowStockIngredientsResponseItem = zod.object({
   unit: zod.string(),
   costPerUnit: zod.number(),
   stockQuantity: zod.number(),
+  startupQuantity: zod.number(),
   lowStockThreshold: zod.number(),
   isActive: zod.boolean(),
   linkedTypeCount: zod.number().optional(),
   linkedProductCount: zod.number().optional(),
+  conversions: zod
+    .array(
+      zod.object({
+        id: zod.number(),
+        ingredientId: zod.number(),
+        unitName: zod.string(),
+        conversionFactor: zod.number(),
+        isDefaultPurchase: zod.boolean(),
+        createdAt: zod.string().optional(),
+      }),
+    )
+    .optional(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });

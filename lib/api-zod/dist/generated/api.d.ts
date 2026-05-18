@@ -760,11 +760,33 @@ export declare const ListIngredientsResponseItem: zod.ZodObject<{
     unit: zod.ZodString;
     costPerUnit: zod.ZodNumber;
     stockQuantity: zod.ZodNumber;
-    startupQuantity: zod.ZodOptional<zod.ZodNumber>;
+    startupQuantity: zod.ZodNumber;
     lowStockThreshold: zod.ZodNumber;
     isActive: zod.ZodBoolean;
     linkedTypeCount: zod.ZodOptional<zod.ZodNumber>;
     linkedProductCount: zod.ZodOptional<zod.ZodNumber>;
+    conversions: zod.ZodOptional<zod.ZodArray<zod.ZodObject<{
+        id: zod.ZodNumber;
+        ingredientId: zod.ZodNumber;
+        unitName: zod.ZodString;
+        conversionFactor: zod.ZodNumber;
+        isDefaultPurchase: zod.ZodBoolean;
+        createdAt: zod.ZodOptional<zod.ZodString>;
+    }, "strip", zod.ZodTypeAny, {
+        id: number;
+        ingredientId: number;
+        unitName: string;
+        conversionFactor: number;
+        isDefaultPurchase: boolean;
+        createdAt?: string | undefined;
+    }, {
+        id: number;
+        ingredientId: number;
+        unitName: string;
+        conversionFactor: number;
+        isDefaultPurchase: boolean;
+        createdAt?: string | undefined;
+    }>, "many">>;
     createdAt: zod.ZodString;
     updatedAt: zod.ZodString;
 }, "strip", zod.ZodTypeAny, {
@@ -778,10 +800,18 @@ export declare const ListIngredientsResponseItem: zod.ZodObject<{
     unit: string;
     costPerUnit: number;
     stockQuantity: number;
+    startupQuantity: number;
     lowStockThreshold: number;
-    startupQuantity?: number | undefined;
     linkedTypeCount?: number | undefined;
     linkedProductCount?: number | undefined;
+    conversions?: {
+        id: number;
+        ingredientId: number;
+        unitName: string;
+        conversionFactor: number;
+        isDefaultPurchase: boolean;
+        createdAt?: string | undefined;
+    }[] | undefined;
 }, {
     id: number;
     name: string;
@@ -793,10 +823,18 @@ export declare const ListIngredientsResponseItem: zod.ZodObject<{
     unit: string;
     costPerUnit: number;
     stockQuantity: number;
+    startupQuantity: number;
     lowStockThreshold: number;
-    startupQuantity?: number | undefined;
     linkedTypeCount?: number | undefined;
     linkedProductCount?: number | undefined;
+    conversions?: {
+        id: number;
+        ingredientId: number;
+        unitName: string;
+        conversionFactor: number;
+        isDefaultPurchase: boolean;
+        createdAt?: string | undefined;
+    }[] | undefined;
 }>;
 export declare const ListIngredientsResponse: zod.ZodArray<zod.ZodObject<{
     id: zod.ZodNumber;
@@ -806,11 +844,33 @@ export declare const ListIngredientsResponse: zod.ZodArray<zod.ZodObject<{
     unit: zod.ZodString;
     costPerUnit: zod.ZodNumber;
     stockQuantity: zod.ZodNumber;
-    startupQuantity: zod.ZodOptional<zod.ZodNumber>;
+    startupQuantity: zod.ZodNumber;
     lowStockThreshold: zod.ZodNumber;
     isActive: zod.ZodBoolean;
     linkedTypeCount: zod.ZodOptional<zod.ZodNumber>;
     linkedProductCount: zod.ZodOptional<zod.ZodNumber>;
+    conversions: zod.ZodOptional<zod.ZodArray<zod.ZodObject<{
+        id: zod.ZodNumber;
+        ingredientId: zod.ZodNumber;
+        unitName: zod.ZodString;
+        conversionFactor: zod.ZodNumber;
+        isDefaultPurchase: zod.ZodBoolean;
+        createdAt: zod.ZodOptional<zod.ZodString>;
+    }, "strip", zod.ZodTypeAny, {
+        id: number;
+        ingredientId: number;
+        unitName: string;
+        conversionFactor: number;
+        isDefaultPurchase: boolean;
+        createdAt?: string | undefined;
+    }, {
+        id: number;
+        ingredientId: number;
+        unitName: string;
+        conversionFactor: number;
+        isDefaultPurchase: boolean;
+        createdAt?: string | undefined;
+    }>, "many">>;
     createdAt: zod.ZodString;
     updatedAt: zod.ZodString;
 }, "strip", zod.ZodTypeAny, {
@@ -824,10 +884,18 @@ export declare const ListIngredientsResponse: zod.ZodArray<zod.ZodObject<{
     unit: string;
     costPerUnit: number;
     stockQuantity: number;
+    startupQuantity: number;
     lowStockThreshold: number;
-    startupQuantity?: number | undefined;
     linkedTypeCount?: number | undefined;
     linkedProductCount?: number | undefined;
+    conversions?: {
+        id: number;
+        ingredientId: number;
+        unitName: string;
+        conversionFactor: number;
+        isDefaultPurchase: boolean;
+        createdAt?: string | undefined;
+    }[] | undefined;
 }, {
     id: number;
     name: string;
@@ -839,10 +907,18 @@ export declare const ListIngredientsResponse: zod.ZodArray<zod.ZodObject<{
     unit: string;
     costPerUnit: number;
     stockQuantity: number;
+    startupQuantity: number;
     lowStockThreshold: number;
-    startupQuantity?: number | undefined;
     linkedTypeCount?: number | undefined;
     linkedProductCount?: number | undefined;
+    conversions?: {
+        id: number;
+        ingredientId: number;
+        unitName: string;
+        conversionFactor: number;
+        isDefaultPurchase: boolean;
+        createdAt?: string | undefined;
+    }[] | undefined;
 }>, "many">;
 /**
  * @summary Create a new ingredient
@@ -900,11 +976,33 @@ export declare const GetIngredientResponse: zod.ZodIntersection<zod.ZodObject<{
     unit: zod.ZodString;
     costPerUnit: zod.ZodNumber;
     stockQuantity: zod.ZodNumber;
-    startupQuantity: zod.ZodOptional<zod.ZodNumber>;
+    startupQuantity: zod.ZodNumber;
     lowStockThreshold: zod.ZodNumber;
     isActive: zod.ZodBoolean;
     linkedTypeCount: zod.ZodOptional<zod.ZodNumber>;
     linkedProductCount: zod.ZodOptional<zod.ZodNumber>;
+    conversions: zod.ZodOptional<zod.ZodArray<zod.ZodObject<{
+        id: zod.ZodNumber;
+        ingredientId: zod.ZodNumber;
+        unitName: zod.ZodString;
+        conversionFactor: zod.ZodNumber;
+        isDefaultPurchase: zod.ZodBoolean;
+        createdAt: zod.ZodOptional<zod.ZodString>;
+    }, "strip", zod.ZodTypeAny, {
+        id: number;
+        ingredientId: number;
+        unitName: string;
+        conversionFactor: number;
+        isDefaultPurchase: boolean;
+        createdAt?: string | undefined;
+    }, {
+        id: number;
+        ingredientId: number;
+        unitName: string;
+        conversionFactor: number;
+        isDefaultPurchase: boolean;
+        createdAt?: string | undefined;
+    }>, "many">>;
     createdAt: zod.ZodString;
     updatedAt: zod.ZodString;
 }, "strip", zod.ZodTypeAny, {
@@ -918,10 +1016,18 @@ export declare const GetIngredientResponse: zod.ZodIntersection<zod.ZodObject<{
     unit: string;
     costPerUnit: number;
     stockQuantity: number;
+    startupQuantity: number;
     lowStockThreshold: number;
-    startupQuantity?: number | undefined;
     linkedTypeCount?: number | undefined;
     linkedProductCount?: number | undefined;
+    conversions?: {
+        id: number;
+        ingredientId: number;
+        unitName: string;
+        conversionFactor: number;
+        isDefaultPurchase: boolean;
+        createdAt?: string | undefined;
+    }[] | undefined;
 }, {
     id: number;
     name: string;
@@ -933,10 +1039,18 @@ export declare const GetIngredientResponse: zod.ZodIntersection<zod.ZodObject<{
     unit: string;
     costPerUnit: number;
     stockQuantity: number;
+    startupQuantity: number;
     lowStockThreshold: number;
-    startupQuantity?: number | undefined;
     linkedTypeCount?: number | undefined;
     linkedProductCount?: number | undefined;
+    conversions?: {
+        id: number;
+        ingredientId: number;
+        unitName: string;
+        conversionFactor: number;
+        isDefaultPurchase: boolean;
+        createdAt?: string | undefined;
+    }[] | undefined;
 }>, zod.ZodObject<{
     options: zod.ZodArray<zod.ZodObject<{
         id: zod.ZodNumber;
@@ -1052,10 +1166,33 @@ export declare const UpdateIngredientResponse: zod.ZodObject<{
     unit: zod.ZodString;
     costPerUnit: zod.ZodNumber;
     stockQuantity: zod.ZodNumber;
+    startupQuantity: zod.ZodNumber;
     lowStockThreshold: zod.ZodNumber;
     isActive: zod.ZodBoolean;
     linkedTypeCount: zod.ZodOptional<zod.ZodNumber>;
     linkedProductCount: zod.ZodOptional<zod.ZodNumber>;
+    conversions: zod.ZodOptional<zod.ZodArray<zod.ZodObject<{
+        id: zod.ZodNumber;
+        ingredientId: zod.ZodNumber;
+        unitName: zod.ZodString;
+        conversionFactor: zod.ZodNumber;
+        isDefaultPurchase: zod.ZodBoolean;
+        createdAt: zod.ZodOptional<zod.ZodString>;
+    }, "strip", zod.ZodTypeAny, {
+        id: number;
+        ingredientId: number;
+        unitName: string;
+        conversionFactor: number;
+        isDefaultPurchase: boolean;
+        createdAt?: string | undefined;
+    }, {
+        id: number;
+        ingredientId: number;
+        unitName: string;
+        conversionFactor: number;
+        isDefaultPurchase: boolean;
+        createdAt?: string | undefined;
+    }>, "many">>;
     createdAt: zod.ZodString;
     updatedAt: zod.ZodString;
 }, "strip", zod.ZodTypeAny, {
@@ -1069,9 +1206,18 @@ export declare const UpdateIngredientResponse: zod.ZodObject<{
     unit: string;
     costPerUnit: number;
     stockQuantity: number;
+    startupQuantity: number;
     lowStockThreshold: number;
     linkedTypeCount?: number | undefined;
     linkedProductCount?: number | undefined;
+    conversions?: {
+        id: number;
+        ingredientId: number;
+        unitName: string;
+        conversionFactor: number;
+        isDefaultPurchase: boolean;
+        createdAt?: string | undefined;
+    }[] | undefined;
 }, {
     id: number;
     name: string;
@@ -1083,9 +1229,18 @@ export declare const UpdateIngredientResponse: zod.ZodObject<{
     unit: string;
     costPerUnit: number;
     stockQuantity: number;
+    startupQuantity: number;
     lowStockThreshold: number;
     linkedTypeCount?: number | undefined;
     linkedProductCount?: number | undefined;
+    conversions?: {
+        id: number;
+        ingredientId: number;
+        unitName: string;
+        conversionFactor: number;
+        isDefaultPurchase: boolean;
+        createdAt?: string | undefined;
+    }[] | undefined;
 }>;
 /**
  * @summary Delete an ingredient
@@ -1270,12 +1425,15 @@ export declare const RestockIngredientQueryParams: zod.ZodObject<{
 }>;
 export declare const RestockIngredientBody: zod.ZodObject<{
     quantity: zod.ZodNumber;
+    unitId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
     note: zod.ZodOptional<zod.ZodString>;
 }, "strip", zod.ZodTypeAny, {
     quantity: number;
+    unitId?: number | null | undefined;
     note?: string | undefined;
 }, {
     quantity: number;
+    unitId?: number | null | undefined;
     note?: string | undefined;
 }>;
 export declare const RestockIngredientResponse: zod.ZodObject<{
@@ -1286,10 +1444,33 @@ export declare const RestockIngredientResponse: zod.ZodObject<{
     unit: zod.ZodString;
     costPerUnit: zod.ZodNumber;
     stockQuantity: zod.ZodNumber;
+    startupQuantity: zod.ZodNumber;
     lowStockThreshold: zod.ZodNumber;
     isActive: zod.ZodBoolean;
     linkedTypeCount: zod.ZodOptional<zod.ZodNumber>;
     linkedProductCount: zod.ZodOptional<zod.ZodNumber>;
+    conversions: zod.ZodOptional<zod.ZodArray<zod.ZodObject<{
+        id: zod.ZodNumber;
+        ingredientId: zod.ZodNumber;
+        unitName: zod.ZodString;
+        conversionFactor: zod.ZodNumber;
+        isDefaultPurchase: zod.ZodBoolean;
+        createdAt: zod.ZodOptional<zod.ZodString>;
+    }, "strip", zod.ZodTypeAny, {
+        id: number;
+        ingredientId: number;
+        unitName: string;
+        conversionFactor: number;
+        isDefaultPurchase: boolean;
+        createdAt?: string | undefined;
+    }, {
+        id: number;
+        ingredientId: number;
+        unitName: string;
+        conversionFactor: number;
+        isDefaultPurchase: boolean;
+        createdAt?: string | undefined;
+    }>, "many">>;
     createdAt: zod.ZodString;
     updatedAt: zod.ZodString;
 }, "strip", zod.ZodTypeAny, {
@@ -1303,9 +1484,18 @@ export declare const RestockIngredientResponse: zod.ZodObject<{
     unit: string;
     costPerUnit: number;
     stockQuantity: number;
+    startupQuantity: number;
     lowStockThreshold: number;
     linkedTypeCount?: number | undefined;
     linkedProductCount?: number | undefined;
+    conversions?: {
+        id: number;
+        ingredientId: number;
+        unitName: string;
+        conversionFactor: number;
+        isDefaultPurchase: boolean;
+        createdAt?: string | undefined;
+    }[] | undefined;
 }, {
     id: number;
     name: string;
@@ -1317,9 +1507,18 @@ export declare const RestockIngredientResponse: zod.ZodObject<{
     unit: string;
     costPerUnit: number;
     stockQuantity: number;
+    startupQuantity: number;
     lowStockThreshold: number;
     linkedTypeCount?: number | undefined;
     linkedProductCount?: number | undefined;
+    conversions?: {
+        id: number;
+        ingredientId: number;
+        unitName: string;
+        conversionFactor: number;
+        isDefaultPurchase: boolean;
+        createdAt?: string | undefined;
+    }[] | undefined;
 }>;
 /**
  * @summary List orders
@@ -1353,6 +1552,7 @@ export declare const ListOrdersResponseItem: zod.ZodIntersection<zod.ZodObject<{
     baristaName: zod.ZodString;
     status: zod.ZodEnum<["pending", "paid", "in_progress", "ready", "completed", "cancelled", "refunded"]>;
     customerName: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
+    customerPhone: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
     subtotal: zod.ZodNumber;
     discount: zod.ZodNumber;
     discountId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
@@ -1382,6 +1582,7 @@ export declare const ListOrdersResponseItem: zod.ZodIntersection<zod.ZodObject<{
     createdAt?: string | null | undefined;
     updatedAt?: string | null | undefined;
     customerName?: string | null | undefined;
+    customerPhone?: string | null | undefined;
     discountId?: number | null | undefined;
     discountValue?: number | null | undefined;
     discountType?: "percentage" | "fixed" | null | undefined;
@@ -1405,6 +1606,7 @@ export declare const ListOrdersResponseItem: zod.ZodIntersection<zod.ZodObject<{
     createdAt?: string | null | undefined;
     updatedAt?: string | null | undefined;
     customerName?: string | null | undefined;
+    customerPhone?: string | null | undefined;
     discountId?: number | null | undefined;
     discountValue?: number | null | undefined;
     discountType?: "percentage" | "fixed" | null | undefined;
@@ -1573,6 +1775,7 @@ export declare const ListOrdersResponse: zod.ZodArray<zod.ZodIntersection<zod.Zo
     baristaName: zod.ZodString;
     status: zod.ZodEnum<["pending", "paid", "in_progress", "ready", "completed", "cancelled", "refunded"]>;
     customerName: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
+    customerPhone: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
     subtotal: zod.ZodNumber;
     discount: zod.ZodNumber;
     discountId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
@@ -1602,6 +1805,7 @@ export declare const ListOrdersResponse: zod.ZodArray<zod.ZodIntersection<zod.Zo
     createdAt?: string | null | undefined;
     updatedAt?: string | null | undefined;
     customerName?: string | null | undefined;
+    customerPhone?: string | null | undefined;
     discountId?: number | null | undefined;
     discountValue?: number | null | undefined;
     discountType?: "percentage" | "fixed" | null | undefined;
@@ -1625,6 +1829,7 @@ export declare const ListOrdersResponse: zod.ZodArray<zod.ZodIntersection<zod.Zo
     createdAt?: string | null | undefined;
     updatedAt?: string | null | undefined;
     customerName?: string | null | undefined;
+    customerPhone?: string | null | undefined;
     discountId?: number | null | undefined;
     discountValue?: number | null | undefined;
     discountType?: "percentage" | "fixed" | null | undefined;
@@ -1792,6 +1997,7 @@ export declare const ListOrdersResponse: zod.ZodArray<zod.ZodIntersection<zod.Zo
 export declare const CreateOrderBody: zod.ZodObject<{
     branchId: zod.ZodOptional<zod.ZodNumber>;
     customerName: zod.ZodOptional<zod.ZodString>;
+    customerPhone: zod.ZodOptional<zod.ZodString>;
     paymentMethod: zod.ZodEnum<["cash", "card", "wallet", "hospitality"]>;
     amountTendered: zod.ZodOptional<zod.ZodNumber>;
     notes: zod.ZodOptional<zod.ZodString>;
@@ -1866,6 +2072,7 @@ export declare const CreateOrderBody: zod.ZodObject<{
     }[];
     branchId?: number | undefined;
     customerName?: string | undefined;
+    customerPhone?: string | undefined;
     discount?: number | undefined;
     amountTendered?: number | undefined;
     notes?: string | undefined;
@@ -1888,6 +2095,7 @@ export declare const CreateOrderBody: zod.ZodObject<{
     }[];
     branchId?: number | undefined;
     customerName?: string | undefined;
+    customerPhone?: string | undefined;
     discount?: number | undefined;
     amountTendered?: number | undefined;
     notes?: string | undefined;
@@ -1918,6 +2126,7 @@ export declare const GetOrderResponse: zod.ZodIntersection<zod.ZodObject<{
     baristaName: zod.ZodString;
     status: zod.ZodEnum<["pending", "paid", "in_progress", "ready", "completed", "cancelled", "refunded"]>;
     customerName: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
+    customerPhone: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
     subtotal: zod.ZodNumber;
     discount: zod.ZodNumber;
     discountId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
@@ -1947,6 +2156,7 @@ export declare const GetOrderResponse: zod.ZodIntersection<zod.ZodObject<{
     createdAt?: string | null | undefined;
     updatedAt?: string | null | undefined;
     customerName?: string | null | undefined;
+    customerPhone?: string | null | undefined;
     discountId?: number | null | undefined;
     discountValue?: number | null | undefined;
     discountType?: "percentage" | "fixed" | null | undefined;
@@ -1970,6 +2180,7 @@ export declare const GetOrderResponse: zod.ZodIntersection<zod.ZodObject<{
     createdAt?: string | null | undefined;
     updatedAt?: string | null | undefined;
     customerName?: string | null | undefined;
+    customerPhone?: string | null | undefined;
     discountId?: number | null | undefined;
     discountValue?: number | null | undefined;
     discountType?: "percentage" | "fixed" | null | undefined;
@@ -2171,6 +2382,7 @@ export declare const UpdateOrderStatusResponse: zod.ZodObject<{
     baristaName: zod.ZodString;
     status: zod.ZodEnum<["pending", "paid", "in_progress", "ready", "completed", "cancelled", "refunded"]>;
     customerName: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
+    customerPhone: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
     subtotal: zod.ZodNumber;
     discount: zod.ZodNumber;
     discountId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
@@ -2200,6 +2412,7 @@ export declare const UpdateOrderStatusResponse: zod.ZodObject<{
     createdAt?: string | null | undefined;
     updatedAt?: string | null | undefined;
     customerName?: string | null | undefined;
+    customerPhone?: string | null | undefined;
     discountId?: number | null | undefined;
     discountValue?: number | null | undefined;
     discountType?: "percentage" | "fixed" | null | undefined;
@@ -2223,6 +2436,7 @@ export declare const UpdateOrderStatusResponse: zod.ZodObject<{
     createdAt?: string | null | undefined;
     updatedAt?: string | null | undefined;
     customerName?: string | null | undefined;
+    customerPhone?: string | null | undefined;
     discountId?: number | null | undefined;
     discountValue?: number | null | undefined;
     discountType?: "percentage" | "fixed" | null | undefined;
@@ -2233,6 +2447,23 @@ export declare const UpdateOrderStatusResponse: zod.ZodObject<{
     readyAt?: string | null | undefined;
     completedAt?: string | null | undefined;
     cancelledAt?: string | null | undefined;
+}>;
+/**
+ * @summary Save order digital signature
+ */
+export declare const SaveOrderSignatureParams: zod.ZodObject<{
+    id: zod.ZodNumber;
+}, "strip", zod.ZodTypeAny, {
+    id: number;
+}, {
+    id: number;
+}>;
+export declare const SaveOrderSignatureBody: zod.ZodObject<{
+    signatureData: zod.ZodString;
+}, "strip", zod.ZodTypeAny, {
+    signatureData: string;
+}, {
+    signatureData: string;
 }>;
 /**
  * @summary Mark a specific order item as ready
@@ -2258,6 +2489,7 @@ export declare const MarkOrderItemReadyResponse: zod.ZodObject<{
     baristaName: zod.ZodString;
     status: zod.ZodEnum<["pending", "paid", "in_progress", "ready", "completed", "cancelled", "refunded"]>;
     customerName: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
+    customerPhone: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
     subtotal: zod.ZodNumber;
     discount: zod.ZodNumber;
     discountId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
@@ -2287,6 +2519,7 @@ export declare const MarkOrderItemReadyResponse: zod.ZodObject<{
     createdAt?: string | null | undefined;
     updatedAt?: string | null | undefined;
     customerName?: string | null | undefined;
+    customerPhone?: string | null | undefined;
     discountId?: number | null | undefined;
     discountValue?: number | null | undefined;
     discountType?: "percentage" | "fixed" | null | undefined;
@@ -2310,6 +2543,7 @@ export declare const MarkOrderItemReadyResponse: zod.ZodObject<{
     createdAt?: string | null | undefined;
     updatedAt?: string | null | undefined;
     customerName?: string | null | undefined;
+    customerPhone?: string | null | undefined;
     discountId?: number | null | undefined;
     discountValue?: number | null | undefined;
     discountType?: "percentage" | "fixed" | null | undefined;
@@ -2326,20 +2560,20 @@ export declare const MarkOrderItemReadyResponse: zod.ZodObject<{
  */
 export declare const ListStockMovementsQueryParams: zod.ZodObject<{
     ingredientId: zod.ZodOptional<zod.ZodNumber>;
-    startDate: zod.ZodOptional<zod.ZodDate>;
-    endDate: zod.ZodOptional<zod.ZodDate>;
     limit: zod.ZodOptional<zod.ZodNumber>;
     offset: zod.ZodOptional<zod.ZodNumber>;
+    startDate: zod.ZodOptional<zod.ZodString>;
+    endDate: zod.ZodOptional<zod.ZodString>;
 }, "strip", zod.ZodTypeAny, {
     ingredientId?: number | undefined;
-    startDate?: Date | undefined;
-    endDate?: Date | undefined;
+    startDate?: string | undefined;
+    endDate?: string | undefined;
     limit?: number | undefined;
     offset?: number | undefined;
 }, {
     ingredientId?: number | undefined;
-    startDate?: Date | undefined;
-    endDate?: Date | undefined;
+    startDate?: string | undefined;
+    endDate?: string | undefined;
     limit?: number | undefined;
     offset?: number | undefined;
 }>;
@@ -2348,7 +2582,7 @@ export declare const ListStockMovementsResponseItem: zod.ZodObject<{
     ingredientId: zod.ZodNumber;
     ingredientName: zod.ZodString;
     orderId: zod.ZodNullable<zod.ZodNumber>;
-    movementType: zod.ZodEnum<["sale", "restock", "adjustment", "waste", "opening"]>;
+    movementType: zod.ZodEnum<["sale", "restock", "adjustment", "waste", "opening", "calibration"]>;
     quantity: zod.ZodNumber;
     quantityAfter: zod.ZodNumber;
     note: zod.ZodNullable<zod.ZodString>;
@@ -2363,7 +2597,7 @@ export declare const ListStockMovementsResponseItem: zod.ZodObject<{
     quantity: number;
     note: string | null;
     orderId: number | null;
-    movementType: "sale" | "restock" | "adjustment" | "waste" | "opening";
+    movementType: "sale" | "restock" | "adjustment" | "waste" | "opening" | "calibration";
     quantityAfter: number;
     createdBy: number;
     createdByName: string;
@@ -2375,7 +2609,7 @@ export declare const ListStockMovementsResponseItem: zod.ZodObject<{
     quantity: number;
     note: string | null;
     orderId: number | null;
-    movementType: "sale" | "restock" | "adjustment" | "waste" | "opening";
+    movementType: "sale" | "restock" | "adjustment" | "waste" | "opening" | "calibration";
     quantityAfter: number;
     createdBy: number;
     createdByName: string;
@@ -2385,7 +2619,7 @@ export declare const ListStockMovementsResponse: zod.ZodArray<zod.ZodObject<{
     ingredientId: zod.ZodNumber;
     ingredientName: zod.ZodString;
     orderId: zod.ZodNullable<zod.ZodNumber>;
-    movementType: zod.ZodEnum<["sale", "restock", "adjustment", "waste", "opening"]>;
+    movementType: zod.ZodEnum<["sale", "restock", "adjustment", "waste", "opening", "calibration"]>;
     quantity: zod.ZodNumber;
     quantityAfter: zod.ZodNumber;
     note: zod.ZodNullable<zod.ZodString>;
@@ -2400,7 +2634,7 @@ export declare const ListStockMovementsResponse: zod.ZodArray<zod.ZodObject<{
     quantity: number;
     note: string | null;
     orderId: number | null;
-    movementType: "sale" | "restock" | "adjustment" | "waste" | "opening";
+    movementType: "sale" | "restock" | "adjustment" | "waste" | "opening" | "calibration";
     quantityAfter: number;
     createdBy: number;
     createdByName: string;
@@ -2412,7 +2646,7 @@ export declare const ListStockMovementsResponse: zod.ZodArray<zod.ZodObject<{
     quantity: number;
     note: string | null;
     orderId: number | null;
-    movementType: "sale" | "restock" | "adjustment" | "waste" | "opening";
+    movementType: "sale" | "restock" | "adjustment" | "waste" | "opening" | "calibration";
     quantityAfter: number;
     createdBy: number;
     createdByName: string;
@@ -2422,18 +2656,21 @@ export declare const ListStockMovementsResponse: zod.ZodArray<zod.ZodObject<{
  */
 export declare const CreateStockAdjustmentBody: zod.ZodObject<{
     ingredientId: zod.ZodNumber;
-    movementType: zod.ZodEnum<["adjustment", "waste", "opening"]>;
+    movementType: zod.ZodEnum<["adjustment", "waste", "opening", "calibration"]>;
     quantity: zod.ZodNumber;
+    unitId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
     note: zod.ZodOptional<zod.ZodString>;
 }, "strip", zod.ZodTypeAny, {
     ingredientId: number;
     quantity: number;
-    movementType: "adjustment" | "waste" | "opening";
+    movementType: "adjustment" | "waste" | "opening" | "calibration";
+    unitId?: number | null | undefined;
     note?: string | undefined;
 }, {
     ingredientId: number;
     quantity: number;
-    movementType: "adjustment" | "waste" | "opening";
+    movementType: "adjustment" | "waste" | "opening" | "calibration";
+    unitId?: number | null | undefined;
     note?: string | undefined;
 }>;
 /**
@@ -2487,6 +2724,7 @@ export declare const GetActiveOrdersResponseItem: zod.ZodIntersection<zod.ZodObj
     baristaName: zod.ZodString;
     status: zod.ZodEnum<["pending", "paid", "in_progress", "ready", "completed", "cancelled", "refunded"]>;
     customerName: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
+    customerPhone: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
     subtotal: zod.ZodNumber;
     discount: zod.ZodNumber;
     discountId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
@@ -2516,6 +2754,7 @@ export declare const GetActiveOrdersResponseItem: zod.ZodIntersection<zod.ZodObj
     createdAt?: string | null | undefined;
     updatedAt?: string | null | undefined;
     customerName?: string | null | undefined;
+    customerPhone?: string | null | undefined;
     discountId?: number | null | undefined;
     discountValue?: number | null | undefined;
     discountType?: "percentage" | "fixed" | null | undefined;
@@ -2539,6 +2778,7 @@ export declare const GetActiveOrdersResponseItem: zod.ZodIntersection<zod.ZodObj
     createdAt?: string | null | undefined;
     updatedAt?: string | null | undefined;
     customerName?: string | null | undefined;
+    customerPhone?: string | null | undefined;
     discountId?: number | null | undefined;
     discountValue?: number | null | undefined;
     discountType?: "percentage" | "fixed" | null | undefined;
@@ -2707,6 +2947,7 @@ export declare const GetActiveOrdersResponse: zod.ZodArray<zod.ZodIntersection<z
     baristaName: zod.ZodString;
     status: zod.ZodEnum<["pending", "paid", "in_progress", "ready", "completed", "cancelled", "refunded"]>;
     customerName: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
+    customerPhone: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
     subtotal: zod.ZodNumber;
     discount: zod.ZodNumber;
     discountId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
@@ -2736,6 +2977,7 @@ export declare const GetActiveOrdersResponse: zod.ZodArray<zod.ZodIntersection<z
     createdAt?: string | null | undefined;
     updatedAt?: string | null | undefined;
     customerName?: string | null | undefined;
+    customerPhone?: string | null | undefined;
     discountId?: number | null | undefined;
     discountValue?: number | null | undefined;
     discountType?: "percentage" | "fixed" | null | undefined;
@@ -2759,6 +3001,7 @@ export declare const GetActiveOrdersResponse: zod.ZodArray<zod.ZodIntersection<z
     createdAt?: string | null | undefined;
     updatedAt?: string | null | undefined;
     customerName?: string | null | undefined;
+    customerPhone?: string | null | undefined;
     discountId?: number | null | undefined;
     discountValue?: number | null | undefined;
     discountType?: "percentage" | "fixed" | null | undefined;
@@ -2931,10 +3174,33 @@ export declare const GetLowStockIngredientsResponseItem: zod.ZodObject<{
     unit: zod.ZodString;
     costPerUnit: zod.ZodNumber;
     stockQuantity: zod.ZodNumber;
+    startupQuantity: zod.ZodNumber;
     lowStockThreshold: zod.ZodNumber;
     isActive: zod.ZodBoolean;
     linkedTypeCount: zod.ZodOptional<zod.ZodNumber>;
     linkedProductCount: zod.ZodOptional<zod.ZodNumber>;
+    conversions: zod.ZodOptional<zod.ZodArray<zod.ZodObject<{
+        id: zod.ZodNumber;
+        ingredientId: zod.ZodNumber;
+        unitName: zod.ZodString;
+        conversionFactor: zod.ZodNumber;
+        isDefaultPurchase: zod.ZodBoolean;
+        createdAt: zod.ZodOptional<zod.ZodString>;
+    }, "strip", zod.ZodTypeAny, {
+        id: number;
+        ingredientId: number;
+        unitName: string;
+        conversionFactor: number;
+        isDefaultPurchase: boolean;
+        createdAt?: string | undefined;
+    }, {
+        id: number;
+        ingredientId: number;
+        unitName: string;
+        conversionFactor: number;
+        isDefaultPurchase: boolean;
+        createdAt?: string | undefined;
+    }>, "many">>;
     createdAt: zod.ZodString;
     updatedAt: zod.ZodString;
 }, "strip", zod.ZodTypeAny, {
@@ -2948,9 +3214,18 @@ export declare const GetLowStockIngredientsResponseItem: zod.ZodObject<{
     unit: string;
     costPerUnit: number;
     stockQuantity: number;
+    startupQuantity: number;
     lowStockThreshold: number;
     linkedTypeCount?: number | undefined;
     linkedProductCount?: number | undefined;
+    conversions?: {
+        id: number;
+        ingredientId: number;
+        unitName: string;
+        conversionFactor: number;
+        isDefaultPurchase: boolean;
+        createdAt?: string | undefined;
+    }[] | undefined;
 }, {
     id: number;
     name: string;
@@ -2962,9 +3237,18 @@ export declare const GetLowStockIngredientsResponseItem: zod.ZodObject<{
     unit: string;
     costPerUnit: number;
     stockQuantity: number;
+    startupQuantity: number;
     lowStockThreshold: number;
     linkedTypeCount?: number | undefined;
     linkedProductCount?: number | undefined;
+    conversions?: {
+        id: number;
+        ingredientId: number;
+        unitName: string;
+        conversionFactor: number;
+        isDefaultPurchase: boolean;
+        createdAt?: string | undefined;
+    }[] | undefined;
 }>;
 export declare const GetLowStockIngredientsResponse: zod.ZodArray<zod.ZodObject<{
     id: zod.ZodNumber;
@@ -2974,10 +3258,33 @@ export declare const GetLowStockIngredientsResponse: zod.ZodArray<zod.ZodObject<
     unit: zod.ZodString;
     costPerUnit: zod.ZodNumber;
     stockQuantity: zod.ZodNumber;
+    startupQuantity: zod.ZodNumber;
     lowStockThreshold: zod.ZodNumber;
     isActive: zod.ZodBoolean;
     linkedTypeCount: zod.ZodOptional<zod.ZodNumber>;
     linkedProductCount: zod.ZodOptional<zod.ZodNumber>;
+    conversions: zod.ZodOptional<zod.ZodArray<zod.ZodObject<{
+        id: zod.ZodNumber;
+        ingredientId: zod.ZodNumber;
+        unitName: zod.ZodString;
+        conversionFactor: zod.ZodNumber;
+        isDefaultPurchase: zod.ZodBoolean;
+        createdAt: zod.ZodOptional<zod.ZodString>;
+    }, "strip", zod.ZodTypeAny, {
+        id: number;
+        ingredientId: number;
+        unitName: string;
+        conversionFactor: number;
+        isDefaultPurchase: boolean;
+        createdAt?: string | undefined;
+    }, {
+        id: number;
+        ingredientId: number;
+        unitName: string;
+        conversionFactor: number;
+        isDefaultPurchase: boolean;
+        createdAt?: string | undefined;
+    }>, "many">>;
     createdAt: zod.ZodString;
     updatedAt: zod.ZodString;
 }, "strip", zod.ZodTypeAny, {
@@ -2991,9 +3298,18 @@ export declare const GetLowStockIngredientsResponse: zod.ZodArray<zod.ZodObject<
     unit: string;
     costPerUnit: number;
     stockQuantity: number;
+    startupQuantity: number;
     lowStockThreshold: number;
     linkedTypeCount?: number | undefined;
     linkedProductCount?: number | undefined;
+    conversions?: {
+        id: number;
+        ingredientId: number;
+        unitName: string;
+        conversionFactor: number;
+        isDefaultPurchase: boolean;
+        createdAt?: string | undefined;
+    }[] | undefined;
 }, {
     id: number;
     name: string;
@@ -3005,9 +3321,18 @@ export declare const GetLowStockIngredientsResponse: zod.ZodArray<zod.ZodObject<
     unit: string;
     costPerUnit: number;
     stockQuantity: number;
+    startupQuantity: number;
     lowStockThreshold: number;
     linkedTypeCount?: number | undefined;
     linkedProductCount?: number | undefined;
+    conversions?: {
+        id: number;
+        ingredientId: number;
+        unitName: string;
+        conversionFactor: number;
+        isDefaultPurchase: boolean;
+        createdAt?: string | undefined;
+    }[] | undefined;
 }>, "many">;
 /**
  * @summary List all users
@@ -3167,6 +3492,26 @@ export declare const DeleteUserQueryParams: zod.ZodObject<{
     branchId?: number | undefined;
 }, {
     branchId?: number | undefined;
+}>;
+/**
+ * @summary Get customer loyalty points by phone number
+ */
+export declare const GetCustomerPointsParams: zod.ZodObject<{
+    phone: zod.ZodString;
+}, "strip", zod.ZodTypeAny, {
+    phone: string;
+}, {
+    phone: string;
+}>;
+export declare const GetCustomerPointsResponse: zod.ZodObject<{
+    points: zod.ZodNumber;
+    name: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
+}, "strip", zod.ZodTypeAny, {
+    points: number;
+    name?: string | null | undefined;
+}, {
+    points: number;
+    name?: string | null | undefined;
 }>;
 /**
  * @summary List activity logs

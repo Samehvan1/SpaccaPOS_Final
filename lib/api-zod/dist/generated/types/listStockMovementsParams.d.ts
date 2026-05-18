@@ -9,5 +9,7 @@ export type ListStockMovementsParams = {
     ingredientId?: number;
     limit?: number;
     offset?: number;
+    startDate?: string;
+    endDate?: string;
 };
 //# sourceMappingURL=listStockMovementsParams.d.ts.map

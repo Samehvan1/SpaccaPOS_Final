@@ -96,6 +96,14 @@ export interface UpdateUserBody {
     pin?: string;
     isActive?: boolean;
 }
+export interface IngredientConversion {
+    id: number;
+    ingredientId: number;
+    unitName: string;
+    conversionFactor: number;
+    isDefaultPurchase: boolean;
+    createdAt?: string;
+}
 export type IngredientIngredientType = (typeof IngredientIngredientType)[keyof typeof IngredientIngredientType];
 export declare const IngredientIngredientType: {
     readonly coffee: "coffee";
@@ -123,6 +131,7 @@ export interface Ingredient {
     isActive: boolean;
     linkedTypeCount?: number;
     linkedProductCount?: number;
+    conversions?: IngredientConversion[];
     createdAt: string;
     updatedAt: string;
 }
@@ -394,6 +403,8 @@ export interface Order {
     status: OrderStatus;
     /** @nullable */
     customerName?: string | null;
+    /** @nullable */
+    customerPhone?: string | null;
     subtotal: number;
     discount: number;
     /** @nullable */
@@ -450,6 +461,7 @@ export type CreateOrderBodyItemsItem = {
 export interface CreateOrderBody {
     branchId?: number;
     customerName?: string;
+    customerPhone?: string;
     paymentMethod: CreateOrderBodyPaymentMethod;
     amountTendered?: number;
     notes?: string;
@@ -491,6 +503,7 @@ export declare const StockMovementMovementType: {
     readonly adjustment: "adjustment";
     readonly waste: "waste";
     readonly opening: "opening";
+    readonly calibration: "calibration";
 };
 export interface StockMovement {
     id: number;
@@ -509,6 +522,8 @@ export interface StockMovement {
 }
 export interface RestockBody {
     quantity: number;
+    /** @nullable */
+    unitId?: number | null;
     note?: string;
 }
 export type StockAdjustmentBodyMovementType = (typeof StockAdjustmentBodyMovementType)[keyof typeof StockAdjustmentBodyMovementType];
@@ -516,11 +531,14 @@ export declare const StockAdjustmentBodyMovementType: {
     readonly adjustment: "adjustment";
     readonly waste: "waste";
     readonly opening: "opening";
+    readonly calibration: "calibration";
 };
 export interface StockAdjustmentBody {
     ingredientId: number;
     movementType: StockAdjustmentBodyMovementType;
     quantity: number;
+    /** @nullable */
+    unitId?: number | null;
     note?: string;
 }
 export interface DashboardSummary {
@@ -688,6 +706,10 @@ export type GetOrderParams = {
 export type UpdateOrderStatusParams = {
     branchId?: number;
 };
+export type SaveOrderSignatureBody = {
+    /** Base64 encoded signature image */
+    signatureData: string;
+};
 export type MarkOrderItemReadyParams = {
     branchId?: number;
 };
@@ -695,6 +717,8 @@ export type ListStockMovementsParams = {
     ingredientId?: number;
     limit?: number;
     offset?: number;
+    startDate?: string;
+    endDate?: string;
 };
 export type GetActiveOrdersParams = {
     status?: GetActiveOrdersStatus;
@@ -712,6 +736,11 @@ export type UpdateUserParams = {
 };
 export type DeleteUserParams = {
     branchId?: number;
+};
+export type GetCustomerPoints200 = {
+    points: number;
+    /** @nullable */
+    name?: string | null;
 };
 export type ListActivityLogsParams = {
     userId?: number;

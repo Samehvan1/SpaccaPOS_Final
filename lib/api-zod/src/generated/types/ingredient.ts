@@ -5,6 +5,7 @@
  * Spacca POS API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { IngredientConversion } from "./ingredientConversion";
 import type { IngredientIngredientType } from "./ingredientIngredientType";
 
 export interface Ingredient {
@@ -15,10 +16,12 @@ export interface Ingredient {
   unit: string;
   costPerUnit: number;
   stockQuantity: number;
+  startupQuantity: number;
   lowStockThreshold: number;
   isActive: boolean;
   linkedTypeCount?: number;
   linkedProductCount?: number;
+  conversions?: IngredientConversion[];
   createdAt: string;
   updatedAt: string;
 }

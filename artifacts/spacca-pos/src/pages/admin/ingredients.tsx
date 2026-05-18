@@ -1070,6 +1070,7 @@ function InventoryTab() {
   const [type, setType] = useState<IngredientType>("coffee");
   const [unit, setUnit] = useState("g");
   const [cost, setCost] = useState("");
+  const [costUnit, setCostUnit] = useState<string>("base");
   const [lowThreshold, setLowThreshold] = useState("0");
   const [startupQuantity, setStartupQuantity] = useState("0");
   const [isActive, setIsActive] = useState(true);
@@ -1113,16 +1114,25 @@ function InventoryTab() {
     },
   });
 
-  const resetForm = () => { setName(""); setType("coffee"); setUnit("g"); setCost(""); setLowThreshold("0"); setStartupQuantity("0"); setIsActive(true); setEditId(null); setOptions([]); setShowAddOption(false); resetNewOption(); setConversions([]); setShowAddConversion(false); resetNewConversion(); };
+  const resetForm = () => { setName(""); setType("coffee"); setUnit("g"); setCost(""); setLowThreshold("0"); setStartupQuantity("0"); setIsActive(true); setEditId(null); setOptions([]); setShowAddOption(false); resetNewOption(); setConversions([]); setShowAddConversion(false); resetNewConversion(); setCostUnit("base"); };
   const resetNewOption = () => { setNewOptLabel(""); setNewOptExtraCost("0"); setNewOptLinkedId("none"); setNewOptProcessedQty("1"); setNewOptProducedQty("1"); setNewOptProducedUnit(""); setNewOptIsDefault(false); };
   const resetNewConversion = () => { setNewConvUnit(""); setNewConvFactor("1"); setNewConvIsDefault(false); };
 
-  const loadDetails = async (id: number) => {
+  const loadDetails = async (id: number, currentBaseCost: number) => {
     setIsLoadingOptions(true);
     try {
       const data = await api(`/api/ingredients/${id}`);
       setOptions(data.options ?? []);
-      setConversions(data.conversions ?? []);
+      const convs = data.conversions ?? [];
+      setConversions(convs);
+      
+      const defaultPurchase = convs.find((c: any) => c.isDefaultPurchase);
+      if (defaultPurchase) {
+        setCostUnit(String(defaultPurchase.id));
+        setCost(String(currentBaseCost * defaultPurchase.conversionFactor));
+      } else {
+        setCostUnit("base");
+      }
     } catch { toast({ variant: "destructive", title: "Failed to load details" }); }
     finally { setIsLoadingOptions(false); }
   };
@@ -1133,15 +1143,24 @@ function InventoryTab() {
     setCost(String(ing.costPerUnit)); setLowThreshold(String(ing.lowStockThreshold)); 
     setStartupQuantity(String(ing.startupQuantity ?? 0));
     setIsActive(ing.isActive);
-    setMode("edit"); loadDetails(ing.id);
+    setCostUnit("base");
+    setMode("edit"); loadDetails(ing.id, ing.costPerUnit);
   };
 
   const handleSave = () => {
     if (!name || !cost) return;
+
+    let baseCost = parseFloat(cost) || 0;
+    if (costUnit !== "base") {
+      const selectedConv = conversions.find(c => String(c.id) === costUnit);
+      const factor = selectedConv ? selectedConv.conversionFactor : 1;
+      baseCost = baseCost / factor;
+    }
+
     if (mode === "add") {
-      createIngredient({ data: { name, ingredientType: type, unit, costPerUnit: parseFloat(cost), startupQuantity: parseFloat(startupQuantity) } });
+      createIngredient({ data: { name, ingredientType: type, unit, costPerUnit: baseCost, startupQuantity: parseFloat(startupQuantity) } });
     } else if (mode === "edit" && editId !== null) {
-      updateIngredient({ id: editId, data: { name, ingredientType: type, unit, costPerUnit: parseFloat(cost), lowStockThreshold: parseFloat(lowThreshold), startupQuantity: parseFloat(startupQuantity), isActive } });
+      updateIngredient({ id: editId, data: { name, ingredientType: type, unit, costPerUnit: baseCost, lowStockThreshold: parseFloat(lowThreshold), startupQuantity: parseFloat(startupQuantity), isActive } });
     }
   };
 
@@ -1197,6 +1216,17 @@ function InventoryTab() {
     if (!editId) return;
     try {
       await api(`/api/ingredients/${editId}/conversions/${convId}`, { method: "DELETE" });
+      
+      // If the deleted conversion was selected as costUnit, convert back to base cost
+      if (costUnit === String(convId)) {
+        const deletedConv = conversions.find(c => c.id === convId);
+        if (deletedConv) {
+          const baseCost = (parseFloat(cost) || 0) / deletedConv.conversionFactor;
+          setCost(String(baseCost));
+        }
+        setCostUnit("base");
+      }
+
       setConversions(prev => prev.filter(c => c.id !== convId));
       toast({ title: "Conversion unit removed" });
     } catch (err: any) {
@@ -1250,9 +1280,15 @@ function InventoryTab() {
     }
   };
 
-  const filteredIngredients = ingredients?.filter(i =>
-    i.name.toLowerCase().includes(searchTerm.toLowerCase()) || i.ingredientType.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredIngredients = ingredients
+    ?.filter(i =>
+      i.name.toLowerCase().includes(searchTerm.toLowerCase()) || i.ingredientType.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+    .sort((a, b) => {
+      const typeCompare = a.ingredientType.localeCompare(b.ingredientType);
+      if (typeCompare !== 0) return typeCompare;
+      return a.name.localeCompare(b.name);
+    });
   const getIngredientName = (id: number | null) => id ? (ingredients?.find(i => i.id === id)?.name ?? `#${id}`) : null;
 
   return (
@@ -1375,8 +1411,38 @@ function InventoryTab() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="i-cost">Cost per Unit (EGP)</Label>
-                <Input id="i-cost" type="number" step="0.0001" value={cost} onChange={e => setCost(e.target.value)} />
+                <Label htmlFor="i-cost">Cost (EGP)</Label>
+                <div className="flex gap-2">
+                  <Input 
+                    id="i-cost" 
+                    type="number" 
+                    step="0.0001" 
+                    value={cost} 
+                    onChange={e => setCost(e.target.value)} 
+                    className="flex-1 text-right"
+                  />
+                  <Select value={costUnit} onValueChange={setCostUnit}>
+                    <SelectTrigger className="w-[120px] shrink-0">
+                      <SelectValue placeholder="Unit" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="base">{unit || "Base Unit"}</SelectItem>
+                      {conversions.map(c => (
+                        <SelectItem key={c.id} value={String(c.id)}>{c.unitName}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {costUnit !== "base" && (
+                  <p className="text-[10px] text-muted-foreground mt-0.5 italic">
+                    Calculated Base Cost: {(() => {
+                      const selectedConv = conversions.find(c => String(c.id) === costUnit);
+                      const factor = selectedConv ? selectedConv.conversionFactor : 1;
+                      const baseCost = (parseFloat(cost) || 0) / factor;
+                      return `${baseCost.toFixed(4)} EGP per ${unit}`;
+                    })()}
+                  </p>
+                )}
               </div>
               {mode === "edit" && (
                 <div className="grid gap-2">

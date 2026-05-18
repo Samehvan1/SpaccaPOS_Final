@@ -7,6 +7,8 @@
  */
 export interface RestockBody {
     quantity: number;
+    /** @nullable */
+    unitId?: number | null;
     note?: string;
 }
 //# sourceMappingURL=restockBody.d.ts.map

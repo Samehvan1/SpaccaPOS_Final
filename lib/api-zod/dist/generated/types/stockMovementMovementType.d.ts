@@ -12,5 +12,6 @@ export declare const StockMovementMovementType: {
     readonly adjustment: "adjustment";
     readonly waste: "waste";
     readonly opening: "opening";
+    readonly calibration: "calibration";
 };
 //# sourceMappingURL=stockMovementMovementType.d.ts.map

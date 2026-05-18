@@ -12,6 +12,7 @@ export interface UpdateIngredientBody {
     unit?: string;
     costPerUnit?: number;
     stockQuantity?: number;
+    startupQuantity?: number;
     lowStockThreshold?: number;
     isActive?: boolean;
 }

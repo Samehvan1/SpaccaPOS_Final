@@ -49,6 +49,7 @@ export * from "./getSettingsScope";
 export * from "./getTopDrinksParams";
 export * from "./healthStatus";
 export * from "./ingredient";
+export * from "./ingredientConversion";
 export * from "./ingredientDetail";
 export * from "./ingredientIngredientType";
 export * from "./ingredientOption";

@@ -10,6 +10,8 @@ export interface StockAdjustmentBody {
     ingredientId: number;
     movementType: StockAdjustmentBodyMovementType;
     quantity: number;
+    /** @nullable */
+    unitId?: number | null;
     note?: string;
 }
 //# sourceMappingURL=stockAdjustmentBody.d.ts.map

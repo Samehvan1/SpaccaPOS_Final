@@ -1,5 +1,5 @@
 import type { QueryKey, UseMutationOptions, UseMutationResult, UseQueryOptions, UseQueryResult } from "@tanstack/react-query";
-import type { ActivityLog, Branch, CalculateDrinkPriceParams, CategorySales, CreateBranchBody, CreateDiscountBody, CreateDrinkBody, CreateIngredientBody, CreateIngredientOptionBody, CreateIngredientOptionParams, CreateOrderBody, CreateUserBody, DashboardSummary, DeleteDiscountParams, DeleteDrinkParams, DeleteIngredientOptionParams, DeleteIngredientParams, DeleteUserParams, Discount, Drink, DrinkDetail, GetActiveOrdersParams, GetDrinkParams, GetIngredientParams, GetOrderParams, GetSalesByCategoryParams, GetSettingsParams, GetTopDrinksParams, HealthStatus, Ingredient, IngredientDetail, IngredientOption, ListActivityLogsParams, ListDrinksParams, ListIngredientsParams, ListOrdersParams, ListStockMovementsParams, LoginBody, LoginResponse, MarkOrderItemReadyParams, Order, OrderDetail, Permission, PriceBreakdown, PriceCalculationBody, RestockBody, RestockIngredientParams, Setting, StockAdjustmentBody, StockMovement, TopDrink, UpdateBranchBody, UpdateDiscountBody, UpdateDiscountParams, UpdateDrinkBody, UpdateDrinkParams, UpdateIngredientBody, UpdateIngredientOptionBody, UpdateIngredientOptionParams, UpdateIngredientParams, UpdateOrderStatusBody, UpdateOrderStatusParams, UpdateSettingsBody, UpdateUserBody, UpdateUserParams, User, UserDetail } from "./api.schemas";
+import type { ActivityLog, Branch, CalculateDrinkPriceParams, CategorySales, CreateBranchBody, CreateDiscountBody, CreateDrinkBody, CreateIngredientBody, CreateIngredientOptionBody, CreateIngredientOptionParams, CreateOrderBody, CreateUserBody, DashboardSummary, DeleteDiscountParams, DeleteDrinkParams, DeleteIngredientOptionParams, DeleteIngredientParams, DeleteUserParams, Discount, Drink, DrinkDetail, GetActiveOrdersParams, GetCustomerPoints200, GetDrinkParams, GetIngredientParams, GetOrderParams, GetSalesByCategoryParams, GetSettingsParams, GetTopDrinksParams, HealthStatus, Ingredient, IngredientDetail, IngredientOption, ListActivityLogsParams, ListDrinksParams, ListIngredientsParams, ListOrdersParams, ListStockMovementsParams, LoginBody, LoginResponse, MarkOrderItemReadyParams, Order, OrderDetail, Permission, PriceBreakdown, PriceCalculationBody, RestockBody, RestockIngredientParams, SaveOrderSignatureBody, Setting, StockAdjustmentBody, StockMovement, TopDrink, UpdateBranchBody, UpdateDiscountBody, UpdateDiscountParams, UpdateDrinkBody, UpdateDrinkParams, UpdateIngredientBody, UpdateIngredientOptionBody, UpdateIngredientOptionParams, UpdateIngredientParams, UpdateOrderStatusBody, UpdateOrderStatusParams, UpdateSettingsBody, UpdateUserBody, UpdateUserParams, User, UserDetail } from "./api.schemas";
 import { customFetch } from "../custom-fetch";
 import type { ErrorType, BodyType } from "../custom-fetch";
 type AwaitedInput<T> = PromiseLike<T> | T;
@@ -677,6 +677,37 @@ export declare const useUpdateOrderStatus: <TError = ErrorType<unknown>, TContex
     params?: UpdateOrderStatusParams;
 }, TContext>;
 /**
+ * @summary Save order digital signature
+ */
+export declare const getSaveOrderSignatureUrl: (id: number) => string;
+export declare const saveOrderSignature: (id: number, saveOrderSignatureBody: SaveOrderSignatureBody, options?: RequestInit) => Promise<void>;
+export declare const getSaveOrderSignatureMutationOptions: <TError = ErrorType<void>, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof saveOrderSignature>>, TError, {
+        id: number;
+        data: BodyType<SaveOrderSignatureBody>;
+    }, TContext>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseMutationOptions<Awaited<ReturnType<typeof saveOrderSignature>>, TError, {
+    id: number;
+    data: BodyType<SaveOrderSignatureBody>;
+}, TContext>;
+export type SaveOrderSignatureMutationResult = NonNullable<Awaited<ReturnType<typeof saveOrderSignature>>>;
+export type SaveOrderSignatureMutationBody = BodyType<SaveOrderSignatureBody>;
+export type SaveOrderSignatureMutationError = ErrorType<void>;
+/**
+ * @summary Save order digital signature
+ */
+export declare const useSaveOrderSignature: <TError = ErrorType<void>, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof saveOrderSignature>>, TError, {
+        id: number;
+        data: BodyType<SaveOrderSignatureBody>;
+    }, TContext>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseMutationResult<Awaited<ReturnType<typeof saveOrderSignature>>, TError, {
+    id: number;
+    data: BodyType<SaveOrderSignatureBody>;
+}, TContext>;
+/**
  * @summary Mark a specific order item as ready
  */
 export declare const getMarkOrderItemReadyUrl: (id: number, params?: MarkOrderItemReadyParams) => string;
@@ -940,6 +971,29 @@ export declare const useDeleteUser: <TError = ErrorType<unknown>, TContext = unk
     id: number;
     params?: DeleteUserParams;
 }, TContext>;
+/**
+ * @summary Get customer loyalty points by phone number
+ */
+export declare const getGetCustomerPointsUrl: (phone: string) => string;
+export declare const getCustomerPoints: (phone: string, options?: RequestInit) => Promise<GetCustomerPoints200>;
+export declare const getGetCustomerPointsQueryKey: (phone: string) => readonly [`/api/customers/points/${string}`];
+export declare const getGetCustomerPointsQueryOptions: <TData = Awaited<ReturnType<typeof getCustomerPoints>>, TError = ErrorType<void>>(phone: string, options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof getCustomerPoints>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseQueryOptions<Awaited<ReturnType<typeof getCustomerPoints>>, TError, TData> & {
+    queryKey: QueryKey;
+};
+export type GetCustomerPointsQueryResult = NonNullable<Awaited<ReturnType<typeof getCustomerPoints>>>;
+export type GetCustomerPointsQueryError = ErrorType<void>;
+/**
+ * @summary Get customer loyalty points by phone number
+ */
+export declare function useGetCustomerPoints<TData = Awaited<ReturnType<typeof getCustomerPoints>>, TError = ErrorType<void>>(phone: string, options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof getCustomerPoints>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+};
 /**
  * @summary List activity logs
  */

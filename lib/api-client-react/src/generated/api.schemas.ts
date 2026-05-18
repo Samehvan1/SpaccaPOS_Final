@@ -115,6 +115,15 @@ export interface UpdateUserBody {
   isActive?: boolean;
 }
 
+export interface IngredientConversion {
+  id: number;
+  ingredientId: number;
+  unitName: string;
+  conversionFactor: number;
+  isDefaultPurchase: boolean;
+  createdAt?: string;
+}
+
 export type IngredientIngredientType =
   (typeof IngredientIngredientType)[keyof typeof IngredientIngredientType];
 
@@ -140,10 +149,12 @@ export interface Ingredient {
   unit: string;
   costPerUnit: number;
   stockQuantity: number;
+  startupQuantity: number;
   lowStockThreshold: number;
   isActive: boolean;
   linkedTypeCount?: number;
   linkedProductCount?: number;
+  conversions?: IngredientConversion[];
   createdAt: string;
   updatedAt: string;
 }
@@ -189,6 +200,7 @@ export interface CreateIngredientBody {
   unit: string;
   costPerUnit: number;
   stockQuantity?: number;
+  startupQuantity?: number;
   lowStockThreshold?: number;
   isActive?: boolean;
 }
@@ -216,6 +228,7 @@ export interface UpdateIngredientBody {
   unit?: string;
   costPerUnit?: number;
   stockQuantity?: number;
+  startupQuantity?: number;
   lowStockThreshold?: number;
   isActive?: boolean;
 }
@@ -568,6 +581,7 @@ export const StockMovementMovementType = {
   adjustment: "adjustment",
   waste: "waste",
   opening: "opening",
+  calibration: "calibration",
 } as const;
 
 export interface StockMovement {
@@ -588,6 +602,8 @@ export interface StockMovement {
 
 export interface RestockBody {
   quantity: number;
+  /** @nullable */
+  unitId?: number | null;
   note?: string;
 }
 
@@ -598,12 +614,15 @@ export const StockAdjustmentBodyMovementType = {
   adjustment: "adjustment",
   waste: "waste",
   opening: "opening",
+  calibration: "calibration",
 } as const;
 
 export interface StockAdjustmentBody {
   ingredientId: number;
   movementType: StockAdjustmentBodyMovementType;
   quantity: number;
+  /** @nullable */
+  unitId?: number | null;
   note?: string;
 }
 
@@ -824,6 +843,8 @@ export type ListStockMovementsParams = {
   ingredientId?: number;
   limit?: number;
   offset?: number;
+  startDate?: string;
+  endDate?: string;
 };
 
 export type GetActiveOrdersParams = {

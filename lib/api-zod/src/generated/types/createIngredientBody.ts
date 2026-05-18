@@ -13,6 +13,7 @@ export interface CreateIngredientBody {
   unit: string;
   costPerUnit: number;
   stockQuantity?: number;
+  startupQuantity?: number;
   lowStockThreshold?: number;
   isActive?: boolean;
 }

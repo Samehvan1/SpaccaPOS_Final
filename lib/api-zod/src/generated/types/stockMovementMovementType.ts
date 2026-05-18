@@ -15,4 +15,5 @@ export const StockMovementMovementType = {
   adjustment: "adjustment",
   waste: "waste",
   opening: "opening",
+  calibration: "calibration",
 } as const;
