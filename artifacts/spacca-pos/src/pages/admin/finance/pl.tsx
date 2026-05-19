@@ -5,6 +5,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Search, Download, Filter, TrendingUp, TrendingDown, DollarSign, PieChart } from "lucide-react";
 import { format } from "date-fns";
@@ -21,6 +27,7 @@ export default function PLReportsPage() {
   const [report, setReport] = useState<any[]>([]);
   const [branches, setBranches] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedDrink, setSelectedDrink] = useState<any | null>(null);
 
   // Filters
   const [selectedBranch, setSelectedBranch] = useState<string>("all");
@@ -225,7 +232,12 @@ export default function PLReportsPage() {
                   <TableCell className="capitalize text-muted-foreground">{r.category}</TableCell>
                   <TableCell className="text-right">{r.totalOrders || 0}</TableCell>
                   <TableCell className="text-right font-mono">{fmt(r.revenue || 0)}</TableCell>
-                  <TableCell className="text-right font-mono text-destructive">-{fmt(r.cost || 0)}</TableCell>
+                  <TableCell 
+                    className="text-right font-mono text-destructive cursor-pointer hover:underline"
+                    onClick={() => setSelectedDrink(r)}
+                  >
+                    -{fmt(r.cost || 0)}
+                  </TableCell>
                   <TableCell className="text-right font-mono font-bold text-green-600">{fmt(r.profit || 0)}</TableCell>
                   <TableCell className="text-right">
                     <Badge variant={(r.margin || 0) > 50 ? "default" : (r.margin || 0) > 20 ? "secondary" : "outline"}>
@@ -238,6 +250,52 @@ export default function PLReportsPage() {
           </TableBody>
         </Table>
       </div>
+
+      {/* Ingredient Details Modal */}
+      <Dialog open={!!selectedDrink} onOpenChange={(open) => !open && setSelectedDrink(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Cost Details: {selectedDrink?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="rounded-md border bg-card max-h-[60vh] overflow-y-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Ingredient</TableHead>
+                  <TableHead className="text-right">Unit</TableHead>
+                  <TableHead className="text-right">Total Qty Used</TableHead>
+                  <TableHead className="text-right">Cost Per Unit</TableHead>
+                  <TableHead className="text-right">Total Cost</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {!selectedDrink?.ingredients || selectedDrink.ingredients.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                      No ingredient cost data available for this drink.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  selectedDrink.ingredients.map((ing: any, idx: number) => (
+                    <TableRow key={idx}>
+                      <TableCell className="font-medium">{ing.name}</TableCell>
+                      <TableCell className="text-right text-muted-foreground">{ing.unit}</TableCell>
+                      <TableCell className="text-right">{ing.qty.toFixed(2)}</TableCell>
+                      <TableCell className="text-right font-mono">{fmt(ing.costPerUnit)}</TableCell>
+                      <TableCell className="text-right font-mono text-destructive">-{fmt(ing.totalCost)}</TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+          <div className="flex justify-end pt-2 mt-2">
+            <div className="text-lg font-bold">
+              Total Ingredient Cost: <span className="text-destructive font-mono">-{fmt(selectedDrink?.cost || 0)}</span>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

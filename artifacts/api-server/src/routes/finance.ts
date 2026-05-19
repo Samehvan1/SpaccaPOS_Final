@@ -133,6 +133,11 @@ router.get("/finance/pl-report", requirePermission("reports:view"), async (req, 
   const ingredientUsage = await db
     .select({
       drinkId: orderItemsTable.drinkId,
+      ingredientId: orderItemCustomizationsTable.ingredientId,
+      ingredientName: sql<string>`MAX(${ingredientsTable.name})`,
+      ingredientUnit: sql<string>`MAX(${ingredientsTable.unit})`,
+      totalQty: sum(orderItemCustomizationsTable.consumedQty),
+      costPerUnit: sql<string>`MAX(${ingredientsTable.costPerUnit})`,
       totalCost: sql<string>`SUM(${orderItemCustomizationsTable.consumedQty} * ${ingredientsTable.costPerUnit})`,
     })
     .from(orderItemCustomizationsTable)
@@ -145,15 +150,35 @@ router.get("/finance/pl-report", requirePermission("reports:view"), async (req, 
       eq(ordersTable.status, "completed"),
       targetBranchId ? eq(ordersTable.branchId, targetBranchId) : undefined
     ))
-    .groupBy(orderItemsTable.drinkId);
+    .groupBy(orderItemsTable.drinkId, orderItemCustomizationsTable.ingredientId);
 
-  const costMap = new Map(ingredientUsage.map(c => [c.drinkId, parseFloat(String(c.totalCost || "0")) || 0]));
+  const costMap = new Map<number, number>();
+  const ingredientsMap = new Map<number, any[]>();
+  
+  ingredientUsage.forEach(c => {
+    const cost = parseFloat(String(c.totalCost || "0")) || 0;
+    const qty = parseFloat(String(c.totalQty || "0")) || 0;
+    
+    if (!costMap.has(c.drinkId)) costMap.set(c.drinkId, 0);
+    costMap.set(c.drinkId, costMap.get(c.drinkId)! + cost);
+    
+    if (!ingredientsMap.has(c.drinkId)) ingredientsMap.set(c.drinkId, []);
+    ingredientsMap.get(c.drinkId)!.push({
+      ingredientId: c.ingredientId,
+      name: c.ingredientName,
+      unit: c.ingredientUnit,
+      qty,
+      costPerUnit: parseFloat(String(c.costPerUnit || "0")) || 0,
+      totalCost: cost
+    });
+  });
 
   const report = drinkSales.map(s => {
     const revenue = parseFloat(String(s.totalRevenue || "0")) || 0;
     const cost = costMap.get(s.drinkId) || 0;
     const profit = revenue - cost;
     const margin = revenue > 0 ? (profit / revenue) * 100 : 0;
+    const ingredients = ingredientsMap.get(s.drinkId) || [];
 
     return {
       drinkId: s.drinkId,
@@ -163,7 +188,8 @@ router.get("/finance/pl-report", requirePermission("reports:view"), async (req, 
       revenue,
       cost,
       profit,
-      margin
+      margin,
+      ingredients
     };
   });
 
