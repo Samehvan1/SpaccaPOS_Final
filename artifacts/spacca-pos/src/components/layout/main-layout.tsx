@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useTheme } from "@/hooks/use-theme";
 import { useSettings } from "@/hooks/use-settings";
 import { useOrderEvents } from "@/hooks/use-order-events";
-import { Coffee, ChefHat, LayoutDashboard, LogOut, Sun, Moon, Printer, Wifi, WifiOff, Download, RefreshCw, ClipboardCheck, History, TrendingUp, ChevronDown, ChevronRight, User, Settings, PieChart, BarChart3, PackageSearch } from "lucide-react";
+import { Coffee, ChefHat, LayoutDashboard, LogOut, Sun, Moon, Printer, Wifi, WifiOff, Download, RefreshCw, ClipboardCheck, History, TrendingUp, ChevronDown, ChevronRight, User, Settings, PieChart, BarChart3, PackageSearch, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -94,6 +94,16 @@ export function MainLayout({ children }: MainLayoutProps) {
               >
                  {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
               </Button>
+              <Link href="/login">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="rounded-lg h-8 w-8 p-0 text-muted-foreground"
+                  title="Staff Login"
+                >
+                  <Lock className="h-4 w-4" />
+                </Button>
+              </Link>
             </div>
           </header>
         )}

@@ -51,7 +51,7 @@ export const appRoutes: RouteConfig[] = [
   { path: "/kiosk", component: KioskPage, permission: "public", layout: false },
 
   // Staff POS & Kitchen
-  { path: "/pos", component: PosTerminal, permission: "pos:view" },
+  { path: "/pos", component: PosTerminal, permission: "public" },
   { path: "/kitchen", component: KitchenDisplay, permission: "kitchen:view" },
   { path: "/cashier", component: CashierPage, permission: "cashier:view", layout: false },
   { path: "/pickup", component: PickupPage, permission: "orders:pickup" },

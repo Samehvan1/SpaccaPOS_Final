@@ -106,7 +106,7 @@ function AppRoutes() {
       {/* Default route redirecting based on session / role */}
       <Route path="/">
         {() => {
-          if (!user) return <Redirect to="/login" />;
+          if (!user) return <Redirect to="/pos" />;
           return <Redirect to={getDefaultRoute(user.role)} />;
         }}
       </Route>
