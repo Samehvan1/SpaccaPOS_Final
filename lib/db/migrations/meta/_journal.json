@@ -71,6 +71,13 @@
       "when": 1778864292163,
       "tag": "0009_square_madrox",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1779190762304,
+      "tag": "0010_nebulous_starfox",
+      "breakpoints": true
     }
   ]
 }

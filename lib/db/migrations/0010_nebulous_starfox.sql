@@ -1,0 +1,1 @@
+ALTER TABLE "order_item_customizations" ADD COLUMN "cost_per_unit" numeric(10, 4) DEFAULT '0' NOT NULL;

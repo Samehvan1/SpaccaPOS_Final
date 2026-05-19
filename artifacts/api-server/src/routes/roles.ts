@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { db, rolesTable, rolePermissionsTable, permissionsTable } from "@workspace/db";
+import { db, rolesTable, rolePermissionsTable, permissionsTable, userPermissionsTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import { requirePermission } from "../middleware/permissions";
 import { logActivity } from "../lib/activity-logger";
@@ -138,4 +138,45 @@ rolesRouter.get("/permissions/list", requirePermission("roles:view"), async (req
   }
 });
 
+// POST /permissions
+rolesRouter.post("/permissions", requirePermission("roles:manage"), async (req, res): Promise<void> => {
+  try {
+    const { key, description } = req.body;
+    if (!key) {
+      res.status(400).json({ error: "Key is required" });
+      return;
+    }
+    const [newPermission] = await db.insert(permissionsTable).values({ key, description }).returning();
+    await logActivity(req, "CREATE_PERMISSION", "permission", newPermission.id, { key: newPermission.key });
+    res.status(201).json(newPermission);
+  } catch (error: any) {
+    console.error("POST /roles/permissions error:", error?.message || error);
+    res.status(500).json({ error: "Failed to create permission" });
+  }
+});
+
+// DELETE /permissions/:key
+rolesRouter.delete("/permissions/:key", requirePermission("roles:manage"), async (req, res): Promise<void> => {
+  try {
+    const key = req.params.key as string;
+    
+    // First, delete role mappings and user overrides referencing this permission key
+    await db.delete(rolePermissionsTable).where(eq(rolePermissionsTable.permissionKey, key));
+    await db.delete(userPermissionsTable).where(eq(userPermissionsTable.permissionKey, key));
+    
+    // Delete the permission itself
+    const [deleted] = await db.delete(permissionsTable).where(eq(permissionsTable.key, key)).returning();
+    if (!deleted) {
+      res.status(404).json({ error: "Permission not found" });
+      return;
+    }
+    await logActivity(req, "DELETE_PERMISSION", "permission", deleted.id, { key: deleted.key });
+    res.status(204).end();
+  } catch (error: any) {
+    console.error("DELETE /roles/permissions/:key error:", error?.message || error);
+    res.status(500).json({ error: "Failed to delete permission" });
+  }
+});
+
 export default rolesRouter;
+

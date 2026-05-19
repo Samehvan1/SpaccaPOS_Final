@@ -511,6 +511,13 @@ router.post("/orders", async (req, res): Promise<void> => {
     const stockMap = new Map(stockRows.map((r) => [r.ingredientId, parseFloat(r.stockQuantity)]));
     console.log(`[stock] Pre-fetched stock for ${allIngredientIds.length} ingredients in branch ${targetBranchId}:`, Array.from(stockMap.entries()));
 
+    const ingredientCosts = allIngredientIds.length > 0
+      ? await tx.select({ id: ingredientsTable.id, costPerUnit: ingredientsTable.costPerUnit })
+          .from(ingredientsTable)
+          .where(inArray(ingredientsTable.id, allIngredientIds))
+      : [];
+    const ingredientCostMap = new Map(ingredientCosts.map((r) => [r.id, r.costPerUnit]));
+
     const savedItems = [];
     for (const item of itemDetails) {
       const [orderItem] = await tx.insert(orderItemsTable).values({
@@ -539,6 +546,7 @@ router.post("/orders", async (req, res): Promise<void> => {
             optionLabel: c.optionLabel,
             baristaSortOrder: c.baristaSortOrder,
             customerSortOrder: c.customerSortOrder,
+            costPerUnit: c.ingredientId ? (ingredientCostMap.get(c.ingredientId) || "0") : "0",
           }))
         );
       }

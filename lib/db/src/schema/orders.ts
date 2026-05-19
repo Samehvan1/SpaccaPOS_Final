@@ -79,6 +79,7 @@ export const orderItemCustomizationsTable = pgTable("order_item_customizations",
   optionLabel: text("option_label").notNull(),
   baristaSortOrder: integer("barista_sort_order").notNull().default(1),
   customerSortOrder: integer("customer_sort_order").notNull().default(1),
+  costPerUnit: numeric("cost_per_unit", { precision: 10, scale: 4 }).notNull().default("0"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => {
   return {

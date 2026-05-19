@@ -56254,6 +56254,7 @@ var init_orders = __esm({
       optionLabel: text("option_label").notNull(),
       baristaSortOrder: integer("barista_sort_order").notNull().default(1),
       customerSortOrder: integer("customer_sort_order").notNull().default(1),
+      costPerUnit: numeric("cost_per_unit", { precision: 10, scale: 4 }).notNull().default("0"),
       createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
     }, (table) => {
       return {
@@ -83070,6 +83071,8 @@ router5.post("/orders", async (req, res) => {
     const stockRows = allIngredientIds.length > 0 ? await tx.select({ ingredientId: branchStockTable.ingredientId, stockQuantity: branchStockTable.stockQuantity }).from(branchStockTable).where(and(eq(branchStockTable.branchId, targetBranchId), inArray(branchStockTable.ingredientId, allIngredientIds))) : [];
     const stockMap = new Map(stockRows.map((r) => [r.ingredientId, parseFloat(r.stockQuantity)]));
     console.log(`[stock] Pre-fetched stock for ${allIngredientIds.length} ingredients in branch ${targetBranchId}:`, Array.from(stockMap.entries()));
+    const ingredientCosts = allIngredientIds.length > 0 ? await tx.select({ id: ingredientsTable.id, costPerUnit: ingredientsTable.costPerUnit }).from(ingredientsTable).where(inArray(ingredientsTable.id, allIngredientIds)) : [];
+    const ingredientCostMap = new Map(ingredientCosts.map((r) => [r.id, r.costPerUnit]));
     const savedItems2 = [];
     for (const item of itemDetails) {
       const [orderItem] = await tx.insert(orderItemsTable).values({
@@ -83096,7 +83099,8 @@ router5.post("/orders", async (req, res) => {
             slotLabel: c.slotLabel,
             optionLabel: c.optionLabel,
             baristaSortOrder: c.baristaSortOrder,
-            customerSortOrder: c.customerSortOrder
+            customerSortOrder: c.customerSortOrder,
+            costPerUnit: c.ingredientId ? ingredientCostMap.get(c.ingredientId) || "0" : "0"
           }))
         );
       }
@@ -85786,6 +85790,38 @@ rolesRouter.get("/permissions/list", requirePermission("roles:view"), async (req
     res.status(500).json({ error: "Failed to list permissions" });
   }
 });
+rolesRouter.post("/permissions", requirePermission("roles:manage"), async (req, res) => {
+  try {
+    const { key, description } = req.body;
+    if (!key) {
+      res.status(400).json({ error: "Key is required" });
+      return;
+    }
+    const [newPermission] = await db.insert(permissionsTable).values({ key, description }).returning();
+    await logActivity(req, "CREATE_PERMISSION", "permission", newPermission.id, { key: newPermission.key });
+    res.status(201).json(newPermission);
+  } catch (error40) {
+    console.error("POST /roles/permissions error:", error40?.message || error40);
+    res.status(500).json({ error: "Failed to create permission" });
+  }
+});
+rolesRouter.delete("/permissions/:key", requirePermission("roles:manage"), async (req, res) => {
+  try {
+    const key = req.params.key;
+    await db.delete(rolePermissionsTable).where(eq(rolePermissionsTable.permissionKey, key));
+    await db.delete(userPermissionsTable).where(eq(userPermissionsTable.permissionKey, key));
+    const [deleted] = await db.delete(permissionsTable).where(eq(permissionsTable.key, key)).returning();
+    if (!deleted) {
+      res.status(404).json({ error: "Permission not found" });
+      return;
+    }
+    await logActivity(req, "DELETE_PERMISSION", "permission", deleted.id, { key: deleted.key });
+    res.status(204).end();
+  } catch (error40) {
+    console.error("DELETE /roles/permissions/:key error:", error40?.message || error40);
+    res.status(500).json({ error: "Failed to delete permission" });
+  }
+});
 var roles_default = rolesRouter;
 
 // src/routes/branches.ts
@@ -86038,19 +86074,41 @@ router18.get("/finance/pl-report", requirePermission("reports:view"), async (req
   )).groupBy(orderItemsTable.drinkId);
   const ingredientUsage = await db.select({
     drinkId: orderItemsTable.drinkId,
-    totalCost: sql`SUM(${orderItemCustomizationsTable.consumedQty} * ${ingredientsTable.costPerUnit})`
+    ingredientId: orderItemCustomizationsTable.ingredientId,
+    ingredientName: sql`MAX(${ingredientsTable.name})`,
+    ingredientUnit: sql`MAX(${ingredientsTable.unit})`,
+    totalQty: sum(orderItemCustomizationsTable.consumedQty),
+    costPerUnit: sql`MAX(${orderItemCustomizationsTable.costPerUnit})`,
+    totalCost: sql`SUM(${orderItemCustomizationsTable.consumedQty} * ${orderItemCustomizationsTable.costPerUnit})`
   }).from(orderItemCustomizationsTable).innerJoin(orderItemsTable, eq(orderItemCustomizationsTable.orderItemId, orderItemsTable.id)).innerJoin(ordersTable, eq(orderItemsTable.orderId, ordersTable.id)).innerJoin(ingredientsTable, eq(orderItemCustomizationsTable.ingredientId, ingredientsTable.id)).where(and(
     gte(ordersTable.createdAt, start),
     lte(ordersTable.createdAt, end),
     eq(ordersTable.status, "completed"),
     targetBranchId ? eq(ordersTable.branchId, targetBranchId) : void 0
-  )).groupBy(orderItemsTable.drinkId);
-  const costMap = new Map(ingredientUsage.map((c) => [c.drinkId, parseFloat(String(c.totalCost || "0")) || 0]));
+  )).groupBy(orderItemsTable.drinkId, orderItemCustomizationsTable.ingredientId);
+  const costMap = /* @__PURE__ */ new Map();
+  const ingredientsMap = /* @__PURE__ */ new Map();
+  ingredientUsage.forEach((c) => {
+    const cost = parseFloat(String(c.totalCost || "0")) || 0;
+    const qty = parseFloat(String(c.totalQty || "0")) || 0;
+    if (!costMap.has(c.drinkId)) costMap.set(c.drinkId, 0);
+    costMap.set(c.drinkId, costMap.get(c.drinkId) + cost);
+    if (!ingredientsMap.has(c.drinkId)) ingredientsMap.set(c.drinkId, []);
+    ingredientsMap.get(c.drinkId).push({
+      ingredientId: c.ingredientId,
+      name: c.ingredientName,
+      unit: c.ingredientUnit,
+      qty,
+      costPerUnit: parseFloat(String(c.costPerUnit || "0")) || 0,
+      totalCost: cost
+    });
+  });
   const report = drinkSales.map((s) => {
     const revenue = parseFloat(String(s.totalRevenue || "0")) || 0;
     const cost = costMap.get(s.drinkId) || 0;
     const profit = revenue - cost;
     const margin = revenue > 0 ? profit / revenue * 100 : 0;
+    const ingredients = ingredientsMap.get(s.drinkId) || [];
     return {
       drinkId: s.drinkId,
       name: s.drinkName,
@@ -86059,7 +86117,8 @@ router18.get("/finance/pl-report", requirePermission("reports:view"), async (req
       revenue,
       cost,
       profit,
-      margin
+      margin,
+      ingredients
     };
   });
   res.json(report);

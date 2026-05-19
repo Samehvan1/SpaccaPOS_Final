@@ -8,46 +8,10 @@ import { SettingsProvider } from "@/hooks/use-settings";
 import { MainLayout } from "@/components/layout/main-layout";
 import { useEffect } from "react";
 import { PWAUpdater } from "@/components/pwa-updater";
-
-import Login from "@/pages/login";
-import PosTerminal from "@/pages/pos";
-import KitchenDisplay from "@/pages/kitchen";
-import CashierPage from "@/pages/cashier";
-import PickupPage from "@/pages/pickup";
-import AdminHub from "@/pages/admin";
-import FinanceDashboard from "@/pages/admin/finance";
-import DrinksAdmin from "@/pages/admin/drinks";
-import IngredientsAdmin from "@/pages/admin/ingredients";
-import StockAdmin from "@/pages/admin/stock";
-import DrinkRecipe from "@/pages/admin/drink-recipe";
-import ReportsPage from "@/pages/admin/reports";
-import CategoriesAdmin from "@/pages/admin/categories";
-import KitchenStationsAdmin from "@/pages/admin/kitchen-stations";
-import AdminUsers from "@/pages/admin/users";
-import BranchesAdmin from "@/pages/admin/branches";
-import DiscountsAdmin from "@/pages/admin/discounts";
-import ActivityLogs from "@/pages/admin/activity-logs";
-import PermissionsAdmin from "@/pages/admin/permissions";
-import NotFound from "@/pages/not-found";
-import CustomerAuth from "@/pages/customer-auth";
-import CustomerProfile from "@/pages/customer-profile";
 import { CustomerAuthProvider } from "@/hooks/use-customer-auth";
-import CashierPerformancePage from "@/pages/admin/cashier-performance";
-import KioskPage from "./pages/kiosk";
-import SystemSettingsAdmin from "@/pages/admin/settings";
-import StockControlPage from "./pages/stock-control";
-import StockAuditReviewPage from "./pages/admin/stock-audit-review";
-import StockMovementReport from "@/pages/admin/finance/stock-movement";
-import SalesAnalysisReport from "@/pages/admin/finance/sales";
-import InventoryUsageReport from "@/pages/admin/finance/usage";
-import PLReport from "@/pages/admin/finance/pl";
-import CashSpotCheckPage from "@/pages/admin/operations/cash-spot-check";
-import ShiftReportPage from "@/pages/admin/operations/shift-report";
-import StockQuantitiesPage from "@/pages/admin/operations/stock-quantities";
-import CustomizationsAnalysisReport from "@/pages/admin/operations/customizations";
-import CalibrationPage from "./pages/admin/operations/calibration";
-import WastagePage from "./pages/admin/operations/wastage";
-import OperationalDeductionsReport from "./pages/admin/operations/deductions-report";
+import Login from "@/pages/login";
+import NotFound from "@/pages/not-found";
+import { appRoutes } from "./routes";
 
 // PWA Helper to update title for "Add to Home Screen"
 function PWAContextHandler() {
@@ -78,7 +42,7 @@ function PWAContextHandler() {
 
 const queryClient = new QueryClient();
 
-function getDefaultRoute(role: string): any {
+function getDefaultRoute(role: string): string {
   switch (role) {
     case "admin": return "/admin";
     case "barista": return "/kitchen";
@@ -93,17 +57,15 @@ function getDefaultRoute(role: string): any {
 function ProtectedRoute({ 
   component: Component, 
   permission,
-  allowedRoles // Keep for backward compat if needed, but prioritize permission
 }: { 
-  component: React.ComponentType, 
-  permission?: string,
-  allowedRoles?: string[]
+  component: React.ComponentType; 
+  permission?: string;
 }) {
   const { user, isLoading, hasPermission } = useAuth();
   const [location] = useLocation();
 
   if (isLoading) {
-    return <div className="h-screen w-full flex items-center justify-center">Loading...</div>;
+    return <div className="h-screen w-full flex items-center justify-center bg-background">Loading...</div>;
   }
 
   if (!user) {
@@ -112,11 +74,6 @@ function ProtectedRoute({
 
   // If a specific permission is required, check it
   if (permission && !hasPermission(permission)) {
-    return <Redirect to={getDefaultRoute(user.role)} />;
-  }
-
-  // Fallback for allowedRoles if permission is not provided
-  if (!permission && allowedRoles && !allowedRoles.includes(user.role)) {
     return <Redirect to={getDefaultRoute(user.role)} />;
   }
 
@@ -132,6 +89,7 @@ function AppRoutes() {
 
   return (
     <Switch>
+      {/* Role-based conditional redirection for /login */}
       <Route path="/login">
         {() => {
           if (user) {
@@ -139,234 +97,45 @@ function AppRoutes() {
             if (params.has("from")) {
               return <Redirect to={params.get("from") as any} />;
             }
-            // Role-based default redirection
-            switch (user.role as string) {
-              case "barista": return <Redirect to="/kitchen" />;
-              case "cashier": return <Redirect to="/cashier" />;
-              case "pickup": return <Redirect to="/pickup" />;
-              case "frontdesk": return <Redirect to="/pos" />;
-              case "stockcontrol": return <Redirect to="/stock-control" />;
-              case "admin": return <Redirect to="/admin" />;
-              default: return <Redirect to="/pos" />;
-            }
+            return <Redirect to={getDefaultRoute(user.role)} />;
           }
           return <Login />;
         }}
       </Route>
 
+      {/* Default route redirecting based on session / role */}
       <Route path="/">
         {() => {
-          if (!user) return <Redirect to="/pos" />;
-          switch (user.role as string) {
-            case "barista": return <Redirect to="/kitchen" />;
-            case "cashier": return <Redirect to="/cashier" />;
-            case "pickup": return <Redirect to="/pickup" />;
-            case "frontdesk": return <Redirect to="/pos" />;
-            case "stockcontrol": return <Redirect to="/stock-control" />;
-            case "admin": return <Redirect to="/admin" />;
-            default: return <Redirect to="/pos" />;
-          }
+          if (!user) return <Redirect to="/login" />;
+          return <Redirect to={getDefaultRoute(user.role)} />;
         }}
       </Route>
 
-      <Route path="/pos">
-        <MainLayout>
-          <PosTerminal />
-        </MainLayout>
-      </Route>
+      {/* Dynamically register protected/public routes from registry */}
+      {appRoutes.map((route) => {
+        const useLayout = route.layout !== false;
 
-      <Route path="/kitchen">
-        <MainLayout>
-          <ProtectedRoute 
-            component={KitchenDisplay} 
-            permission="kitchen:view" 
-          />
-        </MainLayout>
-      </Route>
-      
-      <Route path="/cashier">
-        <CashierPage />
-      </Route>
+        const Content = () => {
+          if (route.permission === "public") {
+            return <route.component />;
+          }
+          return <ProtectedRoute component={route.component} permission={route.permission} />;
+        };
 
-      <Route path="/pickup">
-        <MainLayout>
-          <ProtectedRoute 
-            component={PickupPage} 
-            permission="orders:pickup" 
-          />
-        </MainLayout>
-      </Route>
+        return (
+          <Route key={route.path} path={route.path}>
+            {useLayout ? (
+              <MainLayout>
+                <Content />
+              </MainLayout>
+            ) : (
+              <Content />
+            )}
+          </Route>
+        );
+      })}
 
-      <Route path="/admin">
-        <MainLayout>
-          <ProtectedRoute component={AdminHub} permission="admin:view" />
-        </MainLayout>
-      </Route>
-
-      <Route path="/admin/finance">
-        <MainLayout>
-          <ProtectedRoute component={FinanceDashboard} permission="reports:view" />
-        </MainLayout>
-      </Route>
-      <Route path="/admin/finance/stock-movement">
-        <MainLayout>
-          <ProtectedRoute component={StockMovementReport} permission="reports:view" />
-        </MainLayout>
-      </Route>
-      <Route path="/admin/finance/sales">
-        <MainLayout>
-          <ProtectedRoute component={SalesAnalysisReport} permission="reports:view" />
-        </MainLayout>
-      </Route>
-      <Route path="/admin/finance/usage">
-        <MainLayout>
-          <ProtectedRoute component={InventoryUsageReport} permission="reports:view" />
-        </MainLayout>
-      </Route>
-      <Route path="/admin/finance/pl">
-        <MainLayout>
-          <ProtectedRoute component={PLReport} permission="reports:view" />
-        </MainLayout>
-      </Route>
-
-      <Route path="/admin/operations/cash-spot-check">
-        <MainLayout>
-          <ProtectedRoute component={CashSpotCheckPage} permission="admin:view" />
-        </MainLayout>
-      </Route>
-      <Route path="/admin/operations/shift-report">
-        <MainLayout>
-          <ProtectedRoute component={ShiftReportPage} permission="reports:view" />
-        </MainLayout>
-      </Route>
-      <Route path="/admin/operations/stock-quantities">
-        <MainLayout>
-          <ProtectedRoute component={StockQuantitiesPage} permission="inventory:view" />
-        </MainLayout>
-      </Route>
-      <Route path="/admin/operations/customizations">
-        <MainLayout>
-          <ProtectedRoute component={CustomizationsAnalysisReport} permission="reports:view" />
-        </MainLayout>
-      </Route>
-      <Route path="/admin/operations/calibration">
-        <MainLayout>
-          <ProtectedRoute component={CalibrationPage} permission="admin:view" />
-        </MainLayout>
-      </Route>
-      <Route path="/admin/operations/wastage">
-        <MainLayout>
-          <ProtectedRoute component={WastagePage} permission="admin:view" />
-        </MainLayout>
-      </Route>
-      <Route path="/admin/operations/deductions-report">
-        <MainLayout>
-          <ProtectedRoute component={OperationalDeductionsReport} permission="admin:view" />
-        </MainLayout>
-      </Route>
-
-      <Route path="/admin/drinks">
-        <MainLayout>
-          <ProtectedRoute component={DrinksAdmin} permission="catalog:view" />
-        </MainLayout>
-      </Route>
-
-      <Route path="/admin/drinks/:id/recipe">
-        <MainLayout>
-          <ProtectedRoute component={DrinkRecipe} permission="catalog:manage" />
-        </MainLayout>
-      </Route>
-
-      <Route path="/admin/categories">
-        <MainLayout>
-          <ProtectedRoute component={CategoriesAdmin} permission="catalog:view" />
-        </MainLayout>
-      </Route>
-      <Route path="/admin/kitchen-stations">
-        <MainLayout>
-          <ProtectedRoute component={KitchenStationsAdmin} permission="admin:view" />
-        </MainLayout>
-      </Route>
-
-      <Route path="/admin/ingredients">
-        <MainLayout>
-          <ProtectedRoute component={IngredientsAdmin} permission="inventory:view" />
-        </MainLayout>
-      </Route>
-
-      <Route path="/admin/stock">
-        <MainLayout>
-          <ProtectedRoute component={StockAdmin} permission="inventory:view" />
-        </MainLayout>
-      </Route>
-      <Route path="/admin/stock-audits">
-        <MainLayout>
-          <ProtectedRoute component={StockAuditReviewPage} permission="inventory:manage" />
-        </MainLayout>
-      </Route>
-
-      <Route path="/admin/reports">
-        <MainLayout>
-          <ProtectedRoute component={ReportsPage} permission="reports:view" />
-        </MainLayout>
-      </Route>
-      <Route path="/admin/discounts">
-        <MainLayout>
-          <ProtectedRoute component={DiscountsAdmin} permission="discounts:view" />
-        </MainLayout>
-      </Route>
-      <Route path="/admin/users">
-        <MainLayout>
-          <ProtectedRoute component={AdminUsers} permission="users:view" />
-        </MainLayout>
-      </Route>
-
-      <Route path="/admin/cashier-performance">
-        <MainLayout>
-          <ProtectedRoute component={CashierPerformancePage} permission="reports:view" />
-        </MainLayout>
-      </Route>
-
-      <Route path="/admin/branches">
-        <MainLayout>
-          <ProtectedRoute component={BranchesAdmin} permission="branches:manage" />
-        </MainLayout>
-      </Route>
-
-      <Route path="/admin/activity-logs">
-        <MainLayout>
-          <ProtectedRoute component={ActivityLogs} permission="admin:view" />
-        </MainLayout>
-      </Route>
-
-      <Route path="/admin/permissions">
-        <MainLayout>
-          <ProtectedRoute component={PermissionsAdmin} permission="roles:manage" />
-        </MainLayout>
-      </Route>
-      <Route path="/admin/settings">
-        <MainLayout>
-          <ProtectedRoute component={SystemSettingsAdmin} permission="settings:manage" />
-        </MainLayout>
-      </Route>
-
-      <Route path="/customer/auth">
-        <CustomerAuth />
-      </Route>
-
-      <Route path="/customer/profile">
-        <CustomerProfile />
-      </Route>
-
-      <Route path="/kiosk">
-        <KioskPage />
-      </Route>
-      <Route path="/stock-control">
-        <MainLayout>
-          <ProtectedRoute component={StockControlPage} permission="inventory:view" />
-        </MainLayout>
-      </Route>
-
+      {/* Fallback 404 Route */}
       <Route>
         <MainLayout>
           <NotFound />

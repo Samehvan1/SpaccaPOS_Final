@@ -137,8 +137,8 @@ router.get("/finance/pl-report", requirePermission("reports:view"), async (req, 
       ingredientName: sql<string>`MAX(${ingredientsTable.name})`,
       ingredientUnit: sql<string>`MAX(${ingredientsTable.unit})`,
       totalQty: sum(orderItemCustomizationsTable.consumedQty),
-      costPerUnit: sql<string>`MAX(${ingredientsTable.costPerUnit})`,
-      totalCost: sql<string>`SUM(${orderItemCustomizationsTable.consumedQty} * ${ingredientsTable.costPerUnit})`,
+      costPerUnit: sql<string>`MAX(${orderItemCustomizationsTable.costPerUnit})`,
+      totalCost: sql<string>`SUM(${orderItemCustomizationsTable.consumedQty} * ${orderItemCustomizationsTable.costPerUnit})`,
     })
     .from(orderItemCustomizationsTable)
     .innerJoin(orderItemsTable, eq(orderItemCustomizationsTable.orderItemId, orderItemsTable.id))
