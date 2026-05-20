@@ -617,7 +617,7 @@ router.post("/orders", async (req, res): Promise<void> => {
       // Fallback for backward compatibility if payments array is missing
       await tx.insert(orderPaymentsTable).values({
         orderId: order.id,
-        paymentMethod: parsed.data.paymentMethod,
+        paymentMethod: parsed.data.paymentMethod as any,
         amount: String(total),
       });
     }

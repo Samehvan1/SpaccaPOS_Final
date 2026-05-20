@@ -398,6 +398,8 @@ export declare const OrderPaymentMethod: {
     readonly card: "card";
     readonly wallet: "wallet";
     readonly hospitality: "hospitality";
+    readonly split: "split";
+    readonly refund: "refund";
 };
 export interface Order {
     id: number;
@@ -447,6 +449,8 @@ export declare const CreateOrderBodyPaymentMethod: {
     readonly card: "card";
     readonly wallet: "wallet";
     readonly hospitality: "hospitality";
+    readonly split: "split";
+    readonly refund: "refund";
 };
 export type CreateOrderBodyItemsItemSelectionsItem = {
     ingredientId?: number;
@@ -491,6 +495,8 @@ export declare const UpdateOrderStatusBodyPaymentMethod: {
     readonly card: "card";
     readonly wallet: "wallet";
     readonly hospitality: "hospitality";
+    readonly split: "split";
+    readonly refund: "refund";
 };
 export interface UpdateOrderStatusBody {
     status: UpdateOrderStatusBodyStatus;

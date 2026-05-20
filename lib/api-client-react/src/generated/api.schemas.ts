@@ -458,6 +458,8 @@ export const OrderPaymentMethod = {
   card: "card",
   wallet: "wallet",
   hospitality: "hospitality",
+  split: "split",
+  refund: "refund",
 } as const;
 
 export interface Order {
@@ -512,6 +514,8 @@ export const CreateOrderBodyPaymentMethod = {
   card: "card",
   wallet: "wallet",
   hospitality: "hospitality",
+  split: "split",
+  refund: "refund",
 } as const;
 
 export type CreateOrderBodyItemsItemSelectionsItem = {
@@ -565,6 +569,8 @@ export const UpdateOrderStatusBodyPaymentMethod = {
   card: "card",
   wallet: "wallet",
   hospitality: "hospitality",
+  split: "split",
+  refund: "refund",
 } as const;
 
 export interface UpdateOrderStatusBody {

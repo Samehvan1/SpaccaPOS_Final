@@ -11,5 +11,7 @@ export declare const CreateOrderBodyPaymentMethod: {
     readonly card: "card";
     readonly wallet: "wallet";
     readonly hospitality: "hospitality";
+    readonly split: "split";
+    readonly refund: "refund";
 };
 //# sourceMappingURL=createOrderBodyPaymentMethod.d.ts.map

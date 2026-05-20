@@ -378,4 +378,3 @@ export const Permission = api.ListPermissionsResponseItem;
 export type Permission = Infer<typeof api.ListPermissionsResponseItem>;
 
 export { ALL_PERMISSIONS, type PermissionKey } from "./permissions";
-
