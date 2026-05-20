@@ -68,7 +68,7 @@ router.get("/finance/inventory-usage", requirePermission("reports:view"), async 
     .where(and(
       gte(ordersTable.createdAt, start),
       lte(ordersTable.createdAt, end),
-      eq(ordersTable.status, "completed"),
+      inArray(ordersTable.status, ["paid", "ready", "completed"]),
       targetBranchId ? eq(ordersTable.branchId, targetBranchId) : undefined
     ))
     .groupBy(orderItemCustomizationsTable.ingredientId);
@@ -135,7 +135,7 @@ router.get("/finance/pl-report", requirePermission("reports:view"), async (req, 
     .where(and(
       gte(ordersTable.createdAt, start),
       lte(ordersTable.createdAt, end),
-      eq(ordersTable.status, "completed"),
+      inArray(ordersTable.status, ["paid", "ready", "completed"]),
       targetBranchId ? eq(ordersTable.branchId, targetBranchId) : undefined
     ))
     .groupBy(orderItemsTable.drinkId);
@@ -158,7 +158,7 @@ router.get("/finance/pl-report", requirePermission("reports:view"), async (req, 
     .where(and(
       gte(ordersTable.createdAt, start),
       lte(ordersTable.createdAt, end),
-      eq(ordersTable.status, "completed"),
+      inArray(ordersTable.status, ["paid", "ready", "completed"]),
       targetBranchId ? eq(ordersTable.branchId, targetBranchId) : undefined
     ))
     .groupBy(orderItemsTable.drinkId, orderItemCustomizationsTable.ingredientId);
@@ -411,7 +411,7 @@ router.get("/finance/sales-items", requirePermission("reports:view"), async (req
     .where(and(
       gte(ordersTable.createdAt, start),
       lte(ordersTable.createdAt, end),
-      eq(ordersTable.status, "completed"),
+      inArray(ordersTable.status, ["paid", "ready", "completed"]),
       targetBranchId ? eq(ordersTable.branchId, targetBranchId) : undefined
     ))
     .orderBy(desc(ordersTable.createdAt));
@@ -558,7 +558,7 @@ router.get("/finance/customizations-report", requirePermission("reports:view"), 
     .where(and(
       gte(ordersTable.createdAt, start),
       lte(ordersTable.createdAt, end),
-      eq(ordersTable.status, "completed"),
+      inArray(ordersTable.status, ["paid", "ready", "completed"]),
       targetBranchId ? eq(ordersTable.branchId, targetBranchId) : undefined
     ))
     .orderBy(desc(ordersTable.createdAt));
