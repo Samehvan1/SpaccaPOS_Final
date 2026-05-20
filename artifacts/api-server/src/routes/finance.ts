@@ -27,14 +27,25 @@ import { requirePermission } from "../middleware/permissions";
 import { analyzeCustomization, getRecipeContext } from "../lib/recipe-utils";
 import { startOfDay, endOfDay, subDays } from "date-fns";
 
+function parseLocalDate(dateStr: any): Date {
+  if (!dateStr || typeof dateStr !== "string") return new Date();
+  const parts = dateStr.split("-");
+  if (parts.length !== 3) return new Date(dateStr);
+  const year = parseInt(parts[0], 10);
+  const month = parseInt(parts[1], 10) - 1;
+  const day = parseInt(parts[2], 10);
+  const date = new Date(year, month, day);
+  return isNaN(date.getTime()) ? new Date(dateStr) : date;
+}
+
 const router: IRouter = Router();
 
 // ── Inventory Usage Report ────────────────────────────────────────────────
 router.get("/finance/inventory-usage", requirePermission("reports:view"), async (req, res) => {
   const { startDate, endDate, branchId } = req.query;
   const targetBranchId = branchId && branchId !== "all" ? parseInt(branchId as string) : null;
-  const start = startDate ? startOfDay(new Date(startDate as string)) : startOfDay(subDays(new Date(), 30));
-  const end = endDate ? endOfDay(new Date(endDate as string)) : endOfDay(new Date());
+  const start = startDate ? startOfDay(parseLocalDate(startDate as string)) : startOfDay(subDays(new Date(), 30));
+  const end = endDate ? endOfDay(parseLocalDate(endDate as string)) : endOfDay(new Date());
   
   if (isNaN(start.getTime()) || isNaN(end.getTime())) {
     res.status(400).json({ error: "Invalid date format" });
@@ -102,8 +113,8 @@ router.get("/finance/inventory-usage", requirePermission("reports:view"), async 
 router.get("/finance/pl-report", requirePermission("reports:view"), async (req, res) => {
   const { startDate, endDate, branchId } = req.query;
   const targetBranchId = branchId && branchId !== "all" ? parseInt(branchId as string) : null;
-  const start = startDate ? startOfDay(new Date(startDate as string)) : startOfDay(subDays(new Date(), 30));
-  const end = endDate ? endOfDay(new Date(endDate as string)) : endOfDay(new Date());
+  const start = startDate ? startOfDay(parseLocalDate(startDate as string)) : startOfDay(subDays(new Date(), 30));
+  const end = endDate ? endOfDay(parseLocalDate(endDate as string)) : endOfDay(new Date());
   if (isNaN(start.getTime()) || isNaN(end.getTime())) {
     res.status(400).json({ error: "Invalid date format" });
     return;
@@ -363,8 +374,8 @@ router.get("/finance/ingredient-recipes", requirePermission("reports:view"), asy
 router.get("/finance/sales-items", requirePermission("reports:view"), async (req, res) => {
   const { startDate, endDate, branchId } = req.query;
   const targetBranchId = branchId && branchId !== "all" ? parseInt(branchId as string) : null;
-  const start = startDate ? startOfDay(new Date(startDate as string)) : startOfDay(subDays(new Date(), 30));
-  const end = endDate ? endOfDay(new Date(endDate as string)) : endOfDay(new Date());
+  const start = startDate ? startOfDay(parseLocalDate(startDate as string)) : startOfDay(subDays(new Date(), 30));
+  const end = endDate ? endOfDay(parseLocalDate(endDate as string)) : endOfDay(new Date());
   
   if (isNaN(start.getTime()) || isNaN(end.getTime())) {
     res.status(400).json({ error: "Invalid date format" });
@@ -468,8 +479,8 @@ router.get("/finance/sales-items", requirePermission("reports:view"), async (req
 router.get("/finance/sales-summary", requirePermission("reports:view"), async (req, res) => {
   const { startDate, endDate, branchId } = req.query;
   const targetBranchId = branchId && branchId !== "all" ? parseInt(branchId as string) : null;
-  const start = startDate ? startOfDay(new Date(startDate as string)) : startOfDay(subDays(new Date(), 30));
-  const end = endDate ? endOfDay(new Date(endDate as string)) : endOfDay(new Date());
+  const start = startDate ? startOfDay(parseLocalDate(startDate as string)) : startOfDay(subDays(new Date(), 30));
+  const end = endDate ? endOfDay(parseLocalDate(endDate as string)) : endOfDay(new Date());
 
   if (isNaN(start.getTime()) || isNaN(end.getTime())) {
     res.status(400).json({ error: "Invalid date format" });
@@ -512,8 +523,8 @@ router.get("/finance/sales-summary", requirePermission("reports:view"), async (r
 router.get("/finance/customizations-report", requirePermission("reports:view"), async (req, res) => {
   const { startDate, endDate, branchId } = req.query;
   const targetBranchId = branchId && branchId !== "all" ? parseInt(branchId as string) : null;
-  const start = startDate ? startOfDay(new Date(startDate as string)) : startOfDay(subDays(new Date(), 30));
-  const end = endDate ? endOfDay(new Date(endDate as string)) : endOfDay(new Date());
+  const start = startDate ? startOfDay(parseLocalDate(startDate as string)) : startOfDay(subDays(new Date(), 30));
+  const end = endDate ? endOfDay(parseLocalDate(endDate as string)) : endOfDay(new Date());
   
   if (isNaN(start.getTime()) || isNaN(end.getTime())) {
     res.status(400).json({ error: "Invalid date format" });
@@ -566,8 +577,8 @@ router.get("/finance/customizations-report", requirePermission("reports:view"), 
 router.get("/finance/customization-analytics", requirePermission("reports:view"), async (req, res) => {
   const { startDate, endDate, branchId } = req.query;
   const targetBranchId = branchId && branchId !== "all" ? parseInt(branchId as string) : null;
-  const start = startDate ? startOfDay(new Date(startDate as string)) : startOfDay(subDays(new Date(), 30));
-  const end = endDate ? endOfDay(new Date(endDate as string)) : endOfDay(new Date());
+  const start = startDate ? startOfDay(parseLocalDate(startDate as string)) : startOfDay(subDays(new Date(), 30));
+  const end = endDate ? endOfDay(parseLocalDate(endDate as string)) : endOfDay(new Date());
   
   if (isNaN(start.getTime()) || isNaN(end.getTime())) {
     res.status(400).json({ error: "Invalid date format" });
@@ -675,8 +686,8 @@ router.get("/finance/customization-analytics", requirePermission("reports:view")
 // ── Order Statistics Report ────────────────────────────────────────────────
 router.get("/finance/order-stats", requirePermission("reports:view"), async (req, res) => {
   const { startDate, endDate, branchId } = req.query;
-  const start = startDate ? startOfDay(new Date(startDate as string)) : startOfDay(subDays(new Date(), 30));
-  const end = endDate ? endOfDay(new Date(endDate as string)) : endOfDay(new Date());
+  const start = startDate ? startOfDay(parseLocalDate(startDate as string)) : startOfDay(subDays(new Date(), 30));
+  const end = endDate ? endOfDay(parseLocalDate(endDate as string)) : endOfDay(new Date());
   
   const bId = String(branchId);
   const targetBranchId = (branchId && bId !== "all" && bId !== "undefined") ? parseInt(bId) : null;

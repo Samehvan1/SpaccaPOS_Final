@@ -8,6 +8,7 @@ const router: IRouter = Router();
 
 import bcrypt from "bcryptjs";
 import { requirePermission } from "../middleware/permissions";
+import { resolveUserPermissions } from "../lib/permissions";
 
 const CashierLoginBody = z.object({
   username: z.string().min(1),
@@ -79,6 +80,8 @@ router.post("/cashier/login", async (req, res): Promise<void> => {
       .where(eq(cashierSessionsTable.id, session.id));
   }
 
+  const permissions = await resolveUserPermissions(user.id, user.role);
+
   // Store session in express session
   const sess = req.session as any;
   sess.cashierSessionId = session.id;
@@ -86,6 +89,7 @@ router.post("/cashier/login", async (req, res): Promise<void> => {
   sess.userId = user.id; // Unify with standard auth
   sess.role = user.role;
   sess.branchId = user.branchId;
+  sess.permissions = permissions;
 
 
   req.session.save((err) => {

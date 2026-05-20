@@ -80644,6 +80644,26 @@ async function resolveUserPermissions(userId, role) {
 }
 
 // src/routes/auth.ts
+var RateLimiter = class {
+  constructor(windowMs, maxRequests) {
+    this.windowMs = windowMs;
+    this.maxRequests = maxRequests;
+  }
+  requests = /* @__PURE__ */ new Map();
+  isLimitExceeded(key) {
+    const now = Date.now();
+    const timestamps = this.requests.get(key) ?? [];
+    const validTimestamps = timestamps.filter((ts) => now - ts < this.windowMs);
+    if (validTimestamps.length >= this.maxRequests) {
+      return true;
+    }
+    validTimestamps.push(now);
+    this.requests.set(key, validTimestamps);
+    return false;
+  }
+};
+var loginRateLimiter = new RateLimiter(15 * 60 * 1e3, 10);
+var pinRateLimiter = new RateLimiter(5 * 60 * 1e3, 10);
 var router2 = (0, import_express2.Router)();
 router2.post("/auth/login", async (req, res) => {
   const parsed = BaristaLoginBody2.safeParse(req.body);
@@ -80652,6 +80672,12 @@ router2.post("/auth/login", async (req, res) => {
     return;
   }
   const { username, password } = parsed.data;
+  const ip = req.ip || "unknown-ip";
+  const rateLimitKey = `login:${ip}:${username}`;
+  if (loginRateLimiter.isLimitExceeded(rateLimitKey)) {
+    res.status(429).json({ error: "Too many login attempts. Please try again in 15 minutes." });
+    return;
+  }
   const [result] = await db.select({
     user: usersTable,
     branchName: branchesTable.name
@@ -80669,9 +80695,11 @@ router2.post("/auth/login", async (req, res) => {
     res.status(403).json({ error: "Account is inactive" });
     return;
   }
+  const permissions = await resolveUserPermissions(result.user.id, result.user.role);
   req.session.userId = result.user.id;
   req.session.branchId = result.user.branchId;
   req.session.role = result.user.role;
+  req.session.permissions = permissions;
   await db.insert(activityLogsTable).values({
     userId: result.user.id,
     action: "LOGIN",
@@ -80679,7 +80707,6 @@ router2.post("/auth/login", async (req, res) => {
     entityId: result.user.id,
     details: { ip: req.ip, userAgent: req.get("user-agent") }
   });
-  const permissions = await resolveUserPermissions(result.user.id, result.user.role);
   const payload = BaristaLoginResponse2.parse({
     user: {
       id: result.user.id,
@@ -80721,7 +80748,12 @@ router2.get("/auth/me", async (req, res) => {
     res.status(401).json({ error: "Not authenticated" });
     return;
   }
-  const permissions = await resolveUserPermissions(result.user.id, result.user.role);
+  let permissions = req.session.permissions;
+  if (!permissions) {
+    permissions = await resolveUserPermissions(result.user.id, result.user.role);
+    req.session.permissions = permissions;
+    await new Promise((resolve2) => req.session.save(() => resolve2()));
+  }
   res.json(
     GetMeResponse2.parse({
       id: result.user.id,
@@ -80742,6 +80774,12 @@ router2.post("/auth/verify-pin", async (req, res) => {
     res.status(400).json({ error: "PIN is required" });
     return;
   }
+  const ip = req.ip || "unknown-ip";
+  const rateLimitKey = `pin:${ip}`;
+  if (pinRateLimiter.isLimitExceeded(rateLimitKey)) {
+    res.status(429).json({ error: "Too many PIN verification attempts. Please try again in 5 minutes." });
+    return;
+  }
   const [user] = await db.select().from(usersTable).where(
     and(
       eq(usersTable.pin, pin),
@@ -80755,16 +80793,6 @@ router2.post("/auth/verify-pin", async (req, res) => {
     return;
   }
   res.json({ success: true, message: "PIN verified" });
-});
-router2.post("/auth/emergency-login", async (req, res) => {
-  const [user] = await db.select().from(usersTable).where(eq(usersTable.username, "admin")).limit(1);
-  if (!user) {
-    res.status(404).json({ error: "Admin user not found" });
-    return;
-  }
-  req.session.userId = user.id;
-  req.session.role = user.role;
-  req.session.save(() => res.json({ success: true }));
 });
 router2.post("/auth/change-profile", async (req, res) => {
   const userId = req.session.userId;
@@ -80830,56 +80858,42 @@ function requirePermission(permissionKey) {
       res.status(401).json({ error: "Not authenticated" });
       return;
     }
-    if (!req.user) {
-      const [user2] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
-      if (!user2) {
-        res.status(401).json({ error: "User not found" });
-        return;
-      }
-      req.user = user2;
-    }
-    const user = req.user;
-    const role = user.role;
-    if (role === "admin") {
-      const [denial] = await db.select().from(userPermissionsTable).where(
-        and(
-          eq(userPermissionsTable.userId, userId),
-          eq(userPermissionsTable.permissionKey, permissionKey),
-          eq(userPermissionsTable.granted, false)
-        )
-      ).limit(1);
-      if (!denial) return next();
-    }
-    const [userOverride] = await db.select().from(userPermissionsTable).where(
-      and(
-        eq(userPermissionsTable.userId, userId),
-        eq(userPermissionsTable.permissionKey, permissionKey)
-      )
-    ).limit(1);
-    if (userOverride) {
-      if (userOverride.granted) {
-        return next();
-      } else {
-        res.status(403).json({ error: "Insufficient permissions (denied at user level)" });
+    let permissions = session2.permissions;
+    if (!permissions) {
+      try {
+        if (!req.user) {
+          const [user2] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+          if (!user2) {
+            res.status(401).json({ error: "User not found" });
+            return;
+          }
+          req.user = user2;
+        }
+        const user = req.user;
+        permissions = await resolveUserPermissions(user.id, user.role);
+        session2.permissions = permissions;
+        await new Promise((resolve2, reject) => {
+          session2.save((err) => {
+            if (err) reject(err);
+            else resolve2();
+          });
+        });
+      } catch (error40) {
+        console.error("[Permission] Error lazy loading permissions:", error40);
+        res.status(500).json({ error: "Failed to resolve permissions" });
         return;
       }
     }
-    const [rolePermission] = await db.select().from(rolePermissionsTable).where(
-      and(
-        eq(rolePermissionsTable.roleKey, role),
-        eq(rolePermissionsTable.permissionKey, permissionKey)
-      )
-    ).limit(1);
-    if (!rolePermission) {
-      console.log(`[Permission] DENIED: User ${userId} (Role: ${role}) lacks '${permissionKey}'`);
+    if (!permissions.includes(permissionKey)) {
+      console.log(`[Permission] DENIED: User ${userId} (Role: ${session2.role}) lacks '${permissionKey}'`);
       res.status(403).json({
         error: `Insufficient permissions: '${permissionKey}' required`,
-        role,
+        role: session2.role,
         permission: permissionKey
       });
       return;
     }
-    console.log(`[Permission] GRANTED: User ${userId} (Role: ${role}) for '${permissionKey}'`);
+    console.log(`[Permission] GRANTED: User ${userId} (Role: ${session2.role}) for '${permissionKey}'`);
     next();
   };
 }
@@ -80893,9 +80907,12 @@ async function calculateDrinkData(drinkId, selections, branchId = null) {
   const [drink] = await db.select().from(drinksTable).where(eq(drinksTable.id, drinkId));
   if (!drink) throw new Error("Drink not found");
   const rawSlots = await db.select().from(drinkIngredientSlotsTable).where(eq(drinkIngredientSlotsTable.drinkId, drinkId));
-  const slots = await Promise.all(rawSlots.map(async (slot) => {
+  const predefinedSlotIds = rawSlots.map((s) => s.predefinedSlotId).filter((id) => id !== null);
+  const predefinedSlots = predefinedSlotIds.length > 0 ? await db.select().from(predefinedSlotsTable).where(inArray(predefinedSlotsTable.id, predefinedSlotIds)) : [];
+  const predefinedSlotsMap = new Map(predefinedSlots.map((ps) => [ps.id, ps]));
+  const slots = rawSlots.map((slot) => {
     if (!slot.predefinedSlotId) return slot;
-    const [template] = await db.select().from(predefinedSlotsTable).where(eq(predefinedSlotsTable.id, slot.predefinedSlotId));
+    const template = predefinedSlotsMap.get(slot.predefinedSlotId);
     if (!template) return slot;
     return {
       ...slot,
@@ -80904,7 +80921,94 @@ async function calculateDrinkData(drinkId, selections, branchId = null) {
       isDynamic: slot.isDynamic ?? template.isDynamic,
       affectsCupSize: slot.affectsCupSize ?? template.affectsCupSize
     };
-  }));
+  });
+  const slotIds = slots.map((s) => s.id);
+  const possibleOptionIds = /* @__PURE__ */ new Set();
+  const possibleTypeIds = /* @__PURE__ */ new Set();
+  slots.forEach((s) => {
+    if (s.defaultOptionId) possibleOptionIds.add(s.defaultOptionId);
+    if (s.ingredientTypeId) possibleTypeIds.add(s.ingredientTypeId);
+  });
+  selections.forEach((sel) => {
+    if (sel.optionId) possibleOptionIds.add(sel.optionId);
+    if (sel.subOptionId) possibleOptionIds.add(sel.subOptionId);
+    if (sel.ingredientTypeId) possibleTypeIds.add(sel.ingredientTypeId);
+  });
+  const possibleOptionIdList = Array.from(possibleOptionIds);
+  const [
+    drinkTypeOptionsAll,
+    templateTypeOptionsAll,
+    drinkSlotVolumesAll,
+    predefinedSlotVolumesAll,
+    ingredientOptionsAll
+  ] = await Promise.all([
+    slotIds.length > 0 ? db.select().from(drinkSlotTypeOptionsTable).where(inArray(drinkSlotTypeOptionsTable.slotId, slotIds)) : Promise.resolve([]),
+    predefinedSlotIds.length > 0 ? db.select().from(predefinedSlotTypeOptionsTable).where(inArray(predefinedSlotTypeOptionsTable.predefinedSlotId, predefinedSlotIds)) : Promise.resolve([]),
+    slotIds.length > 0 ? db.select().from(drinkSlotVolumesTable).where(inArray(drinkSlotVolumesTable.slotId, slotIds)) : Promise.resolve([]),
+    predefinedSlotIds.length > 0 ? db.select().from(predefinedSlotVolumesTable).where(inArray(predefinedSlotVolumesTable.predefinedSlotId, predefinedSlotIds)) : Promise.resolve([]),
+    possibleOptionIdList.length > 0 ? db.select().from(ingredientOptionsTable).where(inArray(ingredientOptionsTable.id, possibleOptionIdList)) : Promise.resolve([])
+  ]);
+  drinkTypeOptionsAll.forEach((to) => {
+    if (to.ingredientTypeId) possibleTypeIds.add(to.ingredientTypeId);
+  });
+  templateTypeOptionsAll.forEach((to) => {
+    if (to.ingredientTypeId) possibleTypeIds.add(to.ingredientTypeId);
+  });
+  const possibleTypeIdList = Array.from(possibleTypeIds);
+  const selectionTypeVolumeIds = selections.map((s) => s.typeVolumeId).filter((id) => id !== null);
+  const [
+    ingredientTypesAll,
+    typeVolumesAll,
+    typeVolumesBySpecificId
+  ] = await Promise.all([
+    possibleTypeIdList.length > 0 ? db.select().from(ingredientTypesTable).where(inArray(ingredientTypesTable.id, possibleTypeIdList)) : Promise.resolve([]),
+    possibleTypeIdList.length > 0 ? db.select().from(ingredientTypeVolumesTable).where(and(inArray(ingredientTypeVolumesTable.ingredientTypeId, possibleTypeIdList), eq(ingredientTypeVolumesTable.isActive, true))) : Promise.resolve([]),
+    selectionTypeVolumeIds.length > 0 ? db.select().from(ingredientTypeVolumesTable).where(inArray(ingredientTypeVolumesTable.id, selectionTypeVolumeIds)) : Promise.resolve([])
+  ]);
+  const ingredientTypesMap = new Map(ingredientTypesAll.map((it) => [it.id, it]));
+  const typeVolumeMap = /* @__PURE__ */ new Map();
+  typeVolumesAll.forEach((tv) => typeVolumeMap.set(tv.id, tv));
+  typeVolumesBySpecificId.forEach((tv) => typeVolumeMap.set(tv.id, tv));
+  const volumeIds = Array.from(typeVolumeMap.values()).map((tv) => tv.volumeId).filter((id) => id !== null);
+  const possibleIngredientIds = /* @__PURE__ */ new Set();
+  if (drink.cupIngredientId) possibleIngredientIds.add(drink.cupIngredientId);
+  slots.forEach((s) => {
+    if (s.isDynamic && s.ingredientId) possibleIngredientIds.add(s.ingredientId);
+  });
+  ingredientTypesAll.forEach((it) => {
+    if (it.inventoryIngredientId) possibleIngredientIds.add(it.inventoryIngredientId);
+  });
+  ingredientOptionsAll.forEach((opt) => {
+    if (opt.linkedIngredientId) possibleIngredientIds.add(opt.linkedIngredientId);
+  });
+  const ingredientIdsList = Array.from(possibleIngredientIds);
+  const [baseVolumesAll, ingredientsAll] = await Promise.all([
+    volumeIds.length > 0 ? db.select().from(ingredientVolumesTable).where(inArray(ingredientVolumesTable.id, volumeIds)) : Promise.resolve([]),
+    ingredientIdsList.length > 0 ? db.select().from(ingredientsTable).where(inArray(ingredientsTable.id, ingredientIdsList)) : Promise.resolve([])
+  ]);
+  const baseVolumesMap = new Map(baseVolumesAll.map((bv) => [bv.id, bv]));
+  const ingredientsMap = new Map(ingredientsAll.map((ing) => [ing.id, ing]));
+  const ingredientOptionsMap = new Map(ingredientOptionsAll.map((opt) => [opt.id, opt]));
+  const drinkTypeOptionsMap = /* @__PURE__ */ new Map();
+  drinkTypeOptionsAll.forEach((to) => {
+    const list = drinkTypeOptionsMap.get(to.slotId) ?? [];
+    list.push(to);
+    drinkTypeOptionsMap.set(to.slotId, list);
+  });
+  const templateTypeOptionsMap = /* @__PURE__ */ new Map();
+  templateTypeOptionsAll.forEach((to) => {
+    const list = templateTypeOptionsMap.get(to.predefinedSlotId) ?? [];
+    list.push(to);
+    templateTypeOptionsMap.set(to.predefinedSlotId, list);
+  });
+  const drinkSlotVolumesMap = /* @__PURE__ */ new Map();
+  drinkSlotVolumesAll.forEach((sv) => {
+    drinkSlotVolumesMap.set(`${sv.slotId}:${sv.typeVolumeId}`, sv);
+  });
+  const predefinedSlotVolumesMap = /* @__PURE__ */ new Map();
+  predefinedSlotVolumesAll.forEach((sv) => {
+    predefinedSlotVolumesMap.set(`${sv.predefinedSlotId}:${sv.typeVolumeId}`, sv);
+  });
   const customizations = [];
   let totalExtras = 0;
   let usedVolumeMl = 0;
@@ -80920,19 +81024,19 @@ async function calculateDrinkData(drinkId, selections, branchId = null) {
       }
     }
     if (!sel) {
-      const drinkTypeOptions = await db.select().from(drinkSlotTypeOptionsTable).where(eq(drinkSlotTypeOptionsTable.slotId, slot.id));
+      const drinkTypeOptions = drinkTypeOptionsMap.get(slot.id) ?? [];
       let templateTypeOptions = [];
       if (slot.predefinedSlotId) {
-        templateTypeOptions = await db.select().from(predefinedSlotTypeOptionsTable).where(eq(predefinedSlotTypeOptionsTable.predefinedSlotId, slot.predefinedSlotId));
+        templateTypeOptions = templateTypeOptionsMap.get(slot.predefinedSlotId) ?? [];
       }
       const typeOptions = drinkTypeOptions.length > 0 ? drinkTypeOptions : templateTypeOptions;
       if (typeOptions.length > 0) {
         const defType = typeOptions.find((to) => to.isDefault) ?? typeOptions[0];
         if (defType) {
-          const typeVolumes = await db.select().from(ingredientTypeVolumesTable).where(and(eq(ingredientTypeVolumesTable.ingredientTypeId, defType.ingredientTypeId), eq(ingredientTypeVolumesTable.isActive, true)));
+          const typeVolumes = typeVolumesAll.filter((tv) => tv.ingredientTypeId === defType.ingredientTypeId);
           if (typeVolumes.length > 0) {
-            const slotVolumes = await db.select().from(drinkSlotVolumesTable).where(eq(drinkSlotVolumesTable.slotId, slot.id));
-            const templateVolumes = slot.predefinedSlotId ? await db.select().from(predefinedSlotVolumesTable).where(eq(predefinedSlotVolumesTable.predefinedSlotId, slot.predefinedSlotId)) : [];
+            const slotVolumes = drinkSlotVolumesAll.filter((sv) => sv.slotId === slot.id);
+            const templateVolumes = slot.predefinedSlotId ? predefinedSlotVolumesAll.filter((tv) => tv.predefinedSlotId === slot.predefinedSlotId) : [];
             const slotVolumeMap = new Map(slotVolumes.map((sv) => [sv.typeVolumeId, sv]));
             const templateVolumeMap = new Map(templateVolumes.map((tv) => [tv.typeVolumeId, tv]));
             const defVol = typeVolumes.find((tv) => {
@@ -80962,26 +81066,23 @@ async function calculateDrinkData(drinkId, selections, branchId = null) {
     }
     if (!sel) continue;
     if (sel.typeVolumeId) {
-      const [typeVol] = await db.select().from(ingredientTypeVolumesTable).where(eq(ingredientTypeVolumesTable.id, sel.typeVolumeId));
+      const typeVol = typeVolumeMap.get(sel.typeVolumeId);
       if (!typeVol) continue;
-      const [slotVol] = await db.select().from(drinkSlotVolumesTable).where(and(
-        eq(drinkSlotVolumesTable.slotId, slot.id),
-        eq(drinkSlotVolumesTable.typeVolumeId, sel.typeVolumeId)
-      ));
-      const [typeDef] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, typeVol.ingredientTypeId));
-      const drinkTypeOptions = await db.select().from(drinkSlotTypeOptionsTable).where(eq(drinkSlotTypeOptionsTable.slotId, slot.id));
+      const slotVol = drinkSlotVolumesMap.get(`${slot.id}:${sel.typeVolumeId}`);
+      const typeDef = ingredientTypesMap.get(typeVol.ingredientTypeId);
+      const drinkTypeOptions = drinkTypeOptionsMap.get(slot.id) ?? [];
       let templateTypeOptions = [];
       if (slot.predefinedSlotId) {
-        templateTypeOptions = await db.select().from(predefinedSlotTypeOptionsTable).where(eq(predefinedSlotTypeOptionsTable.predefinedSlotId, slot.predefinedSlotId));
+        templateTypeOptions = templateTypeOptionsMap.get(slot.predefinedSlotId) ?? [];
       }
       const typeOptions = drinkTypeOptions.length > 0 ? drinkTypeOptions : templateTypeOptions;
       const typeOpt = typeOptions.find((to) => to.ingredientTypeId === typeVol.ingredientTypeId);
       const typeExtraCost = parseFloat(typeOpt?.extraCost ?? typeDef?.extraCost ?? "0") || 0;
       const inventoryId = typeDef?.inventoryIngredientId ?? null;
       const typeName = typeDef?.name ?? "";
-      const [volDef] = typeVol.volumeId ? await db.select().from(ingredientVolumesTable).where(eq(ingredientVolumesTable.id, typeVol.volumeId)) : [null];
+      const volDef = typeVol.volumeId ? baseVolumesMap.get(typeVol.volumeId) : null;
       const volumeName = volDef?.name ?? "";
-      const [templateDef] = slot.predefinedSlotId ? await db.select().from(predefinedSlotVolumesTable).where(and(eq(predefinedSlotVolumesTable.predefinedSlotId, slot.predefinedSlotId), eq(predefinedSlotVolumesTable.typeVolumeId, sel.typeVolumeId))) : [null];
+      const templateDef = slot.predefinedSlotId ? predefinedSlotVolumesMap.get(`${slot.predefinedSlotId}:${sel.typeVolumeId}`) : null;
       const volExtraCost = parseFloat(slotVol?.extraCost ?? templateDef?.extraCost ?? typeVol.extraCost) || 0;
       const extraCost2 = typeExtraCost + volExtraCost;
       totalExtras += extraCost2;
@@ -81009,10 +81110,15 @@ async function calculateDrinkData(drinkId, selections, branchId = null) {
       continue;
     }
     if (sel.ingredientTypeId) {
-      const [ingType] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, sel.ingredientTypeId));
+      const ingType = ingredientTypesMap.get(sel.ingredientTypeId);
       if (ingType) {
-        const [slotTypeOpt] = await db.select().from(drinkSlotTypeOptionsTable).where(and(eq(drinkSlotTypeOptionsTable.slotId, slot.id), eq(drinkSlotTypeOptionsTable.ingredientTypeId, sel.ingredientTypeId)));
-        const [templateTypeOpt] = slot.predefinedSlotId ? await db.select().from(predefinedSlotTypeOptionsTable).where(and(eq(predefinedSlotTypeOptionsTable.predefinedSlotId, slot.predefinedSlotId), eq(predefinedSlotTypeOptionsTable.ingredientTypeId, sel.ingredientTypeId))) : [null];
+        const drinkTypeOptions = drinkTypeOptionsMap.get(slot.id) ?? [];
+        const slotTypeOpt = drinkTypeOptions.find((to) => to.ingredientTypeId === sel.ingredientTypeId);
+        let templateTypeOpt = null;
+        if (slot.predefinedSlotId) {
+          const templateTypeOptions = templateTypeOptionsMap.get(slot.predefinedSlotId) ?? [];
+          templateTypeOpt = templateTypeOptions.find((pto) => pto.ingredientTypeId === sel.ingredientTypeId);
+        }
         const consumedQty = parseFloat(slotTypeOpt?.processedQty ?? templateTypeOpt?.processedQty ?? ingType.processedQty ?? "0") || 0;
         const producedQty = parseFloat(slotTypeOpt?.producedQty ?? templateTypeOpt?.producedQty ?? ingType.producedQty ?? "0") || 0;
         const pricingMode = slotTypeOpt?.pricingMode ?? templateTypeOpt?.pricingMode ?? ingType.pricingMode ?? "volume";
@@ -81042,10 +81148,10 @@ async function calculateDrinkData(drinkId, selections, branchId = null) {
       continue;
     }
     if (!sel.optionId) continue;
-    const [option] = await db.select().from(ingredientOptionsTable).where(eq(ingredientOptionsTable.id, sel.optionId));
+    const option = ingredientOptionsMap.get(sel.optionId);
     if (!option) continue;
     if (option.linkedIngredientId && sel.subOptionId) {
-      const [subOption] = await db.select().from(ingredientOptionsTable).where(eq(ingredientOptionsTable.id, sel.subOptionId));
+      const subOption = ingredientOptionsMap.get(sel.subOptionId);
       if (subOption) {
         const extraCost2 = parseFloat(subOption.extraCost) || 0;
         totalExtras += extraCost2;
@@ -81094,10 +81200,10 @@ async function calculateDrinkData(drinkId, selections, branchId = null) {
   const dynamicSlot = slots.find((s) => s.isDynamic);
   if (dynamicSlot && drink.cupSizeMl) {
     const filledMl = Math.max(0, drink.cupSizeMl - usedVolumeMl);
-    const drinkTypeOptions = await db.select().from(drinkSlotTypeOptionsTable).where(eq(drinkSlotTypeOptionsTable.slotId, dynamicSlot.id));
+    const drinkTypeOptions = drinkTypeOptionsMap.get(dynamicSlot.id) ?? [];
     let templateTypeOptions = [];
     if (dynamicSlot.predefinedSlotId) {
-      templateTypeOptions = await db.select().from(predefinedSlotTypeOptionsTable).where(eq(predefinedSlotTypeOptionsTable.predefinedSlotId, dynamicSlot.predefinedSlotId));
+      templateTypeOptions = templateTypeOptionsMap.get(dynamicSlot.predefinedSlotId) ?? [];
     }
     const typeOptions = drinkTypeOptions.length > 0 ? drinkTypeOptions : templateTypeOptions;
     if (dynamicSlot.ingredientTypeId || typeOptions.length > 0) {
@@ -81108,23 +81214,20 @@ async function calculateDrinkData(drinkId, selections, branchId = null) {
         effectiveTypeId = defType?.ingredientTypeId ?? dynamicSlot.ingredientTypeId;
       }
       if (effectiveTypeId) {
-        const [ingredientType] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, effectiveTypeId));
+        const ingredientType = ingredientTypesMap.get(effectiveTypeId);
         let typeVolumeId = dynamicSelection?.typeVolumeId ? Number(dynamicSelection.typeVolumeId) : null;
         if (!typeVolumeId || isNaN(typeVolumeId)) {
-          const typeVolumes = await db.select().from(ingredientTypeVolumesTable).where(and(eq(ingredientTypeVolumesTable.ingredientTypeId, effectiveTypeId), eq(ingredientTypeVolumesTable.isActive, true)));
+          const typeVolumes = typeVolumesAll.filter((tv) => tv.ingredientTypeId === effectiveTypeId);
           const defVol = typeVolumes.find((tv) => tv.isDefault) ?? typeVolumes[0];
           typeVolumeId = defVol?.id ?? null;
         }
-        const [slotVol] = await db.select().from(drinkSlotVolumesTable).where(and(
-          eq(drinkSlotVolumesTable.slotId, dynamicSlot.id),
-          eq(drinkSlotVolumesTable.typeVolumeId, typeVolumeId)
-        ));
-        const [templateDef] = dynamicSlot.predefinedSlotId ? await db.select().from(predefinedSlotVolumesTable).where(and(eq(predefinedSlotVolumesTable.predefinedSlotId, dynamicSlot.predefinedSlotId), eq(predefinedSlotVolumesTable.typeVolumeId, typeVolumeId))) : [null];
+        const slotVol = drinkSlotVolumesMap.get(`${dynamicSlot.id}:${typeVolumeId}`);
+        const templateDef = dynamicSlot.predefinedSlotId ? predefinedSlotVolumesMap.get(`${dynamicSlot.predefinedSlotId}:${typeVolumeId}`) : null;
         let conversionRate = 1;
         let unit = "ml";
         if (typeVolumeId) {
-          const [typeVolume] = await db.select().from(ingredientTypeVolumesTable).where(eq(ingredientTypeVolumesTable.id, typeVolumeId));
-          const [volDef] = typeVolume?.volumeId ? await db.select().from(ingredientVolumesTable).where(eq(ingredientVolumesTable.id, typeVolume.volumeId)) : [null];
+          const typeVolume = typeVolumeMap.get(typeVolumeId);
+          const volDef = typeVolume?.volumeId ? baseVolumesMap.get(typeVolume.volumeId) : null;
           if (typeVolume) {
             const processedQty = parseFloat(slotVol?.processedQty ?? templateDef?.processedQty ?? typeVolume.processedQty ?? volDef?.processedQty ?? "0") || 0;
             const producedQty = parseFloat(slotVol?.producedQty ?? templateDef?.producedQty ?? typeVolume.producedQty ?? volDef?.producedQty ?? "0") || 0;
@@ -81179,13 +81282,13 @@ async function calculateDrinkData(drinkId, selections, branchId = null) {
         let consumedQty = 0;
         let optionLabel = `Dynamic (${Math.round(filledMl)}ml)`;
         let ingredientName = "Dynamic";
-        const [option] = await db.select().from(ingredientOptionsTable).where(eq(ingredientOptionsTable.id, optionId));
+        const option = ingredientOptionsMap.get(optionId);
         if (option) {
           const processedQty = parseFloat(option.processedQty) || 0;
           const producedQty = parseFloat(option.producedQty) || 0;
           const conversionRate = producedQty > 0 ? processedQty / producedQty : 1;
           consumedQty = filledMl * conversionRate;
-          const [ingredient] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, dynamicSlot.ingredientId));
+          const ingredient = ingredientsMap.get(dynamicSlot.ingredientId);
           if (ingredient) {
             cost = consumedQty * parseFloat(ingredient.costPerUnit);
             ingredientName = ingredient.name;
@@ -81219,7 +81322,7 @@ async function calculateDrinkData(drinkId, selections, branchId = null) {
     }
   }
   if (drink.cupIngredientId) {
-    const [cupIng] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, drink.cupIngredientId));
+    const cupIng = ingredientsMap.get(drink.cupIngredientId);
     if (cupIng) {
       customizations.push({
         ingredientId: cupIng.id,
@@ -85055,12 +85158,14 @@ router15.post("/cashier/login", async (req, res) => {
   } else {
     await db.update(cashierSessionsTable).set({ ipAddress, userAgent }).where(eq(cashierSessionsTable.id, session2.id));
   }
+  const permissions = await resolveUserPermissions(user.id, user.role);
   const sess = req.session;
   sess.cashierSessionId = session2.id;
   sess.cashierId = user.id;
   sess.userId = user.id;
   sess.role = user.role;
   sess.branchId = user.branchId;
+  sess.permissions = permissions;
   req.session.save((err) => {
     if (err) {
       res.status(500).json({ error: "Session error" });
@@ -86004,12 +86109,22 @@ function analyzeCustomization(cust, context) {
 }
 
 // src/routes/finance.ts
+function parseLocalDate(dateStr) {
+  if (!dateStr || typeof dateStr !== "string") return /* @__PURE__ */ new Date();
+  const parts = dateStr.split("-");
+  if (parts.length !== 3) return new Date(dateStr);
+  const year = parseInt(parts[0], 10);
+  const month = parseInt(parts[1], 10) - 1;
+  const day = parseInt(parts[2], 10);
+  const date6 = new Date(year, month, day);
+  return isNaN(date6.getTime()) ? new Date(dateStr) : date6;
+}
 var router18 = (0, import_express21.Router)();
 router18.get("/finance/inventory-usage", requirePermission("reports:view"), async (req, res) => {
   const { startDate, endDate, branchId } = req.query;
   const targetBranchId = branchId && branchId !== "all" ? parseInt(branchId) : null;
-  const start = startDate ? startOfDay(new Date(startDate)) : startOfDay(subDays(/* @__PURE__ */ new Date(), 30));
-  const end = endDate ? endOfDay(new Date(endDate)) : endOfDay(/* @__PURE__ */ new Date());
+  const start = startDate ? startOfDay(parseLocalDate(startDate)) : startOfDay(subDays(/* @__PURE__ */ new Date(), 30));
+  const end = endDate ? endOfDay(parseLocalDate(endDate)) : endOfDay(/* @__PURE__ */ new Date());
   if (isNaN(start.getTime()) || isNaN(end.getTime())) {
     res.status(400).json({ error: "Invalid date format" });
     return;
@@ -86054,8 +86169,8 @@ router18.get("/finance/inventory-usage", requirePermission("reports:view"), asyn
 router18.get("/finance/pl-report", requirePermission("reports:view"), async (req, res) => {
   const { startDate, endDate, branchId } = req.query;
   const targetBranchId = branchId && branchId !== "all" ? parseInt(branchId) : null;
-  const start = startDate ? startOfDay(new Date(startDate)) : startOfDay(subDays(/* @__PURE__ */ new Date(), 30));
-  const end = endDate ? endOfDay(new Date(endDate)) : endOfDay(/* @__PURE__ */ new Date());
+  const start = startDate ? startOfDay(parseLocalDate(startDate)) : startOfDay(subDays(/* @__PURE__ */ new Date(), 30));
+  const end = endDate ? endOfDay(parseLocalDate(endDate)) : endOfDay(/* @__PURE__ */ new Date());
   if (isNaN(start.getTime()) || isNaN(end.getTime())) {
     res.status(400).json({ error: "Invalid date format" });
     return;
@@ -86258,8 +86373,8 @@ router18.get("/finance/ingredient-recipes", requirePermission("reports:view"), a
 router18.get("/finance/sales-items", requirePermission("reports:view"), async (req, res) => {
   const { startDate, endDate, branchId } = req.query;
   const targetBranchId = branchId && branchId !== "all" ? parseInt(branchId) : null;
-  const start = startDate ? startOfDay(new Date(startDate)) : startOfDay(subDays(/* @__PURE__ */ new Date(), 30));
-  const end = endDate ? endOfDay(new Date(endDate)) : endOfDay(/* @__PURE__ */ new Date());
+  const start = startDate ? startOfDay(parseLocalDate(startDate)) : startOfDay(subDays(/* @__PURE__ */ new Date(), 30));
+  const end = endDate ? endOfDay(parseLocalDate(endDate)) : endOfDay(/* @__PURE__ */ new Date());
   if (isNaN(start.getTime()) || isNaN(end.getTime())) {
     res.status(400).json({ error: "Invalid date format" });
     return;
@@ -86336,8 +86451,8 @@ router18.get("/finance/sales-items", requirePermission("reports:view"), async (r
 router18.get("/finance/sales-summary", requirePermission("reports:view"), async (req, res) => {
   const { startDate, endDate, branchId } = req.query;
   const targetBranchId = branchId && branchId !== "all" ? parseInt(branchId) : null;
-  const start = startDate ? startOfDay(new Date(startDate)) : startOfDay(subDays(/* @__PURE__ */ new Date(), 30));
-  const end = endDate ? endOfDay(new Date(endDate)) : endOfDay(/* @__PURE__ */ new Date());
+  const start = startDate ? startOfDay(parseLocalDate(startDate)) : startOfDay(subDays(/* @__PURE__ */ new Date(), 30));
+  const end = endDate ? endOfDay(parseLocalDate(endDate)) : endOfDay(/* @__PURE__ */ new Date());
   if (isNaN(start.getTime()) || isNaN(end.getTime())) {
     res.status(400).json({ error: "Invalid date format" });
     return;
@@ -86366,8 +86481,8 @@ router18.get("/finance/sales-summary", requirePermission("reports:view"), async 
 router18.get("/finance/customizations-report", requirePermission("reports:view"), async (req, res) => {
   const { startDate, endDate, branchId } = req.query;
   const targetBranchId = branchId && branchId !== "all" ? parseInt(branchId) : null;
-  const start = startDate ? startOfDay(new Date(startDate)) : startOfDay(subDays(/* @__PURE__ */ new Date(), 30));
-  const end = endDate ? endOfDay(new Date(endDate)) : endOfDay(/* @__PURE__ */ new Date());
+  const start = startDate ? startOfDay(parseLocalDate(startDate)) : startOfDay(subDays(/* @__PURE__ */ new Date(), 30));
+  const end = endDate ? endOfDay(parseLocalDate(endDate)) : endOfDay(/* @__PURE__ */ new Date());
   if (isNaN(start.getTime()) || isNaN(end.getTime())) {
     res.status(400).json({ error: "Invalid date format" });
     return;
@@ -86402,8 +86517,8 @@ router18.get("/finance/customizations-report", requirePermission("reports:view")
 router18.get("/finance/customization-analytics", requirePermission("reports:view"), async (req, res) => {
   const { startDate, endDate, branchId } = req.query;
   const targetBranchId = branchId && branchId !== "all" ? parseInt(branchId) : null;
-  const start = startDate ? startOfDay(new Date(startDate)) : startOfDay(subDays(/* @__PURE__ */ new Date(), 30));
-  const end = endDate ? endOfDay(new Date(endDate)) : endOfDay(/* @__PURE__ */ new Date());
+  const start = startDate ? startOfDay(parseLocalDate(startDate)) : startOfDay(subDays(/* @__PURE__ */ new Date(), 30));
+  const end = endDate ? endOfDay(parseLocalDate(endDate)) : endOfDay(/* @__PURE__ */ new Date());
   if (isNaN(start.getTime()) || isNaN(end.getTime())) {
     res.status(400).json({ error: "Invalid date format" });
     return;
@@ -86482,8 +86597,8 @@ router18.get("/finance/customization-analytics", requirePermission("reports:view
 });
 router18.get("/finance/order-stats", requirePermission("reports:view"), async (req, res) => {
   const { startDate, endDate, branchId } = req.query;
-  const start = startDate ? startOfDay(new Date(startDate)) : startOfDay(subDays(/* @__PURE__ */ new Date(), 30));
-  const end = endDate ? endOfDay(new Date(endDate)) : endOfDay(/* @__PURE__ */ new Date());
+  const start = startDate ? startOfDay(parseLocalDate(startDate)) : startOfDay(subDays(/* @__PURE__ */ new Date(), 30));
+  const end = endDate ? endOfDay(parseLocalDate(endDate)) : endOfDay(/* @__PURE__ */ new Date());
   const bId = String(branchId);
   const targetBranchId = branchId && bId !== "all" && bId !== "undefined" ? parseInt(bId) : null;
   const conditions = [
@@ -86642,6 +86757,12 @@ app.use(
 );
 app.use("/uploads", import_express23.default.static("uploads"));
 app.use("/api", routes_default);
+app.use((err, req, res, next) => {
+  req.log?.error(err, "Unhandled route error");
+  res.status(500).json({
+    error: "An unexpected error occurred. Please try again later."
+  });
+});
 var app_default = app;
 
 // src/index.ts

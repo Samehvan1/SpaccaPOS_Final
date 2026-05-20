@@ -6,6 +6,26 @@ import { BaristaLoginBody, BaristaLoginResponse, GetMeResponse } from "@workspac
 import bcrypt from "bcryptjs";
 import { resolveUserPermissions } from "../lib/permissions";
 
+
+export class RateLimiter {
+  private requests = new Map<string, number[]>();
+  constructor(private windowMs: number, private maxRequests: number) {}
+  isLimitExceeded(key: string): boolean {
+    const now = Date.now();
+    const timestamps = this.requests.get(key) ?? [];
+    const validTimestamps = timestamps.filter(ts => now - ts < this.windowMs);
+    if (validTimestamps.length >= this.maxRequests) {
+      return true;
+    }
+    validTimestamps.push(now);
+    this.requests.set(key, validTimestamps);
+    return false;
+  }
+}
+
+const loginRateLimiter = new RateLimiter(15 * 60 * 1000, 10); // 10 attempts per 15 mins
+const pinRateLimiter = new RateLimiter(5 * 60 * 1000, 10); // 10 attempts per 5 mins
+
 const router: IRouter = Router();
 
 router.post("/auth/login", async (req, res): Promise<void> => {
@@ -16,6 +36,13 @@ router.post("/auth/login", async (req, res): Promise<void> => {
   }
 
   const { username, password } = parsed.data;
+  const ip = req.ip || "unknown-ip";
+  const rateLimitKey = `login:${ip}:${username}`;
+
+  if (loginRateLimiter.isLimitExceeded(rateLimitKey)) {
+    res.status(429).json({ error: "Too many login attempts. Please try again in 15 minutes." });
+    return;
+  }
 
   const [result] = await db
     .select({
@@ -43,9 +70,12 @@ router.post("/auth/login", async (req, res): Promise<void> => {
     return;
   }
 
+  const permissions = await resolveUserPermissions(result.user.id, result.user.role);
+
   (req.session as unknown as Record<string, unknown>).userId = result.user.id;
   (req.session as unknown as Record<string, unknown>).branchId = result.user.branchId;
   (req.session as unknown as Record<string, unknown>).role = result.user.role;
+  (req.session as unknown as Record<string, unknown>).permissions = permissions;
 
   // Log activity
   await db.insert(activityLogsTable).values({
@@ -55,8 +85,6 @@ router.post("/auth/login", async (req, res): Promise<void> => {
     entityId: result.user.id,
     details: { ip: req.ip, userAgent: req.get("user-agent") },
   });
-
-  const permissions = await resolveUserPermissions(result.user.id, result.user.role);
 
   const payload = BaristaLoginResponse.parse({
     user: {
@@ -111,7 +139,12 @@ router.get("/auth/me", async (req, res): Promise<void> => {
     return;
   }
 
-  const permissions = await resolveUserPermissions(result.user.id, result.user.role);
+  let permissions = (req.session as any).permissions;
+  if (!permissions) {
+    permissions = await resolveUserPermissions(result.user.id, result.user.role);
+    (req.session as any).permissions = permissions;
+    await new Promise<void>((resolve) => req.session.save(() => resolve()));
+  }
 
   res.json(
     GetMeResponse.parse({
@@ -135,6 +168,14 @@ router.post("/auth/verify-pin", async (req, res): Promise<void> => {
     return;
   }
 
+  const ip = req.ip || "unknown-ip";
+  const rateLimitKey = `pin:${ip}`;
+
+  if (pinRateLimiter.isLimitExceeded(rateLimitKey)) {
+    res.status(429).json({ error: "Too many PIN verification attempts. Please try again in 5 minutes." });
+    return;
+  }
+
   const [user] = await db
     .select()
     .from(usersTable)
@@ -154,19 +195,6 @@ router.post("/auth/verify-pin", async (req, res): Promise<void> => {
   }
 
   res.json({ success: true, message: "PIN verified" });
-});
-
-// EMERGENCY: Bypasses password for the first admin user found. 
-// Use this to recover access if password hashes are broken.
-router.post("/auth/emergency-login", async (req, res): Promise<void> => {
-  const [user] = await db.select().from(usersTable).where(eq(usersTable.username, "admin")).limit(1);
-  if (!user) {
-    res.status(404).json({ error: "Admin user not found" });
-    return;
-  }
-  (req.session as any).userId = user.id;
-  (req.session as any).role = user.role;
-  req.session.save(() => res.json({ success: true }));
 });
 
 // Allow logged-in user to change their own password and PIN

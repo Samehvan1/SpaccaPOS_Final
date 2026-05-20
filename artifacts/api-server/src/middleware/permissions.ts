@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from "express";
-import { db, rolePermissionsTable, userPermissionsTable, usersTable } from "@workspace/db";
-import { eq, and, or } from "drizzle-orm";
+import { db, usersTable } from "@workspace/db";
+import { eq } from "drizzle-orm";
+import { resolveUserPermissions } from "../lib/permissions";
 
 export function requirePermission(permissionKey: string) {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -12,80 +13,48 @@ export function requirePermission(permissionKey: string) {
       return;
     }
 
-    if (!(req as any).user) {
-      const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
-      if (!user) {
-        res.status(401).json({ error: "User not found" });
-        return;
-      }
-      (req as any).user = user;
-    }
+    let permissions = session.permissions;
 
-    const user = (req as any).user;
-    const role = user.role;
+    if (!permissions) {
+      // Lazy load permissions from DB and cache them in the session
+      try {
+        if (!(req as any).user) {
+          const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+          if (!user) {
+            res.status(401).json({ error: "User not found" });
+            return;
+          }
+          (req as any).user = user;
+        }
+        const user = (req as any).user;
+        permissions = await resolveUserPermissions(user.id, user.role);
+        session.permissions = permissions;
 
-    // Admin still has full access unless explicitly denied (rare case)
-    if (role === "admin") {
-       // Check for explicit denial at user level
-       const [denial] = await db
-         .select()
-         .from(userPermissionsTable)
-         .where(
-           and(
-             eq(userPermissionsTable.userId, userId),
-             eq(userPermissionsTable.permissionKey, permissionKey),
-             eq(userPermissionsTable.granted, false)
-           )
-         )
-         .limit(1);
-       
-       if (!denial) return next();
-    }
-
-    // 1. Check User-level Override (highest priority)
-    const [userOverride] = await db
-      .select()
-      .from(userPermissionsTable)
-      .where(
-        and(
-          eq(userPermissionsTable.userId, userId),
-          eq(userPermissionsTable.permissionKey, permissionKey)
-        )
-      )
-      .limit(1);
-
-    if (userOverride) {
-      if (userOverride.granted) {
-        return next();
-      } else {
-        res.status(403).json({ error: "Insufficient permissions (denied at user level)" });
+        // Save session changes
+        await new Promise<void>((resolve, reject) => {
+          session.save((err: any) => {
+            if (err) reject(err);
+            else resolve();
+          });
+        });
+      } catch (error) {
+        console.error("[Permission] Error lazy loading permissions:", error);
+        res.status(500).json({ error: "Failed to resolve permissions" });
         return;
       }
     }
 
-    // 2. Check Role-level permissions
-    const [rolePermission] = await db
-      .select()
-      .from(rolePermissionsTable)
-      .where(
-        and(
-          eq(rolePermissionsTable.roleKey, role),
-          eq(rolePermissionsTable.permissionKey, permissionKey)
-        )
-      )
-      .limit(1);
-
-    if (!rolePermission) {
-      console.log(`[Permission] DENIED: User ${userId} (Role: ${role}) lacks '${permissionKey}'`);
+    if (!permissions.includes(permissionKey)) {
+      console.log(`[Permission] DENIED: User ${userId} (Role: ${session.role}) lacks '${permissionKey}'`);
       res.status(403).json({ 
         error: `Insufficient permissions: '${permissionKey}' required`,
-        role,
+        role: session.role,
         permission: permissionKey
       });
       return;
     }
 
-    console.log(`[Permission] GRANTED: User ${userId} (Role: ${role}) for '${permissionKey}'`);
+    console.log(`[Permission] GRANTED: User ${userId} (Role: ${session.role}) for '${permissionKey}'`);
     next();
   };
 }

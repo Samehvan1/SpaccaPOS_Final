@@ -1,4 +1,4 @@
-import express, { type Express } from "express";
+import express, { type Express, type Request, type Response, type NextFunction } from "express";
 import cors from "cors";
 import pinoHttp from "pino-http";
 import session from "express-session";
@@ -67,5 +67,13 @@ app.use(
 app.use("/uploads", express.static("uploads"));
 
 app.use("/api", router);
+
+// Global error handling middleware
+app.use((err: unknown, req: Request, res: Response, next: NextFunction) => {
+  req.log?.error(err, "Unhandled route error");
+  res.status(500).json({
+    error: "An unexpected error occurred. Please try again later.",
+  });
+});
 
 export default app;

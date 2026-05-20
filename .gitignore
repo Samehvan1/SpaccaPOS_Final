@@ -4,3 +4,4 @@ dist/
 build/
 .DS_Store
 artifacts/api-server/uploads/
+artifacts/api-server/backups/

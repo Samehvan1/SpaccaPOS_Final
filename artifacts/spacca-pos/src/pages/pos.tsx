@@ -25,6 +25,12 @@ import { CupSimulator, type CupLayer } from "@/components/cup-simulator";
 import { useCustomerAuth } from "@/hooks/use-customer-auth";
 import { Link } from "wouter";
 
+// Modularized components
+import { CartSidebar } from "@/components/pos/CartSidebar";
+import { CustomizerDialog } from "@/components/pos/CustomizerDialog";
+import { CheckoutDialog } from "@/components/pos/CheckoutDialog";
+import { LoyaltyDialog } from "@/components/pos/LoyaltyDialog";
+
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "/api";
 
 type DrinkCategory = {
@@ -877,577 +883,71 @@ export default function PosTerminal() {
         )}
       </ScrollArea>
 
-      {/* Cart Slide-in Overlay */}
-      <>
-        {/* Backdrop */}
-        <div
-          className={`fixed inset-0 bg-black/40 z-40 transition-opacity duration-300 ${isCartOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
-            }`}
-          onClick={() => setIsCartOpen(false)}
-        />
-        {/* Cart panel */}
-        <div
-          className={`fixed top-0 right-0 h-full w-[340px] max-w-[90vw] bg-card shadow-2xl z-50 flex flex-col transition-transform duration-300 ease-in-out ${isCartOpen ? "translate-x-0" : "translate-x-full"
-            }`}
-        >
-          <div className="flex items-center justify-between px-4 py-4 border-b bg-muted/30 shrink-0">
-            <h2 className="text-lg font-bold flex items-center gap-2">
-              <ShoppingCart className="h-5 w-5" />
-              Current Order
-              {cartCount > 0 && (
-                <span className="bg-primary text-primary-foreground px-2 py-0.5 rounded-full text-xs font-bold">
-                  {cartCount}
-                </span>
-              )}
-            </h2>
-            <div className="flex items-center gap-2">
-              {cart.length > 0 && (
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive rounded-full"
-                  onClick={() => {
-                    if (confirm("Clear all items from cart?")) {
-                      setCart([]);
-                    }
-                  }}
-                  title="Clear Cart"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              )}
-              <button onClick={() => setIsCartOpen(false)} className="p-1 rounded-md hover:bg-muted transition-colors">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-          </div>
+      <CartSidebar
+        isOpen={isCartOpen}
+        onClose={() => setIsCartOpen(false)}
+        cart={cart}
+        cartCount={cartCount}
+        cartTotal={cartTotal}
+        onClearCart={() => setCart([])}
+        onUpdateQuantity={updateCartQuantity}
+        onRemoveItem={removeFromCart}
+        onCheckout={() => {
+          setIsCartOpen(false);
+          setIsCheckoutOpen(true);
+        }}
+      />
 
-          <ScrollArea className="flex-1 p-3">
-            {cart.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-64 text-muted-foreground text-center space-y-3 p-6">
-                <ShoppingCart className="h-10 w-10 opacity-20" />
-                <p className="font-medium">No items yet</p>
-                <p className="text-sm">Tap a drink to add it to your order.</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {cart.map(item => (
-                  <div key={item.id} className="p-3 border rounded-lg bg-background shadow-sm">
-                    <div className="flex justify-between items-start mb-1.5">
-                      <span className="font-bold text-sm leading-tight pr-2 capitalize">{item.drinkName}</span>
-                      <span className="font-bold text-sm shrink-0">{fmt(item.totalPrice * item.quantity)}</span>
-                    </div>
-                    <div className="text-xs text-muted-foreground space-y-0.5 mb-2">
-                      {item.selections
-                        .filter(s => s.optionLabel?.toLowerCase() !== "none")
-                        .map(s => (
-                        <div key={s.slotLabel} className="flex justify-between">
-                          <span><span className="text-muted-foreground/60">{s.slotLabel}:</span> {s.optionLabel}</span>
-                          {s.extraCost > 0 && <span>+{fmt(s.extraCost)}</span>}
-                        </div>
-                      ))}
-                      {item.specialNotes && (
-                        <div className="italic text-primary/80">"{item.specialNotes}"</div>
-                      )}
-                    </div>
-                    <div className="flex items-center justify-between pt-2 border-t">
-                      <div className="flex items-center gap-1">
-                        <Button variant="outline" size="icon" className="h-6 w-6 rounded-full" onClick={() => updateCartQuantity(item.id, -1)}>
-                          <Minus className="h-3 w-3" />
-                        </Button>
-                        <span className="w-7 text-center font-bold text-sm">{item.quantity}</span>
-                        <Button variant="outline" size="icon" className="h-6 w-6 rounded-full" onClick={() => updateCartQuantity(item.id, 1)}>
-                          <Plus className="h-3 w-3" />
-                        </Button>
-                      </div>
-                      <button
-                        onClick={() => removeFromCart(item.id)}
-                        className="p-1 text-destructive hover:bg-destructive/10 rounded-md transition-colors"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </ScrollArea>
-
-          <div className="p-4 border-t bg-muted/30 shrink-0 space-y-3">
-            <div className="flex justify-between items-center text-lg font-bold">
-              <span>Total</span>
-              <span className="text-primary">{fmt(cartTotal)}</span>
-            </div>
-            <Button
-              className="w-full h-12 text-base font-bold shadow-md flex items-center gap-2"
-              disabled={cart.length === 0}
-              onClick={() => { setIsCartOpen(false); setIsCheckoutOpen(true); }}
-            >
-              Checkout <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      </>
-
-      <Dialog open={isCustomizing} onOpenChange={(open) => { if (!open) handleCloseCustomization(); }}>
-        <DialogContent className="sm:max-w-[550px] max-h-[85vh] flex flex-col p-0 gap-0">
-          <DialogHeader className="px-5 pt-5 pb-5 border-b shrink-0 flex-row items-center gap-4">
-            <div className="flex-1 min-w-0 pb-1">
-              <DialogTitle className="text-2xl truncate mb-1 capitalize">{activeDrink?.name}</DialogTitle>
-              {drinkDetail?.description && (
-                <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2 mb-2 leading-normal">
-                  {drinkDetail.description}
-                </p>
-              )}
-              <div className="flex items-center gap-3">
-                <div className={`text-3xl font-bold text-primary transition-opacity ${isCalculating ? "opacity-60" : "opacity-100"}`}>
-                  {fmt(displayPrice)}
-                </div>
-                {drinkDetail && (
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={applyDefaults}
-                    className="h-8 px-2 text-xs font-bold uppercase tracking-wider text-muted-foreground hover:text-primary hover:bg-primary/10 gap-1.5"
-                  >
-                    <RotateCcw className="h-3 w-3" />
-                    Reset
-                  </Button>
-                )}
-              </div>
-            </div>
-            {drinkDetail && (
-              <div className="w-24 h-32 shrink-0 pr-6 mr-2">
-                <CupSimulator 
-                  cupSizeMl={drinkDetail.cupSizeMl || 0}
-                  layers={simulatorLayers}
-                  className="mb-2"
-                />
-              </div>
-            )}
-          </DialogHeader>
- 
-          <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4">
-            {isLoadingDrinkDetail ? (
-              <div className="space-y-4">
-                <div className="h-20 bg-muted animate-pulse rounded-md" />
-                <div className="h-20 bg-muted animate-pulse rounded-md" />
-              </div>
-            ) : (
-              <div className="space-y-5">
-                {(drinkDetail?.slots as any[])
-                  ?.filter(s => (s.customerSortOrder ?? s.sortOrder ?? 1) > 0)
-                  ?.sort((a, b) => (a.customerSortOrder ?? a.sortOrder ?? 1) - (b.customerSortOrder ?? b.sortOrder ?? 1))
-                  ?.map(slot => {
-                  // ── Typed (catalog) slot: two-level — type option → volume ──
-                  if (slot.slotStyle === "typed") {
-                    const typeOptions: any[] = slot.typeOptions ?? [];
-                    const selectedTypeId = selections[slot.id];
-                    const activeTypeOpt = typeOptions.find((to: any) => to.ingredientTypeId === selectedTypeId) ?? typeOptions[0];
-                    const activeVolumes: any[] = activeTypeOpt?.volumes ?? [];
-                    const multiType = typeOptions.length > 1;
- 
-                    return (
-                      <div key={slot.id} className="space-y-3 p-3 rounded-xl border-2 border-primary/15 bg-muted/10 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.1)] dark:bg-muted/5">
-                        <div className="flex items-center gap-2">
-                          <Label className="text-xs sm:text-sm font-black uppercase tracking-[0.15em] text-primary/70 flex items-center gap-2">
-                            <span>{slot.slotLabel}</span>
-                            {activeTypeOpt?.pricingMode === "unit" && (
-                              <Badge variant="outline" className="h-4 px-1 text-[9px] border-primary/20 bg-primary/5 text-primary font-black tracking-widest uppercase">
-                                Fixed Price
-                              </Badge>
-                            )}
-                            {(() => {
-                              const typeOptions: any[] = slot.typeOptions ?? [];
-                              const defTypeOpt = typeOptions.find((to: any) => to.isDefault) ?? typeOptions[0];
-                              const defVol = defTypeOpt?.volumes?.find((v: any) => v.isDefault) ?? defTypeOpt?.volumes?.[0];
-                              const defaultLabel = defTypeOpt ? `${defTypeOpt.typeName}${defVol?.volumeName ? ` · ${defVol.volumeName}` : ""}` : "";
-                              return defaultLabel && (
-                                <span className="normal-case font-semibold text-[10px] sm:text-xs text-muted-foreground/60 tracking-normal italic">
-                                  (Default: {defaultLabel})
-                                </span>
-                              );
-                            })()}
-                          </Label>
-                          <div className="flex-1 h-px bg-gradient-to-r from-primary/10 to-transparent" />
-                        </div>
- 
-                        {/* Level 1: Type option buttons (only shown if more than one type) */}
-                        {multiType && (
-                          <div className="grid grid-cols-3 gap-1">
-                            {typeOptions.map((typeOpt: any) => {
-                              const isOutOfStock = !allowNoStockSell && !typeOpt.isAvailable;
-                              return (
-                                <button
-                                  key={typeOpt.ingredientTypeId}
-                                  disabled={isOutOfStock}
-                                  onClick={() => {
-                                    setSelections(prev => ({ ...prev, [slot.id]: typeOpt.ingredientTypeId }));
-                                    const availableVols = (typeOpt.volumes ?? []).filter((v: any) => allowNoStockSell || v.isAvailable);
-                                    const defVol = availableVols.find((v: any) => v.isDefault) ?? availableVols[availableVols.length - 1] ?? typeOpt.volumes?.[0];
-                                    setSubSelections(prev => {
-                                      const next = { ...prev };
-                                      if (defVol) next[slot.id] = defVol.id;
-                                      else delete next[slot.id];
-                                      return next;
-                                    });
-                                  }}
-                                  className={`px-3 py-2 rounded-md border text-left transition-all text-xs sm:text-sm ${selectedTypeId === typeOpt.ingredientTypeId
-                                      ? "bg-primary text-primary-foreground border-primary shadow-sm"
-                                      : "bg-background border-border hover:border-primary/50"
-                                    } ${isOutOfStock ? "opacity-40 grayscale pointer-events-none" : ""}`}
-                                >
-                                  <div className="font-semibold truncate">{typeOpt.typeName}</div>
-                                  {isOutOfStock && <div className="text-[10px] font-bold text-destructive uppercase">Out of Stock</div>}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        )}
- 
-                        {/* Level 1.5: Status text for single type slots */}
-                        {!multiType && activeTypeOpt && (
-                          <div className="text-sm sm:text-base font-semibold text-primary/80 mb-1 px-1">
-                            {activeTypeOpt.typeName}
-                          </div>
-                        )}
- 
-                        {/* Level 2: Volume buttons for the selected type */}
-                        <div className={multiType ? "pl-3 border-l-2 border-primary/30" : ""}>
-                          {multiType && (
-                            <div className="text-xs sm:text-sm text-muted-foreground mb-1.5 font-medium">Volume</div>
-                          )}
-                          <div className="grid grid-cols-3 gap-1">
-                            {activeVolumes.map((vol: any) => {
-                              const isVolOutOfStock = !allowNoStockSell && !vol.isAvailable;
-                              return (
-                                <button
-                                  key={vol.id}
-                                  disabled={isVolOutOfStock}
-                                  onClick={() => setSubSelections(prev => ({ ...prev, [slot.id]: vol.id }))}
-                                  className={`px-3 py-2 rounded-md border text-left transition-all text-xs sm:text-sm ${subSelections[slot.id] === vol.id
-                                      ? "bg-primary text-primary-foreground border-primary shadow-sm"
-                                      : "bg-background border-border hover:border-primary/50"
-                                    } ${isVolOutOfStock ? "opacity-40 grayscale pointer-events-none" : ""}`}
-                                >
-                                  <div className="font-semibold truncate">{vol.volumeName}</div>
-                                  {isVolOutOfStock ? (
-                                    <div className="text-[10px] font-bold text-destructive uppercase">No Stock</div>
-                                  ) : vol.extraCost > 0 && (
-                                    <div className={`text-xs mt-0.5 ${subSelections[slot.id] === vol.id ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
-                                      +{fmt(vol.extraCost)}
-                                    </div>
-                                  )}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  }
- 
-                  // ── Legacy slot: show ingredient options ───────────────────
-                  const options: any[] = slot.ingredient?.options ?? [];
-                  const isLinked = options.some(o => o.linkedIngredientId);
-                  const selectedTypeOpt = isLinked ? options.find(o => o.id === selections[slot.id]) : null;
-                  const subOptions: any[] = selectedTypeOpt?.linkedIngredient?.options ?? [];
- 
-                  return (
-                    <div key={slot.id} className="space-y-3 p-3 rounded-xl border-2 border-primary/15 bg-muted/10 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.1)] dark:bg-muted/5">
-                      <div className="flex items-center gap-2">
-                        <Label className="text-xs sm:text-sm font-black uppercase tracking-[0.15em] text-primary/70 flex items-center gap-2">
-                          <span>{slot.slotLabel}</span>
-                          {(() => {
-                            const options: any[] = slot.ingredient?.options ?? [];
-                            const defOpt = options.find((o: any) => o.id === slot.defaultOptionId) || options[0];
-                            return defOpt && (
-                              <span className="normal-case font-semibold text-[10px] sm:text-xs text-muted-foreground/60 tracking-normal italic">
-                                (Default: {defOpt.label})
-                              </span>
-                            );
-                          })()}
-                        </Label>
-                        <div className="flex-1 h-px bg-gradient-to-r from-primary/10 to-transparent" />
-                      </div>
- 
-                      {/* Type picker (or regular option picker) */}
-                      <div className="grid grid-cols-3 gap-1">
-                        {options.map(option => {
-                          const isOutOfStock = !allowNoStockSell && !option.isAvailable;
-                          return (
-                            <button
-                              key={option.id}
-                              disabled={isOutOfStock}
-                              onClick={() => {
-                                setSelections(prev => ({ ...prev, [slot.id]: option.id }));
-                                // Auto-select first sub-option of newly selected type
-                                if (option.linkedIngredient?.options?.length) {
-                                  const subOpts = option.linkedIngredient.options;
-                                  const availableSub = allowNoStockSell ? subOpts : subOpts.filter((so: any) => so.isAvailable);
-                                  const defSub = availableSub.find((o: any) => o.isDefault) || availableSub[0] || subOpts[0];
-                                  setSubSelections(prev => ({ ...prev, [slot.id]: defSub.id }));
-                                } else {
-                                  setSubSelections(prev => {
-                                    const next = { ...prev };
-                                    delete next[slot.id];
-                                    return next;
-                                  });
-                                }
-                              }}
-                              className={`px-3 py-2 rounded-md border text-left transition-all text-xs sm:text-sm ${selections[slot.id] === option.id
-                                  ? "bg-primary text-primary-foreground border-primary shadow-sm"
-                                  : "bg-background border-border hover:border-primary/50"
-                                } ${isOutOfStock ? "opacity-40 grayscale pointer-events-none" : ""}`}
-                            >
-                              <div className="font-semibold truncate">{option.label}</div>
-                              {isOutOfStock ? (
-                                <div className="text-[10px] font-bold text-destructive uppercase">No Stock</div>
-                              ) : !isLinked && option.extraCost > 0 && (
-                                <div className={`text-xs mt-0.5 ${selections[slot.id] === option.id ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
-                                  +{fmt(option.extraCost)}
-                                </div>
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
- 
-                      {/* Sub-option picker — volume / size (shown when type has linked ingredient) */}
-                      {isLinked && subOptions.length > 0 && (
-                        <div className="mt-2.5 pl-3 border-l-2 border-primary/30">
-                          <div className="text-xs sm:text-sm text-muted-foreground mb-1.5 font-medium">Volume</div>
-                          <div className="grid grid-cols-3 gap-1.5">
-                            {subOptions.map(subOpt => {
-                              const isSubOutOfStock = !allowNoStockSell && !subOpt.isAvailable;
-                              return (
-                                <button
-                                  key={subOpt.id}
-                                  disabled={isSubOutOfStock}
-                                  onClick={() => setSubSelections(prev => ({ ...prev, [slot.id]: subOpt.id }))}
-                                  className={`px-3 py-2 rounded-lg border text-center transition-all text-xs sm:text-sm ${subSelections[slot.id] === subOpt.id
-                                      ? "bg-primary text-primary-foreground border-primary shadow-sm"
-                                      : "bg-background border-border hover:border-primary/50"
-                                    } ${isSubOutOfStock ? "opacity-40 grayscale pointer-events-none" : ""}`}
-                                >
-                                  <div className="font-medium leading-tight">{subOpt.label}</div>
-                                  {isSubOutOfStock ? (
-                                    <div className="text-[10px] font-bold text-destructive uppercase">No Stock</div>
-                                  ) : subOpt.extraCost > 0 && (
-                                    <div className={`text-xs mt-0.5 ${subSelections[slot.id] === subOpt.id ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
-                                      +{fmt(subOpt.extraCost)}
-                                    </div>
-                                  )}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
- 
-                {/* Dynamic ingredient indicator */}
-                {priceBreakdown?.dynamicInfo && (
-                  <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800">
-                    <Droplets className="h-4 w-4 text-blue-500 shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <span className="text-sm sm:text-base font-medium text-blue-700 dark:text-blue-300">
-                        {priceBreakdown.dynamicInfo.ingredientName}
-                      </span>
-                      <span className="text-xs sm:text-sm text-blue-500 ml-1.5">
-                        ingredient added
-                      </span>
-                    </div>
-                    <span className="text-sm sm:text-base font-semibold text-blue-600 dark:text-blue-400 shrink-0">
-                      +{fmt(priceBreakdown.dynamicInfo.cost)}
-                    </span>
-                  </div>
-                )}
- 
-                <div className="pt-2 border-t">
-                  <Label htmlFor="notes" className="text-xs sm:text-sm font-bold uppercase tracking-wider text-muted-foreground">
-                    Special Notes
-                  </Label>
-                  <Input
-                    id="notes"
-                    value={notes}
-                    onChange={e => setNotes(e.target.value)}
-                    placeholder="e.g., Extra hot, no foam"
-                    className="mt-2 text-sm sm:text-base"
-                  />
-                </div>
-              </div>
-            )}
-          </div>
- 
-          <div className="px-5 pb-5 pt-3 border-t shrink-0">
-            <Button
-              className="w-full h-12 text-base sm:text-lg font-bold shadow-md"
-              onClick={handleAddToCart}
-              disabled={isCalculating || isLoadingDrinkDetail}
-            >
-              <Plus className="mr-2 h-4 w-4" /> Add to Order
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <CustomizerDialog
+        isOpen={isCustomizing}
+        activeDrink={activeDrink}
+        drinkDetail={drinkDetail}
+        isLoadingDrinkDetail={isLoadingDrinkDetail}
+        selections={selections}
+        subSelections={subSelections}
+        notes={notes}
+        setSelections={setSelections}
+        setSubSelections={setSubSelections}
+        setNotes={setNotes}
+        displayPrice={displayPrice}
+        priceBreakdown={priceBreakdown}
+        isCalculating={isCalculating}
+        simulatorLayers={simulatorLayers}
+        allowNoStockSell={allowNoStockSell}
+        onReset={applyDefaults}
+        onClose={handleCloseCustomization}
+        onAddToCart={handleAddToCart}
+      />
 
       {/* Checkout Dialog */}
-      <Dialog open={isCheckoutOpen} onOpenChange={setIsCheckoutOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle className="text-2xl">Complete Order</DialogTitle>
-            <div className="flex items-center gap-2 mt-1">
-              <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 font-black tracking-widest text-[10px] uppercase">
-                Sending to: {branches.find(b => b.id === selectedBranchId)?.name || "Default Branch"}
-              </Badge>
-            </div>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="customer" className={isNameRequired ? "text-primary font-bold" : ""}>
-                Customer Name {isNameRequired ? "(Required)" : "(Optional)"}
-              </Label>
-              <Input
-                id="customer"
-                value={customerName}
-                onChange={e => setCustomerName(e.target.value)}
-                placeholder="Name for the order"
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="phone">Customer Phone (Loyalty)</Label>
-              <Input
-                id="phone"
-                value={customerPhone}
-                onChange={e => setCustomerPhone(e.target.value)}
-                placeholder="Phone for loyalty points"
-              />
-              <p className="text-[10px] text-muted-foreground italic">
-                Enter phone for loyalty points and future health tracking system.
-              </p>
-            </div>
-            <div className="grid gap-2">
-              <Label>Payment Method</Label>
-              <div className="grid grid-cols-3 gap-2">
-                {["cash", "card", "wallet"].map(method => (
-                  <Button
-                    key={method}
-                    variant={paymentMethod === method ? "default" : "outline"}
-                    onClick={() => {
-                      setPaymentMethod(method as any);
-                      if (method !== "hospitality") setAdminPin("");
-                    }}
-                    className="capitalize"
-                  >
-                    {method}
-                  </Button>
-                ))}
-              </div>
-            </div>
-            {paymentMethod === "hospitality" && (
-              <div className="grid gap-2 animate-in fade-in slide-in-from-top-2 duration-300">
-                <Label htmlFor="adminPin" className="text-pink-600 font-bold">Admin/Supervisor Authorization PIN</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-pink-400" />
-                  <Input
-                    id="adminPin"
-                    type="password"
-                    value={adminPin}
-                    onChange={e => setAdminPin(e.target.value)}
-                    placeholder="Enter Admin or Supervisor PIN"
-                    className="pl-9 border-pink-200 focus-visible:ring-pink-500"
-                    autoComplete="off"
-                  />
-                </div>
-              </div>
-            )}
-            {paymentMethod === "cash" && (
-              <div className="grid gap-2">
-                <Label htmlFor="amount">Amount Tendered</Label>
-                <Input
-                  id="amount"
-                  type="number"
-                  step="0.01"
-                  value={amountTendered}
-                  onChange={e => setAmountTendered(e.target.value)}
-                  placeholder={fmt(cartTotal)}
-                />
-              </div>
-            )}
-            <div className="grid gap-2">
-              <Label htmlFor="coupon">Discount Coupon</Label>
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <Ticket className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="coupon"
-                    value={discountCode}
-                    onChange={e => setDiscountCode(e.target.value)}
-                    placeholder="Enter code"
-                    className="pl-9 font-mono font-bold uppercase"
-                    disabled={!!appliedDiscount || isValidatingDiscount}
-                    autoComplete="off"
-                  />
-                </div>
-                {appliedDiscount ? (
-                  <Button 
-                    variant="outline" 
-                    size="icon" 
-                    className="text-destructive border-destructive/20 hover:bg-destructive/5"
-                    onClick={() => { setAppliedDiscount(null); setDiscountCode(""); }}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                ) : (
-                  <Button 
-                    variant="secondary" 
-                    onClick={handleValidateDiscount}
-                    disabled={!discountCode.trim() || isValidatingDiscount}
-                  >
-                    {isValidatingDiscount ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                  </Button>
-                )}
-              </div>
-              {appliedDiscount && (
-                <p className="text-[10px] text-green-600 font-bold uppercase tracking-wider flex items-center gap-1 mt-0.5">
-                  <Check className="h-3 w-3" /> 
-                  Applied: {appliedDiscount.type === 'percentage' ? `${appliedDiscount.value}%` : fmt(appliedDiscount.value)} Off
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-1.5 py-4 border-t border-b">
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-muted-foreground">Subtotal</span>
-                <span className="font-medium">{fmt(cartSubtotal)}</span>
-              </div>
-              {discountAmount > 0 && (
-                <div className="flex justify-between items-center text-sm text-green-600 font-medium">
-                  <span className="flex items-center gap-1">
-                    <Tag className="h-3.5 w-3.5" /> Discount
-                  </span>
-                  <span>-{fmt(discountAmount)}</span>
-                </div>
-              )}
-              <div className="flex justify-between items-center pt-1">
-                <span className="font-bold text-lg">Total Due</span>
-                <span className="font-bold text-2xl text-primary">{fmt(cartTotal)}</span>
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsCheckoutOpen(false)} disabled={isCreatingOrder}>
-              Cancel
-            </Button>
-            <Button onClick={handleCheckout} disabled={isCreatingOrder} className="min-w-[120px]">
-              {isCreatingOrder ? "Processing..." : "Charge"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <CheckoutDialog
+        isOpen={isCheckoutOpen}
+        onClose={() => setIsCheckoutOpen(false)}
+        branches={branches}
+        selectedBranchId={selectedBranchId}
+        customerName={customerName}
+        setCustomerName={setCustomerName}
+        customerPhone={customerPhone}
+        setCustomerPhone={setCustomerPhone}
+        paymentMethod={paymentMethod}
+        setPaymentMethod={setPaymentMethod}
+        adminPin={adminPin}
+        setAdminPin={setAdminPin}
+        amountTendered={amountTendered}
+        setAmountTendered={setAmountTendered}
+        discountCode={discountCode}
+        setDiscountCode={setDiscountCode}
+        appliedDiscount={appliedDiscount}
+        setAppliedDiscount={setAppliedDiscount}
+        isValidatingDiscount={isValidatingDiscount}
+        onValidateDiscount={handleValidateDiscount}
+        isNameRequired={isNameRequired}
+        cartSubtotal={cartSubtotal}
+        discountAmount={discountAmount}
+        cartTotal={cartTotal}
+        isCreatingOrder={isCreatingOrder}
+        onSubmitCheckout={handleCheckout}
+      />
 
       {/* Anonymous Branch Picker Overlay */}
       {!user && !selectedBranchId && (
@@ -1504,146 +1004,18 @@ export default function PosTerminal() {
         </div>
       )}
 
-      {/* Loyalty & Signature Dialog */}
-      <Dialog open={isLoyaltyDialogOpen} onOpenChange={(open) => {
-        if (!open) {
+      <LoyaltyDialog
+        isOpen={isLoyaltyDialogOpen}
+        onClose={() => {
           setIsLoyaltyDialogOpen(false);
           setCustomerName("");
           setCustomerPhone("");
           setCreatedOrder(null);
-        }
-      }}>
-        <DialogContent className="sm:max-w-[450px]">
-          <DialogHeader>
-            <DialogTitle className="text-2xl text-center">Loyalty Status</DialogTitle>
-          </DialogHeader>
-          <div className="py-6 space-y-6">
-            <div className="text-center space-y-2">
-              <p className="text-muted-foreground uppercase tracking-widest text-xs font-bold">Total Loyalty Points</p>
-              <div className="text-5xl font-black text-primary italic">
-                {loyaltyPoints !== null ? loyaltyPoints : "..."}
-              </div>
-              <p className="text-sm font-medium">Points earned from this order: {createdOrder ? Math.floor((parseFloat(createdOrder.subtotal) / 1.14) / 10) : 0}</p>
-            </div>
-            
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <div className="h-px flex-1 bg-muted" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Confirm with Signature</span>
-                <div className="h-px flex-1 bg-muted" />
-              </div>
-              <SignaturePad onSave={handleSaveSignature} />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => {
-              setIsLoyaltyDialogOpen(false);
-              setCustomerName("");
-              setCustomerPhone("");
-              setCreatedOrder(null);
-            }} className="w-full">
-              Skip Signature
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
-}
-
-function SignaturePad({ onSave }: { onSave: (data: string) => void }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [isDrawing, setIsDrawing] = useState(false);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    ctx.strokeStyle = "#000";
-    ctx.lineWidth = 3;
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
-  }, []);
-
-  const getPointerPos = (e: any) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return { x: 0, y: 0 };
-    const rect = canvas.getBoundingClientRect();
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    return {
-      x: clientX - rect.left,
-      y: clientY - rect.top
-    };
-  };
-
-  const startDrawing = (e: any) => {
-    setIsDrawing(true);
-    const { x, y } = getPointerPos(e);
-    const ctx = canvasRef.current?.getContext("2d");
-    if (ctx) {
-      ctx.beginPath();
-      ctx.moveTo(x, y);
-    }
-  };
-
-  const draw = (e: any) => {
-    if (!isDrawing) return;
-    const { x, y } = getPointerPos(e);
-    const ctx = canvasRef.current?.getContext("2d");
-    if (ctx) {
-      ctx.lineTo(x, y);
-      ctx.stroke();
-    }
-  };
-
-  const stopDrawing = () => {
-    setIsDrawing(false);
-  };
-
-  const clear = () => {
-    const canvas = canvasRef.current;
-    const ctx = canvas?.getContext("2d");
-    if (canvas && ctx) {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-    }
-  };
-
-  const save = () => {
-    const canvas = canvasRef.current;
-    if (canvas) {
-      // Check if canvas is empty (basic check)
-      const data = canvas.toDataURL("image/png");
-      onSave(data);
-    }
-  };
-
-  return (
-    <div className="space-y-3">
-      <div className="border-2 border-stone-200 rounded-2xl bg-white overflow-hidden shadow-inner">
-        <canvas
-          ref={canvasRef}
-          width={400}
-          height={200}
-          className="w-full h-44 touch-none cursor-crosshair"
-          onMouseDown={startDrawing}
-          onMouseMove={draw}
-          onMouseUp={stopDrawing}
-          onMouseLeave={stopDrawing}
-          onTouchStart={startDrawing}
-          onTouchMove={draw}
-          onTouchEnd={stopDrawing}
-        />
-      </div>
-      <div className="flex gap-2">
-        <Button variant="outline" onClick={clear} className="flex-1 rounded-xl h-12 font-bold uppercase tracking-widest text-xs">
-          Clear
-        </Button>
-        <Button onClick={save} className="flex-1 rounded-xl h-12 font-bold uppercase tracking-widest text-xs">
-          Confirm
-        </Button>
-      </div>
+        }}
+        loyaltyPoints={loyaltyPoints}
+        createdOrder={createdOrder}
+        onSaveSignature={handleSaveSignature}
+      />
     </div>
   );
 }
