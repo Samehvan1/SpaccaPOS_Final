@@ -11,7 +11,7 @@ import { PWAUpdater } from "@/components/pwa-updater";
 import { CustomerAuthProvider } from "@/hooks/use-customer-auth";
 import Login from "@/pages/login";
 import NotFound from "@/pages/not-found";
-import { appRoutes } from "./routes";
+import { appRoutes, type RouteConfig } from "./routes";
 
 // PWA Helper to update title for "Add to Home Screen"
 function PWAContextHandler() {
@@ -80,6 +80,16 @@ function ProtectedRoute({
   return <Component />;
 }
 
+/** Stable wrapper that avoids inline component definitions in the map loop.
+ *  Inline components get a new identity on every parent render, causing React
+ *  to unmount/remount the route and lose all local state. */
+function RouteContent({ route }: { route: RouteConfig }) {
+  if (route.permission === "public") {
+    return <route.component />;
+  }
+  return <ProtectedRoute component={route.component} permission={route.permission} />;
+}
+
 function AppRoutes() {
   const { user, isLoading } = useAuth();
 
@@ -115,21 +125,14 @@ function AppRoutes() {
       {appRoutes.map((route) => {
         const useLayout = route.layout !== false;
 
-        const Content = () => {
-          if (route.permission === "public") {
-            return <route.component />;
-          }
-          return <ProtectedRoute component={route.component} permission={route.permission} />;
-        };
-
         return (
           <Route key={route.path} path={route.path}>
             {useLayout ? (
               <MainLayout>
-                <Content />
+                <RouteContent route={route} />
               </MainLayout>
             ) : (
-              <Content />
+              <RouteContent route={route} />
             )}
           </Route>
         );
