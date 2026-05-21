@@ -49,12 +49,13 @@ export default function StockAdmin() {
     ingredientId: string;
     quantity: string;
     unitId: string;
+    note: string;
   };
 
   const [isRestockOpen, setIsRestockOpen] = useState(false);
   const [openPopovers, setOpenPopovers] = useState<Record<number, boolean>>({});
   const [deliveryItems, setDeliveryItems] = useState<DeliveryItem[]>([
-    { ingredientId: "", quantity: "", unitId: "base" }
+    { ingredientId: "", quantity: "", unitId: "base", note: "" }
   ]);
   const [note, setNote] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -68,7 +69,7 @@ export default function StockAdmin() {
   };
 
   const addItem = () => {
-    setDeliveryItems(prev => [...prev, { ingredientId: "", quantity: "", unitId: "base" }]);
+    setDeliveryItems(prev => [...prev, { ingredientId: "", quantity: "", unitId: "base", note: "" }]);
   };
 
   const removeItem = (index: number) => {
@@ -98,12 +99,13 @@ export default function StockAdmin() {
     setIsSubmitting(true);
     let saved = 0;
     for (const item of validItems) {
+      const combinedNote = [note.trim(), item.note.trim()].filter(Boolean).join(" - ");
       restockSingle({
         id: parseInt(item.ingredientId),
         data: {
           quantity: parseFloat(item.quantity),
           unitId: item.unitId === "base" ? undefined : parseInt(item.unitId),
-          note: note || undefined,
+          note: combinedNote || undefined,
           branchId: selectedBranchId
         } as any
       });
@@ -116,7 +118,7 @@ export default function StockAdmin() {
       refetchIngredients();
       setIsSubmitting(false);
       setIsRestockOpen(false);
-      setDeliveryItems([{ ingredientId: "", quantity: "", unitId: "base" }]);
+      setDeliveryItems([{ ingredientId: "", quantity: "", unitId: "base", note: "" }]);
       setNote("");
       toast({ title: `Received delivery for ${saved} ingredient${saved !== 1 ? "s" : ""}` });
     }, 800);
@@ -260,101 +262,115 @@ export default function StockAdmin() {
                     {deliveryItems.map((item, index) => {
                       const selectedIng = ingredients?.find(i => i.id.toString() === item.ingredientId);
                       return (
-                        <div key={index} className="flex gap-3 items-end p-3 rounded-lg border bg-muted/20 relative">
-                          <div className="flex-1 min-w-0 grid gap-1.5">
-                            <Label className="text-xs">Ingredient</Label>
-                            <Popover 
-                              open={openPopovers[index] || false} 
-                              onOpenChange={(open) => setOpenPopovers(prev => ({ ...prev, [index]: open }))}
-                            >
-                              <PopoverTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  role="combobox"
-                                  className="w-full justify-between font-normal text-left h-10"
-                                >
-                                  {item.ingredientId && selectedIng
-                                    ? `${selectedIng.name} (${selectedIng.unit})`
-                                    : "Select ingredient..."}
-                                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                </Button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-[350px] p-0" align="start">
-                                <Command>
-                                  <CommandInput placeholder="Search ingredient..." />
-                                  <CommandList className="max-h-[250px] overflow-y-auto">
-                                    <CommandEmpty>No ingredient found.</CommandEmpty>
-                                    <CommandGroup>
-                                      {ingredients?.map((ing) => (
-                                        <CommandItem
-                                          key={ing.id}
-                                          value={ing.name}
-                                          onSelect={() => {
-                                            updateItem(index, "ingredientId", ing.id.toString());
-                                            updateItem(index, "unitId", "base");
-                                            setOpenPopovers(prev => ({ ...prev, [index]: false }));
-                                          }}
-                                        >
-                                          <Check
-                                            className={cn(
-                                              "mr-2 h-4 w-4",
-                                              item.ingredientId === ing.id.toString() ? "opacity-100" : "opacity-0"
-                                            )}
-                                          />
-                                          <div className="flex flex-col">
-                                            <span>{ing.name}</span>
-                                            <span className="text-[10px] text-muted-foreground capitalize">{ing.ingredientType} · {ing.unit}</span>
-                                          </div>
-                                        </CommandItem>
-                                      ))}
-                                    </CommandGroup>
-                                  </CommandList>
-                                </Command>
-                              </PopoverContent>
-                            </Popover>
+                        <div key={index} className="flex flex-col gap-3 p-3 rounded-lg border bg-muted/20 relative">
+                          <div className="flex gap-3 items-end">
+                            <div className="flex-1 min-w-0 grid gap-1.5">
+                              <Label className="text-xs">Ingredient</Label>
+                              <Popover 
+                                open={openPopovers[index] || false} 
+                                onOpenChange={(open) => setOpenPopovers(prev => ({ ...prev, [index]: open }))}
+                              >
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    role="combobox"
+                                    className="w-full justify-between font-normal text-left h-10"
+                                  >
+                                    {item.ingredientId && selectedIng
+                                      ? `${selectedIng.name} (${selectedIng.unit})`
+                                      : "Select ingredient..."}
+                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-[350px] p-0" align="start">
+                                  <Command>
+                                    <CommandInput placeholder="Search ingredient..." />
+                                    <CommandList className="max-h-[250px] overflow-y-auto">
+                                      <CommandEmpty>No ingredient found.</CommandEmpty>
+                                      <CommandGroup>
+                                        {ingredients?.map((ing) => (
+                                          <CommandItem
+                                            key={ing.id}
+                                            value={ing.name}
+                                            onSelect={() => {
+                                              updateItem(index, "ingredientId", ing.id.toString());
+                                              updateItem(index, "unitId", "base");
+                                              setOpenPopovers(prev => ({ ...prev, [index]: false }));
+                                            }}
+                                          >
+                                            <Check
+                                              className={cn(
+                                                "mr-2 h-4 w-4",
+                                                item.ingredientId === ing.id.toString() ? "opacity-100" : "opacity-0"
+                                              )}
+                                            />
+                                            <div className="flex flex-col">
+                                              <span>{ing.name}</span>
+                                              <span className="text-[10px] text-muted-foreground capitalize">{ing.ingredientType} · {ing.unit}</span>
+                                            </div>
+                                          </CommandItem>
+                                        ))}
+                                      </CommandGroup>
+                                    </CommandList>
+                                  </Command>
+                                </PopoverContent>
+                              </Popover>
+                            </div>
+
+                            <div className="w-[120px] grid gap-1.5">
+                              <Label htmlFor={`qty-${index}`} className="text-xs">Quantity</Label>
+                              <Input
+                                id={`qty-${index}`}
+                                type="number"
+                                step="0.01"
+                                value={item.quantity}
+                                onChange={e => updateItem(index, "quantity", e.target.value)}
+                                placeholder="0.00"
+                                className="h-10"
+                              />
+                            </div>
+
+                            <div className="w-[120px] grid gap-1.5">
+                              <Label className="text-xs">Unit</Label>
+                              <Select value={item.unitId} onValueChange={val => updateItem(index, "unitId", val)}>
+                                <SelectTrigger className="h-10">
+                                  <SelectValue placeholder="Unit" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="base">
+                                    {selectedIng ? selectedIng.unit : "Unit"}
+                                  </SelectItem>
+                                  {selectedIng?.conversions?.map((c: any) => (
+                                    <SelectItem key={c.id} value={String(c.id)}>{c.unitName}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+
+                            {deliveryItems.length > 1 && (
+                              <Button 
+                                type="button" 
+                                variant="ghost" 
+                                size="icon" 
+                                className="text-destructive hover:text-destructive hover:bg-destructive/10 h-10 w-10 shrink-0" 
+                                onClick={() => removeItem(index)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
                           </div>
 
-                          <div className="w-[120px] grid gap-1.5">
-                            <Label htmlFor={`qty-${index}`} className="text-xs">Quantity</Label>
+                          <div className="grid gap-1.5">
+                            <Label htmlFor={`note-${index}`} className="text-xs">Item Note (e.g. Expiration Date, Batch/Lot Number)</Label>
                             <Input
-                              id={`qty-${index}`}
-                              type="number"
-                              step="0.01"
-                              value={item.quantity}
-                              onChange={e => updateItem(index, "quantity", e.target.value)}
-                              placeholder="0.00"
-                              className="h-10"
+                              id={`note-${index}`}
+                              type="text"
+                              value={item.note}
+                              onChange={e => updateItem(index, "note", e.target.value)}
+                              placeholder="e.g. Expiration: 2026-12-31, Lot: B12"
+                              className="h-9 text-xs"
                             />
                           </div>
-
-                          <div className="w-[120px] grid gap-1.5">
-                            <Label className="text-xs">Unit</Label>
-                            <Select value={item.unitId} onValueChange={val => updateItem(index, "unitId", val)}>
-                              <SelectTrigger className="h-10">
-                                <SelectValue placeholder="Unit" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="base">
-                                  {selectedIng ? selectedIng.unit : "Unit"}
-                                </SelectItem>
-                                {selectedIng?.conversions?.map((c: any) => (
-                                  <SelectItem key={c.id} value={String(c.id)}>{c.unitName}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-
-                          {deliveryItems.length > 1 && (
-                            <Button 
-                              type="button" 
-                              variant="ghost" 
-                              size="icon" 
-                              className="text-destructive hover:text-destructive hover:bg-destructive/10 h-10 w-10 shrink-0" 
-                              onClick={() => removeItem(index)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          )}
                         </div>
                       );
                     })}
