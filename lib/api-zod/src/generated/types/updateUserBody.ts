@@ -12,6 +12,8 @@ export interface UpdateUserBody {
   username?: string;
   password?: string;
   role?: UpdateUserBodyRole;
+  /** @nullable */
+  branchId?: number | null;
   pin?: string;
   isActive?: boolean;
 }

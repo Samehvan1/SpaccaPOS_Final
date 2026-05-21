@@ -12,6 +12,7 @@ export interface CreateUserBody {
   username: string;
   password: string;
   role: CreateUserBodyRole;
-  branchId?: number;
+  /** @nullable */
+  branchId?: number | null;
   pin?: string;
 }

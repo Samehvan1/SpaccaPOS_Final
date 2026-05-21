@@ -16,7 +16,7 @@ router.get("/drink-categories", async (_req, res): Promise<void> => {
 });
 
 // POST /drink-categories — create
-router.post("/drink-categories", requirePermission("admin:manage_categories"), async (req, res): Promise<void> => {
+router.post("/drink-categories", requirePermission("catalog:manage"), async (req, res): Promise<void> => {
   const parsed = insertDrinkCategorySchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -30,7 +30,7 @@ router.post("/drink-categories", requirePermission("admin:manage_categories"), a
 });
 
 // PATCH /drink-categories/:id — update
-router.patch("/drink-categories/:id", requirePermission("admin:manage_categories"), async (req, res): Promise<void> => {
+router.patch("/drink-categories/:id", requirePermission("catalog:manage"), async (req, res): Promise<void> => {
   const id = parseInt(req.params.id as string);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
 
@@ -64,7 +64,7 @@ router.patch("/drink-categories/:id", requirePermission("admin:manage_categories
 });
 
 // DELETE /drink-categories/:id — delete
-router.delete("/drink-categories/:id", requirePermission("admin:manage_categories"), async (req, res): Promise<void> => {
+router.delete("/drink-categories/:id", requirePermission("catalog:manage"), async (req, res): Promise<void> => {
   const id = parseInt(req.params.id as string);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
 

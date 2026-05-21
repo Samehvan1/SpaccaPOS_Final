@@ -297,7 +297,7 @@ export default function AdminUsers() {
                 </TableCell>
                 <TableCell>
                   <div className="text-sm">
-                    {(user as any).branch?.name || (
+                    {branches.find((b: any) => b.id === user.branchId)?.name || (
                       <span className="text-muted-foreground italic">Global</span>
                     )}
                   </div>

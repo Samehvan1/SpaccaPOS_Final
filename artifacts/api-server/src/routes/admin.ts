@@ -10,7 +10,7 @@ import { startOfDay, endOfDay } from "date-fns";
 const adminRouter = Router();
 
 // GET /admin/activity-logs
-adminRouter.get("/admin/activity-logs", requirePermission("admin:view_logs"), async (req, res) => {
+adminRouter.get("/admin/activity-logs", requirePermission("admin:view"), async (req, res) => {
   try {
     const limit = parseInt(req.query.limit as string) || 50;
     const offset = parseInt(req.query.offset as string) || 0;
@@ -72,7 +72,7 @@ adminRouter.get("/admin/activity-logs", requirePermission("admin:view_logs"), as
 });
 
 // GET /admin/permissions
-adminRouter.get("/admin/permissions", requirePermission("admin:manage_permissions"), async (req, res) => {
+adminRouter.get("/admin/permissions", requirePermission("roles:manage"), async (req, res) => {
   try {
     const permissions = await db.select().from(permissionsTable);
     res.json(permissions);
@@ -82,7 +82,7 @@ adminRouter.get("/admin/permissions", requirePermission("admin:manage_permission
 });
 
 // GET /admin/role-permissions
-adminRouter.get("/admin/role-permissions", requirePermission("admin:manage_permissions"), async (req, res) => {
+adminRouter.get("/admin/role-permissions", requirePermission("roles:manage"), async (req, res) => {
   try {
     const rolePermissions = await db.select().from(rolePermissionsTable);
     res.json(rolePermissions);
@@ -92,7 +92,7 @@ adminRouter.get("/admin/role-permissions", requirePermission("admin:manage_permi
 });
 
 // POST /admin/role-permissions
-adminRouter.post("/admin/role-permissions", requirePermission("admin:manage_permissions"), async (req, res): Promise<void> => {
+adminRouter.post("/admin/role-permissions", requirePermission("roles:manage"), async (req, res): Promise<void> => {
   try {
     const { role, permissions } = req.body;
     if (!role || !Array.isArray(permissions)) {
@@ -124,7 +124,7 @@ adminRouter.post("/admin/role-permissions", requirePermission("admin:manage_perm
 });
 
 // POST /admin/permissions
-adminRouter.post("/admin/permissions", requirePermission("admin:manage_permissions"), async (req, res): Promise<void> => {
+adminRouter.post("/admin/permissions", requirePermission("roles:manage"), async (req, res): Promise<void> => {
   try {
     const { key, description } = req.body;
     if (!key) {
@@ -139,7 +139,7 @@ adminRouter.post("/admin/permissions", requirePermission("admin:manage_permissio
 });
 
 // DELETE /admin/permissions/:key
-adminRouter.delete("/admin/permissions/:key", requirePermission("admin:manage_permissions"), async (req, res): Promise<void> => {
+adminRouter.delete("/admin/permissions/:key", requirePermission("roles:manage"), async (req, res): Promise<void> => {
   try {
     const key = req.params.key as string;
     // Transactions: remove from role mappings first
@@ -154,7 +154,7 @@ adminRouter.delete("/admin/permissions/:key", requirePermission("admin:manage_pe
 });
 
 // POST /admin/backup
-adminRouter.post("/admin/backup", requirePermission("admin:backup"), async (req, res) => {
+adminRouter.post("/admin/backup", requirePermission("settings:manage"), async (req, res) => {
   try {
     const dbUrl = process.env.DATABASE_URL;
     if (!dbUrl) throw new Error("DATABASE_URL not set");

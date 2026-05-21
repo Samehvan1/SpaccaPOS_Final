@@ -1303,7 +1303,7 @@ components:
           type: string
           enum: [admin, barista, frontdesk, cashier, pickup, stockcontrol]
         branchId:
-          type: integer
+          type: ["integer", "null"]
         pin:
           type: string
       required:
@@ -1325,6 +1325,8 @@ components:
         role:
           type: string
           enum: [admin, barista, frontdesk, cashier, pickup]
+        branchId:
+          type: ["integer", "null"]
         pin:
           type: string
         isActive:

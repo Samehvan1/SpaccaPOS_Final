@@ -18,7 +18,7 @@ usersRouter.get("/users", requirePermission("users:view"), async (req, res): Pro
 
     const targetBranchId = (isAdmin && req.query.branchId && req.query.branchId !== 'all') 
       ? parseInt(req.query.branchId as string) 
-      : (isAdmin && req.query.branchId === 'all') ? null : sessionBranchId;
+      : (isAdmin && (req.query.branchId === 'all' || !req.query.branchId)) ? null : sessionBranchId;
 
     const allUsers = targetBranchId 
       ? await db.select().from(usersTable).where(eq(usersTable.branchId, targetBranchId))

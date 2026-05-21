@@ -15,7 +15,7 @@ router.get("/kitchen-stations", requirePermission("kitchen:view"), async (_req, 
 });
 
 // POST /kitchen-stations
-router.post("/kitchen-stations", requirePermission("admin:manage_stations"), async (req, res): Promise<void> => {
+router.post("/kitchen-stations", requirePermission("settings:manage"), async (req, res): Promise<void> => {
   const parsed = insertKitchenStationSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -29,7 +29,7 @@ router.post("/kitchen-stations", requirePermission("admin:manage_stations"), asy
 });
 
 // PATCH /kitchen-stations/:id
-router.patch("/kitchen-stations/:id", requirePermission("admin:manage_stations"), async (req, res): Promise<void> => {
+router.patch("/kitchen-stations/:id", requirePermission("settings:manage"), async (req, res): Promise<void> => {
   const id = parseInt(req.params.id as string);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
 
@@ -71,7 +71,7 @@ router.patch("/kitchen-stations/:id", requirePermission("admin:manage_stations")
 });
 
 // DELETE /kitchen-stations/:id
-router.delete("/kitchen-stations/:id", requirePermission("admin:manage_stations"), async (req, res): Promise<void> => {
+router.delete("/kitchen-stations/:id", requirePermission("settings:manage"), async (req, res): Promise<void> => {
   const id = parseInt(req.params.id as string);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
 

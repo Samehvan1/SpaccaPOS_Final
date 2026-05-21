@@ -11,7 +11,7 @@ import {
 
 const router: IRouter = Router();
 
-router.get("/discounts", requirePermission("admin:manage_discounts"), async (req, res): Promise<void> => {
+router.get("/discounts", requirePermission("discounts:manage"), async (req, res): Promise<void> => {
   const discounts = await db.select().from(discountsTable);
   res.json(
     discounts.map((d) => ({
@@ -21,7 +21,7 @@ router.get("/discounts", requirePermission("admin:manage_discounts"), async (req
   );
 });
 
-router.post("/discounts", requirePermission("admin:manage_discounts"), async (req, res): Promise<void> => {
+router.post("/discounts", requirePermission("discounts:manage"), async (req, res): Promise<void> => {
   const parsed = CreateDiscountBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -44,7 +44,7 @@ router.post("/discounts", requirePermission("admin:manage_discounts"), async (re
   });
 });
 
-router.patch("/discounts/:id", requirePermission("admin:manage_discounts"), async (req, res): Promise<void> => {
+router.patch("/discounts/:id", requirePermission("discounts:manage"), async (req, res): Promise<void> => {
   const id = parseInt(req.params.id as string);
   const parsed = UpdateDiscountBody.safeParse(req.body);
   if (!parsed.success) {
@@ -75,7 +75,7 @@ router.patch("/discounts/:id", requirePermission("admin:manage_discounts"), asyn
   });
 });
 
-router.delete("/discounts/:id", requirePermission("admin:manage_discounts"), async (req, res): Promise<void> => {
+router.delete("/discounts/:id", requirePermission("discounts:manage"), async (req, res): Promise<void> => {
   const id = parseInt(req.params.id as string);
   const [deleted] = await db
     .delete(discountsTable)

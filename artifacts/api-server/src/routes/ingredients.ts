@@ -84,7 +84,7 @@ async function buildIngredientDetail(ingredientId: number, branchId?: number) {
   };
 }
 
-router.post("/ingredients/import-csv", requirePermission("admin:manage_ingredients"), async (req, res): Promise<void> => {
+router.post("/ingredients/import-csv", requirePermission("inventory:manage"), async (req, res): Promise<void> => {
   try {
     const { pin } = req.body;
     if (!pin) {
@@ -310,7 +310,7 @@ router.get("/ingredients", requirePermission("inventory:view"), async (req, res)
   }
 });
 
-router.post("/ingredients", requirePermission("admin:manage_ingredients"), async (req, res): Promise<void> => {
+router.post("/ingredients", requirePermission("inventory:manage"), async (req, res): Promise<void> => {
   const parsed = CreateIngredientBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -388,7 +388,7 @@ router.get("/ingredients/:id", requirePermission("inventory:view"), async (req, 
   res.json(GetIngredientResponse.parse(serializeDates(detail)));
 });
 
-router.patch("/ingredients/:id", requirePermission("admin:manage_ingredients"), async (req, res): Promise<void> => {
+router.patch("/ingredients/:id", requirePermission("inventory:manage"), async (req, res): Promise<void> => {
   const params = UpdateIngredientParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -468,7 +468,7 @@ router.patch("/ingredients/:id", requirePermission("admin:manage_ingredients"), 
   globalCache.clear();
 });
 
-router.delete("/ingredients/:id", requirePermission("admin:manage_ingredients"), async (req, res): Promise<void> => {
+router.delete("/ingredients/:id", requirePermission("inventory:manage"), async (req, res): Promise<void> => {
   const params = GetIngredientParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -509,7 +509,7 @@ router.delete("/ingredients/:id", requirePermission("admin:manage_ingredients"),
   }
 });
 
-router.post("/ingredients/:id/options", requirePermission("admin:manage_ingredients"), async (req, res): Promise<void> => {
+router.post("/ingredients/:id/options", requirePermission("inventory:manage"), async (req, res): Promise<void> => {
   const params = CreateIngredientOptionParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -555,7 +555,7 @@ router.post("/ingredients/:id/options", requirePermission("admin:manage_ingredie
   globalCache.clear();
 });
 
-router.patch("/ingredients/:id/options/:optionId", requirePermission("admin:manage_ingredients"), async (req, res): Promise<void> => {
+router.patch("/ingredients/:id/options/:optionId", requirePermission("inventory:manage"), async (req, res): Promise<void> => {
   const params = UpdateIngredientOptionParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -602,7 +602,7 @@ router.patch("/ingredients/:id/options/:optionId", requirePermission("admin:mana
   globalCache.clear();
 });
 
-router.delete("/ingredients/:id/options/:optionId", requirePermission("admin:manage_ingredients"), async (req, res): Promise<void> => {
+router.delete("/ingredients/:id/options/:optionId", requirePermission("inventory:manage"), async (req, res): Promise<void> => {
   const params = DeleteIngredientOptionParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -726,7 +726,7 @@ router.post("/ingredients/:id/restock", requirePermission("inventory:adjust"), a
   broadcastEvent("inventory_updated", { ingredientId: params.data.id });
 });
 
-router.post("/ingredients/:id/conversions", requirePermission("admin:manage_ingredients"), async (req, res): Promise<void> => {
+router.post("/ingredients/:id/conversions", requirePermission("inventory:manage"), async (req, res): Promise<void> => {
   const { unitName, conversionFactor, isDefaultPurchase } = req.body;
   if (!unitName || !conversionFactor) {
     res.status(400).json({ error: "unitName and conversionFactor are required" });
@@ -750,7 +750,7 @@ router.post("/ingredients/:id/conversions", requirePermission("admin:manage_ingr
   globalCache.clear();
 });
 
-router.delete("/ingredients/:id/conversions/:conversionId", requirePermission("admin:manage_ingredients"), async (req, res): Promise<void> => {
+router.delete("/ingredients/:id/conversions/:conversionId", requirePermission("inventory:manage"), async (req, res): Promise<void> => {
   const [deleted] = await db
     .delete(ingredientConversionsTable)
     .where(

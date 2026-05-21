@@ -3415,21 +3415,21 @@ export declare const CreateUserBody: zod.ZodObject<{
     username: zod.ZodString;
     password: zod.ZodString;
     role: zod.ZodEnum<["admin", "barista", "frontdesk", "cashier", "pickup", "stockcontrol"]>;
-    branchId: zod.ZodOptional<zod.ZodNumber>;
+    branchId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
     pin: zod.ZodOptional<zod.ZodString>;
 }, "strip", zod.ZodTypeAny, {
     username: string;
     password: string;
     name: string;
     role: "admin" | "barista" | "frontdesk" | "cashier" | "pickup" | "stockcontrol";
-    branchId?: number | undefined;
+    branchId?: number | null | undefined;
     pin?: string | undefined;
 }, {
     username: string;
     password: string;
     name: string;
     role: "admin" | "barista" | "frontdesk" | "cashier" | "pickup" | "stockcontrol";
-    branchId?: number | undefined;
+    branchId?: number | null | undefined;
     pin?: string | undefined;
 }>;
 /**
@@ -3454,6 +3454,7 @@ export declare const UpdateUserBody: zod.ZodObject<{
     username: zod.ZodOptional<zod.ZodString>;
     password: zod.ZodOptional<zod.ZodString>;
     role: zod.ZodOptional<zod.ZodEnum<["admin", "barista", "frontdesk", "cashier", "pickup"]>>;
+    branchId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
     pin: zod.ZodOptional<zod.ZodString>;
     isActive: zod.ZodOptional<zod.ZodBoolean>;
 }, "strip", zod.ZodTypeAny, {
@@ -3461,6 +3462,7 @@ export declare const UpdateUserBody: zod.ZodObject<{
     password?: string | undefined;
     name?: string | undefined;
     role?: "admin" | "barista" | "frontdesk" | "cashier" | "pickup" | undefined;
+    branchId?: number | null | undefined;
     isActive?: boolean | undefined;
     pin?: string | undefined;
 }, {
@@ -3468,6 +3470,7 @@ export declare const UpdateUserBody: zod.ZodObject<{
     password?: string | undefined;
     name?: string | undefined;
     role?: "admin" | "barista" | "frontdesk" | "cashier" | "pickup" | undefined;
+    branchId?: number | null | undefined;
     isActive?: boolean | undefined;
     pin?: string | undefined;
 }>;

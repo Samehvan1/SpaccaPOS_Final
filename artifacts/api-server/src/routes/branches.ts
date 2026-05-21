@@ -15,7 +15,7 @@ router.get("/", async (req, res): Promise<void> => {
 });
 
 // POST /branches
-router.post("/", requirePermission("admin:manage_branches"), async (req, res): Promise<void> => {
+router.post("/", requirePermission("branches:manage"), async (req, res): Promise<void> => {
   const parsed = insertBranchSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -29,7 +29,7 @@ router.post("/", requirePermission("admin:manage_branches"), async (req, res): P
 });
 
 // PATCH /branches/:id
-router.patch("/:id", requirePermission("admin:manage_branches"), async (req, res): Promise<void> => {
+router.patch("/:id", requirePermission("branches:manage"), async (req, res): Promise<void> => {
   const id = parseInt(req.params.id as string);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
 
@@ -50,7 +50,7 @@ router.patch("/:id", requirePermission("admin:manage_branches"), async (req, res
 });
 
 // DELETE /branches/:id
-router.delete("/:id", requirePermission("admin:manage_branches"), async (req, res): Promise<void> => {
+router.delete("/:id", requirePermission("branches:manage"), async (req, res): Promise<void> => {
   const id = parseInt(req.params.id as string);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
 

@@ -1225,7 +1225,7 @@ export const CreateUserBody = zod.object({
     "pickup",
     "stockcontrol",
   ]),
-  branchId: zod.number().optional(),
+  branchId: zod.number().nullish(),
   pin: zod.string().optional(),
 });
 
@@ -1247,6 +1247,7 @@ export const UpdateUserBody = zod.object({
   role: zod
     .enum(["admin", "barista", "frontdesk", "cashier", "pickup"])
     .optional(),
+  branchId: zod.number().nullish(),
   pin: zod.string().optional(),
   isActive: zod.boolean().optional(),
 });

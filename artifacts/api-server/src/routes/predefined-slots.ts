@@ -53,7 +53,7 @@ router.get("/catalog/predefined-slots/:id", async (req, res): Promise<void> => {
 });
 
 // Create template
-router.post("/catalog/predefined-slots", requirePermission("admin:manage_catalog"), async (req, res): Promise<void> => {
+router.post("/catalog/predefined-slots", requirePermission("catalog:manage"), async (req, res): Promise<void> => {
   const { name, slotLabel, isRequired, isDynamic, affectsCupSize, autoLoadCategoryId } = req.body;
   if (!name || !slotLabel) { res.status(400).json({ error: "name and slotLabel required" }); return; }
   
@@ -99,7 +99,7 @@ router.post("/catalog/predefined-slots", requirePermission("admin:manage_catalog
 });
 
 // Update template
-router.patch("/catalog/predefined-slots/:id", requirePermission("admin:manage_catalog"), async (req, res): Promise<void> => {
+router.patch("/catalog/predefined-slots/:id", requirePermission("catalog:manage"), async (req, res): Promise<void> => {
   const id = parseInt(req.params.id as string);
   const { name, slotLabel, isRequired, isDynamic, affectsCupSize, typeOptions, volumes } = req.body;
   
@@ -165,7 +165,7 @@ router.get("/catalog/predefined-slots/:id/usage", async (req, res): Promise<void
 });
 
 // Delete template
-router.delete("/catalog/predefined-slots/:id", requirePermission("admin:manage_catalog"), async (req, res): Promise<void> => {
+router.delete("/catalog/predefined-slots/:id", requirePermission("catalog:manage"), async (req, res): Promise<void> => {
   const id = parseInt(req.params.id as string);
   try {
     await db.delete(predefinedSlotsTable).where(eq(predefinedSlotsTable.id, id));

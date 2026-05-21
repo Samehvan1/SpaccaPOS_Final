@@ -77,7 +77,8 @@ export interface CreateUserBody {
     username: string;
     password: string;
     role: CreateUserBodyRole;
-    branchId?: number;
+    /** @nullable */
+    branchId?: number | null;
     pin?: string;
 }
 export type UpdateUserBodyRole = (typeof UpdateUserBodyRole)[keyof typeof UpdateUserBodyRole];
@@ -93,6 +94,8 @@ export interface UpdateUserBody {
     username?: string;
     password?: string;
     role?: UpdateUserBodyRole;
+    /** @nullable */
+    branchId?: number | null;
     pin?: string;
     isActive?: boolean;
 }
