@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useListStockMovements, useGetLowStockIngredients, useRestockIngredient, useListIngredients } from "@workspace/api-client-react";
+import { useListStockMovements, useGetLowStockIngredients, useRestockIngredient, useListIngredients, useUpdateIngredient } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,11 +7,22 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Plus, AlertTriangle, ArrowDownToLine, ArrowUpFromLine, PackageOpen, Download } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ArrowLeft, Plus, AlertTriangle, ArrowDownToLine, ArrowUpFromLine, PackageOpen, Download, Settings2 } from "lucide-react";
 import { Link } from "wouter";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
+
+type LowStockItem = {
+  id: number;
+  name: string;
+  unit: string;
+  ingredientType: string;
+  stockQuantity: number;
+  lowStockThreshold: number;
+  conversions?: { id: number; unitName: string; conversionFactor: number; isDefaultPurchase: boolean; createdAt?: string }[];
+};
 
 type Ingredient = {
   id: number;
@@ -50,6 +61,34 @@ export default function StockAdmin() {
   // Startup stock state: map of ingredientId → input value
   const [startupValues, setStartupValues] = useState<Record<number, string>>({});
   const [isSavingStartup, setIsSavingStartup] = useState(false);
+
+  // Low-stock threshold editing
+  const [thresholdEdit, setThresholdEdit] = useState<LowStockItem | null>(null);
+  const [newThreshold, setNewThreshold] = useState("");
+
+  const { mutate: updateLowThreshold } = useUpdateIngredient({
+    mutation: {
+      onSuccess: () => {
+        toast({ title: "Low stock threshold updated" });
+        refetchLowStock();
+        refetchIngredients();
+        setThresholdEdit(null);
+      },
+      onError: () => {
+        toast({ variant: "destructive", title: "Failed to update low stock threshold" });
+      },
+    },
+  });
+
+  const handleSaveThreshold = () => {
+    if (!thresholdEdit) return;
+    const val = parseFloat(newThreshold);
+    if (isNaN(val) || val < 0) {
+      toast({ variant: "destructive", title: "Enter a valid threshold value" });
+      return;
+    }
+    updateLowThreshold({ id: thresholdEdit.id, data: { lowStockThreshold: val } });
+  };
 
   const handleSaveStartupStock = async () => {
     if (!selectedBranchId) {
@@ -171,16 +210,21 @@ export default function StockAdmin() {
           </CardHeader>
           <CardContent className="pt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {lowStock.map(ing => (
-              <div key={ing.id} className="flex justify-between items-center p-3 border rounded bg-background">
+              <button
+                key={ing.id}
+                type="button"
+                onClick={() => { setThresholdEdit(ing); setNewThreshold(String(ing.lowStockThreshold)); }}
+                className="flex justify-between items-center p-3 border rounded bg-background hover:bg-accent/40 hover:border-foreground/30 transition-colors text-left w-full cursor-pointer"
+              >
                 <div>
                   <div className="font-bold">{ing.name}</div>
                   <div className="text-sm text-muted-foreground">Threshold: {ing.lowStockThreshold} {ing.unit}</div>
                 </div>
-                <div className="text-right">
+                <div className="text-right shrink-0">
                   <div className="font-bold text-destructive text-lg">{ing.stockQuantity}</div>
                   <div className="text-xs text-muted-foreground">{ing.unit}</div>
                 </div>
-              </div>
+              </button>
             ))}
           </CardContent>
         </Card>
@@ -325,6 +369,57 @@ export default function StockAdmin() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Low stock threshold editor dialog */}
+      <Dialog open={thresholdEdit !== null} onOpenChange={(open) => { if (!open) setThresholdEdit(null); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Settings2 className="h-5 w-5 text-muted-foreground" />
+              Low Stock Alert Settings
+            </DialogTitle>
+          </DialogHeader>
+          {thresholdEdit && (
+            <div className="space-y-4">
+              <div>
+                <p className="font-semibold text-lg">{thresholdEdit.name}</p>
+                <p className="text-sm text-muted-foreground capitalize">{thresholdEdit.ingredientType}</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="rounded border p-3 bg-muted/30">
+                  <Label className="text-xs text-muted-foreground">Current Stock</Label>
+                  <p className="text-xl font-bold">{thresholdEdit.stockQuantity}</p>
+                  <p className="text-xs text-muted-foreground">{thresholdEdit.unit}</p>
+                </div>
+                <div className="rounded border p-3 bg-muted/30">
+                  <Label className="text-xs text-muted-foreground">Current Threshold</Label>
+                  <p className="text-xl font-bold">{thresholdEdit.lowStockThreshold}</p>
+                  <p className="text-xs text-muted-foreground">{thresholdEdit.unit}</p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="new-threshold">New Low Stock Threshold ({thresholdEdit.unit})</Label>
+                <Input
+                  id="new-threshold"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={newThreshold}
+                  onChange={(e) => setNewThreshold(e.target.value)}
+                  placeholder="Enter threshold value"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="outline" onClick={() => setThresholdEdit(null)}>Cancel</Button>
+                <Button onClick={handleSaveThreshold}>Save</Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
