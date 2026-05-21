@@ -78054,7 +78054,14 @@ var ListOrdersResponseItem = objectType({
   discountValue: numberType().nullish(),
   discountType: enumType(["percentage", "fixed"]).nullish(),
   total: numberType(),
-  paymentMethod: enumType(["cash", "card", "wallet", "hospitality"]),
+  paymentMethod: enumType([
+    "cash",
+    "card",
+    "wallet",
+    "hospitality",
+    "split",
+    "refund"
+  ]),
   amountTendered: numberType().nullish(),
   changeDue: numberType().nullish(),
   notes: stringType().nullish(),
@@ -78102,7 +78109,14 @@ var CreateOrderBody = objectType({
   branchId: numberType().optional(),
   customerName: stringType().optional(),
   customerPhone: stringType().optional(),
-  paymentMethod: enumType(["cash", "card", "wallet", "hospitality"]),
+  paymentMethod: enumType([
+    "cash",
+    "card",
+    "wallet",
+    "hospitality",
+    "split",
+    "refund"
+  ]),
   amountTendered: numberType().optional(),
   notes: stringType().optional(),
   discount: numberType().optional(),
@@ -78154,7 +78168,14 @@ var GetOrderResponse = objectType({
   discountValue: numberType().nullish(),
   discountType: enumType(["percentage", "fixed"]).nullish(),
   total: numberType(),
-  paymentMethod: enumType(["cash", "card", "wallet", "hospitality"]),
+  paymentMethod: enumType([
+    "cash",
+    "card",
+    "wallet",
+    "hospitality",
+    "split",
+    "refund"
+  ]),
   amountTendered: numberType().nullish(),
   changeDue: numberType().nullish(),
   notes: stringType().nullish(),
@@ -78213,7 +78234,7 @@ var UpdateOrderStatusBody = objectType({
     "cancelled",
     "refunded"
   ]),
-  paymentMethod: enumType(["cash", "card", "wallet", "hospitality"]).optional(),
+  paymentMethod: enumType(["cash", "card", "wallet", "hospitality", "split", "refund"]).optional(),
   cashierId: numberType().optional().describe("The ID of the cashier approving the order"),
   adminPin: stringType().optional().describe("Required if changing paymentMethod to hospitality")
 });
@@ -78239,7 +78260,14 @@ var UpdateOrderStatusResponse = objectType({
   discountValue: numberType().nullish(),
   discountType: enumType(["percentage", "fixed"]).nullish(),
   total: numberType(),
-  paymentMethod: enumType(["cash", "card", "wallet", "hospitality"]),
+  paymentMethod: enumType([
+    "cash",
+    "card",
+    "wallet",
+    "hospitality",
+    "split",
+    "refund"
+  ]),
   amountTendered: numberType().nullish(),
   changeDue: numberType().nullish(),
   notes: stringType().nullish(),
@@ -78284,7 +78312,14 @@ var MarkOrderItemReadyResponse = objectType({
   discountValue: numberType().nullish(),
   discountType: enumType(["percentage", "fixed"]).nullish(),
   total: numberType(),
-  paymentMethod: enumType(["cash", "card", "wallet", "hospitality"]),
+  paymentMethod: enumType([
+    "cash",
+    "card",
+    "wallet",
+    "hospitality",
+    "split",
+    "refund"
+  ]),
   amountTendered: numberType().nullish(),
   changeDue: numberType().nullish(),
   notes: stringType().nullish(),
@@ -78368,7 +78403,14 @@ var GetActiveOrdersResponseItem = objectType({
   discountValue: numberType().nullish(),
   discountType: enumType(["percentage", "fixed"]).nullish(),
   total: numberType(),
-  paymentMethod: enumType(["cash", "card", "wallet", "hospitality"]),
+  paymentMethod: enumType([
+    "cash",
+    "card",
+    "wallet",
+    "hospitality",
+    "split",
+    "refund"
+  ]),
   amountTendered: numberType().nullish(),
   changeDue: numberType().nullish(),
   notes: stringType().nullish(),
@@ -78475,7 +78517,7 @@ var CreateUserBody = objectType({
     "pickup",
     "stockcontrol"
   ]),
-  branchId: numberType().optional(),
+  branchId: numberType().nullish(),
   pin: stringType().optional()
 });
 var UpdateUserParams = objectType({
@@ -78489,6 +78531,7 @@ var UpdateUserBody = objectType({
   username: stringType().optional(),
   password: stringType().optional(),
   role: enumType(["admin", "barista", "frontdesk", "cashier", "pickup"]).optional(),
+  branchId: numberType().nullish(),
   pin: stringType().optional(),
   isActive: booleanType().optional()
 });
@@ -81697,7 +81740,7 @@ router3.get("/drinks", async (req, res) => {
   );
   res.json(serializeDates(drinksWithDetails));
 });
-router3.post("/drinks", requirePermission("admin:manage_drinks"), async (req, res) => {
+router3.post("/drinks", requirePermission("catalog:manage"), async (req, res) => {
   const parsed = CreateDrinkBody2.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -81763,7 +81806,7 @@ router3.get("/drinks/:id", async (req, res) => {
   }
   res.json(serializeDates(detail));
 });
-router3.patch("/drinks/:id", requirePermission("admin:manage_drinks"), async (req, res) => {
+router3.patch("/drinks/:id", requirePermission("catalog:manage"), async (req, res) => {
   const params = UpdateDrinkParams2.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -81820,7 +81863,7 @@ router3.patch("/drinks/:id", requirePermission("admin:manage_drinks"), async (re
     categoryId: drink.categoryId ?? void 0
   })));
 });
-router3.post("/drinks/:id/image", requirePermission("admin:manage_drinks"), upload.single("image"), async (req, res) => {
+router3.post("/drinks/:id/image", requirePermission("catalog:manage"), upload.single("image"), async (req, res) => {
   const id = parseInt(req.params.id);
   if (isNaN(id)) {
     res.status(400).json({ error: "Invalid id" });
@@ -81840,7 +81883,7 @@ router3.post("/drinks/:id/image", requirePermission("admin:manage_drinks"), uplo
   }
   res.json({ imageUrl });
 });
-router3.put("/drinks/:id/slots", requirePermission("admin:manage_drinks"), async (req, res) => {
+router3.put("/drinks/:id/slots", requirePermission("catalog:manage"), async (req, res) => {
   const idParsed = GetDrinkParams2.safeParse(req.params);
   if (!idParsed.success) {
     res.status(400).json({ error: idParsed.error.message });
@@ -82017,7 +82060,7 @@ router3.put("/drinks/:id/slots", requirePermission("admin:manage_drinks"), async
   globalCache.clearPrefix(`drink_default_price_${drinkId}`);
   res.json(serializeDates(detail));
 });
-router3.delete("/drinks/:id", requirePermission("admin:manage_drinks"), async (req, res) => {
+router3.delete("/drinks/:id", requirePermission("catalog:manage"), async (req, res) => {
   const params = DeleteDrinkParams2.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -82253,7 +82296,7 @@ async function buildIngredientDetail(ingredientId, branchId) {
     }))
   };
 }
-router4.post("/ingredients/import-csv", requirePermission("admin:manage_ingredients"), async (req, res) => {
+router4.post("/ingredients/import-csv", requirePermission("inventory:manage"), async (req, res) => {
   try {
     const { pin } = req.body;
     if (!pin) {
@@ -82431,7 +82474,7 @@ router4.get("/ingredients", requirePermission("inventory:view"), async (req, res
     res.status(500).json({ error: "Failed to load ingredients data" });
   }
 });
-router4.post("/ingredients", requirePermission("admin:manage_ingredients"), async (req, res) => {
+router4.post("/ingredients", requirePermission("inventory:manage"), async (req, res) => {
   const parsed = CreateIngredientBody2.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -82489,7 +82532,7 @@ router4.get("/ingredients/:id", requirePermission("inventory:view"), async (req,
   }
   res.json(GetIngredientResponse2.parse(serializeDates(detail)));
 });
-router4.patch("/ingredients/:id", requirePermission("admin:manage_ingredients"), async (req, res) => {
+router4.patch("/ingredients/:id", requirePermission("inventory:manage"), async (req, res) => {
   const params = UpdateIngredientParams2.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -82551,7 +82594,7 @@ router4.patch("/ingredients/:id", requirePermission("admin:manage_ingredients"),
   );
   globalCache.clear();
 });
-router4.delete("/ingredients/:id", requirePermission("admin:manage_ingredients"), async (req, res) => {
+router4.delete("/ingredients/:id", requirePermission("inventory:manage"), async (req, res) => {
   const params = GetIngredientParams2.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -82573,7 +82616,7 @@ router4.delete("/ingredients/:id", requirePermission("admin:manage_ingredients")
     res.status(400).json({ error: "Cannot delete ingredient because it is in use by historical orders." });
   }
 });
-router4.post("/ingredients/:id/options", requirePermission("admin:manage_ingredients"), async (req, res) => {
+router4.post("/ingredients/:id/options", requirePermission("inventory:manage"), async (req, res) => {
   const params = CreateIngredientOptionParams2.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -82608,7 +82651,7 @@ router4.post("/ingredients/:id/options", requirePermission("admin:manage_ingredi
   });
   globalCache.clear();
 });
-router4.patch("/ingredients/:id/options/:optionId", requirePermission("admin:manage_ingredients"), async (req, res) => {
+router4.patch("/ingredients/:id/options/:optionId", requirePermission("inventory:manage"), async (req, res) => {
   const params = UpdateIngredientOptionParams2.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -82645,7 +82688,7 @@ router4.patch("/ingredients/:id/options/:optionId", requirePermission("admin:man
   });
   globalCache.clear();
 });
-router4.delete("/ingredients/:id/options/:optionId", requirePermission("admin:manage_ingredients"), async (req, res) => {
+router4.delete("/ingredients/:id/options/:optionId", requirePermission("inventory:manage"), async (req, res) => {
   const params = DeleteIngredientOptionParams2.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -82734,7 +82777,7 @@ router4.post("/ingredients/:id/restock", requirePermission("inventory:adjust"), 
   const { broadcastEvent: broadcastEvent2 } = await Promise.resolve().then(() => (init_sse(), sse_exports));
   broadcastEvent2("inventory_updated", { ingredientId: params.data.id });
 });
-router4.post("/ingredients/:id/conversions", requirePermission("admin:manage_ingredients"), async (req, res) => {
+router4.post("/ingredients/:id/conversions", requirePermission("inventory:manage"), async (req, res) => {
   const { unitName, conversionFactor, isDefaultPurchase } = req.body;
   if (!unitName || !conversionFactor) {
     res.status(400).json({ error: "unitName and conversionFactor are required" });
@@ -82752,7 +82795,7 @@ router4.post("/ingredients/:id/conversions", requirePermission("admin:manage_ing
   });
   globalCache.clear();
 });
-router4.delete("/ingredients/:id/conversions/:conversionId", requirePermission("admin:manage_ingredients"), async (req, res) => {
+router4.delete("/ingredients/:id/conversions/:conversionId", requirePermission("inventory:manage"), async (req, res) => {
   const [deleted] = await db.delete(ingredientConversionsTable).where(
     and(
       eq(ingredientConversionsTable.id, parseInt(String(req.params.conversionId))),
@@ -83840,6 +83883,7 @@ router7.get("/dashboard/low-stock", async (req, res) => {
     ingredientType: ingredientsTable.ingredientType,
     unit: ingredientsTable.unit,
     costPerUnit: ingredientsTable.costPerUnit,
+    startupQuantity: branchStockTable.startupQuantity,
     isActive: ingredientsTable.isActive,
     stockQuantity: branchStockTable.stockQuantity,
     lowStockThreshold: branchStockTable.lowStockThreshold,
@@ -83863,6 +83907,7 @@ router7.get("/dashboard/low-stock", async (req, res) => {
       serializeDates(results.map((i) => ({
         ...i,
         costPerUnit: parseFloat(i.costPerUnit),
+        startupQuantity: parseFloat(i.startupQuantity),
         stockQuantity: parseFloat(i.stockQuantity),
         lowStockThreshold: parseFloat(i.lowStockThreshold),
         createdAt: i.createdAt || /* @__PURE__ */ new Date(),
@@ -84029,7 +84074,7 @@ router8.get("/catalog/categories", async (_req, res) => {
   const rows = await db.select().from(ingredientCategoriesTable).orderBy(asc(ingredientCategoriesTable.sortOrder), asc(ingredientCategoriesTable.name));
   res.json(rows);
 });
-router8.post("/catalog/categories", requirePermission("admin:manage_catalog"), async (req, res) => {
+router8.post("/catalog/categories", requirePermission("catalog:manage"), async (req, res) => {
   const { name, sortOrder } = req.body;
   if (!name) {
     res.status(400).json({ error: "name required" });
@@ -84044,7 +84089,7 @@ router8.post("/catalog/categories", requirePermission("admin:manage_catalog"), a
   globalCache.clear();
   res.status(201).json(row);
 });
-router8.patch("/catalog/categories/:id", requirePermission("admin:manage_catalog"), async (req, res) => {
+router8.patch("/catalog/categories/:id", requirePermission("catalog:manage"), async (req, res) => {
   const id = parseInt(req.params.id);
   const { name, sortOrder } = req.body;
   const [row] = await db.update(ingredientCategoriesTable).set({ ...name && { name }, ...sortOrder !== void 0 && { sortOrder } }).where(eq(ingredientCategoriesTable.id, id)).returning();
@@ -84055,7 +84100,7 @@ router8.patch("/catalog/categories/:id", requirePermission("admin:manage_catalog
   globalCache.clear();
   res.json(row);
 });
-router8.delete("/catalog/categories/:id", requirePermission("admin:manage_catalog"), async (req, res) => {
+router8.delete("/catalog/categories/:id", requirePermission("catalog:manage"), async (req, res) => {
   const id = parseInt(req.params.id);
   try {
     await db.delete(ingredientCategoriesTable).where(eq(ingredientCategoriesTable.id, id));
@@ -84114,7 +84159,7 @@ router8.get("/catalog/types/:id", async (req, res) => {
     }))
   });
 });
-router8.post("/catalog/types", requirePermission("admin:manage_catalog"), async (req, res) => {
+router8.post("/catalog/types", requirePermission("catalog:manage"), async (req, res) => {
   const { categoryId, name, inventoryIngredientId, processedQty, producedQty, unit, isActive, affectsCupSize, sortOrder, color, extraCost, pricingMode } = req.body;
   if (!categoryId || !name) {
     res.status(400).json({ error: "categoryId and name required" });
@@ -84142,7 +84187,7 @@ router8.post("/catalog/types", requirePermission("admin:manage_catalog"), async 
   globalCache.clear();
   res.status(201).json(row);
 });
-router8.patch("/catalog/types/:id", requirePermission("admin:manage_catalog"), async (req, res) => {
+router8.patch("/catalog/types/:id", requirePermission("catalog:manage"), async (req, res) => {
   const id = parseInt(req.params.id);
   const { categoryId, name, inventoryIngredientId, processedQty, producedQty, unit, isActive, affectsCupSize, sortOrder, color, extraCost, pricingMode } = req.body;
   const patch = {};
@@ -84175,7 +84220,7 @@ router8.patch("/catalog/types/:id", requirePermission("admin:manage_catalog"), a
     res.status(500).json({ error: err.message || "Failed to update ingredient type" });
   }
 });
-router8.delete("/catalog/types/:id", requirePermission("admin:manage_catalog"), async (req, res) => {
+router8.delete("/catalog/types/:id", requirePermission("catalog:manage"), async (req, res) => {
   const id = parseInt(req.params.id);
   try {
     await db.delete(ingredientTypesTable).where(eq(ingredientTypesTable.id, id));
@@ -84207,7 +84252,7 @@ router8.get("/catalog/types/:id/volumes", async (req, res) => {
   const volMap = new Map(volRows.flat().map((v) => [v.id, v]));
   res.json(typeVolumes.map((tv) => ({ ...tv, volume: volMap.get(tv.volumeId) ?? null })));
 });
-router8.post("/catalog/types/:id/volumes", requirePermission("admin:manage_catalog"), async (req, res) => {
+router8.post("/catalog/types/:id/volumes", requirePermission("catalog:manage"), async (req, res) => {
   const ingredientTypeId = parseInt(req.params.id);
   const { volumeId, processedQty, producedQty, unit, extraCost, isDefault, sortOrder } = req.body;
   if (!volumeId) {
@@ -84228,7 +84273,7 @@ router8.post("/catalog/types/:id/volumes", requirePermission("admin:manage_catal
   globalCache.clear();
   res.status(201).json(row);
 });
-router8.patch("/catalog/type-volumes/:id", requirePermission("admin:manage_catalog"), async (req, res) => {
+router8.patch("/catalog/type-volumes/:id", requirePermission("catalog:manage"), async (req, res) => {
   const id = parseInt(req.params.id);
   const { processedQty, producedQty, unit, extraCost, isDefault, sortOrder, isActive } = req.body;
   const patch = {};
@@ -84247,7 +84292,7 @@ router8.patch("/catalog/type-volumes/:id", requirePermission("admin:manage_catal
   globalCache.clear();
   res.json(row);
 });
-router8.delete("/catalog/type-volumes/:id", requirePermission("admin:manage_catalog"), async (req, res) => {
+router8.delete("/catalog/type-volumes/:id", requirePermission("catalog:manage"), async (req, res) => {
   await db.delete(ingredientTypeVolumesTable).where(eq(ingredientTypeVolumesTable.id, parseInt(req.params.id)));
   globalCache.clear();
   res.sendStatus(204);
@@ -84256,7 +84301,7 @@ router8.get("/catalog/volumes", async (_req, res) => {
   const rows = await db.select().from(ingredientVolumesTable).orderBy(asc(ingredientVolumesTable.sortOrder), asc(ingredientVolumesTable.name));
   res.json(rows);
 });
-router8.post("/catalog/volumes", requirePermission("admin:manage_catalog"), async (req, res) => {
+router8.post("/catalog/volumes", requirePermission("catalog:manage"), async (req, res) => {
   const { name, processedQty, producedQty, unit, sortOrder } = req.body;
   if (!name) {
     res.status(400).json({ error: "name required" });
@@ -84270,7 +84315,7 @@ router8.post("/catalog/volumes", requirePermission("admin:manage_catalog"), asyn
   const [row] = await db.insert(ingredientVolumesTable).values({ name, processedQty: processedQty ?? "0", producedQty: producedQty ?? "0", unit: unit ?? "ml", sortOrder: sortOrder ?? 0 }).returning();
   res.status(201).json(row);
 });
-router8.patch("/catalog/volumes/:id", requirePermission("admin:manage_catalog"), async (req, res) => {
+router8.patch("/catalog/volumes/:id", requirePermission("catalog:manage"), async (req, res) => {
   const id = parseInt(req.params.id);
   const { name, processedQty, producedQty, unit, sortOrder } = req.body;
   const patch = {};
@@ -84286,7 +84331,7 @@ router8.patch("/catalog/volumes/:id", requirePermission("admin:manage_catalog"),
   }
   res.json(row);
 });
-router8.delete("/catalog/volumes/:id", requirePermission("admin:manage_catalog"), async (req, res) => {
+router8.delete("/catalog/volumes/:id", requirePermission("catalog:manage"), async (req, res) => {
   const id = parseInt(req.params.id);
   try {
     await db.delete(ingredientVolumesTable).where(eq(ingredientVolumesTable.id, id));
@@ -84319,7 +84364,7 @@ router8.get("/catalog/types/:id/overrides", async (req, res) => {
   }, []);
   res.json(grouped);
 });
-router8.post("/catalog/types/:id/sync", requirePermission("admin:manage_catalog"), async (req, res) => {
+router8.post("/catalog/types/:id/sync", requirePermission("catalog:manage"), async (req, res) => {
   const typeId = parseInt(req.params.id);
   const { drinkId } = req.body;
   if (!drinkId) {
@@ -84356,7 +84401,7 @@ router9.get("/drink-categories", async (_req, res) => {
   const categories = await db.select().from(drinkCategoriesTable).orderBy(asc(drinkCategoriesTable.sortOrder), asc(drinkCategoriesTable.name));
   res.json(categories);
 });
-router9.post("/drink-categories", requirePermission("admin:manage_categories"), async (req, res) => {
+router9.post("/drink-categories", requirePermission("catalog:manage"), async (req, res) => {
   const parsed = insertDrinkCategorySchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -84365,7 +84410,7 @@ router9.post("/drink-categories", requirePermission("admin:manage_categories"), 
   const [category] = await db.insert(drinkCategoriesTable).values(parsed.data).returning();
   res.status(201).json(category);
 });
-router9.patch("/drink-categories/:id", requirePermission("admin:manage_categories"), async (req, res) => {
+router9.patch("/drink-categories/:id", requirePermission("catalog:manage"), async (req, res) => {
   const id = parseInt(req.params.id);
   if (isNaN(id)) {
     res.status(400).json({ error: "Invalid id" });
@@ -84386,7 +84431,7 @@ router9.patch("/drink-categories/:id", requirePermission("admin:manage_categorie
   }
   res.json(category);
 });
-router9.delete("/drink-categories/:id", requirePermission("admin:manage_categories"), async (req, res) => {
+router9.delete("/drink-categories/:id", requirePermission("catalog:manage"), async (req, res) => {
   const id = parseInt(req.params.id);
   if (isNaN(id)) {
     res.status(400).json({ error: "Invalid id" });
@@ -84410,7 +84455,7 @@ router10.get("/kitchen-stations", requirePermission("kitchen:view"), async (_req
   const stations = await db.select().from(kitchenStationsTable).orderBy(asc(kitchenStationsTable.sortOrder), asc(kitchenStationsTable.name));
   res.json(stations);
 });
-router10.post("/kitchen-stations", requirePermission("admin:manage_stations"), async (req, res) => {
+router10.post("/kitchen-stations", requirePermission("settings:manage"), async (req, res) => {
   const parsed = insertKitchenStationSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -84419,7 +84464,7 @@ router10.post("/kitchen-stations", requirePermission("admin:manage_stations"), a
   const [station] = await db.insert(kitchenStationsTable).values(parsed.data).returning();
   res.status(201).json(station);
 });
-router10.patch("/kitchen-stations/:id", requirePermission("admin:manage_stations"), async (req, res) => {
+router10.patch("/kitchen-stations/:id", requirePermission("settings:manage"), async (req, res) => {
   const id = parseInt(req.params.id);
   if (isNaN(id)) {
     res.status(400).json({ error: "Invalid id" });
@@ -84443,7 +84488,7 @@ router10.patch("/kitchen-stations/:id", requirePermission("admin:manage_stations
   }
   res.json(station);
 });
-router10.delete("/kitchen-stations/:id", requirePermission("admin:manage_stations"), async (req, res) => {
+router10.delete("/kitchen-stations/:id", requirePermission("settings:manage"), async (req, res) => {
   const id = parseInt(req.params.id);
   if (isNaN(id)) {
     res.status(400).json({ error: "Invalid id" });
@@ -84549,7 +84594,7 @@ router12.get("/catalog/predefined-slots/:id", async (req, res) => {
   const volumes = await db.select().from(predefinedSlotVolumesTable).where(eq(predefinedSlotVolumesTable.predefinedSlotId, id)).orderBy(predefinedSlotVolumesTable.sortOrder);
   res.json({ ...slot, typeOptions, volumes });
 });
-router12.post("/catalog/predefined-slots", requirePermission("admin:manage_catalog"), async (req, res) => {
+router12.post("/catalog/predefined-slots", requirePermission("catalog:manage"), async (req, res) => {
   const { name, slotLabel, isRequired, isDynamic, affectsCupSize, autoLoadCategoryId } = req.body;
   if (!name || !slotLabel) {
     res.status(400).json({ error: "name and slotLabel required" });
@@ -84593,7 +84638,7 @@ router12.post("/catalog/predefined-slots", requirePermission("admin:manage_catal
   }
   res.status(201).json(slot);
 });
-router12.patch("/catalog/predefined-slots/:id", requirePermission("admin:manage_catalog"), async (req, res) => {
+router12.patch("/catalog/predefined-slots/:id", requirePermission("catalog:manage"), async (req, res) => {
   const id = parseInt(req.params.id);
   const { name, slotLabel, isRequired, isDynamic, affectsCupSize, typeOptions, volumes } = req.body;
   const patch = {};
@@ -84643,7 +84688,7 @@ router12.get("/catalog/predefined-slots/:id/usage", async (req, res) => {
   }).from(drinkIngredientSlotsTable).innerJoin(drinksTable, eq(drinkIngredientSlotsTable.drinkId, drinksTable.id)).where(eq(drinkIngredientSlotsTable.predefinedSlotId, id));
   res.json(usage);
 });
-router12.delete("/catalog/predefined-slots/:id", requirePermission("admin:manage_catalog"), async (req, res) => {
+router12.delete("/catalog/predefined-slots/:id", requirePermission("catalog:manage"), async (req, res) => {
   const id = parseInt(req.params.id);
   try {
     await db.delete(predefinedSlotsTable).where(eq(predefinedSlotsTable.id, id));
@@ -84668,7 +84713,7 @@ usersRouter.get("/users", requirePermission("users:view"), async (req, res) => {
     const sessionUser = req.session;
     const isAdmin = sessionUser.role === "admin";
     const sessionBranchId = sessionUser.branchId;
-    const targetBranchId = isAdmin && req.query.branchId && req.query.branchId !== "all" ? parseInt(req.query.branchId) : isAdmin && req.query.branchId === "all" ? null : sessionBranchId;
+    const targetBranchId = isAdmin && req.query.branchId && req.query.branchId !== "all" ? parseInt(req.query.branchId) : isAdmin && (req.query.branchId === "all" || !req.query.branchId) ? null : sessionBranchId;
     const allUsers = targetBranchId ? await db.select().from(usersTable).where(eq(usersTable.branchId, targetBranchId)) : await db.select().from(usersTable);
     res.json(allUsers.map((u) => ListUsersResponseItem2.parse({
       ...u,
@@ -84826,7 +84871,7 @@ var import_express14 = __toESM(require_express2(), 1);
 init_drizzle_orm();
 init_src();
 var router13 = (0, import_express14.Router)();
-router13.get("/discounts", requirePermission("admin:manage_discounts"), async (req, res) => {
+router13.get("/discounts", requirePermission("discounts:manage"), async (req, res) => {
   const discounts = await db.select().from(discountsTable);
   res.json(
     discounts.map((d) => ({
@@ -84835,7 +84880,7 @@ router13.get("/discounts", requirePermission("admin:manage_discounts"), async (r
     }))
   );
 });
-router13.post("/discounts", requirePermission("admin:manage_discounts"), async (req, res) => {
+router13.post("/discounts", requirePermission("discounts:manage"), async (req, res) => {
   const parsed = CreateDiscountBody2.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -84852,7 +84897,7 @@ router13.post("/discounts", requirePermission("admin:manage_discounts"), async (
     value: parseFloat(discount.value)
   });
 });
-router13.patch("/discounts/:id", requirePermission("admin:manage_discounts"), async (req, res) => {
+router13.patch("/discounts/:id", requirePermission("discounts:manage"), async (req, res) => {
   const id = parseInt(req.params.id);
   const parsed = UpdateDiscountBody2.safeParse(req.body);
   if (!parsed.success) {
@@ -84874,7 +84919,7 @@ router13.patch("/discounts/:id", requirePermission("admin:manage_discounts"), as
     value: parseFloat(discount.value)
   });
 });
-router13.delete("/discounts/:id", requirePermission("admin:manage_discounts"), async (req, res) => {
+router13.delete("/discounts/:id", requirePermission("discounts:manage"), async (req, res) => {
   const id = parseInt(req.params.id);
   const [deleted] = await db.delete(discountsTable).where(eq(discountsTable.id, id)).returning();
   if (!deleted) {
@@ -85460,7 +85505,7 @@ import { exec } from "child_process";
 import path4 from "path";
 import fs5 from "fs";
 var adminRouter = (0, import_express17.Router)();
-adminRouter.get("/admin/activity-logs", requirePermission("admin:view_logs"), async (req, res) => {
+adminRouter.get("/admin/activity-logs", requirePermission("admin:view"), async (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 50;
     const offset = parseInt(req.query.offset) || 0;
@@ -85499,7 +85544,7 @@ adminRouter.get("/admin/activity-logs", requirePermission("admin:view_logs"), as
     res.status(500).json({ error: "Failed to list activity logs" });
   }
 });
-adminRouter.get("/admin/permissions", requirePermission("admin:manage_permissions"), async (req, res) => {
+adminRouter.get("/admin/permissions", requirePermission("roles:manage"), async (req, res) => {
   try {
     const permissions = await db.select().from(permissionsTable);
     res.json(permissions);
@@ -85507,7 +85552,7 @@ adminRouter.get("/admin/permissions", requirePermission("admin:manage_permission
     res.status(500).json({ error: "Failed to list permissions" });
   }
 });
-adminRouter.get("/admin/role-permissions", requirePermission("admin:manage_permissions"), async (req, res) => {
+adminRouter.get("/admin/role-permissions", requirePermission("roles:manage"), async (req, res) => {
   try {
     const rolePermissions = await db.select().from(rolePermissionsTable);
     res.json(rolePermissions);
@@ -85515,7 +85560,7 @@ adminRouter.get("/admin/role-permissions", requirePermission("admin:manage_permi
     res.status(500).json({ error: "Failed to list role permissions" });
   }
 });
-adminRouter.post("/admin/role-permissions", requirePermission("admin:manage_permissions"), async (req, res) => {
+adminRouter.post("/admin/role-permissions", requirePermission("roles:manage"), async (req, res) => {
   try {
     const { role, permissions } = req.body;
     if (!role || !Array.isArray(permissions)) {
@@ -85539,7 +85584,7 @@ adminRouter.post("/admin/role-permissions", requirePermission("admin:manage_perm
     res.status(500).json({ error: "Failed to update role permissions" });
   }
 });
-adminRouter.post("/admin/permissions", requirePermission("admin:manage_permissions"), async (req, res) => {
+adminRouter.post("/admin/permissions", requirePermission("roles:manage"), async (req, res) => {
   try {
     const { key, description } = req.body;
     if (!key) {
@@ -85552,7 +85597,7 @@ adminRouter.post("/admin/permissions", requirePermission("admin:manage_permissio
     res.status(500).json({ error: "Failed to create permission key" });
   }
 });
-adminRouter.delete("/admin/permissions/:key", requirePermission("admin:manage_permissions"), async (req, res) => {
+adminRouter.delete("/admin/permissions/:key", requirePermission("roles:manage"), async (req, res) => {
   try {
     const key = req.params.key;
     await db.transaction(async (tx) => {
@@ -85564,7 +85609,7 @@ adminRouter.delete("/admin/permissions/:key", requirePermission("admin:manage_pe
     res.status(500).json({ error: "Failed to delete permission key" });
   }
 });
-adminRouter.post("/admin/backup", requirePermission("admin:backup"), async (req, res) => {
+adminRouter.post("/admin/backup", requirePermission("settings:manage"), async (req, res) => {
   try {
     const dbUrl = process.env.DATABASE_URL;
     if (!dbUrl) throw new Error("DATABASE_URL not set");
@@ -85938,7 +85983,7 @@ router17.get("/", async (req, res) => {
   const branches = await db.select().from(branchesTable).orderBy(asc(branchesTable.name));
   res.json(branches);
 });
-router17.post("/", requirePermission("admin:manage_branches"), async (req, res) => {
+router17.post("/", requirePermission("branches:manage"), async (req, res) => {
   const parsed = insertBranchSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -85947,7 +85992,7 @@ router17.post("/", requirePermission("admin:manage_branches"), async (req, res) 
   const [branch] = await db.insert(branchesTable).values(parsed.data).returning();
   res.status(201).json(branch);
 });
-router17.patch("/:id", requirePermission("admin:manage_branches"), async (req, res) => {
+router17.patch("/:id", requirePermission("branches:manage"), async (req, res) => {
   const id = parseInt(req.params.id);
   if (isNaN(id)) {
     res.status(400).json({ error: "Invalid id" });
@@ -85965,7 +86010,7 @@ router17.patch("/:id", requirePermission("admin:manage_branches"), async (req, r
   }
   res.json(branch);
 });
-router17.delete("/:id", requirePermission("admin:manage_branches"), async (req, res) => {
+router17.delete("/:id", requirePermission("branches:manage"), async (req, res) => {
   const id = parseInt(req.params.id);
   if (isNaN(id)) {
     res.status(400).json({ error: "Invalid id" });
@@ -86137,7 +86182,7 @@ router18.get("/finance/inventory-usage", requirePermission("reports:view"), asyn
   }).from(orderItemCustomizationsTable).innerJoin(orderItemsTable, eq(orderItemCustomizationsTable.orderItemId, orderItemsTable.id)).innerJoin(ordersTable, eq(orderItemsTable.orderId, ordersTable.id)).where(and(
     gte(ordersTable.createdAt, start),
     lte(ordersTable.createdAt, end),
-    eq(ordersTable.status, "completed"),
+    inArray(ordersTable.status, ["paid", "ready", "completed"]),
     targetBranchId ? eq(ordersTable.branchId, targetBranchId) : void 0
   )).groupBy(orderItemCustomizationsTable.ingredientId);
   const usageData = await usageQuery;
@@ -86184,7 +86229,7 @@ router18.get("/finance/pl-report", requirePermission("reports:view"), async (req
   }).from(orderItemsTable).innerJoin(ordersTable, eq(orderItemsTable.orderId, ordersTable.id)).innerJoin(drinksTable, eq(orderItemsTable.drinkId, drinksTable.id)).where(and(
     gte(ordersTable.createdAt, start),
     lte(ordersTable.createdAt, end),
-    eq(ordersTable.status, "completed"),
+    inArray(ordersTable.status, ["paid", "ready", "completed"]),
     targetBranchId ? eq(ordersTable.branchId, targetBranchId) : void 0
   )).groupBy(orderItemsTable.drinkId);
   const ingredientUsage = await db.select({
@@ -86198,7 +86243,7 @@ router18.get("/finance/pl-report", requirePermission("reports:view"), async (req
   }).from(orderItemCustomizationsTable).innerJoin(orderItemsTable, eq(orderItemCustomizationsTable.orderItemId, orderItemsTable.id)).innerJoin(ordersTable, eq(orderItemsTable.orderId, ordersTable.id)).innerJoin(ingredientsTable, eq(orderItemCustomizationsTable.ingredientId, ingredientsTable.id)).where(and(
     gte(ordersTable.createdAt, start),
     lte(ordersTable.createdAt, end),
-    eq(ordersTable.status, "completed"),
+    inArray(ordersTable.status, ["paid", "ready", "completed"]),
     targetBranchId ? eq(ordersTable.branchId, targetBranchId) : void 0
   )).groupBy(orderItemsTable.drinkId, orderItemCustomizationsTable.ingredientId);
   const costMap = /* @__PURE__ */ new Map();
@@ -86401,7 +86446,7 @@ router18.get("/finance/sales-items", requirePermission("reports:view"), async (r
   }).from(orderItemsTable).innerJoin(ordersTable, eq(orderItemsTable.orderId, ordersTable.id)).innerJoin(drinksTable, eq(orderItemsTable.drinkId, drinksTable.id)).innerJoin(branchesTable, eq(ordersTable.branchId, branchesTable.id)).leftJoin(usersTable, eq(ordersTable.cashierId, usersTable.id)).where(and(
     gte(ordersTable.createdAt, start),
     lte(ordersTable.createdAt, end),
-    eq(ordersTable.status, "completed"),
+    inArray(ordersTable.status, ["paid", "ready", "completed"]),
     targetBranchId ? eq(ordersTable.branchId, targetBranchId) : void 0
   )).orderBy(desc(ordersTable.createdAt));
   if (items.length === 0) return res.json([]);
@@ -86506,7 +86551,7 @@ router18.get("/finance/customizations-report", requirePermission("reports:view")
   }).from(orderItemCustomizationsTable).innerJoin(orderItemsTable, eq(orderItemCustomizationsTable.orderItemId, orderItemsTable.id)).innerJoin(ordersTable, eq(orderItemsTable.orderId, ordersTable.id)).innerJoin(branchesTable, eq(ordersTable.branchId, branchesTable.id)).leftJoin(usersTable, eq(ordersTable.cashierId, usersTable.id)).leftJoin(ingredientsTable, eq(orderItemCustomizationsTable.ingredientId, ingredientsTable.id)).where(and(
     gte(ordersTable.createdAt, start),
     lte(ordersTable.createdAt, end),
-    eq(ordersTable.status, "completed"),
+    inArray(ordersTable.status, ["paid", "ready", "completed"]),
     targetBranchId ? eq(ordersTable.branchId, targetBranchId) : void 0
   )).orderBy(desc(ordersTable.createdAt));
   const drinkIds = [...new Set(rawCustoms.map((c) => c.drinkId))];
