@@ -35,7 +35,8 @@ export const APP_PERMISSIONS = [
   { key: "catalog:manage", name: "Manage Catalog", description: "Create and edit drinks and categories" },
   
   { key: "inventory:view", name: "View Inventory", description: "Check stock levels and ingredients" },
-  { key: "inventory:manage", name: "Manage Inventory", description: "Update stock levels and restock" },
+  { key: "inventory:manage", name: "Manage Inventory", description: "Update stock levels, conversions and ingredient options" },
+  { key: "inventory:adjust", name: "Adjust Stock", description: "Restock and adjust inventory quantities" },
   
   // Finance & Reports
   { key: "reports:view", name: "View Reports", description: "Access sales and performance reports" },

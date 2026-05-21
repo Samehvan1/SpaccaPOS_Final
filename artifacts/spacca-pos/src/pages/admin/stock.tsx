@@ -5,19 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Plus, AlertTriangle, ArrowDownToLine, ArrowUpFromLine, PackageOpen, Download, Check, ChevronsUpDown, Trash2 } from "lucide-react";
-import { Separator } from "@/components/ui/separator";
+import { ArrowLeft, Plus, AlertTriangle, ArrowDownToLine, ArrowUpFromLine, PackageOpen, Download } from "lucide-react";
 import { Link } from "wouter";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { cn } from "@/lib/utils";
 
 type Ingredient = {
   id: number;
@@ -45,37 +39,6 @@ export default function StockAdmin() {
 
   const { toast } = useToast();
 
-  type DeliveryItem = {
-    ingredientId: string;
-    quantity: string;
-    unitId: string;
-    note: string;
-  };
-
-  const [isRestockOpen, setIsRestockOpen] = useState(false);
-  const [openPopovers, setOpenPopovers] = useState<Record<number, boolean>>({});
-  const [deliveryItems, setDeliveryItems] = useState<DeliveryItem[]>([
-    { ingredientId: "", quantity: "", unitId: "base", note: "" }
-  ]);
-  const [note, setNote] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Startup stock state: map of ingredientId → input value
-  const [startupValues, setStartupValues] = useState<Record<number, string>>({});
-  const [isSavingStartup, setIsSavingStartup] = useState(false);
-
-  const updateItem = (index: number, key: keyof DeliveryItem, value: string) => {
-    setDeliveryItems(prev => prev.map((item, i) => i === index ? { ...item, [key]: value } : item));
-  };
-
-  const addItem = () => {
-    setDeliveryItems(prev => [...prev, { ingredientId: "", quantity: "", unitId: "base", note: "" }]);
-  };
-
-  const removeItem = (index: number) => {
-    setDeliveryItems(prev => prev.filter((_, i) => i !== index));
-  };
-
   const { mutate: restockSingle } = useRestockIngredient({
     mutation: {
       onError: () => {
@@ -84,45 +47,9 @@ export default function StockAdmin() {
     }
   });
 
-  const handleRestock = () => {
-    if (!selectedBranchId) {
-      toast({ variant: "destructive", title: "Select a branch first", description: "You must select a specific branch to update its stock." });
-      return;
-    }
-
-    const validItems = deliveryItems.filter(item => item.ingredientId !== "" && item.quantity !== "" && !isNaN(parseFloat(item.quantity)));
-    if (validItems.length === 0) {
-      toast({ variant: "destructive", title: "No valid items entered" });
-      return;
-    }
-
-    setIsSubmitting(true);
-    let saved = 0;
-    for (const item of validItems) {
-      const combinedNote = [note.trim(), item.note.trim()].filter(Boolean).join(" - ");
-      restockSingle({
-        id: parseInt(item.ingredientId),
-        data: {
-          quantity: parseFloat(item.quantity),
-          unitId: item.unitId === "base" ? undefined : parseInt(item.unitId),
-          note: combinedNote || undefined,
-          branchId: selectedBranchId
-        } as any
-      });
-      saved++;
-    }
-
-    setTimeout(() => {
-      refetchMovements();
-      refetchLowStock();
-      refetchIngredients();
-      setIsSubmitting(false);
-      setIsRestockOpen(false);
-      setDeliveryItems([{ ingredientId: "", quantity: "", unitId: "base", note: "" }]);
-      setNote("");
-      toast({ title: `Received delivery for ${saved} ingredient${saved !== 1 ? "s" : ""}` });
-    }, 800);
-  };
+  // Startup stock state: map of ingredientId → input value
+  const [startupValues, setStartupValues] = useState<Record<number, string>>({});
+  const [isSavingStartup, setIsSavingStartup] = useState(false);
 
   const handleSaveStartupStock = async () => {
     if (!selectedBranchId) {
@@ -226,166 +153,11 @@ export default function StockAdmin() {
           <Button variant="outline" className="gap-2" onClick={handleExportStock}>
             <Download className="h-4 w-4" /> Export Stock
           </Button>
-          <Dialog open={isRestockOpen} onOpenChange={setIsRestockOpen}>
-            <DialogTrigger asChild>
-              <Button className="gap-2">
-                <Plus className="h-4 w-4" /> Receive Delivery
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-3xl max-h-[85vh] flex flex-col">
-              <DialogHeader>
-                <DialogTitle>Receive Delivery / Restock</DialogTitle>
-              </DialogHeader>
-              
-              <div className="grid gap-4 py-4 flex-1 overflow-y-auto">
-                <div className="grid gap-2">
-                  <Label htmlFor="delivery-note">Delivery Notes / Invoice (Optional)</Label>
-                  <Input 
-                    id="delivery-note" 
-                    value={note} 
-                    onChange={e => setNote(e.target.value)} 
-                    placeholder="e.g. Invoice #1234, Supplier Delivery" 
-                  />
-                </div>
-
-                <Separator className="my-2" />
-
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <Label className="text-sm font-bold uppercase tracking-wider">Delivery Items</Label>
-                    <Button type="button" size="sm" variant="outline" className="gap-1.5" onClick={addItem}>
-                      <Plus className="h-3.5 w-3.5" /> Add Item
-                    </Button>
-                  </div>
-
-                  <div className="space-y-3">
-                    {deliveryItems.map((item, index) => {
-                      const selectedIng = ingredients?.find(i => i.id.toString() === item.ingredientId);
-                      return (
-                        <div key={index} className="flex flex-col gap-3 p-3 rounded-lg border bg-muted/20 relative">
-                          <div className="flex gap-3 items-end">
-                            <div className="flex-1 min-w-0 grid gap-1.5">
-                              <Label className="text-xs">Ingredient</Label>
-                              <Popover 
-                                open={openPopovers[index] || false} 
-                                onOpenChange={(open) => setOpenPopovers(prev => ({ ...prev, [index]: open }))}
-                              >
-                                <PopoverTrigger asChild>
-                                  <Button
-                                    variant="outline"
-                                    role="combobox"
-                                    className="w-full justify-between font-normal text-left h-10"
-                                  >
-                                    {item.ingredientId && selectedIng
-                                      ? `${selectedIng.name} (${selectedIng.unit})`
-                                      : "Select ingredient..."}
-                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                  </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-[350px] p-0" align="start">
-                                  <Command>
-                                    <CommandInput placeholder="Search ingredient..." />
-                                    <CommandList className="max-h-[250px] overflow-y-auto">
-                                      <CommandEmpty>No ingredient found.</CommandEmpty>
-                                      <CommandGroup>
-                                        {ingredients?.map((ing) => (
-                                          <CommandItem
-                                            key={ing.id}
-                                            value={ing.name}
-                                            onSelect={() => {
-                                              updateItem(index, "ingredientId", ing.id.toString());
-                                              updateItem(index, "unitId", "base");
-                                              setOpenPopovers(prev => ({ ...prev, [index]: false }));
-                                            }}
-                                          >
-                                            <Check
-                                              className={cn(
-                                                "mr-2 h-4 w-4",
-                                                item.ingredientId === ing.id.toString() ? "opacity-100" : "opacity-0"
-                                              )}
-                                            />
-                                            <div className="flex flex-col">
-                                              <span>{ing.name}</span>
-                                              <span className="text-[10px] text-muted-foreground capitalize">{ing.ingredientType} · {ing.unit}</span>
-                                            </div>
-                                          </CommandItem>
-                                        ))}
-                                      </CommandGroup>
-                                    </CommandList>
-                                  </Command>
-                                </PopoverContent>
-                              </Popover>
-                            </div>
-
-                            <div className="w-[120px] grid gap-1.5">
-                              <Label htmlFor={`qty-${index}`} className="text-xs">Quantity</Label>
-                              <Input
-                                id={`qty-${index}`}
-                                type="number"
-                                step="0.01"
-                                value={item.quantity}
-                                onChange={e => updateItem(index, "quantity", e.target.value)}
-                                placeholder="0.00"
-                                className="h-10"
-                              />
-                            </div>
-
-                            <div className="w-[120px] grid gap-1.5">
-                              <Label className="text-xs">Unit</Label>
-                              <Select value={item.unitId} onValueChange={val => updateItem(index, "unitId", val)}>
-                                <SelectTrigger className="h-10">
-                                  <SelectValue placeholder="Unit" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="base">
-                                    {selectedIng ? selectedIng.unit : "Unit"}
-                                  </SelectItem>
-                                  {selectedIng?.conversions?.map((c: any) => (
-                                    <SelectItem key={c.id} value={String(c.id)}>{c.unitName}</SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-
-                            {deliveryItems.length > 1 && (
-                              <Button 
-                                type="button" 
-                                variant="ghost" 
-                                size="icon" 
-                                className="text-destructive hover:text-destructive hover:bg-destructive/10 h-10 w-10 shrink-0" 
-                                onClick={() => removeItem(index)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            )}
-                          </div>
-
-                          <div className="grid gap-1.5">
-                            <Label htmlFor={`note-${index}`} className="text-xs">Item Note (e.g. Expiration Date, Batch/Lot Number)</Label>
-                            <Input
-                              id={`note-${index}`}
-                              type="text"
-                              value={item.note}
-                              onChange={e => updateItem(index, "note", e.target.value)}
-                              placeholder="e.g. Expiration: 2026-12-31, Lot: B12"
-                              className="h-9 text-xs"
-                            />
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-              
-              <DialogFooter className="border-t pt-4 bg-background">
-                <Button variant="outline" onClick={() => setIsRestockOpen(false)}>Cancel</Button>
-                <Button onClick={handleRestock} disabled={isSubmitting}>
-                  {isSubmitting ? "Saving Delivery..." : "Save Delivery"}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+          <Button className="gap-2" asChild>
+            <Link href="/admin/stock/receive-delivery">
+              <Plus className="h-4 w-4" /> Receive Delivery
+            </Link>
+          </Button>
         </div>
       </div>
 

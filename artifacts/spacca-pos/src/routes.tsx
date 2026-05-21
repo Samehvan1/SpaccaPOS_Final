@@ -9,6 +9,7 @@ import FinanceDashboard from "@/pages/admin/finance";
 import DrinksAdmin from "@/pages/admin/drinks";
 import IngredientsAdmin from "@/pages/admin/ingredients";
 import StockAdmin from "@/pages/admin/stock";
+import ReceiveDeliveryPage from "@/pages/admin/stock/receive-delivery";
 import DrinkRecipe from "@/pages/admin/drink-recipe";
 import ReportsPage from "@/pages/admin/reports";
 import CategoriesAdmin from "@/pages/admin/categories";
@@ -67,6 +68,7 @@ export const appRoutes: RouteConfig[] = [
   // Inventory & Stock
   { path: "/admin/ingredients", component: IngredientsAdmin, permission: "inventory:view" },
   { path: "/admin/stock", component: StockAdmin, permission: "inventory:view" },
+  { path: "/admin/stock/receive-delivery", component: ReceiveDeliveryPage, permission: "inventory:view" },
   { path: "/admin/stock-audits", component: StockAuditReviewPage, permission: "inventory:manage" },
   { path: "/stock-control", component: StockControlPage, permission: "inventory:view" },
 
