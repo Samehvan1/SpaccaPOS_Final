@@ -9,6 +9,7 @@ import {
   branchStockTable,
   ingredientConversionsTable,
   usersTable,
+  branchesTable,
 } from "@workspace/db";
 import {
   ListStockMovementsQueryParams,
@@ -83,9 +84,20 @@ router.post("/stock/adjustments", async (req, res): Promise<void> => {
   }
 
   const sessionUserId = ((req.session as unknown as Record<string, unknown>).userId as number) ?? 1;
-  const sessionBranchId = (req.session as any).branchId;
-  if (!sessionBranchId) {
-    res.status(400).json({ error: "No branch associated with session" });
+  const sessionUser = (req.session as any);
+  const isAdmin = sessionUser.role === "admin" || sessionUser.role === "supervisor";
+  let targetBranchId: number | undefined = sessionUser.branchId ?? undefined;
+  if (!targetBranchId && isAdmin) {
+    // If admin can choose branch in the body, use it, or fallback to first branch
+    targetBranchId = req.body.branchId ? parseInt(req.body.branchId) : undefined;
+    if (!targetBranchId) {
+      const branches = await db.select().from(branchesTable).limit(1);
+      targetBranchId = branches[0]?.id;
+    }
+  }
+
+  if (!targetBranchId) {
+    res.status(400).json({ error: "No branch associated with session or request" });
     return;
   }
 
@@ -102,7 +114,7 @@ router.post("/stock/adjustments", async (req, res): Promise<void> => {
   const [stock] = await db
     .select()
     .from(branchStockTable)
-    .where(and(eq(branchStockTable.ingredientId, parsed.data.ingredientId), eq(branchStockTable.branchId, sessionBranchId)));
+    .where(and(eq(branchStockTable.ingredientId, parsed.data.ingredientId), eq(branchStockTable.branchId, targetBranchId)));
 
   const quantityValueBase = parsed.data.quantity;
   let finalQuantity = quantityValueBase;
@@ -130,7 +142,7 @@ router.post("/stock/adjustments", async (req, res): Promise<void> => {
   await db
     .insert(branchStockTable)
     .values({
-      branchId: sessionBranchId,
+      branchId: targetBranchId,
       ingredientId: parsed.data.ingredientId,
       stockQuantity: String(newQty),
     })
@@ -149,7 +161,7 @@ router.post("/stock/adjustments", async (req, res): Promise<void> => {
   const [movement] = await db
     .insert(stockMovementsTable)
     .values({
-      branchId: sessionBranchId,
+      branchId: targetBranchId,
       ingredientId: parsed.data.ingredientId,
       orderId: null,
       movementType: parsed.data.movementType,

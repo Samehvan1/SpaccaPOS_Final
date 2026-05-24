@@ -615,10 +615,11 @@ router.post("/orders", async (req, res): Promise<void> => {
       }).where(eq(ordersTable.id, order.id));
     } else if (parsed.data.paymentMethod) {
       // Fallback for backward compatibility if payments array is missing
+      const isHospitality = parsed.data.paymentMethod === "hospitality";
       await tx.insert(orderPaymentsTable).values({
         orderId: order.id,
         paymentMethod: parsed.data.paymentMethod as any,
-        amount: String(total),
+        amount: String(isHospitality ? subtotal : total),
       });
     }
 
@@ -713,6 +714,17 @@ router.patch("/orders/:id/status", async (req, res, next): Promise<void> => {
     return;
   }
 
+  const [existingOrder] = await db
+    .select()
+    .from(ordersTable)
+    .where(eq(ordersTable.id, params.data.id))
+    .limit(1);
+
+  if (!existingOrder) {
+    res.status(404).json({ error: "Order not found" });
+    return;
+  }
+
   // Attach cashierId when approving — comes from the frontend cashier session
   const updateData: Record<string, unknown> = { status: parsed.data.status };
   const now = new Date();
@@ -744,15 +756,17 @@ router.patch("/orders/:id/status", async (req, res, next): Promise<void> => {
 
       console.log(`[Security] Hospitality authorized by admin: ${admin.name} (ID: ${admin.id}) for order ${params.data.id}`);
 
-      // If changed to hospitality, apply 100% discount
-      // Fetch current order to get subtotal
-      const [existingOrder] = await db.select().from(ordersTable).where(eq(ordersTable.id, params.data.id));
-      if (existingOrder) {
-        updateData.discount = String(existingOrder.subtotal);
-        updateData.total = "0";
-        updateData.discountCode = "HOSPITALITY";
-        updateData.discountId = null;
-      }
+      // If changed to hospitality, apply 100% discount (which is equal to subtotal)
+      updateData.discount = String(existingOrder.subtotal);
+      updateData.total = "0";
+      updateData.discountCode = "HOSPITALITY";
+      updateData.discountId = null;
+    } else if (existingOrder.paymentMethod === "hospitality") {
+      // Transitioning away from hospitality: clear hospitality discount and restore total
+      updateData.discount = "0";
+      updateData.total = String(existingOrder.subtotal);
+      updateData.discountCode = null;
+      updateData.discountId = null;
     }
     updateData.paymentMethod = parsed.data.paymentMethod;
   }
@@ -761,22 +775,6 @@ router.patch("/orders/:id/status", async (req, res, next): Promise<void> => {
     const cashierId = (req.body as any).cashierId ?? (req.session as any).cashierId ?? null;
     if (cashierId) updateData.cashierId = cashierId;
     updateData.paidAt = now;
-    
-    // ── Update/Save Payments ──────────────────────────────────────────────
-    if (parsed.data.payments && parsed.data.payments.length > 0) {
-      await db.transaction(async (tx) => {
-        // Delete existing payments for this order and replace with new ones
-        await tx.delete(orderPaymentsTable).where(eq(orderPaymentsTable.orderId, params.data.id));
-        await tx.insert(orderPaymentsTable).values(
-          parsed.data.payments!.map((p) => ({
-            orderId: params.data.id,
-            paymentMethod: p.paymentMethod,
-            amount: String(p.amount),
-            transactionId: p.transactionId ?? null,
-          }))
-        );
-      });
-    }
   } else if (parsed.data.status === "ready") {
     updateData.readyAt = now;
   } else if (parsed.data.status === "completed") {
@@ -785,28 +783,37 @@ router.patch("/orders/:id/status", async (req, res, next): Promise<void> => {
     updateData.cancelledAt = now;
   }
   
-  // ── Handle Payment Method Change After Approval ─────────────────────────
-  // If the status is NOT changing, but payments are provided, it means we are changing payment method
-  if (!parsed.data.status || parsed.data.status === (await db.select({status: ordersTable.status}).from(ordersTable).where(eq(ordersTable.id, params.data.id)).limit(1))[0]?.status) {
-    if (parsed.data.payments && parsed.data.payments.length > 0) {
-       await db.transaction(async (tx) => {
-        await tx.delete(orderPaymentsTable).where(eq(orderPaymentsTable.orderId, params.data.id));
-        await tx.insert(orderPaymentsTable).values(
-          parsed.data.payments!.map((p) => ({
-            orderId: params.data.id,
-            paymentMethod: p.paymentMethod,
-            amount: String(p.amount),
-            transactionId: p.transactionId ?? null,
-          }))
-        );
-        // Also update the main order's paymentMethod for legacy/summary
-        if (parsed.data.payments!.length === 1) {
-          await tx.update(ordersTable).set({ paymentMethod: parsed.data.payments![0].paymentMethod as any }).where(eq(ordersTable.id, params.data.id));
-        } else {
-          await tx.update(ordersTable).set({ paymentMethod: "split" }).where(eq(ordersTable.id, params.data.id));
-        }
+  // ── Update/Save Payments ──────────────────────────────────────────────
+  if (parsed.data.payments && parsed.data.payments.length > 0) {
+    await db.transaction(async (tx) => {
+      // Delete existing payments for this order and replace with new ones
+      await tx.delete(orderPaymentsTable).where(eq(orderPaymentsTable.orderId, params.data.id));
+      await tx.insert(orderPaymentsTable).values(
+        parsed.data.payments!.map((p) => ({
+          orderId: params.data.id,
+          paymentMethod: p.paymentMethod,
+          amount: String(p.amount),
+          transactionId: p.transactionId ?? null,
+        }))
+      );
+    });
+  } else if (parsed.data.paymentMethod || parsed.data.status === "paid") {
+    // If single payment method updated or order approved/paid, update/sync the payment record
+    await db.transaction(async (tx) => {
+      // Delete existing payments
+      await tx.delete(orderPaymentsTable).where(eq(orderPaymentsTable.orderId, params.data.id));
+      
+      const finalMethod = (parsed.data.paymentMethod ?? existingOrder.paymentMethod ?? "cash") as any;
+      const subtotalVal = parseFloat(existingOrder.subtotal);
+      const totalVal = parseFloat((updateData.total as string) ?? existingOrder.total);
+      const amountVal = finalMethod === "hospitality" ? subtotalVal : totalVal;
+
+      await tx.insert(orderPaymentsTable).values({
+        orderId: params.data.id,
+        paymentMethod: finalMethod,
+        amount: String(amountVal),
       });
-    }
+    });
   }
 
   const [order] = await db

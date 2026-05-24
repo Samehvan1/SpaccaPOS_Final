@@ -2,7 +2,7 @@ import { Router, type IRouter } from "express";
 import fs from "fs";
 import path from "path";
 import { eq, and, sql, asc } from "drizzle-orm";
-import { db, ingredientsTable, branchStockTable, ingredientOptionsTable, ingredientConversionsTable, stockMovementsTable, ingredientTypesTable, drinkIngredientSlotsTable, drinksTable, orderItemCustomizationsTable, orderItemsTable, ordersTable, usersTable } from "@workspace/db";
+import { db, ingredientsTable, branchStockTable, ingredientOptionsTable, ingredientConversionsTable, stockMovementsTable, ingredientTypesTable, drinkIngredientSlotsTable, drinksTable, orderItemCustomizationsTable, orderItemsTable, ordersTable, usersTable, branchesTable } from "@workspace/db";
 import { serializeDates } from "../lib/serialize";
 import { globalCache } from "../lib/cache";
 import { logActivity } from "../lib/activity-logger";
@@ -317,9 +317,14 @@ router.post("/ingredients", requirePermission("inventory:manage"), async (req, r
     return;
   }
 
-  const sessionBranchId = ((req.session as any).branchId as number);
-  if (!sessionBranchId) {
-    res.status(400).json({ error: "No branch associated with session" });
+  let targetBranchId = ((req.session as any).branchId as number);
+  if (!targetBranchId) {
+    const branches = await db.select().from(branchesTable).limit(1);
+    targetBranchId = branches[0]?.id;
+  }
+
+  if (!targetBranchId) {
+    res.status(400).json({ error: "No branch exists in the system to associate stock." });
     return;
   }
 
@@ -347,7 +352,7 @@ router.post("/ingredients", requirePermission("inventory:manage"), async (req, r
   const [stock] = await db
     .insert(branchStockTable)
     .values({
-      branchId: sessionBranchId,
+      branchId: targetBranchId,
       ingredientId: ingredient.id,
       stockQuantity: String(parsed.data.stockQuantity ?? 0),
       startupQuantity: String(parsed.data.startupQuantity ?? 0),
@@ -401,7 +406,14 @@ router.patch("/ingredients/:id", requirePermission("inventory:manage"), async (r
     return;
   }
 
-  const sessionBranchId = (req.session as any).branchId;
+  const sessionUser = (req.session as any);
+  const isAdmin = sessionUser.role === "admin" || sessionUser.role === "supervisor";
+  let targetBranchId = sessionUser.branchId as number;
+  if (!targetBranchId && isAdmin) {
+    const branches = await db.select().from(branchesTable).limit(1);
+    targetBranchId = branches[0]?.id;
+  }
+
   const updateData: Record<string, unknown> = {};
   const stockUpdateData: Record<string, unknown> = {};
 
@@ -435,11 +447,11 @@ router.patch("/ingredients/:id", requirePermission("inventory:manage"), async (r
   }
 
   let stock;
-  if (Object.keys(stockUpdateData).length > 0 && sessionBranchId) {
+  if (Object.keys(stockUpdateData).length > 0 && targetBranchId) {
     [stock] = await db
       .insert(branchStockTable)
       .values({
-        branchId: sessionBranchId,
+        branchId: targetBranchId,
         ingredientId: params.data.id,
         stockQuantity: stockUpdateData.stockQuantity as string || "0",
         startupQuantity: stockUpdateData.startupQuantity as string || "0",
@@ -450,8 +462,8 @@ router.patch("/ingredients/:id", requirePermission("inventory:manage"), async (r
         set: stockUpdateData,
       })
       .returning();
-  } else if (sessionBranchId) {
-    [stock] = await db.select().from(branchStockTable).where(and(eq(branchStockTable.ingredientId, params.data.id), eq(branchStockTable.branchId, sessionBranchId)));
+  } else if (targetBranchId) {
+    [stock] = await db.select().from(branchStockTable).where(and(eq(branchStockTable.ingredientId, params.data.id), eq(branchStockTable.branchId, targetBranchId)));
   }
 
   await logActivity(req, "UPDATE_INGREDIENT", "ingredient", params.data.id, { ...updateData, ...stockUpdateData });

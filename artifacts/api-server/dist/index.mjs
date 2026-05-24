@@ -82480,9 +82480,13 @@ router4.post("/ingredients", requirePermission("inventory:manage"), async (req, 
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  const sessionBranchId = req.session.branchId;
-  if (!sessionBranchId) {
-    res.status(400).json({ error: "No branch associated with session" });
+  let targetBranchId = req.session.branchId;
+  if (!targetBranchId) {
+    const branches = await db.select().from(branchesTable).limit(1);
+    targetBranchId = branches[0]?.id;
+  }
+  if (!targetBranchId) {
+    res.status(400).json({ error: "No branch exists in the system to associate stock." });
     return;
   }
   const [existing] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.name, parsed.data.name)).limit(1);
@@ -82500,7 +82504,7 @@ router4.post("/ingredients", requirePermission("inventory:manage"), async (req, 
     isActive: parsed.data.isActive ?? true
   }).returning();
   const [stock] = await db.insert(branchStockTable).values({
-    branchId: sessionBranchId,
+    branchId: targetBranchId,
     ingredientId: ingredient.id,
     stockQuantity: String(parsed.data.stockQuantity ?? 0),
     startupQuantity: String(parsed.data.startupQuantity ?? 0),
@@ -82543,7 +82547,13 @@ router4.patch("/ingredients/:id", requirePermission("inventory:manage"), async (
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  const sessionBranchId = req.session.branchId;
+  const sessionUser = req.session;
+  const isAdmin = sessionUser.role === "admin" || sessionUser.role === "supervisor";
+  let targetBranchId = sessionUser.branchId;
+  if (!targetBranchId && isAdmin) {
+    const branches = await db.select().from(branchesTable).limit(1);
+    targetBranchId = branches[0]?.id;
+  }
   const updateData = {};
   const stockUpdateData = {};
   if (parsed.data.name !== void 0) {
@@ -82568,9 +82578,9 @@ router4.patch("/ingredients/:id", requirePermission("inventory:manage"), async (
     return;
   }
   let stock;
-  if (Object.keys(stockUpdateData).length > 0 && sessionBranchId) {
+  if (Object.keys(stockUpdateData).length > 0 && targetBranchId) {
     [stock] = await db.insert(branchStockTable).values({
-      branchId: sessionBranchId,
+      branchId: targetBranchId,
       ingredientId: params.data.id,
       stockQuantity: stockUpdateData.stockQuantity || "0",
       startupQuantity: stockUpdateData.startupQuantity || "0",
@@ -82579,8 +82589,8 @@ router4.patch("/ingredients/:id", requirePermission("inventory:manage"), async (
       target: [branchStockTable.branchId, branchStockTable.ingredientId],
       set: stockUpdateData
     }).returning();
-  } else if (sessionBranchId) {
-    [stock] = await db.select().from(branchStockTable).where(and(eq(branchStockTable.ingredientId, params.data.id), eq(branchStockTable.branchId, sessionBranchId)));
+  } else if (targetBranchId) {
+    [stock] = await db.select().from(branchStockTable).where(and(eq(branchStockTable.ingredientId, params.data.id), eq(branchStockTable.branchId, targetBranchId)));
   }
   await logActivity(req, "UPDATE_INGREDIENT", "ingredient", params.data.id, { ...updateData, ...stockUpdateData });
   res.json(
@@ -83304,10 +83314,11 @@ router5.post("/orders", async (req, res) => {
         paymentMethod: orderPayments.length > 1 ? "split" : orderPayments[0].paymentMethod
       }).where(eq(ordersTable.id, order2.id));
     } else if (parsed.data.paymentMethod) {
+      const isHospitality = parsed.data.paymentMethod === "hospitality";
       await tx.insert(orderPaymentsTable).values({
         orderId: order2.id,
         paymentMethod: parsed.data.paymentMethod,
-        amount: String(total)
+        amount: String(isHospitality ? subtotal : total)
       });
     }
     return { order: order2, savedItems: savedItems2 };
@@ -83390,6 +83401,11 @@ router5.patch("/orders/:id/status", async (req, res, next) => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
+  const [existingOrder] = await db.select().from(ordersTable).where(eq(ordersTable.id, params.data.id)).limit(1);
+  if (!existingOrder) {
+    res.status(404).json({ error: "Order not found" });
+    return;
+  }
   const updateData = { status: parsed.data.status };
   const now = /* @__PURE__ */ new Date();
   if (parsed.data.paymentMethod) {
@@ -83412,13 +83428,15 @@ router5.patch("/orders/:id/status", async (req, res, next) => {
         return;
       }
       console.log(`[Security] Hospitality authorized by admin: ${admin.name} (ID: ${admin.id}) for order ${params.data.id}`);
-      const [existingOrder] = await db.select().from(ordersTable).where(eq(ordersTable.id, params.data.id));
-      if (existingOrder) {
-        updateData.discount = String(existingOrder.subtotal);
-        updateData.total = "0";
-        updateData.discountCode = "HOSPITALITY";
-        updateData.discountId = null;
-      }
+      updateData.discount = String(existingOrder.subtotal);
+      updateData.total = "0";
+      updateData.discountCode = "HOSPITALITY";
+      updateData.discountId = null;
+    } else if (existingOrder.paymentMethod === "hospitality") {
+      updateData.discount = "0";
+      updateData.total = String(existingOrder.subtotal);
+      updateData.discountCode = null;
+      updateData.discountId = null;
     }
     updateData.paymentMethod = parsed.data.paymentMethod;
   }
@@ -83426,19 +83444,6 @@ router5.patch("/orders/:id/status", async (req, res, next) => {
     const cashierId = req.body.cashierId ?? req.session.cashierId ?? null;
     if (cashierId) updateData.cashierId = cashierId;
     updateData.paidAt = now;
-    if (parsed.data.payments && parsed.data.payments.length > 0) {
-      await db.transaction(async (tx) => {
-        await tx.delete(orderPaymentsTable).where(eq(orderPaymentsTable.orderId, params.data.id));
-        await tx.insert(orderPaymentsTable).values(
-          parsed.data.payments.map((p) => ({
-            orderId: params.data.id,
-            paymentMethod: p.paymentMethod,
-            amount: String(p.amount),
-            transactionId: p.transactionId ?? null
-          }))
-        );
-      });
-    }
   } else if (parsed.data.status === "ready") {
     updateData.readyAt = now;
   } else if (parsed.data.status === "completed") {
@@ -83446,25 +83451,31 @@ router5.patch("/orders/:id/status", async (req, res, next) => {
   } else if (parsed.data.status === "cancelled" || parsed.data.status === "refunded") {
     updateData.cancelledAt = now;
   }
-  if (!parsed.data.status || parsed.data.status === (await db.select({ status: ordersTable.status }).from(ordersTable).where(eq(ordersTable.id, params.data.id)).limit(1))[0]?.status) {
-    if (parsed.data.payments && parsed.data.payments.length > 0) {
-      await db.transaction(async (tx) => {
-        await tx.delete(orderPaymentsTable).where(eq(orderPaymentsTable.orderId, params.data.id));
-        await tx.insert(orderPaymentsTable).values(
-          parsed.data.payments.map((p) => ({
-            orderId: params.data.id,
-            paymentMethod: p.paymentMethod,
-            amount: String(p.amount),
-            transactionId: p.transactionId ?? null
-          }))
-        );
-        if (parsed.data.payments.length === 1) {
-          await tx.update(ordersTable).set({ paymentMethod: parsed.data.payments[0].paymentMethod }).where(eq(ordersTable.id, params.data.id));
-        } else {
-          await tx.update(ordersTable).set({ paymentMethod: "split" }).where(eq(ordersTable.id, params.data.id));
-        }
+  if (parsed.data.payments && parsed.data.payments.length > 0) {
+    await db.transaction(async (tx) => {
+      await tx.delete(orderPaymentsTable).where(eq(orderPaymentsTable.orderId, params.data.id));
+      await tx.insert(orderPaymentsTable).values(
+        parsed.data.payments.map((p) => ({
+          orderId: params.data.id,
+          paymentMethod: p.paymentMethod,
+          amount: String(p.amount),
+          transactionId: p.transactionId ?? null
+        }))
+      );
+    });
+  } else if (parsed.data.paymentMethod || parsed.data.status === "paid") {
+    await db.transaction(async (tx) => {
+      await tx.delete(orderPaymentsTable).where(eq(orderPaymentsTable.orderId, params.data.id));
+      const finalMethod = parsed.data.paymentMethod ?? existingOrder.paymentMethod ?? "cash";
+      const subtotalVal = parseFloat(existingOrder.subtotal);
+      const totalVal = parseFloat(updateData.total ?? existingOrder.total);
+      const amountVal = finalMethod === "hospitality" ? subtotalVal : totalVal;
+      await tx.insert(orderPaymentsTable).values({
+        orderId: params.data.id,
+        paymentMethod: finalMethod,
+        amount: String(amountVal)
       });
-    }
+    });
   }
   const [order] = await db.update(ordersTable).set(updateData).where(eq(ordersTable.id, params.data.id)).returning();
   if (!order) {
@@ -83699,9 +83710,18 @@ router6.post("/stock/adjustments", async (req, res) => {
     return;
   }
   const sessionUserId = req.session.userId ?? 1;
-  const sessionBranchId = req.session.branchId;
-  if (!sessionBranchId) {
-    res.status(400).json({ error: "No branch associated with session" });
+  const sessionUser = req.session;
+  const isAdmin = sessionUser.role === "admin" || sessionUser.role === "supervisor";
+  let targetBranchId = sessionUser.branchId ?? void 0;
+  if (!targetBranchId && isAdmin) {
+    targetBranchId = req.body.branchId ? parseInt(req.body.branchId) : void 0;
+    if (!targetBranchId) {
+      const branches = await db.select().from(branchesTable).limit(1);
+      targetBranchId = branches[0]?.id;
+    }
+  }
+  if (!targetBranchId) {
+    res.status(400).json({ error: "No branch associated with session or request" });
     return;
   }
   const [ingredient] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, parsed.data.ingredientId));
@@ -83709,7 +83729,7 @@ router6.post("/stock/adjustments", async (req, res) => {
     res.status(404).json({ error: "Ingredient not found" });
     return;
   }
-  const [stock] = await db.select().from(branchStockTable).where(and(eq(branchStockTable.ingredientId, parsed.data.ingredientId), eq(branchStockTable.branchId, sessionBranchId)));
+  const [stock] = await db.select().from(branchStockTable).where(and(eq(branchStockTable.ingredientId, parsed.data.ingredientId), eq(branchStockTable.branchId, targetBranchId)));
   const quantityValueBase = parsed.data.quantity;
   let finalQuantity = quantityValueBase;
   let selectedUnitName = null;
@@ -83724,7 +83744,7 @@ router6.post("/stock/adjustments", async (req, res) => {
   const adjustedQty = parsed.data.movementType === "waste" || parsed.data.movementType === "calibration" ? currentQty - finalQuantity : currentQty + finalQuantity;
   const newQty = Math.max(0, adjustedQty);
   await db.insert(branchStockTable).values({
-    branchId: sessionBranchId,
+    branchId: targetBranchId,
     ingredientId: parsed.data.ingredientId,
     stockQuantity: String(newQty)
   }).onConflictDoUpdate({
@@ -83734,7 +83754,7 @@ router6.post("/stock/adjustments", async (req, res) => {
   const ledgerQuantity = parsed.data.movementType === "waste" || parsed.data.movementType === "calibration" ? -finalQuantity : finalQuantity;
   const movementNote = selectedUnitName ? `${parsed.data.note ?? ""} (Converted from ${parsed.data.quantity} ${selectedUnitName})`.trim() : parsed.data.note ?? null;
   const [movement] = await db.insert(stockMovementsTable).values({
-    branchId: sessionBranchId,
+    branchId: targetBranchId,
     ingredientId: parsed.data.ingredientId,
     orderId: null,
     movementType: parsed.data.movementType,
@@ -87118,7 +87138,8 @@ var APP_PERMISSIONS = [
   { key: "catalog:view", name: "View Catalog", description: "Browse drinks and categories" },
   { key: "catalog:manage", name: "Manage Catalog", description: "Create and edit drinks and categories" },
   { key: "inventory:view", name: "View Inventory", description: "Check stock levels and ingredients" },
-  { key: "inventory:manage", name: "Manage Inventory", description: "Update stock levels and restock" },
+  { key: "inventory:manage", name: "Manage Inventory", description: "Update stock levels, conversions and ingredient options" },
+  { key: "inventory:adjust", name: "Adjust Stock", description: "Restock and adjust inventory quantities" },
   // Finance & Reports
   { key: "reports:view", name: "View Reports", description: "Access sales and performance reports" },
   { key: "discounts:view", name: "View Discounts", description: "View active discount codes" },
@@ -87195,6 +87216,44 @@ async function syncPermissions() {
   logger.info("Permissions sync complete.");
 }
 
+// src/lib/data-migrations.ts
+init_src();
+init_drizzle_orm();
+async function runDataMigrations() {
+  try {
+    logger.info("[migration] Checking for legacy hospitality order payments...");
+    const hospitalityOrders = await db.select({
+      id: ordersTable.id,
+      orderNumber: ordersTable.orderNumber,
+      subtotal: ordersTable.subtotal
+    }).from(ordersTable).where(eq(ordersTable.paymentMethod, "hospitality"));
+    let migratedCount = 0;
+    for (const o of hospitalityOrders) {
+      const existingPayments = await db.select().from(orderPaymentsTable).where(eq(orderPaymentsTable.orderId, o.id));
+      const needsMigration = existingPayments.length === 0 || existingPayments.some((p) => p.paymentMethod !== "hospitality" || parseFloat(p.amount) === 0);
+      if (needsMigration) {
+        await db.transaction(async (tx) => {
+          await tx.delete(orderPaymentsTable).where(eq(orderPaymentsTable.orderId, o.id));
+          await tx.insert(orderPaymentsTable).values({
+            orderId: o.id,
+            paymentMethod: "hospitality",
+            amount: o.subtotal
+          });
+        });
+        logger.info(`[migration] Migrated hospitality order #${o.orderNumber} to amount ${o.subtotal}`);
+        migratedCount++;
+      }
+    }
+    if (migratedCount > 0) {
+      logger.info(`[migration] Completed! Migrated ${migratedCount} legacy hospitality orders.`);
+    } else {
+      logger.info("[migration] No legacy hospitality orders needed migration.");
+    }
+  } catch (error40) {
+    logger.error({ err: error40 }, "[migration] Error running data migrations");
+  }
+}
+
 // src/index.ts
 var rawPort = process.env["PORT"];
 if (!rawPort) {
@@ -87206,7 +87265,7 @@ var port = Number(rawPort);
 if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
-runMigrations().then(() => seedIfEmpty()).then(() => syncPermissions()).then(() => {
+runMigrations().then(() => seedIfEmpty()).then(() => syncPermissions()).then(() => runDataMigrations()).then(() => {
   app_default.listen(port, (err) => {
     if (err) {
       logger.error({ err }, "Error listening on port");
