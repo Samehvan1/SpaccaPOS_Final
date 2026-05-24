@@ -346,6 +346,7 @@ export function MainLayout({ children }: MainLayoutProps) {
         { href: "/admin/finance/sales", label: "Sales Analysis" },
         { href: "/admin/finance/usage", label: "Inventory Usage" },
         { href: "/admin/finance/pl", label: "P&L Reports" },
+        { href: "/admin/finance/all-orders", label: "All Orders Tracker" },
       ]
     },
     { 
@@ -361,6 +362,7 @@ export function MainLayout({ children }: MainLayoutProps) {
         { href: "/admin/operations/calibration", label: "Calibration & Testing" },
         { href: "/admin/operations/wastage", label: "Wastage Tracking" },
         { href: "/admin/operations/deductions-report", label: "Operational Deductions Audit" },
+        { href: "/admin/operations/all-orders", label: "All Orders Tracker" },
       ]
     },
     { href: "/admin/stock-audits", label: "Stock Audits", icon: History, permission: "inventory:view" },

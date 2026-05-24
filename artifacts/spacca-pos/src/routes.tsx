@@ -37,6 +37,7 @@ import CustomizationsAnalysisReport from "@/pages/admin/operations/customization
 import CalibrationPage from "@/pages/admin/operations/calibration";
 import WastagePage from "@/pages/admin/operations/wastage";
 import OperationalDeductionsReport from "@/pages/admin/operations/deductions-report";
+import AllOrdersReport from "@/pages/admin/all-orders-report";
 
 export interface RouteConfig {
   path: string;
@@ -78,6 +79,7 @@ export const appRoutes: RouteConfig[] = [
   { path: "/admin/finance/sales", component: SalesAnalysisReport, permission: "reports:view" },
   { path: "/admin/finance/usage", component: InventoryUsageReport, permission: "reports:view" },
   { path: "/admin/finance/pl", component: PLReport, permission: "reports:view" },
+  { path: "/admin/finance/all-orders", component: AllOrdersReport, permission: "reports:view" },
   { path: "/admin/reports", component: ReportsPage, permission: "reports:view" },
   { path: "/admin/cashier-performance", component: CashierPerformancePage, permission: "reports:view" },
 
@@ -89,6 +91,7 @@ export const appRoutes: RouteConfig[] = [
   { path: "/admin/operations/calibration", component: CalibrationPage, permission: "admin:view" },
   { path: "/admin/operations/wastage", component: WastagePage, permission: "admin:view" },
   { path: "/admin/operations/deductions-report", component: OperationalDeductionsReport, permission: "admin:view" },
+  { path: "/admin/operations/all-orders", component: AllOrdersReport, permission: "reports:view" },
 
   // Settings & Users
   { path: "/admin/kitchen-stations", component: KitchenStationsAdmin, permission: "admin:view" },
