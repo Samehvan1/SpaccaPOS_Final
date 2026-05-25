@@ -45,7 +45,7 @@ interface CompletedOrder {
 
 const BASE_STYLE = `
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: 'Courier New', Courier, monospace; font-size: 12px; color: #000; background: #fff; padding: 8px; width: 280px; }
+  body { font-family: 'Courier New', Courier, monospace; font-size: 12px; color: #000; background: #fff; padding: 8px 8px 8px 18px; width: 280px; }
   .center { text-align: center; }
   .bold { font-weight: bold; }
   .big { font-size: 15px; }

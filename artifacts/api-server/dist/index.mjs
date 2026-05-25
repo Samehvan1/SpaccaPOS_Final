@@ -82941,6 +82941,11 @@ async function buildOrderDetail(orderId) {
 }
 router5.get("/orders", requirePermission("cashier:view"), async (req, res) => {
   const params = ListOrdersQueryParams2.safeParse(req.query);
+  if (!params.success) {
+    console.error("[orders-query] Zod safeParse failed for query:", req.query, "Error:", params.error);
+  } else {
+    console.log("[orders-query] Zod safeParse succeeded. Parsed data:", params.data);
+  }
   const sessionUser = req.session;
   const isAdmin = sessionUser.role === "admin";
   const sessionBranchId = sessionUser.branchId;

@@ -894,6 +894,10 @@ export default function PosTerminal() {
         onRemoveItem={removeFromCart}
         onCheckout={() => {
           setIsCartOpen(false);
+          if (loggedCustomer) {
+            setCustomerName((prev) => prev || loggedCustomer.name);
+            setCustomerPhone((prev) => prev || loggedCustomer.phone);
+          }
           setIsCheckoutOpen(true);
         }}
       />

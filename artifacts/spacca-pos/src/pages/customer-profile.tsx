@@ -82,7 +82,7 @@ export default function CustomerProfile() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen w-full flex items-center justify-center bg-background">
+      <div className="h-screen w-full flex items-center justify-center bg-background">
         <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
       </div>
     );
@@ -95,7 +95,7 @@ export default function CustomerProfile() {
   const nextLevelName = level.next >= 500 ? "Gold" : "Silver";
 
   return (
-    <div className="min-h-screen w-full bg-background overflow-y-auto">
+    <div className="h-screen w-full bg-background overflow-y-auto">
       {/* Subtle background blobs */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-96 h-96 bg-primary/10 rounded-full blur-3xl" />
