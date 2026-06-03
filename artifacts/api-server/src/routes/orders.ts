@@ -44,11 +44,23 @@ import {
 
 const router: IRouter = Router();
 
+export function getDayOfYear(date: Date): number {
+  const monthLengths = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  const year = date.getFullYear();
+  const isLeapYear = (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
+  if (isLeapYear) {
+    monthLengths[1] = 29;
+  }
+  let dayOfYear = date.getDate();
+  for (let i = 0; i < date.getMonth(); i++) {
+    dayOfYear += monthLengths[i];
+  }
+  return dayOfYear;
+}
+
 async function generateOrderNumber(branchId: number): Promise<string> {
   const now = new Date();
-  // Day of year (1-indexed): Jan 1 = 1, Apr 16 = 106, Dec 31 = 365/366
-  const startOfYear = new Date(now.getFullYear(), 0, 1);
-  const dayOfYear = Math.floor((now.getTime() - startOfYear.getTime()) / 86_400_000) + 1;
+  const dayOfYear = getDayOfYear(now);
 
   // Count orders already created today to derive the next serial
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
