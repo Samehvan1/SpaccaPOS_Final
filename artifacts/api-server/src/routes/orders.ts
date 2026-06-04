@@ -199,15 +199,24 @@ router.get("/orders", requirePermission("cashier:view"), async (req, res): Promi
   // However, we'll ensure the conditions are applied at the DB level.
   
   let query = db.select().from(ordersTable).$dynamic();
+  let countQuery = db.select({ count: sql<number>`cast(count(*) as int)` }).from(ordersTable).$dynamic();
   
   if (conditions.length > 0) {
     query = query.where(and(...conditions)) as any;
+    countQuery = countQuery.where(and(...conditions)) as any;
   }
   
-  const orders = await query
-    .orderBy(desc(ordersTable.createdAt))
-    .limit(limit)
-    .offset(offset);
+  const [orders, [countResult]] = await Promise.all([
+    query
+      .orderBy(desc(ordersTable.createdAt))
+      .limit(limit)
+      .offset(offset),
+    countQuery
+  ]);
+
+  const totalCount = countResult?.count ?? 0;
+  res.setHeader("X-Total-Count", String(totalCount));
+  res.setHeader("Access-Control-Expose-Headers", "X-Total-Count");
 
   const orderIds = orders.map((o) => o.id);
 

@@ -725,27 +725,32 @@ export default function ReportsPage() {
                   <Download className="h-4 w-4" /> Export Sales
                 </Button>
               </div>
-              {!isDailyGrouped && (
-                <div className="flex items-center gap-2">
-                  <Button 
-                    variant="outline" 
-                    size="icon" 
-                    onClick={() => setReportPage(p => Math.max(1, p - 1))}
-                    disabled={reportPage === 1 || loadingReportOrders}
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  <span className="text-sm font-medium">Page {reportPage}</span>
-                  <Button 
-                    variant="outline" 
-                    size="icon" 
-                    onClick={() => setReportPage(p => p + 1)}
-                    disabled={!reportOrders || reportOrders.length < rowsPerPage || loadingReportOrders}
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              )}
+              {!isDailyGrouped && (() => {
+                const totalPages = rangeSummary?.count ? Math.ceil(rangeSummary.count / rowsPerPage) : 1;
+                return (
+                  <div className="flex items-center gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="icon" 
+                      onClick={() => setReportPage(p => Math.max(1, p - 1))}
+                      disabled={reportPage === 1 || loadingReportOrders}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <span className="text-sm font-medium">
+                      {loadingRangeSummary ? "Page..." : `Page ${reportPage} of ${totalPages}`}
+                    </span>
+                    <Button 
+                      variant="outline" 
+                      size="icon" 
+                      onClick={() => setReportPage(p => p + 1)}
+                      disabled={loadingReportOrders || (rangeSummary?.count ? reportPage >= totalPages : !reportOrders || reportOrders.length < rowsPerPage)}
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                );
+              })()}
             </CardHeader>
             <CardContent>
               {isDailyGrouped ? (
@@ -892,31 +897,42 @@ export default function ReportsPage() {
                 </div>
               )}
               
-              {!isDailyGrouped && (
-                <div className="flex justify-between items-center mt-6">
-                   <p className="text-xs text-muted-foreground">
-                      Calculations based on 14% VAT. Before Tax = Gross / 1.14. Discount applied to Net price.
-                   </p>
-                   <div className="flex items-center gap-2">
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => setReportPage(p => Math.max(1, p - 1))}
-                        disabled={reportPage === 1 || loadingReportOrders}
-                      >
-                        Previous
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => setReportPage(p => p + 1)}
-                        disabled={!reportOrders || reportOrders.length < rowsPerPage || loadingReportOrders}
-                      >
-                        Next
-                      </Button>
-                   </div>
-                </div>
-              )}
+              {!isDailyGrouped && (() => {
+                const totalPages = rangeSummary?.count ? Math.ceil(rangeSummary.count / rowsPerPage) : 1;
+                const totalOrders = rangeSummary?.count || 0;
+                const displayLabel = loadingRangeSummary
+                  ? "Loading orders info..."
+                  : (totalOrders > 0
+                      ? `Showing Page ${reportPage} of ${totalPages} (${totalOrders} total orders)`
+                      : (reportOrders && reportOrders.length > 0 ? `Showing Page ${reportPage}` : `Showing Page ${reportPage} of 1 (0 total orders)`)
+                    );
+
+                return (
+                  <div className="flex flex-col sm:flex-row justify-between items-center mt-6 gap-4 w-full">
+                     <p className="text-xs text-muted-foreground font-semibold">
+                        {displayLabel} • Calculations based on 14% VAT. Before Tax = Gross / 1.14. Discount applied to Net price.
+                     </p>
+                     <div className="flex items-center gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => setReportPage(p => Math.max(1, p - 1))}
+                          disabled={reportPage === 1 || loadingReportOrders}
+                        >
+                          Previous
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => setReportPage(p => p + 1)}
+                          disabled={loadingReportOrders || (rangeSummary?.count ? reportPage >= totalPages : !reportOrders || reportOrders.length < rowsPerPage)}
+                        >
+                          Next
+                        </Button>
+                     </div>
+                  </div>
+                );
+              })()}
             </CardContent>
           </Card>
         </TabsContent>

@@ -402,17 +402,30 @@ export default function SalesAnalysisPage() {
             )}
           </div>
 
-          {!isDailyGrouped && (
-            <div className="flex justify-center gap-2 pb-10">
-              <Button variant="outline" onClick={() => setReportPage(p => Math.max(1, p - 1))} disabled={reportPage === 1}>
-                Previous
-              </Button>
-              <div className="flex items-center px-4 font-medium text-sm">Page {reportPage}</div>
-              <Button variant="outline" onClick={() => setReportPage(p => p + 1)} disabled={orders.length < rowsPerPage}>
-                Next
-              </Button>
-            </div>
-          )}
+          {!isDailyGrouped && (() => {
+            const totalPages = rangeSummary?.count ? Math.ceil(rangeSummary.count / rowsPerPage) : 1;
+            return (
+              <div className="flex justify-center items-center gap-2 pb-10">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setReportPage(p => Math.max(1, p - 1))} 
+                  disabled={reportPage === 1}
+                >
+                  Previous
+                </Button>
+                <div className="flex items-center px-4 font-medium text-sm">
+                  Page {reportPage} of {totalPages} ({rangeSummary?.count || 0} total orders)
+                </div>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setReportPage(p => p + 1)} 
+                  disabled={reportPage >= totalPages}
+                >
+                  Next
+                </Button>
+              </div>
+            );
+          })()}
         </TabsContent>
 
         <TabsContent value="drinks">

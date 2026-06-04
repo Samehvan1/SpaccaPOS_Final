@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
-import { Search, Download, Filter, Receipt, Clock, Calendar, BarChart3, Tag, Coins, RefreshCw } from "lucide-react";
+import { Search, Download, Filter, Receipt, Clock, Calendar, RefreshCw } from "lucide-react";
 import { format } from "date-fns";
 import { fmt, pure } from "@/lib/currency";
 
@@ -35,6 +35,7 @@ export default function AllOrdersReport() {
   // Data States
   const [orders, setOrders] = useState<any[]>([]);
   const [branches, setBranches] = useState<any[]>([]);
+  const [totalOrders, setTotalOrders] = useState(0);
   const [loading, setLoading] = useState(true);
   const [selectedOrderDetails, setSelectedOrderDetails] = useState<any | null>(null);
 
@@ -69,12 +70,15 @@ export default function AllOrdersReport() {
         params.append("status", selectedStatus);
       }
 
-      const [ordersData, branchData] = await Promise.all([
-        api(`/api/orders?${params.toString()}`),
-        api("/api/admin/branches")
-      ]);
+      const ordersRes = await fetch(`/api/orders?${params.toString()}`);
+      if (!ordersRes.ok) throw new Error(await ordersRes.text());
+      const totalCount = parseInt(ordersRes.headers.get("X-Total-Count") || ordersRes.headers.get("x-total-count") || "0");
+      const ordersData = await ordersRes.json();
+      
+      const branchData = await api("/api/admin/branches");
 
       setOrders(ordersData);
+      setTotalOrders(totalCount);
       setBranches(branchData);
     } catch (err) {
       toast({ variant: "destructive", title: "Failed to load orders data" });
@@ -102,12 +106,6 @@ export default function AllOrdersReport() {
 
     return matchesSearch;
   });
-
-  // Calculate Metrics from loaded data (filtered locally by search term as well)
-  const totalCount = filteredOrders.length;
-  const totalGross = filteredOrders.reduce((sum, o) => sum + parseFloat(o.subtotal || "0"), 0);
-  const totalDiscount = filteredOrders.reduce((sum, o) => sum + parseFloat(o.discount || "0"), 0);
-  const totalPaid = filteredOrders.reduce((sum, o) => sum + parseFloat(o.total || "0"), 0);
 
   const exportCsv = () => {
     const headers = [
@@ -156,53 +154,6 @@ export default function AllOrdersReport() {
             <Download className="h-4 w-4" /> Export CSV
           </Button>
         </div>
-      </div>
-
-      {/* Metrics Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="border-none shadow-md bg-card/60 backdrop-blur-sm">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Filtered Orders</CardTitle>
-            <Receipt className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-black">{totalCount}</div>
-            <p className="text-[10px] text-muted-foreground mt-1">Orders in the current list</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-none shadow-md bg-card/60 backdrop-blur-sm">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Gross Subtotal</CardTitle>
-            <BarChart3 className="h-4 w-4 text-emerald-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-black text-emerald-500">{fmt(totalGross)}</div>
-            <p className="text-[10px] text-muted-foreground mt-1">Before discount & adjustments</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-none shadow-md bg-card/60 backdrop-blur-sm">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Total Discount</CardTitle>
-            <Tag className="h-4 w-4 text-rose-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-black text-rose-500">{fmt(totalDiscount)}</div>
-            <p className="text-[10px] text-muted-foreground mt-1">Includes staff & hospitality discounts</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-none shadow-md bg-card/60 backdrop-blur-sm">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Net Revenue</CardTitle>
-            <Coins className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-black text-primary">{fmt(totalPaid)}</div>
-            <p className="text-[10px] text-muted-foreground mt-1">Actual collected revenue</p>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Filters Card */}
@@ -362,29 +313,38 @@ export default function AllOrdersReport() {
         </div>
 
         {/* Pagination Footer */}
-        <div className="p-4 border-t bg-muted/20 flex flex-col sm:flex-row justify-between items-center gap-4">
-          <p className="text-xs text-muted-foreground">
-            Showing Page {page} • List includes cancelled and refunded transactions to maintain a clean tracking ledger.
-          </p>
-          <div className="flex items-center gap-2">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => setPage(p => Math.max(1, p - 1))}
-              disabled={page === 1 || loading}
-            >
-              Previous
-            </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => setPage(p => p + 1)}
-              disabled={orders.length < rowsPerPage || loading}
-            >
-              Next
-            </Button>
-          </div>
-        </div>
+        {(() => {
+          const totalPages = totalOrders > 0 ? Math.ceil(totalOrders / rowsPerPage) : 1;
+          const displayLabel = totalOrders > 0 
+            ? `Showing Page ${page} of ${totalPages} (${totalOrders} total orders)`
+            : (orders.length > 0 ? `Showing Page ${page}` : `Showing Page ${page} of 1 (0 total orders)`);
+            
+          return (
+            <div className="p-4 border-t bg-muted/20 flex flex-col sm:flex-row justify-between items-center gap-4">
+              <p className="text-xs text-muted-foreground">
+                {displayLabel} • List includes cancelled and refunded transactions to maintain a clean tracking ledger.
+              </p>
+              <div className="flex items-center gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={page === 1 || loading}
+                >
+                  Previous
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setPage(p => p + 1)}
+                  disabled={loading || (totalOrders > 0 ? page >= totalPages : orders.length < rowsPerPage)}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          );
+        })()}
       </div>
 
       {/* Order Details Modal */}

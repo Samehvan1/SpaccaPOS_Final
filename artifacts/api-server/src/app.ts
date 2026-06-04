@@ -41,7 +41,7 @@ app.use(
 // and the session cookie's Secure flag is applied properly.
 app.set("trust proxy", 1);
 
-app.use(cors({ credentials: true, origin: true }));
+app.use(cors({ credentials: true, origin: true, exposedHeaders: ["X-Total-Count"] }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

@@ -80826,7 +80826,7 @@ router2.post("/auth/verify-pin", async (req, res) => {
   const [user] = await db.select().from(usersTable).where(
     and(
       eq(usersTable.pin, pin),
-      inArray(usersTable.role, ["admin", "cashier"]),
+      inArray(usersTable.role, ["admin", "cashier", "supervisor"]),
       eq(usersTable.isActive, true)
     )
   ).limit(1);
@@ -82881,22 +82881,51 @@ init_sse();
 init_src();
 var router5 = (0, import_express5.Router)();
 function getDayOfYear(date6) {
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Africa/Cairo",
+    year: "numeric",
+    month: "numeric",
+    day: "numeric"
+  });
+  const parts = formatter.formatToParts(date6);
+  const year = parseInt(parts.find((p) => p.type === "year").value);
+  const month = parseInt(parts.find((p) => p.type === "month").value) - 1;
+  const day = parseInt(parts.find((p) => p.type === "day").value);
   const monthLengths = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-  const year = date6.getFullYear();
   const isLeapYear = year % 4 === 0 && year % 100 !== 0 || year % 400 === 0;
   if (isLeapYear) {
     monthLengths[1] = 29;
   }
-  let dayOfYear = date6.getDate();
-  for (let i = 0; i < date6.getMonth(); i++) {
+  let dayOfYear = day;
+  for (let i = 0; i < month; i++) {
     dayOfYear += monthLengths[i];
   }
   return dayOfYear;
 }
+function getCairoStartOfDay(date6) {
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Africa/Cairo",
+    year: "numeric",
+    month: "numeric",
+    day: "numeric"
+  });
+  const parts = formatter.formatToParts(date6);
+  const year = parseInt(parts.find((p) => p.type === "year").value);
+  const month = parseInt(parts.find((p) => p.type === "month").value);
+  const day = parseInt(parts.find((p) => p.type === "day").value);
+  const utcMidnight = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0));
+  const cairoHours = parseInt(new Intl.DateTimeFormat("en-US", {
+    timeZone: "Africa/Cairo",
+    hour: "numeric",
+    hourCycle: "h23"
+  }).format(utcMidnight));
+  utcMidnight.setUTCHours(utcMidnight.getUTCHours() - cairoHours);
+  return utcMidnight;
+}
 async function generateOrderNumber(branchId) {
   const now = /* @__PURE__ */ new Date();
   const dayOfYear = getDayOfYear(now);
-  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const todayStart = getCairoStartOfDay(now);
   const [row] = await db.select({ count: sql`cast(count(*) as int)` }).from(ordersTable).where(and(eq(ordersTable.branchId, branchId), gte(ordersTable.createdAt, todayStart)));
   const serial2 = (row?.count ?? 0) + 1;
   return `${dayOfYear}${String(serial2).padStart(3, "0")}`;
@@ -82974,10 +83003,18 @@ router5.get("/orders", requirePermission("cashier:view"), async (req, res) => {
   const limit = params.success && params.data.limit ? params.data.limit : 50;
   const offset = params.success && params.data.offset ? params.data.offset : 0;
   let query = db.select().from(ordersTable).$dynamic();
+  let countQuery = db.select({ count: sql`cast(count(*) as int)` }).from(ordersTable).$dynamic();
   if (conditions.length > 0) {
     query = query.where(and(...conditions));
+    countQuery = countQuery.where(and(...conditions));
   }
-  const orders = await query.orderBy(desc(ordersTable.createdAt)).limit(limit).offset(offset);
+  const [orders, [countResult]] = await Promise.all([
+    query.orderBy(desc(ordersTable.createdAt)).limit(limit).offset(offset),
+    countQuery
+  ]);
+  const totalCount = countResult?.count ?? 0;
+  res.setHeader("X-Total-Count", String(totalCount));
+  res.setHeader("Access-Control-Expose-Headers", "X-Total-Count");
   const orderIds = orders.map((o) => o.id);
   const [items, baristas, payments, branches] = await Promise.all([
     orderIds.length > 0 ? db.select().from(orderItemsTable).where(inArray(orderItemsTable.orderId, orderIds)) : Promise.resolve([]),
@@ -86812,7 +86849,7 @@ app.use(
   })
 );
 app.set("trust proxy", 1);
-app.use((0, import_cors.default)({ credentials: true, origin: true }));
+app.use((0, import_cors.default)({ credentials: true, origin: true, exposedHeaders: ["X-Total-Count"] }));
 app.use(import_express23.default.json());
 app.use(import_express23.default.urlencoded({ extended: true }));
 app.use(
