@@ -38,6 +38,8 @@ import CalibrationPage from "@/pages/admin/operations/calibration";
 import WastagePage from "@/pages/admin/operations/wastage";
 import OperationalDeductionsReport from "@/pages/admin/operations/deductions-report";
 import AllOrdersReport from "@/pages/admin/all-orders-report";
+import PurchasesAdmin from "@/pages/admin/purchases";
+import SuppliersAdmin from "@/pages/admin/purchases/suppliers";
 
 export interface RouteConfig {
   path: string;
@@ -72,6 +74,10 @@ export const appRoutes: RouteConfig[] = [
   { path: "/admin/stock/receive-delivery", component: ReceiveDeliveryPage, permission: "inventory:view" },
   { path: "/admin/stock-audits", component: StockAuditReviewPage, permission: "inventory:manage" },
   { path: "/stock-control", component: StockControlPage, permission: "inventory:view" },
+
+  // Purchases
+  { path: "/admin/purchases", component: PurchasesAdmin, permission: "purchases:view" },
+  { path: "/admin/purchases/suppliers", component: SuppliersAdmin, permission: "purchases:view" },
 
   // Finance & Reports
   { path: "/admin/finance", component: FinanceDashboard, permission: "reports:view" },

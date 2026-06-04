@@ -37,6 +37,8 @@ export const APP_PERMISSIONS = [
   { key: "inventory:view", name: "View Inventory", description: "Check stock levels and ingredients" },
   { key: "inventory:manage", name: "Manage Inventory", description: "Update stock levels, conversions and ingredient options" },
   { key: "inventory:adjust", name: "Adjust Stock", description: "Restock and adjust inventory quantities" },
+  { key: "purchases:view", name: "View Purchases", description: "View purchases department, orders and suppliers" },
+  { key: "purchases:manage", name: "Manage Purchases", description: "Create purchase orders, receive orders, and record payments" },
   
   // Finance & Reports
   { key: "reports:view", name: "View Reports", description: "Access sales and performance reports" },
@@ -124,7 +126,8 @@ export async function syncPermissions() {
     "admin:view",
     "reports:view",
     "inventory:view",
-    "cashier:view_reports"
+    "cashier:view_reports",
+    "purchases:view"
   ]);
 
   logger.info("Permissions sync complete.");

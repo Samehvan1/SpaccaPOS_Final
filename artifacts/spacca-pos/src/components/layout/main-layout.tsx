@@ -365,6 +365,16 @@ export function MainLayout({ children }: MainLayoutProps) {
         { href: "/admin/operations/all-orders", label: "All Orders Tracker" },
       ]
     },
+    { 
+      href: "/admin/purchases", 
+      label: "Purchases", 
+      icon: PackageSearch, 
+      permission: "purchases:view",
+      children: [
+        { href: "/admin/purchases", label: "Purchase Orders" },
+        { href: "/admin/purchases/suppliers", label: "Suppliers Directory" },
+      ]
+    },
     { href: "/admin/stock-audits", label: "Stock Audits", icon: History, permission: "inventory:view" },
   ].filter(item => hasPermission(item.permission));
 

@@ -20,6 +20,8 @@ import stockAuditsRouter from "./stock-audits";
 import rolesRouter from "./roles";
 import branchesRouter from "./branches";
 import financeRouter from "./finance";
+import suppliersRouter from "./suppliers";
+import purchasesRouter from "./purchases";
 import { db, branchesTable } from "@workspace/db";
 import { addSseClient } from "../lib/sse";
 
@@ -50,6 +52,8 @@ router.use(adminRouter);
 router.use(stockAuditsRouter);
 router.use("/roles", rolesRouter);
 router.use(financeRouter);
+router.use(suppliersRouter);
+router.use(purchasesRouter);
 
 // Server-Sent Events endpoint for real-time order push
 router.get("/events", (req, res) => {

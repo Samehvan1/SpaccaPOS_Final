@@ -6,12 +6,30 @@ import { exec } from "child_process";
 
 import app from "./app";
 import { logger } from "./lib/logger";
-import { runMigrations } from "@workspace/db";
+import { runMigrations, db, branchesTable } from "@workspace/db";
+import { eq } from "drizzle-orm";
 import { seedIfEmpty } from "./lib/seed";
 import { syncPermissions } from "./lib/permissions-seed";
 import { runDataMigrations } from "./lib/data-migrations";
 import stockAuditsRouter from "./routes/stock-audits";
 import rolesRouter from "./routes/roles";
+
+async function ensureCentralBranch() {
+  try {
+    const [existing] = await db.select().from(branchesTable).where(eq(branchesTable.code, "CENTRAL")).limit(1);
+    if (!existing) {
+      await db.insert(branchesTable).values({
+        name: "Global / Central Warehouse",
+        code: "CENTRAL",
+        address: "Central Distribution Center",
+        isActive: true,
+      });
+      logger.info("Created Global / Central Warehouse branch");
+    }
+  } catch (err) {
+    logger.error({ err }, "Error ensuring central branch");
+  }
+}
 
 const rawPort = process.env["PORT"];
 
@@ -30,6 +48,7 @@ if (Number.isNaN(port) || port <= 0) {
 // Ensure migrations, permissions, and data migrations sync run before server starts accepting requests
 runMigrations()
   .then(() => seedIfEmpty())
+  .then(() => ensureCentralBranch())
   .then(() => syncPermissions())
   .then(() => runDataMigrations())
   .then(() => {

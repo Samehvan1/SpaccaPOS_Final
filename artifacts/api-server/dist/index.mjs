@@ -20807,11 +20807,11 @@ var require_router = __commonJS({
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var methods = METHODS.map((method) => method.toLowerCase());
-    module.exports = Router23;
+    module.exports = Router25;
     module.exports.Route = Route;
-    function Router23(options) {
-      if (!(this instanceof Router23)) {
-        return new Router23(options);
+    function Router25(options) {
+      if (!(this instanceof Router25)) {
+        return new Router25(options);
       }
       const opts = options || {};
       function router20(req, res, next) {
@@ -20825,9 +20825,9 @@ var require_router = __commonJS({
       router20.stack = [];
       return router20;
     }
-    Router23.prototype = function() {
+    Router25.prototype = function() {
     };
-    Router23.prototype.param = function param(name, fn) {
+    Router25.prototype.param = function param(name, fn) {
       if (!name) {
         throw new TypeError("argument name is required");
       }
@@ -20847,7 +20847,7 @@ var require_router = __commonJS({
       params.push(fn);
       return this;
     };
-    Router23.prototype.handle = function handle(req, res, callback) {
+    Router25.prototype.handle = function handle(req, res, callback) {
       if (!callback) {
         throw new TypeError("argument callback is required");
       }
@@ -20974,7 +20974,7 @@ var require_router = __commonJS({
         }
       }
     };
-    Router23.prototype.use = function use(handler) {
+    Router25.prototype.use = function use(handler) {
       let offset = 0;
       let path6 = "/";
       if (typeof handler !== "function") {
@@ -21007,7 +21007,7 @@ var require_router = __commonJS({
       }
       return this;
     };
-    Router23.prototype.route = function route(path6) {
+    Router25.prototype.route = function route(path6) {
       const route2 = new Route(path6);
       const layer = new Layer(path6, {
         sensitive: this.caseSensitive,
@@ -21022,7 +21022,7 @@ var require_router = __commonJS({
       return route2;
     };
     methods.concat("all").forEach(function(method) {
-      Router23.prototype[method] = function(path6) {
+      Router25.prototype[method] = function(path6) {
         const route = this.route(path6);
         route[method].apply(route, slice.call(arguments, 1));
         return this;
@@ -21205,7 +21205,7 @@ var require_application = __commonJS({
     var compileTrust = require_utils3().compileTrust;
     var resolve2 = __require("node:path").resolve;
     var once = require_once();
-    var Router23 = require_router();
+    var Router25 = require_router();
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var app2 = exports = module.exports = {};
@@ -21221,7 +21221,7 @@ var require_application = __commonJS({
         enumerable: true,
         get: function getrouter() {
           if (router20 === null) {
-            router20 = new Router23({
+            router20 = new Router25({
               caseSensitive: this.enabled("case sensitive routing"),
               strict: this.enabled("strict routing")
             });
@@ -23832,7 +23832,7 @@ var require_express = __commonJS({
     var EventEmitter = __require("node:events").EventEmitter;
     var mixin = require_merge_descriptors();
     var proto = require_application();
-    var Router23 = require_router();
+    var Router25 = require_router();
     var req = require_request();
     var res = require_response();
     exports = module.exports = createApplication;
@@ -23854,8 +23854,8 @@ var require_express = __commonJS({
     exports.application = proto;
     exports.request = req;
     exports.response = res;
-    exports.Route = Router23.Route;
-    exports.Router = Router23;
+    exports.Route = Router25.Route;
+    exports.Router = Router25;
     exports.json = bodyParser.json;
     exports.raw = bodyParser.raw;
     exports.static = require_serve_static();
@@ -39579,6 +39579,17 @@ function extractTablesRelationalConfig(schema, configHelpers) {
     }
   }
   return { tables: tablesConfig, tableNamesMap };
+}
+function relations(table, relations2) {
+  return new Relations(
+    table,
+    (helpers) => Object.fromEntries(
+      Object.entries(relations2(helpers)).map(([key, value]) => [
+        key,
+        value.withFieldName(key)
+      ])
+    )
+  );
 }
 function createOne(sourceTable) {
   return function one(table, config3) {
@@ -56512,6 +56523,94 @@ var init_signatures = __esm({
   }
 });
 
+// ../../lib/db/src/schema/purchases.ts
+var suppliersTable, purchasesTable, purchaseItemsTable, suppliersRelations, purchasesRelations, purchaseItemsRelations, insertSupplierSchema, insertPurchaseSchema, insertPurchaseItemSchema;
+var init_purchases = __esm({
+  "../../lib/db/src/schema/purchases.ts"() {
+    "use strict";
+    init_pg_core();
+    init_drizzle_orm();
+    init_drizzle_zod();
+    init_branches();
+    init_ingredients();
+    init_users();
+    suppliersTable = pgTable("suppliers", {
+      id: serial("id").primaryKey(),
+      name: text("name").notNull(),
+      contactName: text("contact_name"),
+      phone: text("phone"),
+      email: text("email"),
+      address: text("address"),
+      taxId: text("tax_id"),
+      isActive: boolean("is_active").notNull().default(true),
+      createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+      updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => /* @__PURE__ */ new Date())
+    });
+    purchasesTable = pgTable("purchases", {
+      id: serial("id").primaryKey(),
+      poNumber: text("po_number").notNull().unique(),
+      supplierId: integer("supplier_id").notNull().references(() => suppliersTable.id, { onDelete: "restrict" }),
+      branchId: integer("branch_id").notNull().references(() => branchesTable.id, { onDelete: "restrict" }),
+      status: text("status", { enum: ["draft", "ordered", "received", "cancelled"] }).notNull().default("draft"),
+      paymentStatus: text("payment_status", { enum: ["unpaid", "partially_paid", "paid"] }).notNull().default("unpaid"),
+      orderDate: timestamp("order_date", { withTimezone: true }),
+      deliveryDate: timestamp("delivery_date", { withTimezone: true }),
+      totalAmount: numeric("total_amount", { precision: 12, scale: 4 }).notNull().default("0"),
+      paidAmount: numeric("paid_amount", { precision: 12, scale: 4 }).notNull().default("0"),
+      notes: text("notes"),
+      createdBy: integer("created_by").notNull().references(() => usersTable.id),
+      createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+      updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => /* @__PURE__ */ new Date())
+    });
+    purchaseItemsTable = pgTable("purchase_items", {
+      id: serial("id").primaryKey(),
+      purchaseId: integer("purchase_id").notNull().references(() => purchasesTable.id, { onDelete: "cascade" }),
+      ingredientId: integer("ingredient_id").notNull().references(() => ingredientsTable.id, { onDelete: "restrict" }),
+      quantityOrdered: numeric("quantity_ordered", { precision: 12, scale: 4 }).notNull(),
+      quantityReceived: numeric("quantity_received", { precision: 12, scale: 4 }).notNull().default("0"),
+      unitPrice: numeric("unit_price", { precision: 12, scale: 4 }).notNull(),
+      totalCost: numeric("total_cost", { precision: 12, scale: 4 }).notNull(),
+      conversionId: integer("conversion_id").references(() => ingredientConversionsTable.id, { onDelete: "set null" }),
+      unitName: text("unit_name").notNull().default("pcs")
+    });
+    suppliersRelations = relations(suppliersTable, ({ many }) => ({
+      purchases: many(purchasesTable)
+    }));
+    purchasesRelations = relations(purchasesTable, ({ one, many }) => ({
+      supplier: one(suppliersTable, {
+        fields: [purchasesTable.supplierId],
+        references: [suppliersTable.id]
+      }),
+      branch: one(branchesTable, {
+        fields: [purchasesTable.branchId],
+        references: [branchesTable.id]
+      }),
+      items: many(purchaseItemsTable),
+      creator: one(usersTable, {
+        fields: [purchasesTable.createdBy],
+        references: [usersTable.id]
+      })
+    }));
+    purchaseItemsRelations = relations(purchaseItemsTable, ({ one }) => ({
+      purchase: one(purchasesTable, {
+        fields: [purchaseItemsTable.purchaseId],
+        references: [purchasesTable.id]
+      }),
+      ingredient: one(ingredientsTable, {
+        fields: [purchaseItemsTable.ingredientId],
+        references: [ingredientsTable.id]
+      }),
+      conversion: one(ingredientConversionsTable, {
+        fields: [purchaseItemsTable.conversionId],
+        references: [ingredientConversionsTable.id]
+      })
+    }));
+    insertSupplierSchema = createInsertSchema(suppliersTable).omit({ id: true, createdAt: true, updatedAt: true });
+    insertPurchaseSchema = createInsertSchema(purchasesTable).omit({ id: true, createdAt: true, updatedAt: true });
+    insertPurchaseItemSchema = createInsertSchema(purchaseItemsTable).omit({ id: true });
+  }
+});
+
 // ../../lib/db/src/schema/index.ts
 var schema_exports = {};
 __export(schema_exports, {
@@ -56553,12 +56652,15 @@ __export(schema_exports, {
   insertOrderSchema: () => insertOrderSchema,
   insertPermissionSchema: () => insertPermissionSchema,
   insertPredefinedSlotSchema: () => insertPredefinedSlotSchema,
+  insertPurchaseItemSchema: () => insertPurchaseItemSchema,
+  insertPurchaseSchema: () => insertPurchaseSchema,
   insertRolePermissionSchema: () => insertRolePermissionSchema,
   insertRoleSchema: () => insertRoleSchema,
   insertSettingSchema: () => insertSettingSchema,
   insertStockAuditItemSchema: () => insertStockAuditItemSchema,
   insertStockAuditSchema: () => insertStockAuditSchema,
   insertStockMovementSchema: () => insertStockMovementSchema,
+  insertSupplierSchema: () => insertSupplierSchema,
   insertUserPermissionSchema: () => insertUserPermissionSchema,
   insertUserSchema: () => insertUserSchema,
   kitchenStationsTable: () => kitchenStationsTable,
@@ -56570,6 +56672,10 @@ __export(schema_exports, {
   predefinedSlotTypeOptionsTable: () => predefinedSlotTypeOptionsTable,
   predefinedSlotVolumesTable: () => predefinedSlotVolumesTable,
   predefinedSlotsTable: () => predefinedSlotsTable,
+  purchaseItemsRelations: () => purchaseItemsRelations,
+  purchaseItemsTable: () => purchaseItemsTable,
+  purchasesRelations: () => purchasesRelations,
+  purchasesTable: () => purchasesTable,
   rolePermissionsTable: () => rolePermissionsTable,
   rolesTable: () => rolesTable,
   sessionsTable: () => sessionsTable,
@@ -56578,6 +56684,8 @@ __export(schema_exports, {
   stockAuditItemsTable: () => stockAuditItemsTable,
   stockAuditsTable: () => stockAuditsTable,
   stockMovementsTable: () => stockMovementsTable,
+  suppliersRelations: () => suppliersRelations,
+  suppliersTable: () => suppliersTable,
   userPermissionsTable: () => userPermissionsTable,
   usersTable: () => usersTable
 });
@@ -56599,6 +56707,7 @@ var init_schema2 = __esm({
     init_stock_audit();
     init_customers();
     init_signatures();
+    init_purchases();
   }
 });
 
@@ -56691,12 +56800,15 @@ __export(src_exports, {
   insertOrderSchema: () => insertOrderSchema,
   insertPermissionSchema: () => insertPermissionSchema,
   insertPredefinedSlotSchema: () => insertPredefinedSlotSchema,
+  insertPurchaseItemSchema: () => insertPurchaseItemSchema,
+  insertPurchaseSchema: () => insertPurchaseSchema,
   insertRolePermissionSchema: () => insertRolePermissionSchema,
   insertRoleSchema: () => insertRoleSchema,
   insertSettingSchema: () => insertSettingSchema,
   insertStockAuditItemSchema: () => insertStockAuditItemSchema,
   insertStockAuditSchema: () => insertStockAuditSchema,
   insertStockMovementSchema: () => insertStockMovementSchema,
+  insertSupplierSchema: () => insertSupplierSchema,
   insertUserPermissionSchema: () => insertUserPermissionSchema,
   insertUserSchema: () => insertUserSchema,
   kitchenStationsTable: () => kitchenStationsTable,
@@ -56709,6 +56821,10 @@ __export(src_exports, {
   predefinedSlotTypeOptionsTable: () => predefinedSlotTypeOptionsTable,
   predefinedSlotVolumesTable: () => predefinedSlotVolumesTable,
   predefinedSlotsTable: () => predefinedSlotsTable,
+  purchaseItemsRelations: () => purchaseItemsRelations,
+  purchaseItemsTable: () => purchaseItemsTable,
+  purchasesRelations: () => purchasesRelations,
+  purchasesTable: () => purchasesTable,
   rolePermissionsTable: () => rolePermissionsTable,
   rolesTable: () => rolesTable,
   runMigrations: () => runMigrations,
@@ -56718,6 +56834,8 @@ __export(src_exports, {
   stockAuditItemsTable: () => stockAuditItemsTable,
   stockAuditsTable: () => stockAuditsTable,
   stockMovementsTable: () => stockMovementsTable,
+  suppliersRelations: () => suppliersRelations,
+  suppliersTable: () => suppliersTable,
   userPermissionsTable: () => userPermissionsTable,
   usersTable: () => usersTable
 });
@@ -73446,7 +73564,7 @@ import fs6 from "fs";
 import { exec as exec2 } from "child_process";
 
 // src/app.ts
-var import_express23 = __toESM(require_express2(), 1);
+var import_express25 = __toESM(require_express2(), 1);
 var import_cors = __toESM(require_lib3(), 1);
 var import_pino_http = __toESM(require_logger(), 1);
 var import_express_session = __toESM(require_express_session(), 1);
@@ -73454,7 +73572,7 @@ var import_connect_pg_simple = __toESM(require_connect_pg_simple(), 1);
 init_src();
 
 // src/routes/index.ts
-var import_express22 = __toESM(require_express2(), 1);
+var import_express24 = __toESM(require_express2(), 1);
 
 // src/routes/health.ts
 var import_express = __toESM(require_express2(), 1);
@@ -86834,9 +86952,494 @@ router18.get("/finance/order-stats", requirePermission("reports:view"), async (r
 });
 var finance_default = router18;
 
+// src/routes/suppliers.ts
+var import_express22 = __toESM(require_express2(), 1);
+init_src();
+init_drizzle_orm();
+var suppliersRouter = (0, import_express22.Router)();
+suppliersRouter.get("/purchases/suppliers", requirePermission("purchases:view"), async (req, res) => {
+  try {
+    const suppliers = await db.select().from(suppliersTable).orderBy(suppliersTable.name);
+    res.json(suppliers);
+  } catch (error40) {
+    console.error("GET /purchases/suppliers error:", error40?.message || error40);
+    res.status(500).json({ error: "Failed to list suppliers" });
+  }
+});
+suppliersRouter.post("/purchases/suppliers", requirePermission("purchases:manage"), async (req, res) => {
+  try {
+    const parsed = insertSupplierSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.format() });
+      return;
+    }
+    const [newSupplier] = await db.insert(suppliersTable).values(parsed.data).returning();
+    if (!newSupplier) {
+      throw new Error("Supplier creation failed");
+    }
+    await logActivity(req, "CREATE_SUPPLIER", "supplier", newSupplier.id, { name: newSupplier.name });
+    res.status(201).json(newSupplier);
+  } catch (error40) {
+    console.error("POST /purchases/suppliers error:", error40?.message || error40);
+    res.status(500).json({ error: "Failed to create supplier" });
+  }
+});
+suppliersRouter.patch("/purchases/suppliers/:id", requirePermission("purchases:manage"), async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      res.status(400).json({ error: "Invalid supplier ID" });
+      return;
+    }
+    const parsed = insertSupplierSchema.partial().safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.format() });
+      return;
+    }
+    const [updatedSupplier] = await db.update(suppliersTable).set({
+      ...parsed.data,
+      updatedAt: /* @__PURE__ */ new Date()
+    }).where(eq(suppliersTable.id, id)).returning();
+    if (!updatedSupplier) {
+      res.status(404).json({ error: "Supplier not found" });
+      return;
+    }
+    await logActivity(req, "UPDATE_SUPPLIER", "supplier", id, { name: updatedSupplier.name });
+    res.json(updatedSupplier);
+  } catch (error40) {
+    console.error("PATCH /purchases/suppliers/:id error:", error40?.message || error40);
+    res.status(500).json({ error: "Failed to update supplier" });
+  }
+});
+suppliersRouter.delete("/purchases/suppliers/:id", requirePermission("purchases:manage"), async (req, res) => {
+  const id = parseInt(req.params.id);
+  if (isNaN(id)) {
+    res.status(400).json({ error: "Invalid supplier ID" });
+    return;
+  }
+  try {
+    const [deletedSupplier] = await db.delete(suppliersTable).where(eq(suppliersTable.id, id)).returning();
+    if (!deletedSupplier) {
+      res.status(404).json({ error: "Supplier not found" });
+      return;
+    }
+    await logActivity(req, "DELETE_SUPPLIER", "supplier", id, { name: deletedSupplier.name });
+    res.status(204).end();
+  } catch (error40) {
+    console.error("DELETE /purchases/suppliers/:id error:", error40?.message || error40);
+    if (error40?.code === "23503" || error40?.message?.includes("foreign key constraint")) {
+      const [deactivatedSupplier] = await db.update(suppliersTable).set({ isActive: false, updatedAt: /* @__PURE__ */ new Date() }).where(eq(suppliersTable.id, id)).returning();
+      if (deactivatedSupplier) {
+        await logActivity(req, "DEACTIVATE_SUPPLIER", "supplier", id, { name: deactivatedSupplier.name });
+        res.status(200).json({ message: "Supplier has purchase orders. It has been deactivated instead of deleted.", supplier: deactivatedSupplier });
+        return;
+      }
+    }
+    res.status(500).json({ error: "Failed to delete supplier" });
+  }
+});
+var suppliers_default = suppliersRouter;
+
+// src/routes/purchases.ts
+var import_express23 = __toESM(require_express2(), 1);
+init_src();
+init_drizzle_orm();
+var purchasesRouter = (0, import_express23.Router)();
+var formatPurchase = (p) => ({
+  ...p,
+  totalAmount: parseFloat(String(p.totalAmount || "0")),
+  paidAmount: parseFloat(String(p.paidAmount || "0")),
+  supplierName: p.supplier?.name ?? "Unknown",
+  branchName: p.branch?.name ?? "Unknown",
+  createdByName: p.creator?.name ?? "Unknown"
+});
+purchasesRouter.get("/purchases", requirePermission("purchases:view"), async (req, res) => {
+  try {
+    const sessionUser = req.session;
+    const isAdmin = sessionUser.role === "admin" || sessionUser.role === "finance";
+    const sessionBranchId = sessionUser.branchId;
+    const targetBranchId = req.query.branchId && req.query.branchId !== "all" ? parseInt(req.query.branchId) : isAdmin ? null : sessionBranchId;
+    const conditions = [];
+    if (targetBranchId) {
+      conditions.push(eq(purchasesTable.branchId, targetBranchId));
+    }
+    if (req.query.status) {
+      conditions.push(eq(purchasesTable.status, req.query.status));
+    }
+    const pos = await db.query.purchasesTable.findMany({
+      where: conditions.length ? and(...conditions) : void 0,
+      with: {
+        supplier: true,
+        branch: true,
+        creator: true
+      },
+      orderBy: [desc(purchasesTable.createdAt)]
+    });
+    res.json(pos.map(formatPurchase));
+  } catch (error40) {
+    console.error("GET /purchases error:", error40?.message || error40);
+    res.status(500).json({ error: "Failed to list purchase orders" });
+  }
+});
+purchasesRouter.get("/purchases/:id", requirePermission("purchases:view"), async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      res.status(400).json({ error: "Invalid purchase order ID" });
+      return;
+    }
+    const po = await db.query.purchasesTable.findFirst({
+      where: eq(purchasesTable.id, id),
+      with: {
+        supplier: true,
+        branch: true,
+        creator: true,
+        items: {
+          with: {
+            ingredient: true,
+            conversion: true
+          }
+        }
+      }
+    });
+    if (!po) {
+      res.status(404).json({ error: "Purchase order not found" });
+      return;
+    }
+    const items = po.items.map((item) => ({
+      ...item,
+      quantityOrdered: parseFloat(String(item.quantityOrdered || "0")),
+      quantityReceived: parseFloat(String(item.quantityReceived || "0")),
+      unitPrice: parseFloat(String(item.unitPrice || "0")),
+      totalCost: parseFloat(String(item.totalCost || "0")),
+      ingredientName: item.ingredient?.name ?? "Unknown"
+    }));
+    res.json({
+      ...formatPurchase(po),
+      items
+    });
+  } catch (error40) {
+    console.error("GET /purchases/:id error:", error40?.message || error40);
+    res.status(500).json({ error: "Failed to fetch purchase order details" });
+  }
+});
+purchasesRouter.post("/purchases", requirePermission("purchases:manage"), async (req, res) => {
+  try {
+    const sessionUserId = req.session.userId ?? 1;
+    const sessionBranchId = req.session.branchId;
+    const { items, poNumber: customPoNumber, ...purchaseData } = req.body;
+    if (!Array.isArray(items) || items.length === 0) {
+      res.status(400).json({ error: "Purchase order must contain at least one item." });
+      return;
+    }
+    let poNumber = customPoNumber;
+    if (!poNumber) {
+      const countResult = await db.select({ count: sql`count(*)` }).from(purchasesTable);
+      const count2 = Number(countResult[0]?.count || 0) + 1;
+      const today = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10).replace(/-/g, "");
+      poNumber = `PO-${today}-${String(count2).padStart(4, "0")}`;
+    }
+    const finalPurchaseData = {
+      ...purchaseData,
+      poNumber,
+      createdBy: sessionUserId,
+      branchId: purchaseData.branchId ?? sessionBranchId
+    };
+    const parsed = insertPurchaseSchema.safeParse(finalPurchaseData);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.format() });
+      return;
+    }
+    let calculatedTotal = 0;
+    const itemsToInsert = items.map((item) => {
+      const qty = parseFloat(item.quantityOrdered);
+      const price = parseFloat(item.unitPrice);
+      const cost = qty * price;
+      calculatedTotal += cost;
+      return {
+        ingredientId: item.ingredientId,
+        quantityOrdered: String(qty),
+        unitPrice: String(price),
+        totalCost: String(cost),
+        conversionId: item.conversionId || null,
+        unitName: item.unitName || "pcs"
+      };
+    });
+    const newPurchase = await db.transaction(async (tx) => {
+      const [insertedPo] = await tx.insert(purchasesTable).values({
+        ...parsed.data,
+        totalAmount: String(calculatedTotal),
+        orderDate: parsed.data.status === "ordered" ? /* @__PURE__ */ new Date() : null
+      }).returning();
+      if (!insertedPo) {
+        throw new Error("Failed to insert purchase order header");
+      }
+      const finalItems = itemsToInsert.map((item) => ({
+        ...item,
+        purchaseId: insertedPo.id
+      }));
+      await tx.insert(purchaseItemsTable).values(finalItems);
+      return insertedPo;
+    });
+    await logActivity(req, "CREATE_PURCHASE_ORDER", "purchase", newPurchase.id, { poNumber: newPurchase.poNumber, totalAmount: calculatedTotal });
+    res.status(201).json(newPurchase);
+  } catch (error40) {
+    console.error("POST /purchases error:", error40?.message || error40);
+    res.status(500).json({ error: "Failed to create purchase order" });
+  }
+});
+purchasesRouter.patch("/purchases/:id", requirePermission("purchases:manage"), async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      res.status(400).json({ error: "Invalid purchase order ID" });
+      return;
+    }
+    const { items, ...purchaseData } = req.body;
+    const [existing] = await db.select().from(purchasesTable).where(eq(purchasesTable.id, id)).limit(1);
+    if (!existing) {
+      res.status(404).json({ error: "Purchase order not found" });
+      return;
+    }
+    if (existing.status !== "draft") {
+      res.status(400).json({ error: "Only draft purchase orders can be modified." });
+      return;
+    }
+    const updatedPurchase = await db.transaction(async (tx) => {
+      let calculatedTotal = parseFloat(existing.totalAmount);
+      if (items && Array.isArray(items)) {
+        if (items.length === 0) {
+          throw new Error("Purchase order must contain at least one item.");
+        }
+        await tx.delete(purchaseItemsTable).where(eq(purchaseItemsTable.purchaseId, id));
+        calculatedTotal = 0;
+        const itemsToInsert = items.map((item) => {
+          const qty = parseFloat(item.quantityOrdered);
+          const price = parseFloat(item.unitPrice);
+          const cost = qty * price;
+          calculatedTotal += cost;
+          return {
+            purchaseId: id,
+            ingredientId: item.ingredientId,
+            quantityOrdered: String(qty),
+            unitPrice: String(price),
+            totalCost: String(cost),
+            conversionId: item.conversionId || null,
+            unitName: item.unitName || "pcs"
+          };
+        });
+        await tx.insert(purchaseItemsTable).values(itemsToInsert);
+      }
+      const updateValues = {
+        ...purchaseData,
+        totalAmount: String(calculatedTotal),
+        updatedAt: /* @__PURE__ */ new Date()
+      };
+      if (purchaseData.status === "ordered" && existing.status === "draft") {
+        updateValues.orderDate = /* @__PURE__ */ new Date();
+      }
+      const [updated] = await tx.update(purchasesTable).set(updateValues).where(eq(purchasesTable.id, id)).returning();
+      return updated;
+    });
+    await logActivity(req, "UPDATE_PURCHASE_ORDER", "purchase", id, { poNumber: updatedPurchase.poNumber });
+    res.json(updatedPurchase);
+  } catch (error40) {
+    console.error("PATCH /purchases/:id error:", error40?.message || error40);
+    res.status(500).json({ error: error40?.message || "Failed to update purchase order" });
+  }
+});
+purchasesRouter.post("/purchases/:id/receive", requirePermission("purchases:manage"), async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      res.status(400).json({ error: "Invalid purchase order ID" });
+      return;
+    }
+    const sessionUserId = req.session.userId ?? 1;
+    const { items: receivedItemsInput } = req.body;
+    const po = await db.query.purchasesTable.findFirst({
+      where: eq(purchasesTable.id, id),
+      with: {
+        items: true
+      }
+    });
+    if (!po) {
+      res.status(404).json({ error: "Purchase order not found" });
+      return;
+    }
+    if (po.status === "received") {
+      res.status(400).json({ error: "Purchase order has already been received." });
+      return;
+    }
+    if (po.status === "draft") {
+      res.status(400).json({ error: "Draft purchase orders must be placed ('ordered') before they can be received." });
+      return;
+    }
+    await db.transaction(async (tx) => {
+      await tx.update(purchasesTable).set({
+        status: "received",
+        deliveryDate: /* @__PURE__ */ new Date(),
+        updatedAt: /* @__PURE__ */ new Date()
+      }).where(eq(purchasesTable.id, id));
+      for (const item of po.items) {
+        const inputItem = Array.isArray(receivedItemsInput) ? receivedItemsInput.find((i) => i.itemId === item.id) : null;
+        const qtyReceived = inputItem ? parseFloat(inputItem.quantityReceived) : parseFloat(item.quantityOrdered);
+        await tx.update(purchaseItemsTable).set({ quantityReceived: String(qtyReceived) }).where(eq(purchaseItemsTable.id, item.id));
+        if (qtyReceived <= 0) continue;
+        let finalQuantityAdded = qtyReceived;
+        let selectedUnitName = item.unitName;
+        let factor = 1;
+        if (item.conversionId) {
+          const [conversion] = await tx.select().from(ingredientConversionsTable).where(eq(ingredientConversionsTable.id, item.conversionId)).limit(1);
+          if (conversion) {
+            factor = parseFloat(conversion.conversionFactor) || 1;
+            finalQuantityAdded = qtyReceived * factor;
+            selectedUnitName = conversion.unitName;
+          }
+        }
+        const totalCostOfNewItems = qtyReceived * parseFloat(item.unitPrice);
+        const costPerBaseUnit = parseFloat(item.unitPrice) / factor;
+        const stockSums = await tx.select({ total: sql`SUM(stock_quantity)` }).from(branchStockTable).where(eq(branchStockTable.ingredientId, item.ingredientId));
+        const currentTotalStock = Math.max(0, parseFloat(stockSums[0]?.total || "0"));
+        const [ingredient] = await tx.select().from(ingredientsTable).where(eq(ingredientsTable.id, item.ingredientId)).limit(1);
+        const currentCostPerUnit = parseFloat(ingredient?.costPerUnit || "0");
+        const newTotalStock = currentTotalStock + finalQuantityAdded;
+        let newCostPerUnit = currentCostPerUnit;
+        if (newTotalStock > 0) {
+          newCostPerUnit = (currentTotalStock * currentCostPerUnit + totalCostOfNewItems) / newTotalStock;
+        } else {
+          newCostPerUnit = costPerBaseUnit;
+        }
+        await tx.update(ingredientsTable).set({ costPerUnit: String(newCostPerUnit.toFixed(4)) }).where(eq(ingredientsTable.id, item.ingredientId));
+        const [stock] = await tx.select().from(branchStockTable).where(
+          and(
+            eq(branchStockTable.branchId, po.branchId),
+            eq(branchStockTable.ingredientId, item.ingredientId)
+          )
+        ).limit(1);
+        const currentQty = stock ? parseFloat(stock.stockQuantity) : 0;
+        const newQty = currentQty + finalQuantityAdded;
+        await tx.insert(branchStockTable).values({
+          branchId: po.branchId,
+          ingredientId: item.ingredientId,
+          stockQuantity: String(newQty)
+        }).onConflictDoUpdate({
+          target: [branchStockTable.branchId, branchStockTable.ingredientId],
+          set: { stockQuantity: String(newQty) }
+        });
+        await tx.insert(stockMovementsTable).values({
+          branchId: po.branchId,
+          ingredientId: item.ingredientId,
+          orderId: null,
+          movementType: "restock",
+          quantity: String(finalQuantityAdded),
+          quantityAfter: String(newQty),
+          note: `Received from PO #${po.poNumber}${item.conversionId ? ` (Converted from ${qtyReceived} ${selectedUnitName})` : ""}`,
+          createdBy: sessionUserId
+        });
+      }
+    });
+    try {
+      const { globalCache: globalCache2 } = await Promise.resolve().then(() => (init_cache2(), cache_exports));
+      globalCache2.clear();
+      const { broadcastEvent: broadcastEvent2 } = await Promise.resolve().then(() => (init_sse(), sse_exports));
+      broadcastEvent2("inventory_updated", {});
+    } catch (cacheErr) {
+      console.warn("Failed to clear cache or broadcast SSE:", cacheErr);
+    }
+    await logActivity(req, "RECEIVE_PURCHASE_ORDER", "purchase", id, { poNumber: po.poNumber });
+    res.json({ success: true, message: "Purchase order items received and stock updated." });
+  } catch (error40) {
+    console.error("POST /purchases/:id/receive error:", error40?.message || error40);
+    res.status(500).json({ error: "Failed to receive purchase order items" });
+  }
+});
+purchasesRouter.post("/purchases/:id/pay", requirePermission("purchases:manage"), async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      res.status(400).json({ error: "Invalid purchase order ID" });
+      return;
+    }
+    const { paymentAmount } = req.body;
+    const amount = parseFloat(paymentAmount);
+    if (isNaN(amount) || amount <= 0) {
+      res.status(400).json({ error: "Payment amount must be a positive number." });
+      return;
+    }
+    const po = await db.query.purchasesTable.findFirst({
+      where: eq(purchasesTable.id, id)
+    });
+    if (!po) {
+      res.status(404).json({ error: "Purchase order not found" });
+      return;
+    }
+    const currentPaid = parseFloat(po.paidAmount);
+    const totalAmount = parseFloat(po.totalAmount);
+    const newPaid = currentPaid + amount;
+    let paymentStatus = "unpaid";
+    if (newPaid >= totalAmount) {
+      paymentStatus = "paid";
+    } else if (newPaid > 0) {
+      paymentStatus = "partially_paid";
+    }
+    const [updated] = await db.update(purchasesTable).set({
+      paidAmount: String(newPaid),
+      paymentStatus,
+      updatedAt: /* @__PURE__ */ new Date()
+    }).where(eq(purchasesTable.id, id)).returning();
+    await logActivity(req, "RECORD_PURCHASE_PAYMENT", "purchase", id, {
+      poNumber: po.poNumber,
+      paymentAmount: amount,
+      totalPaid: newPaid,
+      paymentStatus
+    });
+    res.json({
+      success: true,
+      purchase: formatPurchase(updated)
+    });
+  } catch (error40) {
+    console.error("POST /purchases/:id/pay error:", error40?.message || error40);
+    res.status(500).json({ error: "Failed to record payment" });
+  }
+});
+purchasesRouter.delete("/purchases/:id", requirePermission("purchases:manage"), async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      res.status(400).json({ error: "Invalid purchase order ID" });
+      return;
+    }
+    const po = await db.query.purchasesTable.findFirst({
+      where: eq(purchasesTable.id, id)
+    });
+    if (!po) {
+      res.status(404).json({ error: "Purchase order not found" });
+      return;
+    }
+    if (po.status === "received") {
+      res.status(400).json({ error: "Cannot delete or cancel a purchase order that has already been received." });
+      return;
+    }
+    if (po.status === "draft") {
+      await db.delete(purchasesTable).where(eq(purchasesTable.id, id));
+      await logActivity(req, "DELETE_PURCHASE_ORDER", "purchase", id, { poNumber: po.poNumber });
+      res.status(200).json({ success: true, message: "Draft purchase order deleted successfully." });
+    } else {
+      await db.update(purchasesTable).set({ status: "cancelled", updatedAt: /* @__PURE__ */ new Date() }).where(eq(purchasesTable.id, id));
+      await logActivity(req, "CANCEL_PURCHASE_ORDER", "purchase", id, { poNumber: po.poNumber });
+      res.status(200).json({ success: true, message: "Purchase order has been cancelled." });
+    }
+  } catch (error40) {
+    console.error("DELETE /purchases/:id error:", error40?.message || error40);
+    res.status(500).json({ error: "Failed to delete or cancel purchase order" });
+  }
+});
+var purchases_default = purchasesRouter;
+
 // src/routes/index.ts
 init_sse();
-var router19 = (0, import_express22.Router)();
+var router19 = (0, import_express24.Router)();
 router19.get("/health-test", (req, res) => res.send("OK"));
 router19.use("/admin/branches", branches_default);
 router19.use(health_default);
@@ -86859,6 +87462,8 @@ router19.use(admin_default);
 router19.use(stock_audits_default);
 router19.use("/roles", roles_default);
 router19.use(finance_default);
+router19.use(suppliers_default);
+router19.use(purchases_default);
 router19.get("/events", (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache, no-transform");
@@ -86890,7 +87495,7 @@ var logger = (0, import_pino.default)({
 
 // src/app.ts
 var PostgresStore = (0, import_connect_pg_simple.default)(import_express_session.default);
-var app = (0, import_express23.default)();
+var app = (0, import_express25.default)();
 app.set("json replacer", (_key2, value) => {
   if (value instanceof Date) return value.toISOString();
   return value;
@@ -86916,8 +87521,8 @@ app.use(
 );
 app.set("trust proxy", 1);
 app.use((0, import_cors.default)({ credentials: true, origin: true, exposedHeaders: ["X-Total-Count"] }));
-app.use(import_express23.default.json());
-app.use(import_express23.default.urlencoded({ extended: true }));
+app.use(import_express25.default.json());
+app.use(import_express25.default.urlencoded({ extended: true }));
 app.use(
   (0, import_express_session.default)({
     store: new PostgresStore({
@@ -86935,7 +87540,7 @@ app.use(
     }
   })
 );
-app.use("/uploads", import_express23.default.static("uploads"));
+app.use("/uploads", import_express25.default.static("uploads"));
 app.use("/api", routes_default);
 app.use((err, req, res, next) => {
   req.log?.error(err, "Unhandled route error");
@@ -86947,6 +87552,7 @@ var app_default = app;
 
 // src/index.ts
 init_src();
+init_drizzle_orm();
 
 // src/lib/seed.ts
 init_src();
@@ -87255,6 +87861,8 @@ var APP_PERMISSIONS = [
   { key: "inventory:view", name: "View Inventory", description: "Check stock levels and ingredients" },
   { key: "inventory:manage", name: "Manage Inventory", description: "Update stock levels, conversions and ingredient options" },
   { key: "inventory:adjust", name: "Adjust Stock", description: "Restock and adjust inventory quantities" },
+  { key: "purchases:view", name: "View Purchases", description: "View purchases department, orders and suppliers" },
+  { key: "purchases:manage", name: "Manage Purchases", description: "Create purchase orders, receive orders, and record payments" },
   // Finance & Reports
   { key: "reports:view", name: "View Reports", description: "Access sales and performance reports" },
   { key: "discounts:view", name: "View Discounts", description: "View active discount codes" },
@@ -87326,7 +87934,8 @@ async function syncPermissions() {
     "admin:view",
     "reports:view",
     "inventory:view",
-    "cashier:view_reports"
+    "cashier:view_reports",
+    "purchases:view"
   ]);
   logger.info("Permissions sync complete.");
 }
@@ -87370,6 +87979,22 @@ async function runDataMigrations() {
 }
 
 // src/index.ts
+async function ensureCentralBranch() {
+  try {
+    const [existing] = await db.select().from(branchesTable).where(eq(branchesTable.code, "CENTRAL")).limit(1);
+    if (!existing) {
+      await db.insert(branchesTable).values({
+        name: "Global / Central Warehouse",
+        code: "CENTRAL",
+        address: "Central Distribution Center",
+        isActive: true
+      });
+      logger.info("Created Global / Central Warehouse branch");
+    }
+  } catch (err) {
+    logger.error({ err }, "Error ensuring central branch");
+  }
+}
 var rawPort = process.env["PORT"];
 if (!rawPort) {
   throw new Error(
@@ -87380,7 +88005,7 @@ var port = Number(rawPort);
 if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
-runMigrations().then(() => seedIfEmpty()).then(() => syncPermissions()).then(() => runDataMigrations()).then(() => {
+runMigrations().then(() => seedIfEmpty()).then(() => ensureCentralBranch()).then(() => syncPermissions()).then(() => runDataMigrations()).then(() => {
   app_default.listen(port, (err) => {
     if (err) {
       logger.error({ err }, "Error listening on port");
