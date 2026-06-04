@@ -45,25 +45,58 @@ import {
 const router: IRouter = Router();
 
 export function getDayOfYear(date: Date): number {
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Africa/Cairo",
+    year: "numeric",
+    month: "numeric",
+    day: "numeric"
+  });
+  const parts = formatter.formatToParts(date);
+  const year = parseInt(parts.find(p => p.type === 'year')!.value);
+  const month = parseInt(parts.find(p => p.type === 'month')!.value) - 1; // 0-indexed
+  const day = parseInt(parts.find(p => p.type === 'day')!.value);
+
   const monthLengths = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-  const year = date.getFullYear();
   const isLeapYear = (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
   if (isLeapYear) {
     monthLengths[1] = 29;
   }
-  let dayOfYear = date.getDate();
-  for (let i = 0; i < date.getMonth(); i++) {
+  let dayOfYear = day;
+  for (let i = 0; i < month; i++) {
     dayOfYear += monthLengths[i];
   }
   return dayOfYear;
+}
+
+export function getCairoStartOfDay(date: Date): Date {
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Africa/Cairo",
+    year: "numeric",
+    month: "numeric",
+    day: "numeric"
+  });
+  const parts = formatter.formatToParts(date);
+  const year = parseInt(parts.find(p => p.type === 'year')!.value);
+  const month = parseInt(parts.find(p => p.type === 'month')!.value);
+  const day = parseInt(parts.find(p => p.type === 'day')!.value);
+
+  const utcMidnight = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0));
+  const cairoHours = parseInt(new Intl.DateTimeFormat("en-US", {
+    timeZone: "Africa/Cairo",
+    hour: "numeric",
+    hourCycle: "h23"
+  }).format(utcMidnight));
+  
+  utcMidnight.setUTCHours(utcMidnight.getUTCHours() - cairoHours);
+  return utcMidnight;
 }
 
 async function generateOrderNumber(branchId: number): Promise<string> {
   const now = new Date();
   const dayOfYear = getDayOfYear(now);
 
-  // Count orders already created today to derive the next serial
-  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  // Count orders already created today (Cairo time) to derive the next serial
+  const todayStart = getCairoStartOfDay(now);
   const [row] = await db
     .select({ count: sql<number>`cast(count(*) as int)` })
     .from(ordersTable)
