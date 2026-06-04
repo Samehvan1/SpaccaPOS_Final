@@ -207,6 +207,93 @@ router.get("/finance/pl-report", requirePermission("reports:view"), async (req, 
   res.json(report);
 });
 
+// ── P&L Daily Trend Report ────────────────────────────────────────────────
+router.get("/finance/pl-by-day", requirePermission("reports:view"), async (req, res) => {
+  const { startDate, endDate, branchId } = req.query;
+  const targetBranchId = branchId && branchId !== "all" ? parseInt(branchId as string) : null;
+  const start = startDate ? startOfDay(parseLocalDate(startDate as string)) : startOfDay(subDays(new Date(), 30));
+  const end = endDate ? endOfDay(parseLocalDate(endDate as string)) : endOfDay(new Date());
+  
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+    res.status(400).json({ error: "Invalid date format" });
+    return;
+  }
+
+  // 1. Fetch all completed/paid orders in range
+  const orders = await db
+    .select({
+      id: ordersTable.id,
+      createdAt: ordersTable.createdAt,
+      total: ordersTable.total,
+    })
+    .from(ordersTable)
+    .where(and(
+      gte(ordersTable.createdAt, start),
+      lte(ordersTable.createdAt, end),
+      inArray(ordersTable.status, ["paid", "ready", "completed"]),
+      targetBranchId ? eq(ordersTable.branchId, targetBranchId) : undefined
+    ));
+
+  // 2. Fetch all customizations in range (COGS)
+  const customizations = await db
+    .select({
+      createdAt: ordersTable.createdAt,
+      consumedQty: orderItemCustomizationsTable.consumedQty,
+      costPerUnit: orderItemCustomizationsTable.costPerUnit,
+    })
+    .from(orderItemCustomizationsTable)
+    .innerJoin(orderItemsTable, eq(orderItemCustomizationsTable.orderItemId, orderItemsTable.id))
+    .innerJoin(ordersTable, eq(orderItemsTable.orderId, ordersTable.id))
+    .where(and(
+      gte(ordersTable.createdAt, start),
+      lte(ordersTable.createdAt, end),
+      inArray(ordersTable.status, ["paid", "ready", "completed"]),
+      targetBranchId ? eq(ordersTable.branchId, targetBranchId) : undefined
+    ));
+
+  const getLocalDateString = (d: Date) => {
+    const dateObj = new Date(d);
+    const formatter = new Intl.DateTimeFormat("en-US", {
+      timeZone: "Africa/Cairo",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit"
+    });
+    const parts = formatter.formatToParts(dateObj);
+    const year = parts.find(p => p.type === 'year')!.value;
+    const month = parts.find(p => p.type === 'month')!.value;
+    const day = parts.find(p => p.type === 'day')!.value;
+    return `${year}-${month}-${day}`;
+  };
+
+  const dailyStats: Record<string, { date: string; revenue: number; cost: number; profit: number }> = {};
+
+  orders.forEach(o => {
+    const dateStr = getLocalDateString(o.createdAt);
+    if (!dailyStats[dateStr]) {
+      dailyStats[dateStr] = { date: dateStr, revenue: 0, cost: 0, profit: 0 };
+    }
+    dailyStats[dateStr].revenue += parseFloat(String(o.total || "0"));
+  });
+
+  customizations.forEach(c => {
+    const dateStr = getLocalDateString(c.createdAt);
+    if (!dailyStats[dateStr]) {
+      dailyStats[dateStr] = { date: dateStr, revenue: 0, cost: 0, profit: 0 };
+    }
+    const cost = parseFloat(String(c.consumedQty || "0")) * parseFloat(String(c.costPerUnit || "0"));
+    dailyStats[dateStr].cost += cost;
+  });
+
+  Object.keys(dailyStats).forEach(dateStr => {
+    const day = dailyStats[dateStr];
+    day.profit = day.revenue - day.cost;
+  });
+
+  const sortedResult = Object.values(dailyStats).sort((a, b) => a.date.localeCompare(b.date));
+  res.json(serializeDates(sortedResult));
+});
+
 // ── Ingredient Recipe Audit ───────────────────────────────────────────────
 router.get("/finance/ingredient-recipes", requirePermission("reports:view"), async (req, res) => {
   // 1. Get all ingredients
