@@ -35,7 +35,7 @@ export default function CalibrationPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [isAuthorized, setIsAuthorized] = useState(user?.role === "admin");
+  const [isAuthorized, setIsAuthorized] = useState(user?.role === "admin" || (user?.role as string) === "supervisor");
   const [adminPin, setAdminPin] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
   

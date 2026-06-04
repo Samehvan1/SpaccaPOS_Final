@@ -409,6 +409,48 @@ export default function KioskPage() {
     setActiveDrink(null);
   };
 
+  const handleSelectDrink = (drink: Drink) => {
+    if (drink.isCustomizable === false) {
+      const requirements: { ingredientId: number; name: string; consumedQty: number }[] = [];
+      if (drink.cupIngredientId) {
+        requirements.push({
+          ingredientId: drink.cupIngredientId,
+          name: "Cup/Glass",
+          consumedQty: 1,
+        });
+      }
+
+      const nextCartItem = {
+        id: Math.random().toString(36).substring(7),
+        drinkId: drink.id,
+        drinkName: drink.name,
+        quantity: 1,
+        basePrice: drink.basePrice,
+        totalPrice: (drink as any).defaultPrice ?? drink.basePrice,
+        selections: [],
+        image: (drink as any).imageUrl,
+        ingredientsRequirement: requirements,
+      };
+
+      const testCart = [...cart, nextCartItem];
+      const stockCheck = checkCartStock(testCart, ingredients, allowNoStockSell);
+      if (!stockCheck.isValid) {
+        toast({
+          variant: "destructive",
+          title: "Insufficient Stock",
+          description: stockCheck.errorMsg,
+        });
+        return;
+      }
+
+      setCart(testCart);
+      toast({ title: "Added to order", description: `${drink.name} added.` });
+    } else {
+      setActiveDrink(drink);
+      setIsCustomizing(true);
+    }
+  };
+
   // --- Order Creation ---
   const { mutate: createOrder, isPending: isCreatingOrder } = useCreateOrder({
     mutation: {
@@ -611,10 +653,7 @@ export default function KioskPage() {
                   key={drink.id}
                   drink={drink}
                   variant="kiosk"
-                  onClick={() => {
-                    setActiveDrink(drink);
-                    setIsCustomizing(true);
-                  }}
+                  onClick={() => handleSelectDrink(drink)}
                 />
               ))}
             </div>

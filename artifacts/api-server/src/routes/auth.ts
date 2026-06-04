@@ -182,7 +182,7 @@ router.post("/auth/verify-pin", async (req, res): Promise<void> => {
     .where(
       and(
         eq(usersTable.pin, pin),
-        inArray(usersTable.role, ["admin", "cashier"]),
+        inArray(usersTable.role, ["admin", "cashier", "supervisor"]),
         eq(usersTable.isActive, true)
       )
     )
