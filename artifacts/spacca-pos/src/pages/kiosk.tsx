@@ -644,7 +644,7 @@ export default function KioskPage() {
       </div>
 
       <Dialog open={isCustomizing} onOpenChange={(open) => { if (!open) setIsCustomizing(false); }}>
-        <DialogContent className="sm:max-w-[750px] h-[95vh] flex flex-col p-0 gap-0 overflow-hidden bg-background">
+        <DialogContent className="sm:max-w-[750px] h-[95vh] flex flex-col p-0 gap-0 overflow-hidden bg-background [&>button]:hidden">
           <DialogHeader className="px-8 pt-10 pb-8 border-b shrink-0 bg-muted/20 relative">
              <div className="flex flex-col items-center text-center">
                <div className="w-full flex justify-between items-start mb-6">
@@ -659,7 +659,7 @@ export default function KioskPage() {
                
                {/* Cup Simulator & Description */}
                <div className="w-full flex flex-col items-center gap-6">
-                 {drinkDetail && (
+                 {drinkDetail && activeDrink?.cupIngredientId && (
                    <div className="w-48 h-64">
                      <CupSimulator 
                        cupSizeMl={drinkDetail.cupSizeMl || 0}

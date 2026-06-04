@@ -78,7 +78,7 @@ export const CustomizerDialog: React.FC<CustomizerDialogProps> = ({
               )}
             </div>
           </div>
-          {drinkDetail && (
+          {drinkDetail && activeDrink?.cupIngredientId && (
             <div className="w-24 h-32 shrink-0 pr-6 mr-2">
               <CupSimulator
                 cupSizeMl={drinkDetail.cupSizeMl || 0}

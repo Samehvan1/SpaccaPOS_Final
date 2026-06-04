@@ -82880,10 +82880,22 @@ function subDays(date6, amount) {
 init_sse();
 init_src();
 var router5 = (0, import_express5.Router)();
+function getDayOfYear(date6) {
+  const monthLengths = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  const year = date6.getFullYear();
+  const isLeapYear = year % 4 === 0 && year % 100 !== 0 || year % 400 === 0;
+  if (isLeapYear) {
+    monthLengths[1] = 29;
+  }
+  let dayOfYear = date6.getDate();
+  for (let i = 0; i < date6.getMonth(); i++) {
+    dayOfYear += monthLengths[i];
+  }
+  return dayOfYear;
+}
 async function generateOrderNumber(branchId) {
   const now = /* @__PURE__ */ new Date();
-  const startOfYear = new Date(now.getFullYear(), 0, 1);
-  const dayOfYear = Math.floor((now.getTime() - startOfYear.getTime()) / 864e5) + 1;
+  const dayOfYear = getDayOfYear(now);
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const [row] = await db.select({ count: sql`cast(count(*) as int)` }).from(ordersTable).where(and(eq(ordersTable.branchId, branchId), gte(ordersTable.createdAt, todayStart)));
   const serial2 = (row?.count ?? 0) + 1;
@@ -82941,11 +82953,6 @@ async function buildOrderDetail(orderId) {
 }
 router5.get("/orders", requirePermission("cashier:view"), async (req, res) => {
   const params = ListOrdersQueryParams2.safeParse(req.query);
-  if (!params.success) {
-    console.error("[orders-query] Zod safeParse failed for query:", req.query, "Error:", params.error);
-  } else {
-    console.log("[orders-query] Zod safeParse succeeded. Parsed data:", params.data);
-  }
   const sessionUser = req.session;
   const isAdmin = sessionUser.role === "admin";
   const sessionBranchId = sessionUser.branchId;
