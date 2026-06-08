@@ -1054,6 +1054,12 @@ export const CreateStockAdjustmentBody = zod.object({
 /**
  * @summary Get today's sales summary
  */
+export const GetDashboardSummaryQueryParams = zod.object({
+  branchId: zod.coerce.number().optional(),
+  startDate: zod.coerce.date().optional(),
+  endDate: zod.coerce.date().optional(),
+});
+
 export const GetDashboardSummaryResponse = zod.object({
   todayRevenue: zod.number(),
   todayCashRevenue: zod.number(),

@@ -39,6 +39,7 @@ export * from "./drinkIngredientSlot";
 export * from "./getActiveOrdersParams";
 export * from "./getActiveOrdersStatus";
 export * from "./getCustomerPoints200";
+export * from "./getDashboardSummaryParams";
 export * from "./getDrinkParams";
 export * from "./getIngredientParams";
 export * from "./getOrderParams";

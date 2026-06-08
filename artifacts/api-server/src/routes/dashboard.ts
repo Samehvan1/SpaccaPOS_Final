@@ -33,11 +33,26 @@ router.get("/dashboard/summary", async (req, res): Promise<void> => {
     ? parseInt(req.query.branchId as string)
     : (isAdmin && (req.query.branchId === 'all' || !req.query.branchId)) ? null : sessionBranchId;
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  let start: Date;
+  let end: Date;
+
+  if (req.query.startDate) {
+    start = startOfDay(new Date(req.query.startDate as string));
+  } else {
+    start = new Date();
+    start.setHours(0, 0, 0, 0);
+  }
+
+  if (req.query.endDate) {
+    end = endOfDay(new Date(req.query.endDate as string));
+  } else {
+    end = new Date();
+    end.setHours(23, 59, 59, 999);
+  }
 
   const orderConditions = [
-    gte(ordersTable.createdAt, today),
+    gte(ordersTable.createdAt, start),
+    lte(ordersTable.createdAt, end),
     sql`${ordersTable.status} NOT IN ('cancelled', 'refunded')`
   ];
   if (targetBranchId) {

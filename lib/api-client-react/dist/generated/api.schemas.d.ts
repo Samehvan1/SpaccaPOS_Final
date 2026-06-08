@@ -733,6 +733,11 @@ export type ListStockMovementsParams = {
     startDate?: string;
     endDate?: string;
 };
+export type GetDashboardSummaryParams = {
+    branchId?: number;
+    startDate?: string;
+    endDate?: string;
+};
 export type GetActiveOrdersParams = {
     status?: GetActiveOrdersStatus;
     branchId?: number;

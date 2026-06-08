@@ -78485,6 +78485,11 @@ var CreateStockAdjustmentBody = objectType({
   unitId: numberType().nullish(),
   note: stringType().optional()
 });
+var GetDashboardSummaryQueryParams = objectType({
+  branchId: coerce.number().optional(),
+  startDate: coerce.date().optional(),
+  endDate: coerce.date().optional()
+});
 var GetDashboardSummaryResponse = objectType({
   todayRevenue: numberType(),
   todayCashRevenue: numberType(),
@@ -83956,10 +83961,23 @@ router7.get("/dashboard/summary", async (req, res) => {
   const isAdmin = sessionUser.role === "admin";
   const sessionBranchId = sessionUser.branchId;
   const targetBranchId = req.query.branchId && req.query.branchId !== "all" ? parseInt(req.query.branchId) : isAdmin && (req.query.branchId === "all" || !req.query.branchId) ? null : sessionBranchId;
-  const today = /* @__PURE__ */ new Date();
-  today.setHours(0, 0, 0, 0);
+  let start;
+  let end;
+  if (req.query.startDate) {
+    start = startOfDay(new Date(req.query.startDate));
+  } else {
+    start = /* @__PURE__ */ new Date();
+    start.setHours(0, 0, 0, 0);
+  }
+  if (req.query.endDate) {
+    end = endOfDay(new Date(req.query.endDate));
+  } else {
+    end = /* @__PURE__ */ new Date();
+    end.setHours(23, 59, 59, 999);
+  }
   const orderConditions = [
-    gte(ordersTable.createdAt, today),
+    gte(ordersTable.createdAt, start),
+    lte(ordersTable.createdAt, end),
     sql`${ordersTable.status} NOT IN ('cancelled', 'refunded')`
   ];
   if (targetBranchId) {

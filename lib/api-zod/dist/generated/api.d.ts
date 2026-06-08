@@ -2696,6 +2696,19 @@ export declare const CreateStockAdjustmentBody: zod.ZodObject<{
 /**
  * @summary Get today's sales summary
  */
+export declare const GetDashboardSummaryQueryParams: zod.ZodObject<{
+    branchId: zod.ZodOptional<zod.ZodNumber>;
+    startDate: zod.ZodOptional<zod.ZodDate>;
+    endDate: zod.ZodOptional<zod.ZodDate>;
+}, "strip", zod.ZodTypeAny, {
+    branchId?: number | undefined;
+    startDate?: Date | undefined;
+    endDate?: Date | undefined;
+}, {
+    branchId?: number | undefined;
+    startDate?: Date | undefined;
+    endDate?: Date | undefined;
+}>;
 export declare const GetDashboardSummaryResponse: zod.ZodObject<{
     todayRevenue: zod.ZodNumber;
     todayCashRevenue: zod.ZodNumber;

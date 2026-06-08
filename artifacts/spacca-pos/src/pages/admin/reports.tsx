@@ -68,6 +68,26 @@ export default function ReportsPage() {
   const [selectedOrderDetails, setSelectedOrderDetails] = useState<any>(null);
   const { selectedBranchId } = useAuth();
 
+  const [dashStartDate, setDashStartDate] = useState(format(subDays(new Date(), 6), "yyyy-MM-dd"));
+  const [dashEndDate, setDashEndDate] = useState(format(new Date(), "yyyy-MM-dd"));
+
+  const dashPeriodLabel = useMemo(() => {
+    const matchedPeriod = PERIODS.find(p => {
+      const daysAgo = format(subDays(new Date(), p.days - 1), "yyyy-MM-dd");
+      const todayStr = format(new Date(), "yyyy-MM-dd");
+      return dashStartDate === daysAgo && dashEndDate === todayStr;
+    });
+    if (matchedPeriod) return matchedPeriod.label;
+    
+    try {
+      const startFmt = format(parseISO(dashStartDate), "MMM d, yyyy");
+      const endFmt = format(parseISO(dashEndDate), "MMM d, yyyy");
+      return `${startFmt} - ${endFmt}`;
+    } catch {
+      return "Custom Range";
+    }
+  }, [dashStartDate, dashEndDate]);
+
   // Fetch branches for the title indicator
   const { data: branches } = useQuery<any[]>({
     queryKey: ["admin-branches"],
@@ -91,13 +111,25 @@ export default function ReportsPage() {
 
 
   // Dashboard Tab Data
-  const { data: summary, isLoading: loadingSummary } = useGetDashboardSummary({ branchId: selectedBranchId } as any);
-  const { data: dashboardCategorySales, isLoading: loadingDashboardCategory } = useGetSalesByCategory({ days: period.days, branchId: selectedBranchId } as any);
-  const { data: topDrinks, isLoading: loadingTop } = useGetTopDrinks({ limit: 10, days: period.days, branchId: selectedBranchId } as any);
+  const { data: summary, isLoading: loadingSummary } = useGetDashboardSummary(
+    selectedBranchId ? { branchId: selectedBranchId } : undefined
+  );
+  const { data: dashboardCategorySales, isLoading: loadingDashboardCategory } = useGetSalesByCategory({
+    startDate: dashStartDate,
+    endDate: dashEndDate,
+    branchId: selectedBranchId
+  } as any);
+  const { data: topDrinks, isLoading: loadingTop } = useGetTopDrinks({
+    limit: 10,
+    startDate: dashStartDate,
+    endDate: dashEndDate,
+    branchId: selectedBranchId
+  } as any);
   const { data: recentOrders, isLoading: loadingRecentOrders } = useListOrders({ 
     status: "completed", 
     limit: 10,
-    startDate: format(subDays(new Date(), period.days - 1), "yyyy-MM-dd"),
+    startDate: dashStartDate,
+    endDate: dashEndDate,
     branchId: selectedBranchId
   } as any);
 
@@ -454,19 +486,62 @@ export default function ReportsPage() {
         )}
 
         <TabsContent value="dashboard" className="flex flex-col gap-6 animate-in fade-in duration-500">
-          {/* Period selector */}
-          <div className="flex justify-end gap-2">
-            {PERIODS.map(p => (
-              <Button
-                key={p.days}
-                variant={period.days === p.days ? "default" : "outline"}
-                size="sm"
-                onClick={() => setPeriod(p)}
-              >
-                {p.label}
-              </Button>
-            ))}
-          </div>
+          {/* Date Filters Banner */}
+          <Card className="bg-muted/30 border-primary/20 overflow-hidden">
+            <CardContent className="p-6">
+              <div className="flex flex-col md:flex-row items-end gap-6">
+                <div className="grid gap-2 w-full md:w-auto">
+                  <Label htmlFor="dash-start-date" className="flex items-center gap-2 text-sm font-bold">
+                    <Calendar className="h-4 w-4 text-primary" /> From
+                  </Label>
+                  <Input 
+                    id="dash-start-date" 
+                    type="date" 
+                    value={dashStartDate} 
+                    onChange={e => {
+                      setDashStartDate(e.target.value);
+                    }}
+                    className="bg-background w-full md:w-48"
+                  />
+                </div>
+                <div className="grid gap-2 w-full md:w-auto">
+                  <Label htmlFor="dash-end-date" className="flex items-center gap-2 text-sm font-bold">
+                    <Calendar className="h-4 w-4 text-primary" /> To
+                  </Label>
+                  <Input 
+                    id="dash-end-date" 
+                    type="date" 
+                    value={dashEndDate} 
+                    onChange={e => {
+                      setDashEndDate(e.target.value);
+                    }}
+                    className="bg-background w-full md:w-48"
+                  />
+                </div>
+                <div className="md:ml-auto flex items-center gap-2 bg-background/50 p-1.5 rounded-xl border border-primary/10 shadow-sm">
+                  {PERIODS.map(p => {
+                    const daysAgo = format(subDays(new Date(), p.days - 1), "yyyy-MM-dd");
+                    const todayStr = format(new Date(), "yyyy-MM-dd");
+                    const isActive = dashStartDate === daysAgo && dashEndDate === todayStr;
+                    return (
+                      <Button
+                        key={p.days}
+                        variant={isActive ? "default" : "ghost"}
+                        size="sm"
+                        onClick={() => {
+                          setDashStartDate(daysAgo);
+                          setDashEndDate(todayStr);
+                        }}
+                        className="h-8 px-3 text-xs font-semibold"
+                      >
+                        {p.label}
+                      </Button>
+                    );
+                  })}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Summary KPI cards */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -511,7 +586,7 @@ export default function ReportsPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <Card className="lg:col-span-2">
               <CardHeader>
-                <CardTitle>Revenue by Category — {period.label}</CardTitle>
+                <CardTitle>Revenue by Category — {dashPeriodLabel}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="h-[280px]">
@@ -577,7 +652,7 @@ export default function ReportsPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Medal className="h-5 w-5 text-primary" />
-                  Top Drinks ({period.label})
+                  Top Drinks ({dashPeriodLabel})
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -611,7 +686,7 @@ export default function ReportsPage() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Category Breakdown — {period.label}</CardTitle>
+                <CardTitle>Category Breakdown — {dashPeriodLabel}</CardTitle>
               </CardHeader>
               <CardContent>
                 {loadingDashboardCategory ? (

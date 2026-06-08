@@ -1,5 +1,5 @@
 import type { QueryKey, UseMutationOptions, UseMutationResult, UseQueryOptions, UseQueryResult } from "@tanstack/react-query";
-import type { ActivityLog, Branch, CalculateDrinkPriceParams, CategorySales, CreateBranchBody, CreateDiscountBody, CreateDrinkBody, CreateIngredientBody, CreateIngredientOptionBody, CreateIngredientOptionParams, CreateOrderBody, CreateUserBody, DashboardSummary, DeleteDiscountParams, DeleteDrinkParams, DeleteIngredientOptionParams, DeleteIngredientParams, DeleteUserParams, Discount, Drink, DrinkDetail, GetActiveOrdersParams, GetCustomerPoints200, GetDrinkParams, GetIngredientParams, GetOrderParams, GetSalesByCategoryParams, GetSettingsParams, GetTopDrinksParams, HealthStatus, Ingredient, IngredientDetail, IngredientOption, ListActivityLogsParams, ListDrinksParams, ListIngredientsParams, ListOrdersParams, ListStockMovementsParams, LoginBody, LoginResponse, MarkOrderItemReadyParams, Order, OrderDetail, Permission, PriceBreakdown, PriceCalculationBody, RestockBody, RestockIngredientParams, SaveOrderSignatureBody, Setting, StockAdjustmentBody, StockMovement, TopDrink, UpdateBranchBody, UpdateDiscountBody, UpdateDiscountParams, UpdateDrinkBody, UpdateDrinkParams, UpdateIngredientBody, UpdateIngredientOptionBody, UpdateIngredientOptionParams, UpdateIngredientParams, UpdateOrderStatusBody, UpdateOrderStatusParams, UpdateSettingsBody, UpdateUserBody, UpdateUserParams, User, UserDetail } from "./api.schemas";
+import type { ActivityLog, Branch, CalculateDrinkPriceParams, CategorySales, CreateBranchBody, CreateDiscountBody, CreateDrinkBody, CreateIngredientBody, CreateIngredientOptionBody, CreateIngredientOptionParams, CreateOrderBody, CreateUserBody, DashboardSummary, DeleteDiscountParams, DeleteDrinkParams, DeleteIngredientOptionParams, DeleteIngredientParams, DeleteUserParams, Discount, Drink, DrinkDetail, GetActiveOrdersParams, GetCustomerPoints200, GetDashboardSummaryParams, GetDrinkParams, GetIngredientParams, GetOrderParams, GetSalesByCategoryParams, GetSettingsParams, GetTopDrinksParams, HealthStatus, Ingredient, IngredientDetail, IngredientOption, ListActivityLogsParams, ListDrinksParams, ListIngredientsParams, ListOrdersParams, ListStockMovementsParams, LoginBody, LoginResponse, MarkOrderItemReadyParams, Order, OrderDetail, Permission, PriceBreakdown, PriceCalculationBody, RestockBody, RestockIngredientParams, SaveOrderSignatureBody, Setting, StockAdjustmentBody, StockMovement, TopDrink, UpdateBranchBody, UpdateDiscountBody, UpdateDiscountParams, UpdateDrinkBody, UpdateDrinkParams, UpdateIngredientBody, UpdateIngredientOptionBody, UpdateIngredientOptionParams, UpdateIngredientParams, UpdateOrderStatusBody, UpdateOrderStatusParams, UpdateSettingsBody, UpdateUserBody, UpdateUserParams, User, UserDetail } from "./api.schemas";
 import { customFetch } from "../custom-fetch";
 import type { ErrorType, BodyType } from "../custom-fetch";
 type AwaitedInput<T> = PromiseLike<T> | T;
@@ -790,10 +790,10 @@ export declare const useCreateStockAdjustment: <TError = ErrorType<unknown>, TCo
 /**
  * @summary Get today's sales summary
  */
-export declare const getGetDashboardSummaryUrl: () => string;
-export declare const getDashboardSummary: (options?: RequestInit) => Promise<DashboardSummary>;
-export declare const getGetDashboardSummaryQueryKey: () => readonly ["/api/dashboard/summary"];
-export declare const getGetDashboardSummaryQueryOptions: <TData = Awaited<ReturnType<typeof getDashboardSummary>>, TError = ErrorType<unknown>>(options?: {
+export declare const getGetDashboardSummaryUrl: (params?: GetDashboardSummaryParams) => string;
+export declare const getDashboardSummary: (params?: GetDashboardSummaryParams, options?: RequestInit) => Promise<DashboardSummary>;
+export declare const getGetDashboardSummaryQueryKey: (params?: GetDashboardSummaryParams) => readonly ["/api/dashboard/summary", ...GetDashboardSummaryParams[]];
+export declare const getGetDashboardSummaryQueryOptions: <TData = Awaited<ReturnType<typeof getDashboardSummary>>, TError = ErrorType<unknown>>(params?: GetDashboardSummaryParams, options?: {
     query?: UseQueryOptions<Awaited<ReturnType<typeof getDashboardSummary>>, TError, TData>;
     request?: SecondParameter<typeof customFetch>;
 }) => UseQueryOptions<Awaited<ReturnType<typeof getDashboardSummary>>, TError, TData> & {
@@ -804,7 +804,7 @@ export type GetDashboardSummaryQueryError = ErrorType<unknown>;
 /**
  * @summary Get today's sales summary
  */
-export declare function useGetDashboardSummary<TData = Awaited<ReturnType<typeof getDashboardSummary>>, TError = ErrorType<unknown>>(options?: {
+export declare function useGetDashboardSummary<TData = Awaited<ReturnType<typeof getDashboardSummary>>, TError = ErrorType<unknown>>(params?: GetDashboardSummaryParams, options?: {
     query?: UseQueryOptions<Awaited<ReturnType<typeof getDashboardSummary>>, TError, TData>;
     request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & {

@@ -698,6 +698,21 @@ paths:
       operationId: getDashboardSummary
       tags: [dashboard]
       summary: Get today's sales summary
+      parameters:
+        - in: query
+          name: branchId
+          schema:
+            type: integer
+        - in: query
+          name: startDate
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: endDate
+          schema:
+            type: string
+            format: date
       responses:
         "200":
           description: Dashboard summary
