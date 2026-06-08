@@ -78970,8 +78970,13 @@ var UpdateOrderStatusBody2 = UpdateOrderStatusBody.extend({
   adminPin: external_exports2.string().optional()
 });
 var UpdateOrderStatusResponse2 = GetOrderResponse2;
-var ListStockMovementsQueryParams2 = ListStockMovementsQueryParams;
-var ListStockMovementsResponse2 = ListStockMovementsResponse;
+var ListStockMovementsQueryParams2 = ListStockMovementsQueryParams.extend({
+  movementType: external_exports2.string().optional()
+});
+var ListStockMovementsResponseItem2 = ListStockMovementsResponseItem.extend({
+  branchId: external_exports2.number().nullish()
+});
+var ListStockMovementsResponse2 = external_exports2.array(ListStockMovementsResponseItem2);
 var CreateStockAdjustmentBody2 = CreateStockAdjustmentBody;
 var GetDashboardSummaryResponse2 = GetDashboardSummaryResponse;
 var GetActiveOrdersResponseItem2 = GetActiveOrdersResponseItem.and(
@@ -83852,6 +83857,10 @@ router6.get("/stock/movements", async (req, res) => {
     }
     if (params.data.endDate) {
       conditions.push(lte(stockMovementsTable.createdAt, endOfDay(new Date(params.data.endDate))));
+    }
+    if (params.data.movementType) {
+      const types3 = params.data.movementType.split(",");
+      conditions.push(inArray(stockMovementsTable.movementType, types3));
     }
   }
   const movements = await db.select().from(stockMovementsTable).where(conditions.length ? and(...conditions) : void 0).orderBy(desc(stockMovementsTable.createdAt));

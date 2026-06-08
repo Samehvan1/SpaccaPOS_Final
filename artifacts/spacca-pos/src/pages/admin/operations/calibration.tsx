@@ -367,7 +367,7 @@ export default function CalibrationPage() {
                   {selectedIngredient && (
                     <div className="p-6 rounded-2xl bg-primary/5 border border-primary/10 animate-in fade-in slide-in-from-top-2 duration-300">
                       <div className="flex flex-col md:flex-row gap-6 items-end">
-                        <div className="flex-1 space-y-2">
+                        <div className="w-full md:w-[280px] md:shrink-0 space-y-2">
                           <Label className="text-[10px] font-black uppercase tracking-widest text-primary ml-1">Quantity</Label>
                           <div className="flex gap-2">
                             <Input 
@@ -398,7 +398,7 @@ export default function CalibrationPage() {
                             </p>
                           )}
                         </div>
-                        <div className="flex-[2] space-y-2">
+                        <div className="w-full md:flex-1 space-y-2">
                           <Label className="text-[10px] font-black uppercase tracking-widest text-primary ml-1">Notes / Purpose</Label>
                           <Input 
                             placeholder="e.g. New recipe test #4"
@@ -409,7 +409,7 @@ export default function CalibrationPage() {
                         </div>
                         <Button 
                           onClick={addItem}
-                          className="h-14 px-8 font-black uppercase tracking-widest rounded-xl shadow-lg shadow-primary/20"
+                          className="w-full md:w-auto h-14 px-8 font-black uppercase tracking-widest rounded-xl shadow-lg shadow-primary/20"
                         >
                           <Plus className="h-5 w-5 mr-2 stroke-[3px]" /> Add to List
                         </Button>

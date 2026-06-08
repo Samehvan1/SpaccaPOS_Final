@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
@@ -11,6 +11,8 @@ import { Search, Plus, Trash2, CheckCircle2, Lock, Loader2, Trash, AlertTriangle
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface WastageItem {
   ingredientId: number;
@@ -68,6 +70,111 @@ export default function WastagePage() {
       return res.json();
     },
   });
+
+  // By Drink Recipe States
+  const [selectedDrinkId, setSelectedDrinkId] = useState<string>("none");
+  const [checkedIngredients, setCheckedIngredients] = useState<Record<number, boolean>>({});
+  const [customQuantities, setCustomQuantities] = useState<Record<number, string>>({});
+  const [drinkReasonInput, setDrinkReasonInput] = useState("Expired");
+  const [drinkNoteInput, setDrinkNoteInput] = useState("");
+
+  // Fetch all drinks
+  const { data: drinks = [], isLoading: isDrinksLoading } = useQuery<any[]>({
+    queryKey: ["/api/drinks"],
+    queryFn: async () => {
+      const res = await fetch("/api/drinks");
+      if (!res.ok) throw new Error("Failed to fetch drinks");
+      return res.json();
+    },
+  });
+
+  // Fetch recipe ingredients for selected drink
+  const { data: drinkUsage = [], isLoading: isUsageLoading } = useQuery<any[]>({
+    queryKey: ["/api/drinks", selectedDrinkId, "stock-usage"],
+    queryFn: async () => {
+      const res = await fetch(`/api/drinks/${selectedDrinkId}/stock-usage`);
+      if (!res.ok) throw new Error("Failed to fetch drink ingredients");
+      return res.json();
+    },
+    enabled: !!selectedDrinkId && selectedDrinkId !== "none",
+  });
+
+  // Sync checkboxes and quantities when drink recipe is loaded
+  useEffect(() => {
+    if (drinkUsage && drinkUsage.length > 0) {
+      const initialChecked: Record<number, boolean> = {};
+      const initialQuantities: Record<number, string> = {};
+      drinkUsage.forEach((item: any) => {
+        initialChecked[item.ingredientId] = true;
+        initialQuantities[item.ingredientId] = String(item.qty || 1);
+      });
+      setCheckedIngredients(initialChecked);
+      setCustomQuantities(initialQuantities);
+    }
+  }, [drinkUsage]);
+
+  const addDrinkIngredients = () => {
+    if (!selectedDrinkId || selectedDrinkId === "none" || drinkUsage.length === 0) return;
+
+    const itemsToAdd: WastageItem[] = [];
+    let hasInvalidQty = false;
+
+    drinkUsage.forEach((item: any) => {
+      if (!checkedIngredients[item.ingredientId]) return;
+
+      const qtyStr = customQuantities[item.ingredientId] || "0";
+      const qty = parseFloat(qtyStr);
+      if (isNaN(qty) || qty <= 0) {
+        hasInvalidQty = true;
+        return;
+      }
+
+      const ingCatalog = ingredients.find((i: any) => i.id === item.ingredientId);
+      const unit = ingCatalog ? ingCatalog.unit : item.unit;
+
+      itemsToAdd.push({
+        ingredientId: item.ingredientId,
+        name: item.ingredientName,
+        quantity: qty,
+        unit: unit,
+        reason: drinkReasonInput,
+        note: drinkNoteInput || "Drink wastage",
+        displayUnit: unit
+      });
+    });
+
+    if (hasInvalidQty) {
+      toast({ variant: "destructive", title: "Invalid Quantity", description: "Please ensure all checked ingredients have a positive quantity." });
+      return;
+    }
+
+    if (itemsToAdd.length === 0) {
+      toast({ variant: "destructive", title: "No Items Selected", description: "Please check at least one ingredient to add." });
+      return;
+    }
+
+    const newList = [...wastageList];
+    itemsToAdd.forEach(item => {
+      const existingIndex = newList.findIndex(existing => 
+        existing.ingredientId === item.ingredientId && 
+        existing.reason === item.reason && 
+        existing.unitId === item.unitId
+      );
+      if (existingIndex > -1) {
+        newList[existingIndex].quantity += item.quantity;
+      } else {
+        newList.push(item);
+      }
+    });
+
+    setWastageList(newList);
+    setSelectedDrinkId("none");
+    setCheckedIngredients({});
+    setCustomQuantities({});
+    setDrinkReasonInput("Expired");
+    setDrinkNoteInput("");
+    toast({ title: "Added", description: `Added ${itemsToAdd.length} recipe ingredients to the list.` });
+  };
 
   const handleVerifyPin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -242,107 +349,246 @@ export default function WastagePage() {
             <CardHeader className="bg-muted/30 pb-4">
               <CardTitle className="text-sm font-black uppercase tracking-widest text-destructive">Select Wasted Items</CardTitle>
             </CardHeader>
-            <CardContent className="pt-6 space-y-6">
-              <div className="space-y-3">
-                <div className="relative">
-                  <Search className="absolute left-3 top-3.5 h-5 w-5 text-muted-foreground" />
-                  <Input 
-                    placeholder="Search inventory (Coffee, Milk, Syrup...)" 
-                    className="pl-10 h-12 text-lg bg-muted/20 border-transparent focus:bg-background transition-all"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
-                </div>
+            <CardContent className="pt-6">
+              <Tabs defaultValue="individual" className="w-full">
+                <TabsList className="grid w-full grid-cols-2 mb-6">
+                  <TabsTrigger value="individual" className="font-bold">Individual Ingredient</TabsTrigger>
+                  <TabsTrigger value="recipe" className="font-bold">By Drink Recipe</TabsTrigger>
+                </TabsList>
 
-                {searchQuery.length > 0 && (
-                  <div className="max-h-[300px] overflow-y-auto rounded-xl border border-destructive/10 bg-card divide-y">
-                    {filteredIngredients.length === 0 ? (
-                      <div className="p-8 text-center text-muted-foreground italic">No ingredients found</div>
-                    ) : (
-                      filteredIngredients.map((ing: any) => (
-                        <div 
-                          key={ing.id}
-                          className={`p-4 flex items-center justify-between cursor-pointer hover:bg-destructive/5 transition-colors ${selectedIngredient?.id === ing.id ? 'bg-destructive/10 border-destructive/20' : ''}`}
-                          onClick={() => setSelectedIngredient(ing)}
-                        >
-                          <div>
-                            <div className="font-bold">{ing.name}</div>
-                            <div className="text-[10px] uppercase font-bold text-muted-foreground tracking-tighter">{ing.ingredientType} • Stock: {ing.stockQuantity} {ing.unit}</div>
-                          </div>
-                          {selectedIngredient?.id === ing.id && <CheckCircle2 className="h-5 w-5 text-destructive" />}
-                        </div>
-                      ))
+                <TabsContent value="individual" className="space-y-6">
+                  <div className="space-y-3">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-3.5 h-5 w-5 text-muted-foreground" />
+                      <Input 
+                        placeholder="Search inventory (Coffee, Milk, Syrup...)" 
+                        className="pl-10 h-12 text-lg bg-muted/20 border-transparent focus:bg-background transition-all"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                      />
+                    </div>
+
+                    {searchQuery.length > 0 && (
+                      <div className="max-h-[300px] overflow-y-auto rounded-xl border border-destructive/10 bg-card divide-y">
+                        {filteredIngredients.length === 0 ? (
+                          <div className="p-8 text-center text-muted-foreground italic">No ingredients found</div>
+                        ) : (
+                          filteredIngredients.map((ing: any) => (
+                            <div 
+                              key={ing.id}
+                              className={`p-4 flex items-center justify-between cursor-pointer hover:bg-destructive/5 transition-colors ${selectedIngredient?.id === ing.id ? 'bg-destructive/10 border-destructive/20' : ''}`}
+                              onClick={() => setSelectedIngredient(ing)}
+                            >
+                              <div>
+                                <div className="font-bold">{ing.name}</div>
+                                <div className="text-[10px] uppercase font-bold text-muted-foreground tracking-tighter">{ing.ingredientType} • Stock: {ing.stockQuantity} {ing.unit}</div>
+                              </div>
+                              {selectedIngredient?.id === ing.id && <CheckCircle2 className="h-5 w-5 text-destructive" />}
+                            </div>
+                          ))
+                        )}
+                      </div>
                     )}
                   </div>
-                )}
-              </div>
 
-              {selectedIngredient && (
-                <div className="p-6 rounded-2xl bg-destructive/5 border border-destructive/10 animate-in fade-in slide-in-from-top-2 duration-300 space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label className="text-[10px] font-black uppercase tracking-widest text-destructive ml-1">Quantity</Label>
-                      <div className="flex gap-2">
-                        <Input 
-                          type="number" 
-                          placeholder="0.00" 
-                          className="h-14 text-2xl font-black bg-background border-destructive/20 flex-1"
-                          value={quantityInput}
-                          onChange={(e) => setQuantityInput(e.target.value)}
-                          autoFocus
-                        />
-                        <div className="w-[120px]">
-                          <Select value={selectedUnit} onValueChange={setSelectedUnit}>
-                            <SelectTrigger className="h-14 font-bold border-destructive/20 bg-background">
-                              <SelectValue placeholder="Unit" />
+                  {selectedIngredient && (
+                    <div className="p-6 rounded-2xl bg-destructive/5 border border-destructive/10 animate-in fade-in slide-in-from-top-2 duration-300">
+                      <div className="flex flex-col md:flex-row gap-6 items-end">
+                        <div className="w-full md:w-[280px] md:shrink-0 space-y-2">
+                          <Label className="text-[10px] font-black uppercase tracking-widest text-destructive ml-1">Quantity</Label>
+                          <div className="flex gap-2">
+                            <Input 
+                              type="number" 
+                              placeholder="0.00" 
+                              className="h-14 text-2xl font-black bg-background border-destructive/20 flex-1"
+                              value={quantityInput}
+                              onChange={(e) => setQuantityInput(e.target.value)}
+                              autoFocus
+                            />
+                            <div className="w-[120px]">
+                              <Select value={selectedUnit} onValueChange={setSelectedUnit}>
+                                <SelectTrigger className="h-14 font-bold border-destructive/20 bg-background">
+                                  <SelectValue placeholder="Unit" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="base" className="font-bold">{selectedIngredient?.unit}</SelectItem>
+                                  {selectedIngredient?.conversions?.map((c: any) => (
+                                    <SelectItem key={c.id} value={String(c.id)} className="font-bold">{c.unitName}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+                          {selectedUnit !== "base" && selectedIngredient && quantityInput && (
+                            <p className="text-[10px] font-bold text-muted-foreground ml-1 uppercase tracking-tighter">
+                              Equivalent to: {(parseFloat(quantityInput) * Number(selectedIngredient.conversions.find((c: any) => String(c.id) === selectedUnit)?.conversionFactor || 1)).toFixed(2)} {selectedIngredient.unit}
+                            </p>
+                          )}
+                        </div>
+                        <div className="w-full md:w-[200px] md:shrink-0 space-y-2">
+                          <Label className="text-[10px] font-black uppercase tracking-widest text-destructive ml-1">Reason for wastage</Label>
+                          <Select value={reasonInput} onValueChange={setReasonInput}>
+                            <SelectTrigger className="h-14 text-lg font-bold border-destructive/20 bg-background">
+                              <SelectValue placeholder="Select reason" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="base" className="font-bold">{selectedIngredient?.unit}</SelectItem>
-                              {selectedIngredient?.conversions?.map((c: any) => (
-                                <SelectItem key={c.id} value={String(c.id)} className="font-bold">{c.unitName}</SelectItem>
+                              {WASTE_REASONS.map((r) => (
+                                <SelectItem key={r} value={r} className="font-bold">{r}</SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
                         </div>
+                        <div className="w-full md:flex-1 space-y-2">
+                          <Label className="text-[10px] font-black uppercase tracking-widest text-destructive ml-1">Additional Notes</Label>
+                          <Input 
+                            placeholder="e.g. Fridge failure during night shift"
+                            className="h-14 bg-background border-destructive/20"
+                            value={noteInput}
+                            onChange={(e) => setNoteInput(e.target.value)}
+                          />
+                        </div>
+                        <Button 
+                          onClick={addItem}
+                          variant="destructive"
+                          className="w-full md:w-auto h-14 px-8 font-black uppercase tracking-widest rounded-xl shadow-lg shadow-destructive/20"
+                        >
+                          <Plus className="h-5 w-5 mr-2 stroke-[3px]" /> Add to List
+                        </Button>
                       </div>
-                      {selectedUnit !== "base" && selectedIngredient && quantityInput && (
-                        <p className="text-[10px] font-bold text-muted-foreground ml-1 uppercase tracking-tighter">
-                          Equivalent to: {(parseFloat(quantityInput) * Number(selectedIngredient.conversions.find((c: any) => String(c.id) === selectedUnit)?.conversionFactor || 1)).toFixed(2)} {selectedIngredient.unit}
-                        </p>
+                    </div>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="recipe" className="space-y-6">
+                  <div className="space-y-3">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-destructive ml-1">Select Drink Recipe</Label>
+                    <Select value={selectedDrinkId} onValueChange={setSelectedDrinkId}>
+                      <SelectTrigger className="h-12 font-bold bg-muted/20 border-transparent focus:bg-background transition-all">
+                        <SelectValue placeholder="Search or select a drink (e.g. Caffè Latte)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none" className="font-bold text-muted-foreground">Select a drink...</SelectItem>
+                        {isDrinksLoading ? (
+                          <div className="p-4 text-center text-xs text-muted-foreground flex items-center justify-center gap-2">
+                            <Loader2 className="h-4 w-4 animate-spin text-destructive" /> Loading drinks...
+                          </div>
+                        ) : drinks.length === 0 ? (
+                          <div className="p-4 text-center text-xs text-muted-foreground">No drinks found</div>
+                        ) : (
+                          drinks.map((drink: any) => (
+                            <SelectItem key={drink.id} value={String(drink.id)} className="font-bold">
+                              {drink.name} <span className="text-muted-foreground text-xs font-normal">({drink.category})</span>
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {selectedDrinkId && selectedDrinkId !== "none" && (
+                    <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                      {isUsageLoading ? (
+                        <div className="p-8 text-center text-muted-foreground flex flex-col items-center justify-center gap-2">
+                          <Loader2 className="h-8 w-8 animate-spin text-destructive" />
+                          <span className="text-xs uppercase font-bold tracking-widest">Fetching recipe ingredients...</span>
+                        </div>
+                      ) : drinkUsage.length === 0 ? (
+                        <div className="p-6 text-center text-muted-foreground italic rounded-2xl bg-muted/10 border border-dashed">
+                          No inventory items are linked to this drink recipe.
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          <div className="rounded-xl border overflow-hidden">
+                            <Table>
+                              <TableHeader className="bg-muted/30">
+                                <TableRow>
+                                  <TableHead className="w-[80px] text-center"></TableHead>
+                                  <TableHead className="text-[10px] font-black uppercase tracking-widest">Ingredient</TableHead>
+                                  <TableHead className="w-[150px] text-right text-[10px] font-black uppercase tracking-widest">Wastage Qty</TableHead>
+                                  <TableHead className="w-[80px] text-left text-[10px] font-black uppercase tracking-widest">Unit</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {drinkUsage.map((item: any) => {
+                                  const isChecked = !!checkedIngredients[item.ingredientId];
+                                  return (
+                                    <TableRow key={item.ingredientId} className={isChecked ? "" : "opacity-50"}>
+                                      <TableCell className="text-center">
+                                        <Checkbox 
+                                          checked={isChecked} 
+                                          onCheckedChange={(checked) => {
+                                            setCheckedIngredients(prev => ({
+                                              ...prev,
+                                              [item.ingredientId]: !!checked
+                                            }));
+                                          }}
+                                        />
+                                      </TableCell>
+                                      <TableCell className="font-bold">
+                                        {item.ingredientName}
+                                        <div className="text-[9px] text-muted-foreground uppercase font-semibold">Role: {item.slotLabel}</div>
+                                      </TableCell>
+                                      <TableCell className="text-right">
+                                        <Input 
+                                          type="number" 
+                                          value={customQuantities[item.ingredientId] ?? ""} 
+                                          onChange={(e) => {
+                                            setCustomQuantities(prev => ({
+                                              ...prev,
+                                              [item.ingredientId]: e.target.value
+                                            }));
+                                          }}
+                                          disabled={!isChecked}
+                                          className="h-10 text-right font-black w-24 ml-auto"
+                                        />
+                                      </TableCell>
+                                      <TableCell className="text-left font-bold text-muted-foreground uppercase text-xs">
+                                        {item.unit}
+                                      </TableCell>
+                                    </TableRow>
+                                  );
+                                })}
+                              </TableBody>
+                            </Table>
+                          </div>
+
+                          <div className="flex flex-col md:flex-row gap-6 items-end p-6 rounded-2xl bg-destructive/5 border border-destructive/10">
+                            <div className="w-full md:w-[200px] md:shrink-0 space-y-2">
+                              <Label className="text-[10px] font-black uppercase tracking-widest text-destructive ml-1">Reason for wastage</Label>
+                              <Select value={drinkReasonInput} onValueChange={setDrinkReasonInput}>
+                                <SelectTrigger className="h-14 text-lg font-bold border-destructive/20 bg-background">
+                                  <SelectValue placeholder="Select reason" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {WASTE_REASONS.map((r) => (
+                                    <SelectItem key={r} value={r} className="font-bold">{r}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="w-full md:flex-1 space-y-2">
+                              <Label className="text-[10px] font-black uppercase tracking-widest text-destructive ml-1">Notes / Purpose (for all added items)</Label>
+                              <Input 
+                                placeholder="e.g. Batch wastage for Caffè Latte recipe"
+                                className="h-14 bg-background border-destructive/20"
+                                value={drinkNoteInput}
+                                onChange={(e) => setDrinkNoteInput(e.target.value)}
+                              />
+                            </div>
+                            <Button 
+                              onClick={addDrinkIngredients}
+                              variant="destructive"
+                              className="w-full md:w-auto h-14 px-8 font-black uppercase tracking-widest rounded-xl shadow-lg shadow-destructive/20"
+                            >
+                              <Plus className="h-5 w-5 mr-2 stroke-[3px]" /> Add Checked Items
+                            </Button>
+                          </div>
+                        </div>
                       )}
                     </div>
-                    <div className="space-y-2">
-                      <Label className="text-[10px] font-black uppercase tracking-widest text-destructive ml-1">Reason for wastage</Label>
-                      <Select value={reasonInput} onValueChange={setReasonInput}>
-                        <SelectTrigger className="h-14 text-lg font-bold border-destructive/20 bg-background">
-                          <SelectValue placeholder="Select reason" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {WASTE_REASONS.map((r) => (
-                            <SelectItem key={r} value={r} className="font-bold">{r}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-[10px] font-black uppercase tracking-widest text-destructive ml-1">Additional Notes</Label>
-                    <Input 
-                      placeholder="e.g. Fridge failure during night shift"
-                      className="h-14 bg-background border-destructive/20"
-                      value={noteInput}
-                      onChange={(e) => setNoteInput(e.target.value)}
-                    />
-                  </div>
-                  <Button 
-                    onClick={addItem}
-                    variant="destructive"
-                    className="w-full h-14 font-black uppercase tracking-widest rounded-xl shadow-lg shadow-destructive/20"
-                  >
-                    <Plus className="h-5 w-5 mr-2 stroke-[3px]" /> Add to Wastage List
-                  </Button>
-                </div>
-              )}
+                  )}
+                </TabsContent>
+              </Tabs>
             </CardContent>
           </Card>
 

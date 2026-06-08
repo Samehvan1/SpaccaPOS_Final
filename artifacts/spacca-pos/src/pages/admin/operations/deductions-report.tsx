@@ -36,17 +36,15 @@ export default function OperationalDeductionsReport() {
       const params = new URLSearchParams({ startDate, endDate });
       if (selectedBranch !== "all") params.append("branchId", selectedBranch);
       
+      const typeParam = selectedType === "all" ? "calibration,waste" : selectedType;
+      params.append("movementType", typeParam);
+      
       const [moveData, branchData] = await Promise.all([
         api(`/api/stock/movements?${params.toString()}`),
         api("/api/admin/branches")
       ]);
 
-      // Filter for only calibration and waste
-      const operationalMoves = moveData.filter((m: any) => 
-        m.movementType === "calibration" || m.movementType === "waste"
-      );
-
-      setMovements(operationalMoves);
+      setMovements(moveData);
       setBranches(branchData);
     } catch (err) {
       toast({ variant: "destructive", title: "Failed to load operational data" });
@@ -57,7 +55,7 @@ export default function OperationalDeductionsReport() {
 
   useEffect(() => {
     loadData();
-  }, [selectedBranch, startDate, endDate]);
+  }, [selectedBranch, startDate, endDate, selectedType]);
 
   const filteredMovements = movements.filter(m => {
     const matchesSearch = m.ingredientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -95,7 +93,7 @@ export default function OperationalDeductionsReport() {
   };
 
   return (
-    <div className="p-6 w-full flex flex-col gap-6 overflow-y-auto">
+    <div className="space-y-6 p-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-black tracking-tighter uppercase flex items-center gap-3 text-primary">
@@ -116,7 +114,7 @@ export default function OperationalDeductionsReport() {
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
             <div className="space-y-2">
               <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1 flex items-center gap-1.5">
                 <MapPin className="h-3 w-3" /> Branch
@@ -150,7 +148,7 @@ export default function OperationalDeductionsReport() {
               </Select>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2 lg:col-span-2">
               <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1 flex items-center gap-1.5">
                 <Calendar className="h-3 w-3" /> Date Range
               </label>

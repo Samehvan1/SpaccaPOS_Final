@@ -39,6 +39,7 @@ export default function StockMovementPage() {
       const params = new URLSearchParams({ startDate, endDate });
       if (selectedBranch !== "all") params.append("branchId", selectedBranch);
       if (selectedIngredient !== "all") params.append("ingredientId", selectedIngredient);
+      if (selectedType !== "all") params.append("movementType", selectedType);
 
       const [moveData, ingData, branchData] = await Promise.all([
         api(`/api/stock/movements?${params.toString()}`),
@@ -57,7 +58,7 @@ export default function StockMovementPage() {
 
   useEffect(() => {
     loadData();
-  }, [selectedBranch, selectedIngredient, startDate, endDate]);
+  }, [selectedBranch, selectedIngredient, startDate, endDate, selectedType]);
 
   const exportCsv = () => {
     const headers = ["Date", "Ingredient", "Type", "Quantity", "After", "User", "Note"];
@@ -161,7 +162,7 @@ export default function StockMovementPage() {
                   <SelectItem value="sale">Sale</SelectItem>
                   <SelectItem value="waste">Waste</SelectItem>
                   <SelectItem value="calibration">Calibration</SelectItem>
-                  <SelectItem value="manual">Manual Adjustment</SelectItem>
+                  <SelectItem value="adjustment">Manual Adjustment</SelectItem>
                 </SelectContent>
               </Select>
             </div>

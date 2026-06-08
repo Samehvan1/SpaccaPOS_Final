@@ -243,18 +243,22 @@ export type UpdateOrderStatusResponse = Infer<
 >;
 
 // Stock Movements
-export const ListStockMovementsQueryParams = api.ListStockMovementsQueryParams;
+export const ListStockMovementsQueryParams = api.ListStockMovementsQueryParams.extend({
+  movementType: z.string().optional(),
+});
 export type ListStockMovementsQueryParams = Infer<
-  typeof api.ListStockMovementsQueryParams
+  typeof ListStockMovementsQueryParams
 >;
 export const ListStockMovementsResponseItem =
-  api.ListStockMovementsResponseItem;
+  api.ListStockMovementsResponseItem.extend({
+    branchId: z.number().nullish(),
+  });
 export type ListStockMovementsResponseItem = Infer<
-  typeof api.ListStockMovementsResponseItem
+  typeof ListStockMovementsResponseItem
 >;
-export const ListStockMovementsResponse = api.ListStockMovementsResponse;
+export const ListStockMovementsResponse = z.array(ListStockMovementsResponseItem);
 export type ListStockMovementsResponse = Infer<
-  typeof api.ListStockMovementsResponse
+  typeof ListStockMovementsResponse
 >;
 
 export const CreateStockAdjustmentBody = api.CreateStockAdjustmentBody;

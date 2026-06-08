@@ -45,6 +45,10 @@ router.get("/stock/movements", async (req, res): Promise<void> => {
     if (params.data.endDate) {
       conditions.push(lte(stockMovementsTable.createdAt, endOfDay(new Date(params.data.endDate))));
     }
+    if (params.data.movementType) {
+      const types = params.data.movementType.split(",") as any[];
+      conditions.push(inArray(stockMovementsTable.movementType, types));
+    }
   }
 
   const movements = await db
