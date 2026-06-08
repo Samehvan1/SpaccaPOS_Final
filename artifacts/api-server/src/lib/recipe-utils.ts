@@ -111,7 +111,7 @@ export function analyzeCustomization(cust: any, context: CustomizationContext) {
 
   let defVolInfo: any = null;
 
-  const style = matchingSlot.ingredientTypeId || matchingSlot.predefinedSlotId ? "typed" : "legacy";
+  const style = matchingSlot.ingredientTypeId || matchingSlot.predefinedSlotId || effectiveOptions.length > 0 ? "typed" : "legacy";
 
   if (style === "typed" && defType) {
     const t = types.find(typ => typ.id === defType.ingredientTypeId);
