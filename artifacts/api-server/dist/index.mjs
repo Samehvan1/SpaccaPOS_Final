@@ -56305,7 +56305,7 @@ var init_stock = __esm({
       ingredientId: integer("ingredient_id").notNull().references(() => ingredientsTable.id),
       orderId: integer("order_id").references(() => ordersTable.id, { onDelete: "set null" }),
       movementType: text("movement_type", {
-        enum: ["sale", "restock", "adjustment", "waste", "opening", "calibration"]
+        enum: ["sale", "restock", "adjustment", "waste", "opening", "calibration", "testing"]
       }).notNull(),
       quantity: numeric("quantity", { precision: 12, scale: 4 }).notNull(),
       quantityAfter: numeric("quantity_after", { precision: 12, scale: 4 }).notNull(),
@@ -78466,7 +78466,8 @@ var ListStockMovementsResponseItem = objectType({
     "adjustment",
     "waste",
     "opening",
-    "calibration"
+    "calibration",
+    "testing"
   ]),
   quantity: numberType(),
   quantityAfter: numberType(),
@@ -78480,7 +78481,13 @@ var ListStockMovementsResponse = arrayType(
 );
 var CreateStockAdjustmentBody = objectType({
   ingredientId: numberType(),
-  movementType: enumType(["adjustment", "waste", "opening", "calibration"]),
+  movementType: enumType([
+    "adjustment",
+    "waste",
+    "opening",
+    "calibration",
+    "testing"
+  ]),
   quantity: numberType(),
   unitId: numberType().nullish(),
   note: stringType().optional()
@@ -78976,7 +78983,9 @@ var ListStockMovementsQueryParams2 = ListStockMovementsQueryParams.extend({
 var ListStockMovementsResponseItem2 = ListStockMovementsResponseItem.extend({
   branchId: external_exports2.number().nullish()
 });
-var ListStockMovementsResponse2 = external_exports2.array(ListStockMovementsResponseItem2);
+var ListStockMovementsResponse2 = external_exports2.array(
+  ListStockMovementsResponseItem2
+);
 var CreateStockAdjustmentBody2 = CreateStockAdjustmentBody;
 var GetDashboardSummaryResponse2 = GetDashboardSummaryResponse;
 var GetActiveOrdersResponseItem2 = GetActiveOrdersResponseItem.and(
@@ -82303,7 +82312,7 @@ router3.get("/drinks/:id/stock-usage", requirePermission("catalog:view"), async 
     console.log(`[DEBUG-TRACE]   - predefinedSlotId: ${slot.predefinedSlotId}`);
     console.log(`[DEBUG-TRACE]   - defaultOptionId: ${slot.defaultOptionId}`);
     const seenIngredients = /* @__PURE__ */ new Set();
-    const addUsage = (ing, type, label, qty) => {
+    const addUsage = (ing, type, label, qty, isDefault = false) => {
       console.log(`[DEBUG-TRACE]   !!! MATCH FOUND !!! -> ${ing.name} via ${type} (qty: ${qty})`);
       if (seenIngredients.has(ing.id)) return;
       seenIngredients.add(ing.id);
@@ -82313,25 +82322,26 @@ router3.get("/drinks/:id/stock-usage", requirePermission("catalog:view"), async 
         ingredientId: ing.id,
         ingredientName: ing.name,
         unit: ing.unit,
-        qty
+        qty,
+        isDefault
       });
     };
     if (slot.ingredientId) {
       const [ing] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, slot.ingredientId));
-      if (ing) addUsage(ing, "legacy", slot.slotLabel, 0);
+      if (ing) addUsage(ing, "legacy", slot.slotLabel, 0, true);
     }
     if (slot.defaultOptionId) {
       const [opt] = await db.select().from(ingredientOptionsTable).where(eq(ingredientOptionsTable.id, slot.defaultOptionId));
       if (opt) {
         const [ing] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, opt.ingredientId));
-        if (ing) addUsage(ing, "legacy-option", slot.slotLabel, Number(opt.processedQty || 0));
+        if (ing) addUsage(ing, "legacy-option", slot.slotLabel, Number(opt.processedQty || 0), true);
       }
     }
     if (slot.ingredientTypeId) {
       const [ingType] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, slot.ingredientTypeId));
       if (ingType?.inventoryIngredientId) {
         const [ing] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, ingType.inventoryIngredientId));
-        if (ing) addUsage(ing, "typed-catalog", slot.slotLabel, Number(ingType.processedQty || 0));
+        if (ing) addUsage(ing, "typed-catalog", slot.slotLabel, Number(ingType.processedQty || 0), true);
       }
     }
     const typeOptions = await db.select().from(drinkSlotTypeOptionsTable).where(eq(drinkSlotTypeOptionsTable.slotId, slot.id));
@@ -82339,7 +82349,7 @@ router3.get("/drinks/:id/stock-usage", requirePermission("catalog:view"), async 
       const [ingType] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, to.ingredientTypeId));
       if (ingType?.inventoryIngredientId) {
         const [ing] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, ingType.inventoryIngredientId));
-        if (ing) addUsage(ing, "typed-option", slot.slotLabel, Number(to.processedQty || ingType.processedQty || 0));
+        if (ing) addUsage(ing, "typed-option", slot.slotLabel, Number(to.processedQty || ingType.processedQty || 0), !!to.isDefault);
       }
     }
     const slotVolumes = await db.select().from(drinkSlotVolumesTable).where(eq(drinkSlotVolumesTable.slotId, slot.id));
@@ -82349,7 +82359,7 @@ router3.get("/drinks/:id/stock-usage", requirePermission("catalog:view"), async 
         const [ingType] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, typeVol.ingredientTypeId));
         if (ingType?.inventoryIngredientId) {
           const [ing] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, ingType.inventoryIngredientId));
-          if (ing) addUsage(ing, "typed-volume", slot.slotLabel, Number(sv.processedQty || typeVol.processedQty || 0));
+          if (ing) addUsage(ing, "typed-volume", slot.slotLabel, Number(sv.processedQty || typeVol.processedQty || 0), !!sv.isDefault);
         }
       }
     }
@@ -82359,7 +82369,7 @@ router3.get("/drinks/:id/stock-usage", requirePermission("catalog:view"), async 
         const [ingType] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, tto.ingredientTypeId));
         if (ingType?.inventoryIngredientId) {
           const [ing] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, ingType.inventoryIngredientId));
-          if (ing) addUsage(ing, "typed-template", slot.slotLabel + " (Template)", Number(tto.processedQty || ingType.processedQty || 0));
+          if (ing) addUsage(ing, "typed-template", slot.slotLabel + " (Template)", Number(tto.processedQty || ingType.processedQty || 0), !!tto.isDefault);
         }
       }
       const templateVolumes = await db.select().from(predefinedSlotVolumesTable).where(eq(predefinedSlotVolumesTable.predefinedSlotId, slot.predefinedSlotId));
@@ -82369,7 +82379,7 @@ router3.get("/drinks/:id/stock-usage", requirePermission("catalog:view"), async 
           const [ingType] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, typeVol.ingredientTypeId));
           if (ingType?.inventoryIngredientId) {
             const [ing] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, ingType.inventoryIngredientId));
-            if (ing) addUsage(ing, "typed-template-vol", slot.slotLabel + " (Template)", Number(tv.processedQty || typeVol.processedQty || 0));
+            if (ing) addUsage(ing, "typed-template-vol", slot.slotLabel + " (Template)", Number(tv.processedQty || typeVol.processedQty || 0), !!tv.isDefault);
           }
         }
       }
@@ -82952,61 +82962,54 @@ var ingredients_default = router4;
 // src/routes/orders.ts
 var import_express5 = __toESM(require_express2(), 1);
 init_drizzle_orm();
-
-// ../../node_modules/.pnpm/date-fns@3.6.0/node_modules/date-fns/toDate.mjs
-function toDate(argument) {
-  const argStr = Object.prototype.toString.call(argument);
-  if (argument instanceof Date || typeof argument === "object" && argStr === "[object Date]") {
-    return new argument.constructor(+argument);
-  } else if (typeof argument === "number" || argStr === "[object Number]" || typeof argument === "string" || argStr === "[object String]") {
-    return new Date(argument);
-  } else {
-    return /* @__PURE__ */ new Date(NaN);
-  }
-}
-
-// ../../node_modules/.pnpm/date-fns@3.6.0/node_modules/date-fns/constructFrom.mjs
-function constructFrom(date6, value) {
-  if (date6 instanceof Date) {
-    return new date6.constructor(value);
-  } else {
-    return new Date(value);
-  }
-}
-
-// ../../node_modules/.pnpm/date-fns@3.6.0/node_modules/date-fns/addDays.mjs
-function addDays(date6, amount) {
-  const _date2 = toDate(date6);
-  if (isNaN(amount)) return constructFrom(date6, NaN);
-  if (!amount) {
-    return _date2;
-  }
-  _date2.setDate(_date2.getDate() + amount);
-  return _date2;
-}
-
-// ../../node_modules/.pnpm/date-fns@3.6.0/node_modules/date-fns/startOfDay.mjs
-function startOfDay(date6) {
-  const _date2 = toDate(date6);
-  _date2.setHours(0, 0, 0, 0);
-  return _date2;
-}
-
-// ../../node_modules/.pnpm/date-fns@3.6.0/node_modules/date-fns/endOfDay.mjs
-function endOfDay(date6) {
-  const _date2 = toDate(date6);
-  _date2.setHours(23, 59, 59, 999);
-  return _date2;
-}
-
-// ../../node_modules/.pnpm/date-fns@3.6.0/node_modules/date-fns/subDays.mjs
-function subDays(date6, amount) {
-  return addDays(date6, -amount);
-}
-
-// src/routes/orders.ts
 init_sse();
 init_src();
+function parseLocalDate(dateStr) {
+  if (!dateStr || typeof dateStr !== "string") return /* @__PURE__ */ new Date();
+  const parts = dateStr.split("-");
+  if (parts.length !== 3) return new Date(dateStr);
+  const year = parseInt(parts[0], 10);
+  const month = parseInt(parts[1], 10) - 1;
+  const day = parseInt(parts[2], 10);
+  const date6 = new Date(year, month, day);
+  return isNaN(date6.getTime()) ? new Date(dateStr) : date6;
+}
+function toCairoMidnight(localDate, isEnd) {
+  const year = localDate.getFullYear();
+  const month = localDate.getMonth();
+  const day = localDate.getDate();
+  const approxUtc = isEnd ? new Date(Date.UTC(year, month, day, 23, 59, 59, 999)) : new Date(Date.UTC(year, month, day, 0, 0, 0, 0));
+  try {
+    const formatter = new Intl.DateTimeFormat("en-US", {
+      timeZone: "Africa/Cairo",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false
+    });
+    const partsFmt = formatter.formatToParts(approxUtc);
+    const fYear = parseInt(partsFmt.find((p) => p.type === "year").value, 10);
+    const fMonth = parseInt(partsFmt.find((p) => p.type === "month").value, 10) - 1;
+    const fDay = parseInt(partsFmt.find((p) => p.type === "day").value, 10);
+    const fHour = parseInt(partsFmt.find((p) => p.type === "hour").value, 10);
+    const fMin = parseInt(partsFmt.find((p) => p.type === "minute").value, 10);
+    const fSec = parseInt(partsFmt.find((p) => p.type === "second").value, 10);
+    const formattedUtc = Date.UTC(fYear, fMonth, fDay, fHour, fMin, fSec);
+    const offsetMs = approxUtc.getTime() - formattedUtc;
+    return new Date(approxUtc.getTime() + offsetMs);
+  } catch (e) {
+    return localDate;
+  }
+}
+function startOfDay(d) {
+  return toCairoMidnight(d, false);
+}
+function endOfDay(d) {
+  return toCairoMidnight(d, true);
+}
 var router5 = (0, import_express5.Router)();
 function getDayOfYear(date6) {
   const formatter = new Intl.DateTimeFormat("en-US", {
@@ -83123,10 +83126,10 @@ router5.get("/orders", requirePermission("cashier:view"), async (req, res) => {
     conditions.push(inArray(ordersTable.status, statuses));
   }
   if (params.success && params.data.startDate) {
-    conditions.push(gte(ordersTable.createdAt, startOfDay(new Date(params.data.startDate))));
+    conditions.push(gte(ordersTable.createdAt, startOfDay(parseLocalDate(params.data.startDate))));
   }
   if (params.success && params.data.endDate) {
-    conditions.push(lte(ordersTable.createdAt, endOfDay(new Date(params.data.endDate))));
+    conditions.push(lte(ordersTable.createdAt, endOfDay(parseLocalDate(params.data.endDate))));
   }
   const limit = params.success && params.data.limit ? params.data.limit : 50;
   const offset = params.success && params.data.offset ? params.data.offset : 0;
@@ -83836,6 +83839,59 @@ var orders_default = router5;
 // src/routes/stock.ts
 var import_express6 = __toESM(require_express2(), 1);
 init_drizzle_orm();
+
+// ../../node_modules/.pnpm/date-fns@3.6.0/node_modules/date-fns/toDate.mjs
+function toDate(argument) {
+  const argStr = Object.prototype.toString.call(argument);
+  if (argument instanceof Date || typeof argument === "object" && argStr === "[object Date]") {
+    return new argument.constructor(+argument);
+  } else if (typeof argument === "number" || argStr === "[object Number]" || typeof argument === "string" || argStr === "[object String]") {
+    return new Date(argument);
+  } else {
+    return /* @__PURE__ */ new Date(NaN);
+  }
+}
+
+// ../../node_modules/.pnpm/date-fns@3.6.0/node_modules/date-fns/constructFrom.mjs
+function constructFrom(date6, value) {
+  if (date6 instanceof Date) {
+    return new date6.constructor(value);
+  } else {
+    return new Date(value);
+  }
+}
+
+// ../../node_modules/.pnpm/date-fns@3.6.0/node_modules/date-fns/addDays.mjs
+function addDays(date6, amount) {
+  const _date2 = toDate(date6);
+  if (isNaN(amount)) return constructFrom(date6, NaN);
+  if (!amount) {
+    return _date2;
+  }
+  _date2.setDate(_date2.getDate() + amount);
+  return _date2;
+}
+
+// ../../node_modules/.pnpm/date-fns@3.6.0/node_modules/date-fns/startOfDay.mjs
+function startOfDay2(date6) {
+  const _date2 = toDate(date6);
+  _date2.setHours(0, 0, 0, 0);
+  return _date2;
+}
+
+// ../../node_modules/.pnpm/date-fns@3.6.0/node_modules/date-fns/endOfDay.mjs
+function endOfDay2(date6) {
+  const _date2 = toDate(date6);
+  _date2.setHours(23, 59, 59, 999);
+  return _date2;
+}
+
+// ../../node_modules/.pnpm/date-fns@3.6.0/node_modules/date-fns/subDays.mjs
+function subDays(date6, amount) {
+  return addDays(date6, -amount);
+}
+
+// src/routes/stock.ts
 init_src();
 var router6 = (0, import_express6.Router)();
 router6.get("/stock/movements", async (req, res) => {
@@ -83853,10 +83909,10 @@ router6.get("/stock/movements", async (req, res) => {
       conditions.push(eq(stockMovementsTable.ingredientId, params.data.ingredientId));
     }
     if (params.data.startDate) {
-      conditions.push(gte(stockMovementsTable.createdAt, startOfDay(new Date(params.data.startDate))));
+      conditions.push(gte(stockMovementsTable.createdAt, startOfDay2(new Date(params.data.startDate))));
     }
     if (params.data.endDate) {
-      conditions.push(lte(stockMovementsTable.createdAt, endOfDay(new Date(params.data.endDate))));
+      conditions.push(lte(stockMovementsTable.createdAt, endOfDay2(new Date(params.data.endDate))));
     }
     if (params.data.movementType) {
       const types3 = params.data.movementType.split(",");
@@ -83922,7 +83978,7 @@ router6.post("/stock/adjustments", async (req, res) => {
     }
   }
   const currentQty = stock ? parseFloat(stock.stockQuantity) : 0;
-  const adjustedQty = parsed.data.movementType === "waste" || parsed.data.movementType === "calibration" ? currentQty - finalQuantity : currentQty + finalQuantity;
+  const adjustedQty = parsed.data.movementType === "waste" || parsed.data.movementType === "calibration" || parsed.data.movementType === "testing" ? currentQty - finalQuantity : currentQty + finalQuantity;
   const newQty = Math.max(0, adjustedQty);
   await db.insert(branchStockTable).values({
     branchId: targetBranchId,
@@ -83932,7 +83988,7 @@ router6.post("/stock/adjustments", async (req, res) => {
     target: [branchStockTable.branchId, branchStockTable.ingredientId],
     set: { stockQuantity: String(newQty) }
   });
-  const ledgerQuantity = parsed.data.movementType === "waste" || parsed.data.movementType === "calibration" ? -finalQuantity : finalQuantity;
+  const ledgerQuantity = parsed.data.movementType === "waste" || parsed.data.movementType === "calibration" || parsed.data.movementType === "testing" ? -finalQuantity : finalQuantity;
   const movementNote = selectedUnitName ? `${parsed.data.note ?? ""} (Converted from ${parsed.data.quantity} ${selectedUnitName})`.trim() : parsed.data.note ?? null;
   const [movement] = await db.insert(stockMovementsTable).values({
     branchId: targetBranchId,
@@ -83973,13 +84029,13 @@ router7.get("/dashboard/summary", async (req, res) => {
   let start;
   let end;
   if (req.query.startDate) {
-    start = startOfDay(new Date(req.query.startDate));
+    start = startOfDay2(new Date(req.query.startDate));
   } else {
     start = /* @__PURE__ */ new Date();
     start.setHours(0, 0, 0, 0);
   }
   if (req.query.endDate) {
-    end = endOfDay(new Date(req.query.endDate));
+    end = endOfDay2(new Date(req.query.endDate));
   } else {
     end = /* @__PURE__ */ new Date();
     end.setHours(23, 59, 59, 999);
@@ -84141,10 +84197,10 @@ router7.get("/dashboard/sales-by-category", async (req, res) => {
     conditions.push(eq(ordersTable.branchId, targetBranchId));
   }
   if (params.success && params.data.startDate) {
-    conditions.push(gte(ordersTable.createdAt, startOfDay(new Date(params.data.startDate))));
+    conditions.push(gte(ordersTable.createdAt, startOfDay2(new Date(params.data.startDate))));
   }
   if (params.success && params.data.endDate) {
-    conditions.push(lte(ordersTable.createdAt, endOfDay(new Date(params.data.endDate))));
+    conditions.push(lte(ordersTable.createdAt, endOfDay2(new Date(params.data.endDate))));
   }
   if (!params.success || !params.data.startDate && !params.data.endDate) {
     const days = params.success && params.data.days ? params.data.days : 30;
@@ -84193,10 +84249,10 @@ router7.get("/dashboard/top-drinks", async (req, res) => {
     conditions.push(eq(ordersTable.branchId, targetBranchId));
   }
   if (params.success && params.data.startDate) {
-    conditions.push(gte(ordersTable.createdAt, startOfDay(new Date(params.data.startDate))));
+    conditions.push(gte(ordersTable.createdAt, startOfDay2(new Date(params.data.startDate))));
   }
   if (params.success && params.data.endDate) {
-    conditions.push(lte(ordersTable.createdAt, endOfDay(new Date(params.data.endDate))));
+    conditions.push(lte(ordersTable.createdAt, endOfDay2(new Date(params.data.endDate))));
   }
   if (!params.success || !params.data.startDate && !params.data.endDate) {
     const days = params.success && params.data.days ? params.data.days : 30;
@@ -84246,10 +84302,10 @@ router7.get("/dashboard/sales-by-day", async (req, res) => {
     conditions.push(eq(ordersTable.branchId, targetBranchId));
   }
   if (params.success && params.data.startDate) {
-    conditions.push(gte(ordersTable.createdAt, startOfDay(new Date(params.data.startDate))));
+    conditions.push(gte(ordersTable.createdAt, startOfDay2(new Date(params.data.startDate))));
   }
   if (params.success && params.data.endDate) {
-    conditions.push(lte(ordersTable.createdAt, endOfDay(new Date(params.data.endDate))));
+    conditions.push(lte(ordersTable.createdAt, endOfDay2(new Date(params.data.endDate))));
   }
   const orders = await db.select({
     id: ordersTable.id,
@@ -85489,9 +85545,9 @@ router15.get("/cashier/performance/:cashierId", requirePermission("cashier:view_
   }
   const { startDate, endDate } = req.query;
   const conditions = [eq(ordersTable.cashierId, cashierId)];
-  if (startDate) conditions.push(gte(ordersTable.createdAt, startOfDay(new Date(startDate))));
+  if (startDate) conditions.push(gte(ordersTable.createdAt, startOfDay2(new Date(startDate))));
   if (endDate) {
-    conditions.push(lte(ordersTable.createdAt, endOfDay(new Date(endDate))));
+    conditions.push(lte(ordersTable.createdAt, endOfDay2(new Date(endDate))));
   }
   const orders = await db.select({
     id: ordersTable.id,
@@ -85530,9 +85586,9 @@ router15.get("/cashier/sessions", requirePermission("cashier:view_reports"), asy
   const { cashierId, startDate, endDate } = req.query;
   const conditions = [];
   if (cashierId) conditions.push(eq(cashierSessionsTable.cashierId, parseInt(cashierId)));
-  if (startDate) conditions.push(gte(cashierSessionsTable.startedAt, startOfDay(new Date(startDate))));
+  if (startDate) conditions.push(gte(cashierSessionsTable.startedAt, startOfDay2(new Date(startDate))));
   if (endDate) {
-    conditions.push(lte(cashierSessionsTable.startedAt, endOfDay(new Date(endDate))));
+    conditions.push(lte(cashierSessionsTable.startedAt, endOfDay2(new Date(endDate))));
   }
   const sessions = await db.select().from(cashierSessionsTable).where(conditions.length > 0 ? and(...conditions) : void 0).orderBy(desc(cashierSessionsTable.startedAt));
   const cashierIds = [...new Set(sessions.map((s) => s.cashierId))];
@@ -85729,9 +85785,9 @@ adminRouter.get("/admin/activity-logs", requirePermission("admin:view"), async (
     if (action) conditions.push(ilike(activityLogsTable.action, `%${action}%`));
     if (entityType) conditions.push(eq(activityLogsTable.entityType, entityType));
     if (userName) conditions.push(ilike(usersTable.name, `%${userName}%`));
-    if (startDate) conditions.push(gte(activityLogsTable.createdAt, startOfDay(new Date(startDate))));
+    if (startDate) conditions.push(gte(activityLogsTable.createdAt, startOfDay2(new Date(startDate))));
     if (endDate) {
-      conditions.push(lte(activityLogsTable.createdAt, endOfDay(new Date(endDate))));
+      conditions.push(lte(activityLogsTable.createdAt, endOfDay2(new Date(endDate))));
     }
     const where = conditions.length > 0 ? and(...conditions) : void 0;
     const [logs, totalCount] = await Promise.all([
@@ -86310,7 +86366,7 @@ function analyzeCustomization(cust, context) {
   let defType = effectiveOptions.find((o) => o.isDefault);
   if (!defType && effectiveOptions.length > 0) defType = effectiveOptions[0];
   let defVolInfo = null;
-  const style = matchingSlot.ingredientTypeId || matchingSlot.predefinedSlotId ? "typed" : "legacy";
+  const style = matchingSlot.ingredientTypeId || matchingSlot.predefinedSlotId || effectiveOptions.length > 0 ? "typed" : "legacy";
   if (style === "typed" && defType) {
     const t = types3.find((typ) => typ.id === defType.ingredientTypeId);
     typeName = defType.typeName || t?.name || "";
@@ -86368,7 +86424,7 @@ function analyzeCustomization(cust, context) {
 }
 
 // src/routes/finance.ts
-function parseLocalDate(dateStr) {
+function parseLocalDate2(dateStr) {
   if (!dateStr || typeof dateStr !== "string") return /* @__PURE__ */ new Date();
   const parts = dateStr.split("-");
   if (parts.length !== 3) return new Date(dateStr);
@@ -86378,12 +86434,48 @@ function parseLocalDate(dateStr) {
   const date6 = new Date(year, month, day);
   return isNaN(date6.getTime()) ? new Date(dateStr) : date6;
 }
+function toCairoMidnight2(localDate, isEnd) {
+  const year = localDate.getFullYear();
+  const month = localDate.getMonth();
+  const day = localDate.getDate();
+  const approxUtc = isEnd ? new Date(Date.UTC(year, month, day, 23, 59, 59, 999)) : new Date(Date.UTC(year, month, day, 0, 0, 0, 0));
+  try {
+    const formatter = new Intl.DateTimeFormat("en-US", {
+      timeZone: "Africa/Cairo",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false
+    });
+    const partsFmt = formatter.formatToParts(approxUtc);
+    const fYear = parseInt(partsFmt.find((p) => p.type === "year").value, 10);
+    const fMonth = parseInt(partsFmt.find((p) => p.type === "month").value, 10) - 1;
+    const fDay = parseInt(partsFmt.find((p) => p.type === "day").value, 10);
+    const fHour = parseInt(partsFmt.find((p) => p.type === "hour").value, 10);
+    const fMin = parseInt(partsFmt.find((p) => p.type === "minute").value, 10);
+    const fSec = parseInt(partsFmt.find((p) => p.type === "second").value, 10);
+    const formattedUtc = Date.UTC(fYear, fMonth, fDay, fHour, fMin, fSec);
+    const offsetMs = approxUtc.getTime() - formattedUtc;
+    return new Date(approxUtc.getTime() + offsetMs);
+  } catch (e) {
+    return localDate;
+  }
+}
+function startOfDay3(d) {
+  return toCairoMidnight2(d, false);
+}
+function endOfDay3(d) {
+  return toCairoMidnight2(d, true);
+}
 var router18 = (0, import_express21.Router)();
 router18.get("/finance/inventory-usage", requirePermission("reports:view"), async (req, res) => {
   const { startDate, endDate, branchId } = req.query;
   const targetBranchId = branchId && branchId !== "all" ? parseInt(branchId) : null;
-  const start = startDate ? startOfDay(parseLocalDate(startDate)) : startOfDay(subDays(/* @__PURE__ */ new Date(), 30));
-  const end = endDate ? endOfDay(parseLocalDate(endDate)) : endOfDay(/* @__PURE__ */ new Date());
+  const start = startDate ? startOfDay3(parseLocalDate2(startDate)) : startOfDay3(subDays(/* @__PURE__ */ new Date(), 30));
+  const end = endDate ? endOfDay3(parseLocalDate2(endDate)) : endOfDay3(/* @__PURE__ */ new Date());
   if (isNaN(start.getTime()) || isNaN(end.getTime())) {
     res.status(400).json({ error: "Invalid date format" });
     return;
@@ -86428,8 +86520,8 @@ router18.get("/finance/inventory-usage", requirePermission("reports:view"), asyn
 router18.get("/finance/pl-report", requirePermission("reports:view"), async (req, res) => {
   const { startDate, endDate, branchId } = req.query;
   const targetBranchId = branchId && branchId !== "all" ? parseInt(branchId) : null;
-  const start = startDate ? startOfDay(parseLocalDate(startDate)) : startOfDay(subDays(/* @__PURE__ */ new Date(), 30));
-  const end = endDate ? endOfDay(parseLocalDate(endDate)) : endOfDay(/* @__PURE__ */ new Date());
+  const start = startDate ? startOfDay3(parseLocalDate2(startDate)) : startOfDay3(subDays(/* @__PURE__ */ new Date(), 30));
+  const end = endDate ? endOfDay3(parseLocalDate2(endDate)) : endOfDay3(/* @__PURE__ */ new Date());
   if (isNaN(start.getTime()) || isNaN(end.getTime())) {
     res.status(400).json({ error: "Invalid date format" });
     return;
@@ -86500,8 +86592,8 @@ router18.get("/finance/pl-report", requirePermission("reports:view"), async (req
 router18.get("/finance/pl-by-day", requirePermission("reports:view"), async (req, res) => {
   const { startDate, endDate, branchId } = req.query;
   const targetBranchId = branchId && branchId !== "all" ? parseInt(branchId) : null;
-  const start = startDate ? startOfDay(parseLocalDate(startDate)) : startOfDay(subDays(/* @__PURE__ */ new Date(), 30));
-  const end = endDate ? endOfDay(parseLocalDate(endDate)) : endOfDay(/* @__PURE__ */ new Date());
+  const start = startDate ? startOfDay3(parseLocalDate2(startDate)) : startOfDay3(subDays(/* @__PURE__ */ new Date(), 30));
+  const end = endDate ? endOfDay3(parseLocalDate2(endDate)) : endOfDay3(/* @__PURE__ */ new Date());
   if (isNaN(start.getTime()) || isNaN(end.getTime())) {
     res.status(400).json({ error: "Invalid date format" });
     return;
@@ -86698,8 +86790,8 @@ router18.get("/finance/ingredient-recipes", requirePermission("reports:view"), a
 router18.get("/finance/sales-items", requirePermission("reports:view"), async (req, res) => {
   const { startDate, endDate, branchId } = req.query;
   const targetBranchId = branchId && branchId !== "all" ? parseInt(branchId) : null;
-  const start = startDate ? startOfDay(parseLocalDate(startDate)) : startOfDay(subDays(/* @__PURE__ */ new Date(), 30));
-  const end = endDate ? endOfDay(parseLocalDate(endDate)) : endOfDay(/* @__PURE__ */ new Date());
+  const start = startDate ? startOfDay3(parseLocalDate2(startDate)) : startOfDay3(subDays(/* @__PURE__ */ new Date(), 30));
+  const end = endDate ? endOfDay3(parseLocalDate2(endDate)) : endOfDay3(/* @__PURE__ */ new Date());
   if (isNaN(start.getTime()) || isNaN(end.getTime())) {
     res.status(400).json({ error: "Invalid date format" });
     return;
@@ -86776,8 +86868,8 @@ router18.get("/finance/sales-items", requirePermission("reports:view"), async (r
 router18.get("/finance/sales-summary", requirePermission("reports:view"), async (req, res) => {
   const { startDate, endDate, branchId } = req.query;
   const targetBranchId = branchId && branchId !== "all" ? parseInt(branchId) : null;
-  const start = startDate ? startOfDay(parseLocalDate(startDate)) : startOfDay(subDays(/* @__PURE__ */ new Date(), 30));
-  const end = endDate ? endOfDay(parseLocalDate(endDate)) : endOfDay(/* @__PURE__ */ new Date());
+  const start = startDate ? startOfDay3(parseLocalDate2(startDate)) : startOfDay3(subDays(/* @__PURE__ */ new Date(), 30));
+  const end = endDate ? endOfDay3(parseLocalDate2(endDate)) : endOfDay3(/* @__PURE__ */ new Date());
   if (isNaN(start.getTime()) || isNaN(end.getTime())) {
     res.status(400).json({ error: "Invalid date format" });
     return;
@@ -86792,7 +86884,15 @@ router18.get("/finance/sales-summary", requirePermission("reports:view"), async 
     revenue: sum(ordersTable.subtotal),
     discounts: sum(ordersTable.discount),
     netRevenue: sum(ordersTable.total),
-    count: count(ordersTable.id)
+    count: count(ordersTable.id),
+    hospitalityRevenue: sql`coalesce(sum(case when ${ordersTable.paymentMethod} = 'hospitality' then cast(${ordersTable.subtotal} as numeric) else 0 end), 0)`,
+    hospitalityNetRevenue: sql`coalesce(sum(case when ${ordersTable.paymentMethod} = 'hospitality' then cast(${ordersTable.total} as numeric) else 0 end), 0)`,
+    hospitalityCount: sql`coalesce(count(case when ${ordersTable.paymentMethod} = 'hospitality' then 1 else null end), 0)`,
+    staffRevenue: sql`coalesce(sum(case when ${ordersTable.discountCode} = 'STAFF' then cast(${ordersTable.subtotal} as numeric) else 0 end), 0)`,
+    staffNetRevenue: sql`coalesce(sum(case when ${ordersTable.discountCode} = 'STAFF' then cast(${ordersTable.total} as numeric) else 0 end), 0)`,
+    staffCount: sql`coalesce(count(case when ${ordersTable.discountCode} = 'STAFF' then 1 else null end), 0)`,
+    zeroRevenueCount: sql`coalesce(count(case when cast(${ordersTable.total} as numeric) = 0 then 1 else null end), 0)`,
+    zeroRevenueRevenue: sql`coalesce(sum(case when cast(${ordersTable.total} as numeric) = 0 then cast(${ordersTable.subtotal} as numeric) else 0 end), 0)`
   }).from(ordersTable).where(and(...conditions));
   const itemsResult = await db.select({ totalDrinks: sum(orderItemsTable.quantity) }).from(orderItemsTable).innerJoin(ordersTable, eq(orderItemsTable.orderId, ordersTable.id)).where(and(...conditions));
   res.json({
@@ -86800,14 +86900,22 @@ router18.get("/finance/sales-summary", requirePermission("reports:view"), async 
     discounts: parseFloat(summary.discounts || "0"),
     netRevenue: parseFloat(summary.netRevenue || "0"),
     count: Number(summary.count || 0),
-    drinks: Number(itemsResult[0]?.totalDrinks || 0)
+    drinks: Number(itemsResult[0]?.totalDrinks || 0),
+    hospitalityRevenue: parseFloat(summary.hospitalityRevenue || "0"),
+    hospitalityNetRevenue: parseFloat(summary.hospitalityNetRevenue || "0"),
+    hospitalityCount: Number(summary.hospitalityCount || 0),
+    staffRevenue: parseFloat(summary.staffRevenue || "0"),
+    staffNetRevenue: parseFloat(summary.staffNetRevenue || "0"),
+    staffCount: Number(summary.staffCount || 0),
+    zeroRevenueCount: Number(summary.zeroRevenueCount || 0),
+    zeroRevenueRevenue: parseFloat(summary.zeroRevenueRevenue || "0")
   });
 });
 router18.get("/finance/customizations-report", requirePermission("reports:view"), async (req, res) => {
   const { startDate, endDate, branchId } = req.query;
   const targetBranchId = branchId && branchId !== "all" ? parseInt(branchId) : null;
-  const start = startDate ? startOfDay(parseLocalDate(startDate)) : startOfDay(subDays(/* @__PURE__ */ new Date(), 30));
-  const end = endDate ? endOfDay(parseLocalDate(endDate)) : endOfDay(/* @__PURE__ */ new Date());
+  const start = startDate ? startOfDay3(parseLocalDate2(startDate)) : startOfDay3(subDays(/* @__PURE__ */ new Date(), 30));
+  const end = endDate ? endOfDay3(parseLocalDate2(endDate)) : endOfDay3(/* @__PURE__ */ new Date());
   if (isNaN(start.getTime()) || isNaN(end.getTime())) {
     res.status(400).json({ error: "Invalid date format" });
     return;
@@ -86842,8 +86950,8 @@ router18.get("/finance/customizations-report", requirePermission("reports:view")
 router18.get("/finance/customization-analytics", requirePermission("reports:view"), async (req, res) => {
   const { startDate, endDate, branchId } = req.query;
   const targetBranchId = branchId && branchId !== "all" ? parseInt(branchId) : null;
-  const start = startDate ? startOfDay(parseLocalDate(startDate)) : startOfDay(subDays(/* @__PURE__ */ new Date(), 30));
-  const end = endDate ? endOfDay(parseLocalDate(endDate)) : endOfDay(/* @__PURE__ */ new Date());
+  const start = startDate ? startOfDay3(parseLocalDate2(startDate)) : startOfDay3(subDays(/* @__PURE__ */ new Date(), 30));
+  const end = endDate ? endOfDay3(parseLocalDate2(endDate)) : endOfDay3(/* @__PURE__ */ new Date());
   if (isNaN(start.getTime()) || isNaN(end.getTime())) {
     res.status(400).json({ error: "Invalid date format" });
     return;
@@ -86922,8 +87030,8 @@ router18.get("/finance/customization-analytics", requirePermission("reports:view
 });
 router18.get("/finance/order-stats", requirePermission("reports:view"), async (req, res) => {
   const { startDate, endDate, branchId } = req.query;
-  const start = startDate ? startOfDay(parseLocalDate(startDate)) : startOfDay(subDays(/* @__PURE__ */ new Date(), 30));
-  const end = endDate ? endOfDay(parseLocalDate(endDate)) : endOfDay(/* @__PURE__ */ new Date());
+  const start = startDate ? startOfDay3(parseLocalDate2(startDate)) : startOfDay3(subDays(/* @__PURE__ */ new Date(), 30));
+  const end = endDate ? endOfDay3(parseLocalDate2(endDate)) : endOfDay3(/* @__PURE__ */ new Date());
   const bId = String(branchId);
   const targetBranchId = branchId && bId !== "all" && bId !== "undefined" ? parseInt(bId) : null;
   const conditions = [

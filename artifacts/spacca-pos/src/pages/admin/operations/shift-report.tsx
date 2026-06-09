@@ -80,7 +80,7 @@ export default function ShiftReportPage() {
     ]);
 
     const csvContent = [headers.join(","), ...rows.map((r: any[]) => r.join(","))].join("\n");
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const blob = new Blob(["\ufeff", csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
