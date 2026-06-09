@@ -465,7 +465,7 @@ export default function ReportsPage() {
                   { label: "Range Discounts", value: fmt(rangeSummary?.discounts || 0), icon: Tag, loading: loadingRangeSummary },
                   { label: "Range Hospitality", value: `${fmt(rangeSummary?.hospitalityRevenue || 0)} (${rangeSummary?.hospitalityCount || 0} ord)`, icon: Medal, loading: loadingRangeSummary },
                   { label: "Range Staff", value: `${fmt(rangeSummary?.staffRevenue || 0)} (${rangeSummary?.staffCount || 0} ord)`, icon: User, loading: loadingRangeSummary },
-                  { label: "Zero Revenue", value: `${rangeSummary?.zeroRevenueCount || 0} orders`, icon: XCircle, loading: loadingRangeSummary },
+                  { label: "Zero Revenue", value: `${fmt(rangeSummary?.zeroRevenueRevenue || 0)} (${rangeSummary?.zeroRevenueCount || 0} ord)`, icon: XCircle, loading: loadingRangeSummary },
                 ].map((stat, i) => (
                   <Card key={i} className="border-none shadow-md bg-card/40 backdrop-blur-sm">
                     <CardContent className="p-4 flex items-center gap-4">

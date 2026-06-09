@@ -594,6 +594,7 @@ router.get("/finance/sales-summary", requirePermission("reports:view"), async (r
       staffNetRevenue: sql<string>`coalesce(sum(case when ${ordersTable.discountCode} = 'STAFF' then cast(${ordersTable.total} as numeric) else 0 end), 0)`,
       staffCount: sql<string>`coalesce(count(case when ${ordersTable.discountCode} = 'STAFF' then 1 else null end), 0)`,
       zeroRevenueCount: sql<string>`coalesce(count(case when cast(${ordersTable.total} as numeric) = 0 then 1 else null end), 0)`,
+      zeroRevenueRevenue: sql<string>`coalesce(sum(case when cast(${ordersTable.total} as numeric) = 0 then cast(${ordersTable.subtotal} as numeric) else 0 end), 0)`,
     })
     .from(ordersTable)
     .where(and(...conditions));
@@ -617,6 +618,7 @@ router.get("/finance/sales-summary", requirePermission("reports:view"), async (r
     staffNetRevenue: parseFloat(summary.staffNetRevenue || "0"),
     staffCount: Number(summary.staffCount || 0),
     zeroRevenueCount: Number(summary.zeroRevenueCount || 0),
+    zeroRevenueRevenue: parseFloat(summary.zeroRevenueRevenue || "0"),
   });
 });
 
