@@ -2602,7 +2602,7 @@ export declare const ListStockMovementsResponseItem: zod.ZodObject<{
     ingredientId: zod.ZodNumber;
     ingredientName: zod.ZodString;
     orderId: zod.ZodNullable<zod.ZodNumber>;
-    movementType: zod.ZodEnum<["sale", "restock", "adjustment", "waste", "opening", "calibration"]>;
+    movementType: zod.ZodEnum<["sale", "restock", "adjustment", "waste", "opening", "calibration", "testing"]>;
     quantity: zod.ZodNumber;
     quantityAfter: zod.ZodNumber;
     note: zod.ZodNullable<zod.ZodString>;
@@ -2617,7 +2617,7 @@ export declare const ListStockMovementsResponseItem: zod.ZodObject<{
     quantity: number;
     note: string | null;
     orderId: number | null;
-    movementType: "sale" | "restock" | "adjustment" | "waste" | "opening" | "calibration";
+    movementType: "sale" | "restock" | "adjustment" | "waste" | "opening" | "calibration" | "testing";
     quantityAfter: number;
     createdBy: number;
     createdByName: string;
@@ -2629,7 +2629,7 @@ export declare const ListStockMovementsResponseItem: zod.ZodObject<{
     quantity: number;
     note: string | null;
     orderId: number | null;
-    movementType: "sale" | "restock" | "adjustment" | "waste" | "opening" | "calibration";
+    movementType: "sale" | "restock" | "adjustment" | "waste" | "opening" | "calibration" | "testing";
     quantityAfter: number;
     createdBy: number;
     createdByName: string;
@@ -2639,7 +2639,7 @@ export declare const ListStockMovementsResponse: zod.ZodArray<zod.ZodObject<{
     ingredientId: zod.ZodNumber;
     ingredientName: zod.ZodString;
     orderId: zod.ZodNullable<zod.ZodNumber>;
-    movementType: zod.ZodEnum<["sale", "restock", "adjustment", "waste", "opening", "calibration"]>;
+    movementType: zod.ZodEnum<["sale", "restock", "adjustment", "waste", "opening", "calibration", "testing"]>;
     quantity: zod.ZodNumber;
     quantityAfter: zod.ZodNumber;
     note: zod.ZodNullable<zod.ZodString>;
@@ -2654,7 +2654,7 @@ export declare const ListStockMovementsResponse: zod.ZodArray<zod.ZodObject<{
     quantity: number;
     note: string | null;
     orderId: number | null;
-    movementType: "sale" | "restock" | "adjustment" | "waste" | "opening" | "calibration";
+    movementType: "sale" | "restock" | "adjustment" | "waste" | "opening" | "calibration" | "testing";
     quantityAfter: number;
     createdBy: number;
     createdByName: string;
@@ -2666,7 +2666,7 @@ export declare const ListStockMovementsResponse: zod.ZodArray<zod.ZodObject<{
     quantity: number;
     note: string | null;
     orderId: number | null;
-    movementType: "sale" | "restock" | "adjustment" | "waste" | "opening" | "calibration";
+    movementType: "sale" | "restock" | "adjustment" | "waste" | "opening" | "calibration" | "testing";
     quantityAfter: number;
     createdBy: number;
     createdByName: string;
@@ -2676,20 +2676,20 @@ export declare const ListStockMovementsResponse: zod.ZodArray<zod.ZodObject<{
  */
 export declare const CreateStockAdjustmentBody: zod.ZodObject<{
     ingredientId: zod.ZodNumber;
-    movementType: zod.ZodEnum<["adjustment", "waste", "opening", "calibration"]>;
+    movementType: zod.ZodEnum<["adjustment", "waste", "opening", "calibration", "testing"]>;
     quantity: zod.ZodNumber;
     unitId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
     note: zod.ZodOptional<zod.ZodString>;
 }, "strip", zod.ZodTypeAny, {
     ingredientId: number;
     quantity: number;
-    movementType: "adjustment" | "waste" | "opening" | "calibration";
+    movementType: "adjustment" | "waste" | "opening" | "calibration" | "testing";
     unitId?: number | null | undefined;
     note?: string | undefined;
 }, {
     ingredientId: number;
     quantity: number;
-    movementType: "adjustment" | "waste" | "opening" | "calibration";
+    movementType: "adjustment" | "waste" | "opening" | "calibration" | "testing";
     unitId?: number | null | undefined;
     note?: string | undefined;
 }>;

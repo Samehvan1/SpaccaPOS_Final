@@ -243,9 +243,10 @@ export type UpdateOrderStatusResponse = Infer<
 >;
 
 // Stock Movements
-export const ListStockMovementsQueryParams = api.ListStockMovementsQueryParams.extend({
-  movementType: z.string().optional(),
-});
+export const ListStockMovementsQueryParams =
+  api.ListStockMovementsQueryParams.extend({
+    movementType: z.string().optional(),
+  });
 export type ListStockMovementsQueryParams = Infer<
   typeof ListStockMovementsQueryParams
 >;
@@ -256,7 +257,9 @@ export const ListStockMovementsResponseItem =
 export type ListStockMovementsResponseItem = Infer<
   typeof ListStockMovementsResponseItem
 >;
-export const ListStockMovementsResponse = z.array(ListStockMovementsResponseItem);
+export const ListStockMovementsResponse = z.array(
+  ListStockMovementsResponseItem,
+);
 export type ListStockMovementsResponse = Infer<
   typeof ListStockMovementsResponse
 >;

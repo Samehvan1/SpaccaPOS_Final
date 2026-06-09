@@ -162,6 +162,7 @@ export default function StockMovementPage() {
                   <SelectItem value="sale">Sale</SelectItem>
                   <SelectItem value="waste">Waste</SelectItem>
                   <SelectItem value="calibration">Calibration</SelectItem>
+                  <SelectItem value="testing">Testing</SelectItem>
                   <SelectItem value="adjustment">Manual Adjustment</SelectItem>
                 </SelectContent>
               </Select>
@@ -233,10 +234,13 @@ export default function StockMovementPage() {
                       m.movementType === "restock" ? "default" :
                       m.movementType === "sale" ? "secondary" :
                       m.movementType === "waste" ? "destructive" : "outline"
-                    } className={`capitalize ${m.movementType === "calibration" ? "border-amber-500 text-amber-600 bg-amber-50" : ""}`}>
+                    } className={`capitalize ${
+                      m.movementType === "calibration" ? "border-amber-500 text-amber-600 bg-amber-50" : 
+                      m.movementType === "testing" ? "border-cyan-500 text-cyan-600 bg-cyan-50" : ""
+                    }`}>
                       {m.movementType === "restock" && <ArrowDownLeft className="mr-1 h-3 w-3" />}
                       {m.movementType === "sale" && <ArrowUpRight className="mr-1 h-3 w-3" />}
-                      {m.movementType === "calibration" && <Beaker className="mr-1 h-3 w-3" />}
+                      {(m.movementType === "calibration" || m.movementType === "testing") && <Beaker className="mr-1 h-3 w-3" />}
                       {m.movementType}
                     </Badge>
                   </TableCell>

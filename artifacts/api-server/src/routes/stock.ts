@@ -137,7 +137,7 @@ router.post("/stock/adjustments", async (req, res): Promise<void> => {
   }
 
   const currentQty = stock ? parseFloat(stock.stockQuantity) : 0;
-  const adjustedQty = (parsed.data.movementType === "waste" || parsed.data.movementType === "calibration")
+  const adjustedQty = (parsed.data.movementType === "waste" || parsed.data.movementType === "calibration" || parsed.data.movementType === "testing")
     ? currentQty - finalQuantity
     : currentQty + finalQuantity;
 
@@ -156,7 +156,7 @@ router.post("/stock/adjustments", async (req, res): Promise<void> => {
     });
 
   const ledgerQuantity =
-    (parsed.data.movementType === "waste" || parsed.data.movementType === "calibration") ? -finalQuantity : finalQuantity;
+    (parsed.data.movementType === "waste" || parsed.data.movementType === "calibration" || parsed.data.movementType === "testing") ? -finalQuantity : finalQuantity;
 
   const movementNote = selectedUnitName 
     ? `${parsed.data.note ?? ""} (Converted from ${parsed.data.quantity} ${selectedUnitName})`.trim()

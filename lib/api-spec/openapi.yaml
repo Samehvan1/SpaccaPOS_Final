@@ -2067,7 +2067,7 @@ components:
           type: ["integer", "null"]
         movementType:
           type: string
-          enum: [sale, restock, adjustment, waste, opening, calibration]
+          enum: [sale, restock, adjustment, waste, opening, calibration, testing]
         quantity:
           type: number
         quantityAfter:
@@ -2112,7 +2112,7 @@ components:
           type: integer
         movementType:
           type: string
-          enum: [adjustment, waste, opening, calibration]
+          enum: [adjustment, waste, opening, calibration, testing]
         quantity:
           type: number
         unitId:

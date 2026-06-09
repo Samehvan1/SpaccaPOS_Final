@@ -22,6 +22,7 @@ interface AdjustmentItem {
   note?: string;
   unitId?: number;
   displayUnit: string;
+  movementType: "calibration" | "testing";
 }
 
 type Ingredient = {
@@ -48,6 +49,7 @@ export default function CalibrationPage() {
   const [quantityInput, setQuantityInput] = useState("");
   const [noteInput, setNoteInput] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [adjustmentType, setAdjustmentType] = useState<"calibration" | "testing">("calibration");
 
   // By Drink Recipe States
   const [selectedDrinkId, setSelectedDrinkId] = useState<string>("none");
@@ -139,7 +141,7 @@ export default function CalibrationPage() {
       }
     }
 
-    const existingIndex = adjustmentList.findIndex(item => item.ingredientId === selectedIngredient.id && item.unitId === unitId);
+    const existingIndex = adjustmentList.findIndex(item => item.ingredientId === selectedIngredient.id && item.unitId === unitId && item.movementType === adjustmentType);
     if (existingIndex > -1) {
       const newList = [...adjustmentList];
       newList[existingIndex].quantity += qty;
@@ -152,7 +154,8 @@ export default function CalibrationPage() {
         unit: selectedIngredient.unit,
         note: noteInput,
         unitId,
-        displayUnit: finalUnit
+        displayUnit: finalUnit,
+        movementType: adjustmentType
       }]);
     }
 
@@ -188,7 +191,8 @@ export default function CalibrationPage() {
         quantity: qty,
         unit: unit,
         note: drinkNoteInput || "Drink calibration",
-        displayUnit: unit
+        displayUnit: unit,
+        movementType: adjustmentType
       });
     });
 
@@ -204,7 +208,7 @@ export default function CalibrationPage() {
 
     const newList = [...adjustmentList];
     itemsToAdd.forEach(item => {
-      const existingIndex = newList.findIndex(existing => existing.ingredientId === item.ingredientId && existing.unitId === item.unitId);
+      const existingIndex = newList.findIndex(existing => existing.ingredientId === item.ingredientId && existing.unitId === item.unitId && existing.movementType === item.movementType);
       if (existingIndex > -1) {
         newList[existingIndex].quantity += item.quantity;
       } else {
@@ -220,8 +224,8 @@ export default function CalibrationPage() {
     toast({ title: "Added", description: `Added ${itemsToAdd.length} recipe ingredients to the list.` });
   };
 
-  const removeItem = (id: number, unitId?: number) => {
-    setAdjustmentList(adjustmentList.filter(item => !(item.ingredientId === id && item.unitId === unitId)));
+  const removeItem = (id: number, unitId?: number, movementType?: string) => {
+    setAdjustmentList(adjustmentList.filter(item => !(item.ingredientId === id && item.unitId === unitId && item.movementType === movementType)));
   };
 
   const handleSubmit = async () => {
@@ -234,16 +238,16 @@ export default function CalibrationPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             ingredientId: item.ingredientId,
-            movementType: "calibration",
+            movementType: item.movementType,
             quantity: item.quantity,
             unitId: item.unitId,
-            note: item.note || "Machine calibration/Recipe testing"
+            note: item.note || (item.movementType === "calibration" ? "Machine calibration" : "Recipe testing")
           }),
         });
         if (!res.ok) throw new Error(`Failed to adjust ${item.name}`);
       }
 
-      toast({ title: "Success", description: "Stock updated successfully for calibration." });
+      toast({ title: "Success", description: "Stock updated successfully." });
       setAdjustmentList([]);
       queryClient.invalidateQueries({ queryKey: ["/api/ingredients"] });
     } catch (error: any) {
@@ -407,6 +411,18 @@ export default function CalibrationPage() {
                             onChange={(e) => setNoteInput(e.target.value)}
                           />
                         </div>
+                        <div className="w-full md:w-[160px] md:shrink-0 space-y-2">
+                          <Label className="text-[10px] font-black uppercase tracking-widest text-primary ml-1">Deduction Type</Label>
+                          <Select value={adjustmentType} onValueChange={(val: "calibration" | "testing") => setAdjustmentType(val)}>
+                            <SelectTrigger className="h-14 font-bold border-primary/20 bg-background">
+                              <SelectValue placeholder="Type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="calibration" className="font-bold">Calibration</SelectItem>
+                              <SelectItem value="testing" className="font-bold">Testing</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
                         <Button 
                           onClick={addItem}
                           className="w-full md:w-auto h-14 px-8 font-black uppercase tracking-widest rounded-xl shadow-lg shadow-primary/20"
@@ -521,6 +537,18 @@ export default function CalibrationPage() {
                                 onChange={(e) => setDrinkNoteInput(e.target.value)}
                               />
                             </div>
+                            <div className="w-full md:w-[160px] md:shrink-0 space-y-2">
+                              <Label className="text-[10px] font-black uppercase tracking-widest text-primary ml-1">Deduction Type</Label>
+                              <Select value={adjustmentType} onValueChange={(val: "calibration" | "testing") => setAdjustmentType(val)}>
+                                <SelectTrigger className="h-14 font-bold border-primary/20 bg-background">
+                                  <SelectValue placeholder="Type" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="calibration" className="font-bold">Calibration</SelectItem>
+                                  <SelectItem value="testing" className="font-bold">Testing</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
                             <Button 
                               onClick={addDrinkIngredients}
                               className="h-14 px-8 font-black uppercase tracking-widest rounded-xl shadow-lg shadow-primary/20"
@@ -595,9 +623,21 @@ export default function CalibrationPage() {
                 ) : (
                   <div className="space-y-3">
                     {adjustmentList.map((item) => (
-                      <div key={item.ingredientId} className="group p-4 rounded-2xl bg-muted/30 border border-transparent hover:border-primary/20 hover:bg-background transition-all flex items-center justify-between">
+                      <div key={`${item.ingredientId}-${item.unitId || "base"}-${item.movementType}`} className="group p-4 rounded-2xl bg-muted/30 border border-transparent hover:border-primary/20 hover:bg-background transition-all flex items-center justify-between">
                         <div>
-                          <div className="font-black text-sm">{item.name}</div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-black text-sm">{item.name}</span>
+                            <Badge 
+                              variant="outline" 
+                              className={`text-[9px] font-black uppercase py-0.5 px-1.5 rounded-full ${
+                                item.movementType === "calibration" 
+                                  ? "border-amber-500 text-amber-600 bg-amber-50" 
+                                  : "border-cyan-500 text-cyan-600 bg-cyan-50"
+                              }`}
+                            >
+                              {item.movementType === "calibration" ? "Calib" : "Test"}
+                            </Badge>
+                          </div>
                           {item.note && <div className="text-[10px] text-muted-foreground italic truncate max-w-[200px]">{item.note}</div>}
                           <div className="text-lg font-black text-primary">-{item.quantity} <span className="text-xs uppercase text-muted-foreground">{item.displayUnit}</span></div>
                         </div>
@@ -605,7 +645,7 @@ export default function CalibrationPage() {
                           variant="ghost" 
                           size="icon" 
                           className="h-8 w-8 text-destructive"
-                          onClick={() => removeItem(item.ingredientId, item.unitId)}
+                          onClick={() => removeItem(item.ingredientId, item.unitId, item.movementType)}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -618,7 +658,7 @@ export default function CalibrationPage() {
               <div className="p-6 bg-muted/30 border-t space-y-4">
                 <div className="flex items-center gap-3 p-4 rounded-xl bg-amber-500/5 text-amber-600 border border-amber-500/20 text-xs font-bold leading-relaxed">
                   <Info className="h-5 w-5 shrink-0" />
-                  These adjustments will be recorded as 'Calibration' in the ledger and will NOT affect revenue.
+                  These adjustments will be recorded as 'Calibration' or 'Testing' in the ledger and will NOT affect revenue.
                 </div>
                 <Button 
                   className="w-full h-16 text-lg font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-primary/30 glow-primary"

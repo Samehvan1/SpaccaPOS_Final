@@ -36,7 +36,7 @@ export default function OperationalDeductionsReport() {
       const params = new URLSearchParams({ startDate, endDate });
       if (selectedBranch !== "all") params.append("branchId", selectedBranch);
       
-      const typeParam = selectedType === "all" ? "calibration,waste" : selectedType;
+      const typeParam = selectedType === "all" ? "calibration,testing,waste" : selectedType;
       params.append("movementType", typeParam);
       
       const [moveData, branchData] = await Promise.all([
@@ -142,7 +142,8 @@ export default function OperationalDeductionsReport() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all" className="font-bold">All Deductions</SelectItem>
-                  <SelectItem value="calibration" className="font-bold">Calibration & Testing</SelectItem>
+                  <SelectItem value="calibration" className="font-bold">Calibration</SelectItem>
+                  <SelectItem value="testing" className="font-bold">Testing</SelectItem>
                   <SelectItem value="waste" className="font-bold">Wastage</SelectItem>
                 </SelectContent>
               </Select>
@@ -226,10 +227,24 @@ export default function OperationalDeductionsReport() {
                       <div className="text-[10px] text-muted-foreground uppercase font-bold">Stock Item #{m.ingredientId}</div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={m.movementType === "calibration" ? "outline" : "destructive"} className={`capitalize font-black text-[10px] py-1 px-3 rounded-full ${m.movementType === "calibration" ? "border-amber-500 text-amber-600 bg-amber-50" : ""}`}>
-                        {m.movementType === "calibration" ? <Beaker className="mr-1.5 h-3 w-3" /> : <Trash className="mr-1.5 h-3 w-3" />}
-                        {m.movementType === "calibration" ? "Calibration" : "Wastage"}
-                      </Badge>
+                      {m.movementType === "calibration" && (
+                        <Badge variant="outline" className="capitalize font-black text-[10px] py-1 px-3 rounded-full border-amber-500 text-amber-600 bg-amber-50">
+                          <Beaker className="mr-1.5 h-3 w-3" />
+                          Calibration
+                        </Badge>
+                      )}
+                      {m.movementType === "testing" && (
+                        <Badge variant="outline" className="capitalize font-black text-[10px] py-1 px-3 rounded-full border-cyan-500 text-cyan-600 bg-cyan-50">
+                          <Beaker className="mr-1.5 h-3 w-3" />
+                          Testing
+                        </Badge>
+                      )}
+                      {m.movementType === "waste" && (
+                        <Badge variant="destructive" className="capitalize font-black text-[10px] py-1 px-3 rounded-full">
+                          <Trash className="mr-1.5 h-3 w-3" />
+                          Wastage
+                        </Badge>
+                      )}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="text-lg font-black text-destructive">-{m.quantity}</div>

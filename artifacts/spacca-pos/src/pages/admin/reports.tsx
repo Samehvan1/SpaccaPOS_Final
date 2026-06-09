@@ -19,7 +19,7 @@ import { Switch } from "@/components/ui/switch";
 import { 
   ArrowLeft, BarChart2, TrendingUp, Coffee, Receipt, 
   Banknote, Medal, Calendar, ChevronLeft, ChevronRight,
-  Download, Tag, CheckCircle2, XCircle, FileText, Layers, Clock, Loader2
+  Download, Tag, CheckCircle2, XCircle, FileText, Layers, Clock, Loader2, User
 } from "lucide-react";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
@@ -1548,7 +1548,7 @@ export default function ReportsPage() {
           </DialogHeader>
           
           <div className="space-y-6 py-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="bg-muted/30 p-3 rounded-lg border">
                 <p className="text-[10px] uppercase font-bold text-muted-foreground mb-1">Status & Payment</p>
                  <div className="flex flex-wrap items-center gap-2">
@@ -1556,6 +1556,20 @@ export default function ReportsPage() {
                     <Badge variant="outline" className="capitalize bg-primary/5">{selectedOrderDetails?.paymentMethod}</Badge>
                     <Badge variant="outline" className="capitalize border-primary/20 text-primary">{selectedOrderDetails?.source || "POS"}</Badge>
                  </div>
+              </div>
+              <div className="bg-muted/30 p-3 rounded-lg border">
+                <p className="text-[10px] uppercase font-bold text-muted-foreground mb-1">Customer</p>
+                <div className="flex items-center gap-2">
+                   <User className="h-4 w-4 text-primary" />
+                   <span className="text-sm font-bold truncate">
+                     {selectedOrderDetails?.customerName || "Walk-in Guest"}
+                     {selectedOrderDetails?.customerPhone && (
+                       <span className="text-xs text-muted-foreground font-normal ml-1 block md:inline">
+                         ({selectedOrderDetails.customerPhone})
+                       </span>
+                     )}
+                   </span>
+                </div>
               </div>
               <div className="bg-muted/30 p-3 rounded-lg border">
                 <p className="text-[10px] uppercase font-bold text-muted-foreground mb-1">Completion Duration</p>

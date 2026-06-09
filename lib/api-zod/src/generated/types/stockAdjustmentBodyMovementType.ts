@@ -14,4 +14,5 @@ export const StockAdjustmentBodyMovementType = {
   waste: "waste",
   opening: "opening",
   calibration: "calibration",
+  testing: "testing",
 } as const;

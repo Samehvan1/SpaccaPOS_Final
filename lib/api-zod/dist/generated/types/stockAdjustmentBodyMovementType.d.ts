@@ -11,5 +11,6 @@ export declare const StockAdjustmentBodyMovementType: {
     readonly waste: "waste";
     readonly opening: "opening";
     readonly calibration: "calibration";
+    readonly testing: "testing";
 };
 //# sourceMappingURL=stockAdjustmentBodyMovementType.d.ts.map

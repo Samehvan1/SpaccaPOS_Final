@@ -1028,6 +1028,7 @@ export const ListStockMovementsResponseItem = zod.object({
     "waste",
     "opening",
     "calibration",
+    "testing",
   ]),
   quantity: zod.number(),
   quantityAfter: zod.number(),
@@ -1045,7 +1046,13 @@ export const ListStockMovementsResponse = zod.array(
  */
 export const CreateStockAdjustmentBody = zod.object({
   ingredientId: zod.number(),
-  movementType: zod.enum(["adjustment", "waste", "opening", "calibration"]),
+  movementType: zod.enum([
+    "adjustment",
+    "waste",
+    "opening",
+    "calibration",
+    "testing",
+  ]),
   quantity: zod.number(),
   unitId: zod.number().nullish(),
   note: zod.string().optional(),

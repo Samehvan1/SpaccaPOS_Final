@@ -595,6 +595,7 @@ export const StockMovementMovementType = {
   waste: "waste",
   opening: "opening",
   calibration: "calibration",
+  testing: "testing",
 } as const;
 
 export interface StockMovement {
@@ -628,6 +629,7 @@ export const StockAdjustmentBodyMovementType = {
   waste: "waste",
   opening: "opening",
   calibration: "calibration",
+  testing: "testing",
 } as const;
 
 export interface StockAdjustmentBody {
