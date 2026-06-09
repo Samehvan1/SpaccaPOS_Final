@@ -174,7 +174,7 @@ export default function SalesAnalysisPage() {
           grossPrice.toFixed(2),
           netPrice.toFixed(2),
           taxValue.toFixed(2),
-          (o as any).discountCode || "-",
+          o.paymentMethod === "hospitality" ? "HOSPITALITY" : ((o as any).discountCode || "-"),
           (o as any).discountValue ? ((o as any).discountType === 'percentage' ? `${(o as any).discountValue}%` : (o as any).discountValue.toFixed(2)) : "0",
           discountAmount.toFixed(2),
           finalPrice.toFixed(2),

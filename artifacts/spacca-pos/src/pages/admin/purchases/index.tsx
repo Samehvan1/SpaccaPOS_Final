@@ -847,11 +847,11 @@ export default function PurchasesAdmin() {
                 </Button>
               </div>
 
-              <div className="rounded-lg border border-primary/10 overflow-hidden bg-background/30">
-                <Table>
+              <div className="rounded-lg border border-primary/10 bg-background/30 overflow-visible">
+                <Table className="overflow-visible">
                   <TableHeader className="bg-primary/5">
-                    <TableRow className="hover:bg-transparent border-primary/10">
-                      <TableHead className="font-bold text-foreground">Ingredient</TableHead>
+                    <TableRow className="hover:bg-transparent border-primary/10 overflow-visible">
+                      <TableHead className="font-bold text-foreground min-w-[250px]">Ingredient</TableHead>
                       <TableHead className="font-bold text-foreground w-[180px]">Purchasing Unit</TableHead>
                       <TableHead className="font-bold text-foreground w-[120px]">Qty Ordered</TableHead>
                       <TableHead className="font-bold text-foreground w-[130px]">Unit Price (EGP)</TableHead>

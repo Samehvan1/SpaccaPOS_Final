@@ -634,7 +634,10 @@ export default function CashierPage() {
                                   {((order as any).discountCode) && ((order as any).discount as any) > 0 && (
                                     <div className="text-[10px] font-bold text-amber-400 flex items-center justify-end gap-1 mt-0.5">
                                       <Tag className="h-2.5 w-2.5" />
-                                      {(order as any).discountCode} ({(order as any).discountType === 'percentage' ? `${(order as any).discountValue}%` : fmt(Number((order as any).discountValue))})
+                                      {(order as any).discountCode}
+                                      {(order as any).discountValue && (
+                                        <> ({(order as any).discountType === 'percentage' ? `${(order as any).discountValue}%` : fmt(Number((order as any).discountValue))})</>
+                                      )}
                                     </div>
                                   )}
                                   <div className="flex flex-wrap gap-1 justify-end mt-1">

@@ -285,7 +285,7 @@ export default function ReportsPage() {
         totalPrice.toFixed(2),
         beforeTax.toFixed(2),
         taxAmount.toFixed(2),
-        (order as any).discountCode || "None",
+        order.paymentMethod === "hospitality" ? "HOSPITALITY" : ((order as any).discountCode || "None"),
         (order as any).discountValue ? ((order as any).discountType === "percentage" ? `${(order as any).discountValue}%` : `EGP ${(order as any).discountValue}`) : "0",
         discountAmt.toFixed(2),
         finalPrice.toFixed(2),
@@ -940,11 +940,11 @@ export default function ReportsPage() {
                                <TableCell className="font-mono font-bold">#{order.orderNumber}</TableCell>
                                <TableCell className="text-center">{(order.items || []).length}</TableCell>
                                <TableCell>
-                                 {(order as any).discountId ? (
-                                   <Badge variant="outline" className="font-mono text-[10px] bg-primary/5">
-                                     {(order as any).discountCode || `ID:${(order as any).discountId}`}
-                                   </Badge>
-                                 ) : <span className="text-muted-foreground text-xs">—</span>}
+                                 {(order as any).discountId || (order as any).discountCode || order.paymentMethod === "hospitality" ? (
+                                    <Badge variant="outline" className="font-mono text-[10px] bg-primary/5">
+                                      {order.paymentMethod === "hospitality" ? "HOSPITALITY" : ((order as any).discountCode || `ID:${(order as any).discountId}`)}
+                                    </Badge>
+                                  ) : <span className="text-muted-foreground text-xs">—</span>}
                                </TableCell>
                               <TableCell className="text-right">{pure(totalPrice)}</TableCell>
                               <TableCell className="text-right">{pure(beforeTax)}</TableCell>
