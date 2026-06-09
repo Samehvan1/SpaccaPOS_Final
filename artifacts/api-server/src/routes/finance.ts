@@ -587,6 +587,13 @@ router.get("/finance/sales-summary", requirePermission("reports:view"), async (r
       discounts: sum(ordersTable.discount),
       netRevenue: sum(ordersTable.total),
       count: count(ordersTable.id),
+      hospitalityRevenue: sql<string>`coalesce(sum(case when ${ordersTable.paymentMethod} = 'hospitality' then cast(${ordersTable.subtotal} as numeric) else 0 end), 0)`,
+      hospitalityNetRevenue: sql<string>`coalesce(sum(case when ${ordersTable.paymentMethod} = 'hospitality' then cast(${ordersTable.total} as numeric) else 0 end), 0)`,
+      hospitalityCount: sql<string>`coalesce(count(case when ${ordersTable.paymentMethod} = 'hospitality' then 1 else null end), 0)`,
+      staffRevenue: sql<string>`coalesce(sum(case when ${ordersTable.discountCode} = 'STAFF' then cast(${ordersTable.subtotal} as numeric) else 0 end), 0)`,
+      staffNetRevenue: sql<string>`coalesce(sum(case when ${ordersTable.discountCode} = 'STAFF' then cast(${ordersTable.total} as numeric) else 0 end), 0)`,
+      staffCount: sql<string>`coalesce(count(case when ${ordersTable.discountCode} = 'STAFF' then 1 else null end), 0)`,
+      zeroRevenueCount: sql<string>`coalesce(count(case when cast(${ordersTable.total} as numeric) = 0 then 1 else null end), 0)`,
     })
     .from(ordersTable)
     .where(and(...conditions));
@@ -603,6 +610,13 @@ router.get("/finance/sales-summary", requirePermission("reports:view"), async (r
     netRevenue: parseFloat(summary.netRevenue || "0"),
     count: Number(summary.count || 0),
     drinks: Number(itemsResult[0]?.totalDrinks || 0),
+    hospitalityRevenue: parseFloat(summary.hospitalityRevenue || "0"),
+    hospitalityNetRevenue: parseFloat(summary.hospitalityNetRevenue || "0"),
+    hospitalityCount: Number(summary.hospitalityCount || 0),
+    staffRevenue: parseFloat(summary.staffRevenue || "0"),
+    staffNetRevenue: parseFloat(summary.staffNetRevenue || "0"),
+    staffCount: Number(summary.staffCount || 0),
+    zeroRevenueCount: Number(summary.zeroRevenueCount || 0),
   });
 });
 

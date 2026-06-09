@@ -456,13 +456,16 @@ export default function ReportsPage() {
 
             {/* Shared Totals Banner */}
             {activeTab !== "stats" && (
-              <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {[
                   { label: "Range Revenue", value: fmt(rangeSummary?.revenue || 0), icon: Banknote, loading: loadingRangeSummary },
                   { label: "Range Net Rev", value: fmt(rangeSummary?.netRevenue || 0), icon: TrendingUp, loading: loadingRangeSummary },
                   { label: "Range Orders", value: rangeSummary?.count || 0, icon: Receipt, loading: loadingRangeSummary },
                   { label: "Range Drinks", value: rangeSummary?.drinks || 0, icon: Coffee, loading: loadingRangeSummary },
                   { label: "Range Discounts", value: fmt(rangeSummary?.discounts || 0), icon: Tag, loading: loadingRangeSummary },
+                  { label: "Range Hospitality", value: `${fmt(rangeSummary?.hospitalityRevenue || 0)} (${rangeSummary?.hospitalityCount || 0} ord)`, icon: Medal, loading: loadingRangeSummary },
+                  { label: "Range Staff", value: `${fmt(rangeSummary?.staffRevenue || 0)} (${rangeSummary?.staffCount || 0} ord)`, icon: User, loading: loadingRangeSummary },
+                  { label: "Zero Revenue", value: `${rangeSummary?.zeroRevenueCount || 0} orders`, icon: XCircle, loading: loadingRangeSummary },
                 ].map((stat, i) => (
                   <Card key={i} className="border-none shadow-md bg-card/40 backdrop-blur-sm">
                     <CardContent className="p-4 flex items-center gap-4">
@@ -474,7 +477,7 @@ export default function ReportsPage() {
                         {stat.loading ? (
                           <div className="h-6 w-16 bg-muted animate-pulse rounded mt-1" />
                         ) : (
-                          <p className="text-lg font-bold">{stat.value}</p>
+                          <p className="text-sm lg:text-base font-bold whitespace-nowrap">{stat.value}</p>
                         )}
                       </div>
                     </CardContent>
