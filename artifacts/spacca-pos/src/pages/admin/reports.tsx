@@ -139,7 +139,7 @@ export default function ReportsPage() {
   const dashAvgOrder = dashTotalOrders > 0 ? dashTotalRevenue / dashTotalOrders : 0;
 
   // Sales Report Tab Data
-  const [reportStartDate, setReportStartDate] = useState(format(subDays(new Date(), 30), "yyyy-MM-dd"));
+  const [reportStartDate, setReportStartDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [reportEndDate, setReportEndDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [reportPage, setReportPage] = useState(1);
   const rowsPerPage = 50;
@@ -463,9 +463,27 @@ export default function ReportsPage() {
                   { label: "Range Orders", value: rangeSummary?.count || 0, icon: Receipt, loading: loadingRangeSummary },
                   { label: "Range Drinks", value: rangeSummary?.drinks || 0, icon: Coffee, loading: loadingRangeSummary },
                   { label: "Range Discounts", value: fmt(rangeSummary?.discounts || 0), icon: Tag, loading: loadingRangeSummary },
-                  { label: "Range Hospitality", value: `${fmt(rangeSummary?.hospitalityRevenue || 0)} (${rangeSummary?.hospitalityCount || 0} ord)`, icon: Medal, loading: loadingRangeSummary },
-                  { label: "Range Staff", value: `${fmt(rangeSummary?.staffRevenue || 0)} (${rangeSummary?.staffCount || 0} ord)`, icon: User, loading: loadingRangeSummary },
-                  { label: "Zero Revenue", value: `${fmt(rangeSummary?.zeroRevenueRevenue || 0)} (${rangeSummary?.zeroRevenueCount || 0} ord)`, icon: XCircle, loading: loadingRangeSummary },
+                  { 
+                    label: "Range Hospitality", 
+                    value: `${fmt(rangeSummary?.hospitalityRevenue || 0)} (${rangeSummary?.hospitalityCount || 0} ord)`, 
+                    desc: rangeSummary?.revenue > 0 ? `${((rangeSummary.hospitalityRevenue / rangeSummary.revenue) * 100).toFixed(1)}% of gross` : "0.0% of gross",
+                    icon: Medal, 
+                    loading: loadingRangeSummary 
+                  },
+                  { 
+                    label: "Range Staff", 
+                    value: `${fmt(rangeSummary?.staffRevenue || 0)} (${rangeSummary?.staffCount || 0} ord)`, 
+                    desc: rangeSummary?.revenue > 0 ? `${((rangeSummary.staffRevenue / rangeSummary.revenue) * 100).toFixed(1)}% of gross` : "0.0% of gross",
+                    icon: User, 
+                    loading: loadingRangeSummary 
+                  },
+                  { 
+                    label: "Zero Revenue", 
+                    value: `${fmt(rangeSummary?.zeroRevenueRevenue || 0)} (${rangeSummary?.zeroRevenueCount || 0} ord)`, 
+                    desc: rangeSummary?.revenue > 0 ? `${((rangeSummary.zeroRevenueRevenue / rangeSummary.revenue) * 100).toFixed(1)}% of gross` : "0.0% of gross",
+                    icon: XCircle, 
+                    loading: loadingRangeSummary 
+                  },
                 ].map((stat, i) => (
                   <Card key={i} className="border-none shadow-md bg-card/40 backdrop-blur-sm">
                     <CardContent className="p-4 flex items-center gap-4">
@@ -477,7 +495,12 @@ export default function ReportsPage() {
                         {stat.loading ? (
                           <div className="h-6 w-16 bg-muted animate-pulse rounded mt-1" />
                         ) : (
-                          <p className="text-sm lg:text-base font-bold whitespace-nowrap">{stat.value}</p>
+                          <>
+                            <p className="text-sm lg:text-base font-bold whitespace-nowrap">{stat.value}</p>
+                            {(stat as any).desc && (
+                              <p className="text-[10px] text-muted-foreground mt-0.5 font-bold uppercase tracking-tight">{(stat as any).desc}</p>
+                            )}
+                          </>
                         )}
                       </div>
                     </CardContent>
