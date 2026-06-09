@@ -1012,7 +1012,7 @@ router.get("/drinks/:id/stock-usage", requirePermission("catalog:view"), async (
     // Track unique ingredient IDs for this slot to avoid duplicates
     const seenIngredients = new Set<number>();
 
-    const addUsage = (ing: any, type: string, label: string, qty: number) => {
+    const addUsage = (ing: any, type: string, label: string, qty: number, isDefault = false) => {
       console.log(`[DEBUG-TRACE]   !!! MATCH FOUND !!! -> ${ing.name} via ${type} (qty: ${qty})`);
       if (seenIngredients.has(ing.id)) return;
       seenIngredients.add(ing.id);
@@ -1022,14 +1022,15 @@ router.get("/drinks/:id/stock-usage", requirePermission("catalog:view"), async (
         ingredientId: ing.id,
         ingredientName: ing.name,
         unit: ing.unit,
-        qty: qty
+        qty: qty,
+        isDefault
       });
     };
 
     // A. Direct Ingredient (Legacy)
     if (slot.ingredientId) {
       const [ing] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, slot.ingredientId));
-      if (ing) addUsage(ing, "legacy", slot.slotLabel, 0);
+      if (ing) addUsage(ing, "legacy", slot.slotLabel, 0, true);
     }
 
     // A2. Default Option (Legacy)
@@ -1037,7 +1038,7 @@ router.get("/drinks/:id/stock-usage", requirePermission("catalog:view"), async (
       const [opt] = await db.select().from(ingredientOptionsTable).where(eq(ingredientOptionsTable.id, (slot as any).defaultOptionId));
       if (opt) {
         const [ing] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, opt.ingredientId));
-        if (ing) addUsage(ing, "legacy-option", slot.slotLabel, Number(opt.processedQty || 0));
+        if (ing) addUsage(ing, "legacy-option", slot.slotLabel, Number(opt.processedQty || 0), true);
       }
     }
 
@@ -1046,7 +1047,7 @@ router.get("/drinks/:id/stock-usage", requirePermission("catalog:view"), async (
       const [ingType] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, slot.ingredientTypeId));
       if (ingType?.inventoryIngredientId) {
         const [ing] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, ingType.inventoryIngredientId));
-        if (ing) addUsage(ing, "typed-catalog", slot.slotLabel, Number(ingType.processedQty || 0));
+        if (ing) addUsage(ing, "typed-catalog", slot.slotLabel, Number(ingType.processedQty || 0), true);
       }
     }
 
@@ -1056,7 +1057,7 @@ router.get("/drinks/:id/stock-usage", requirePermission("catalog:view"), async (
       const [ingType] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, to.ingredientTypeId));
       if (ingType?.inventoryIngredientId) {
         const [ing] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, ingType.inventoryIngredientId));
-        if (ing) addUsage(ing, "typed-option", slot.slotLabel, Number(to.processedQty || ingType.processedQty || 0));
+        if (ing) addUsage(ing, "typed-option", slot.slotLabel, Number(to.processedQty || ingType.processedQty || 0), !!to.isDefault);
       }
     }
 
@@ -1068,7 +1069,7 @@ router.get("/drinks/:id/stock-usage", requirePermission("catalog:view"), async (
         const [ingType] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, typeVol.ingredientTypeId));
         if (ingType?.inventoryIngredientId) {
           const [ing] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, ingType.inventoryIngredientId));
-          if (ing) addUsage(ing, "typed-volume", slot.slotLabel, Number(sv.processedQty || typeVol.processedQty || 0));
+          if (ing) addUsage(ing, "typed-volume", slot.slotLabel, Number(sv.processedQty || typeVol.processedQty || 0), !!sv.isDefault);
         }
       }
     }
@@ -1080,7 +1081,7 @@ router.get("/drinks/:id/stock-usage", requirePermission("catalog:view"), async (
         const [ingType] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, tto.ingredientTypeId));
         if (ingType?.inventoryIngredientId) {
           const [ing] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, ingType.inventoryIngredientId));
-          if (ing) addUsage(ing, "typed-template", slot.slotLabel + " (Template)", Number(tto.processedQty || ingType.processedQty || 0));
+          if (ing) addUsage(ing, "typed-template", slot.slotLabel + " (Template)", Number(tto.processedQty || ingType.processedQty || 0), !!tto.isDefault);
         }
       }
 
@@ -1092,7 +1093,7 @@ router.get("/drinks/:id/stock-usage", requirePermission("catalog:view"), async (
           const [ingType] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, typeVol.ingredientTypeId));
           if (ingType?.inventoryIngredientId) {
             const [ing] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, ingType.inventoryIngredientId));
-            if (ing) addUsage(ing, "typed-template-vol", slot.slotLabel + " (Template)", Number(tv.processedQty || typeVol.processedQty || 0));
+            if (ing) addUsage(ing, "typed-template-vol", slot.slotLabel + " (Template)", Number(tv.processedQty || typeVol.processedQty || 0), !!tv.isDefault);
           }
         }
       }

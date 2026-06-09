@@ -94,7 +94,7 @@ export default function CalibrationPage() {
       const initialChecked: Record<number, boolean> = {};
       const initialQuantities: Record<number, string> = {};
       drinkUsage.forEach((item: any) => {
-        initialChecked[item.ingredientId] = true;
+        initialChecked[item.ingredientId] = !!item.isDefault;
         initialQuantities[item.ingredientId] = String(item.qty || 1);
       });
       setCheckedIngredients(initialChecked);
@@ -484,45 +484,75 @@ export default function CalibrationPage() {
                                 </TableRow>
                               </TableHeader>
                               <TableBody>
-                                {drinkUsage.map((item: any) => {
-                                  const isChecked = !!checkedIngredients[item.ingredientId];
+                                {(() => {
+                                  const renderItemRow = (item: any) => {
+                                    const isChecked = !!checkedIngredients[item.ingredientId];
+                                    return (
+                                      <TableRow key={item.ingredientId} className={isChecked ? "" : "opacity-50"}>
+                                        <TableCell className="text-center">
+                                          <Checkbox 
+                                            checked={isChecked} 
+                                            onCheckedChange={(checked) => {
+                                              setCheckedIngredients(prev => ({
+                                                ...prev,
+                                                [item.ingredientId]: !!checked
+                                              }));
+                                            }}
+                                          />
+                                        </TableCell>
+                                        <TableCell className="font-bold">
+                                          {item.ingredientName}
+                                          <div className="text-[9px] text-muted-foreground uppercase font-semibold">Role: {item.slotLabel}</div>
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                          <Input 
+                                            type="number" 
+                                            value={customQuantities[item.ingredientId] ?? ""} 
+                                            onChange={(e) => {
+                                              setCustomQuantities(prev => ({
+                                                ...prev,
+                                                [item.ingredientId]: e.target.value
+                                              }));
+                                            }}
+                                            disabled={!isChecked}
+                                            className="h-10 text-right font-black w-24 ml-auto"
+                                          />
+                                        </TableCell>
+                                        <TableCell className="text-left font-bold text-muted-foreground uppercase text-xs">
+                                          {item.unit}
+                                        </TableCell>
+                                      </TableRow>
+                                    );
+                                  };
+
+                                  const defaultUsage = drinkUsage.filter((item: any) => item.isDefault);
+                                  const otherUsage = drinkUsage.filter((item: any) => !item.isDefault);
+
                                   return (
-                                    <TableRow key={item.ingredientId} className={isChecked ? "" : "opacity-50"}>
-                                      <TableCell className="text-center">
-                                        <Checkbox 
-                                          checked={isChecked} 
-                                          onCheckedChange={(checked) => {
-                                            setCheckedIngredients(prev => ({
-                                              ...prev,
-                                              [item.ingredientId]: !!checked
-                                            }));
-                                          }}
-                                        />
-                                      </TableCell>
-                                      <TableCell className="font-bold">
-                                        {item.ingredientName}
-                                        <div className="text-[9px] text-muted-foreground uppercase font-semibold">Role: {item.slotLabel}</div>
-                                      </TableCell>
-                                      <TableCell className="text-right">
-                                        <Input 
-                                          type="number" 
-                                          value={customQuantities[item.ingredientId] ?? ""} 
-                                          onChange={(e) => {
-                                            setCustomQuantities(prev => ({
-                                              ...prev,
-                                              [item.ingredientId]: e.target.value
-                                            }));
-                                          }}
-                                          disabled={!isChecked}
-                                          className="h-10 text-right font-black w-24 ml-auto"
-                                        />
-                                      </TableCell>
-                                      <TableCell className="text-left font-bold text-muted-foreground uppercase text-xs">
-                                        {item.unit}
-                                      </TableCell>
-                                    </TableRow>
+                                    <>
+                                      {defaultUsage.length > 0 && (
+                                        <>
+                                          <TableRow className="bg-muted/10 hover:bg-transparent border-b">
+                                            <TableCell colSpan={4} className="py-2 pl-4 text-[10px] font-black uppercase tracking-widest text-primary">
+                                              Default (Standard) Options
+                                            </TableCell>
+                                          </TableRow>
+                                          {defaultUsage.map(renderItemRow)}
+                                        </>
+                                      )}
+                                      {otherUsage.length > 0 && (
+                                        <>
+                                          <TableRow className="bg-muted/10 hover:bg-transparent border-b">
+                                            <TableCell colSpan={4} className="py-2 pl-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                                              Other Options (Optional / Customizations)
+                                            </TableCell>
+                                          </TableRow>
+                                          {otherUsage.map(renderItemRow)}
+                                        </>
+                                      )}
+                                    </>
                                   );
-                                })}
+                                })()}
                               </TableBody>
                             </Table>
                           </div>

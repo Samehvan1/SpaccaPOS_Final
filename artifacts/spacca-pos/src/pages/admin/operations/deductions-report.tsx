@@ -247,7 +247,7 @@ export default function OperationalDeductionsReport() {
                       )}
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="text-lg font-black text-destructive">-{m.quantity}</div>
+                      <div className="text-lg font-black text-destructive">-{Math.abs(m.quantity)}</div>
                     </TableCell>
                     <TableCell>
                       <div className="font-black text-xs uppercase">{m.createdByName}</div>
