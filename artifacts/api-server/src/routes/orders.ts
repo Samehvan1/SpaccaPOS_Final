@@ -3,7 +3,19 @@ import { eq, and, inArray, gte, lte, sql, desc } from "drizzle-orm";
 import { serializeDates } from "../lib/serialize";
 
 function parseLocalDate(dateStr: any): Date {
-  if (!dateStr || typeof dateStr !== "string") return new Date();
+  if (!dateStr) return new Date();
+  if (dateStr instanceof Date) {
+    if (
+      dateStr.getUTCHours() === 0 &&
+      dateStr.getUTCMinutes() === 0 &&
+      dateStr.getUTCSeconds() === 0 &&
+      dateStr.getUTCMilliseconds() === 0
+    ) {
+      return new Date(dateStr.getUTCFullYear(), dateStr.getUTCMonth(), dateStr.getUTCDate());
+    }
+    return dateStr;
+  }
+  if (typeof dateStr !== "string") return new Date();
   const parts = dateStr.split("-");
   if (parts.length !== 3) return new Date(dateStr);
   const year = parseInt(parts[0], 10);

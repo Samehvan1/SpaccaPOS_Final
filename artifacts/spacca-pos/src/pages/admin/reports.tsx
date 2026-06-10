@@ -16,10 +16,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   ArrowLeft, BarChart2, TrendingUp, Coffee, Receipt, 
   Banknote, Medal, Calendar, ChevronLeft, ChevronRight,
-  Download, Tag, CheckCircle2, XCircle, FileText, Layers, Clock, Loader2, User
+  Download, Tag, CheckCircle2, XCircle, FileText, Layers, Clock, Loader2, User, Printer
 } from "lucide-react";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
@@ -141,13 +142,18 @@ export default function ReportsPage() {
   // Sales Report Tab Data
   const [reportStartDate, setReportStartDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [reportEndDate, setReportEndDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [reportStatus, setReportStatus] = useState<string>("active");
   const [reportPage, setReportPage] = useState(1);
   const rowsPerPage = 50;
 
   const { data: reportOrders, isLoading: loadingReportOrders } = useListOrders({
     startDate: reportStartDate,
     endDate: reportEndDate,
-    status: "pending,paid,completed,ready,in_progress", // Include pending to match summary cards
+    status: reportStatus === "active" 
+      ? "pending,paid,completed,ready,in_progress" 
+      : (reportStatus === "all" 
+          ? "pending,paid,completed,ready,in_progress,cancelled,refunded" 
+          : reportStatus),
     limit: rowsPerPage,
     offset: (reportPage - 1) * rowsPerPage,
     branchId: selectedBranchId
@@ -374,11 +380,11 @@ export default function ReportsPage() {
   };
 
   return (
-    <div className="p-8 w-full flex flex-col gap-6 overflow-y-auto h-full">
+    <div className="p-8 w-full flex flex-col gap-6 overflow-y-auto h-full print:p-0 print:overflow-visible print:h-auto print:gap-4">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" asChild>
+          <Button variant="ghost" size="icon" asChild className="print:hidden">
             <Link href="/admin"><ArrowLeft className="h-5 w-5" /></Link>
           </Button>
           <div>
@@ -393,13 +399,22 @@ export default function ReportsPage() {
                 )}
               </span>
             </h1>
-            <p className="text-muted-foreground mt-1">Sales performance and operational analytics.</p>
+            <p className="text-muted-foreground mt-1 print:hidden">Sales performance and operational analytics.</p>
           </div>
         </div>
+        {activeTab === "dashboard" && (
+          <Button
+            onClick={() => window.print()}
+            className="print:hidden gap-2 bg-primary/10 border-primary/30 text-primary hover:bg-primary hover:text-primary-foreground font-bold"
+            variant="outline"
+          >
+            <Printer className="h-4 w-4" /> Export PDF / Print
+          </Button>
+        )}
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-5 mb-8 h-12">
+        <TabsList className="grid w-full grid-cols-5 mb-8 h-12 print:hidden">
           <TabsTrigger value="dashboard" className="text-base font-semibold">Dashboard</TabsTrigger>
           <TabsTrigger value="sales" className="text-base font-semibold">Sales Report</TabsTrigger>
           <TabsTrigger value="drinks" className="text-base font-semibold">Drinks Report</TabsTrigger>
@@ -410,7 +425,7 @@ export default function ReportsPage() {
         {activeTab !== "dashboard" && (
           <div className="flex flex-col gap-6 mb-8 animate-in fade-in duration-500">
             {/* Shared Filters Banner */}
-            <Card className="bg-muted/30 border-primary/20 overflow-hidden">
+            <Card className="bg-muted/30 border-primary/20 overflow-hidden print:hidden">
               <CardContent className="p-6">
                 <div className="flex flex-col md:flex-row items-end gap-6">
                   <div className="grid gap-2 w-full md:w-auto">
@@ -436,6 +451,27 @@ export default function ReportsPage() {
                       onChange={e => { setReportEndDate(e.target.value); setReportPage(1); }}
                       className="bg-background w-full md:w-48"
                     />
+                  </div>
+                  <div className="grid gap-2 w-full md:w-auto">
+                    <Label htmlFor="status-filter" className="flex items-center gap-2 text-sm font-bold">
+                      <FileText className="h-4 w-4 text-primary" /> Status
+                    </Label>
+                    <Select value={reportStatus} onValueChange={(val) => { setReportStatus(val); setReportPage(1); }}>
+                      <SelectTrigger id="status-filter" className="bg-background w-full md:w-48">
+                        <SelectValue placeholder="All Active" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="active">All Active</SelectItem>
+                        <SelectItem value="all">All Statuses</SelectItem>
+                        <SelectItem value="pending">Pending</SelectItem>
+                        <SelectItem value="paid">Paid</SelectItem>
+                        <SelectItem value="in_progress">In Progress</SelectItem>
+                        <SelectItem value="ready">Ready</SelectItem>
+                        <SelectItem value="completed">Completed</SelectItem>
+                        <SelectItem value="cancelled">Cancelled</SelectItem>
+                        <SelectItem value="refunded">Refunded</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="md:ml-auto flex items-center gap-3 bg-background/50 px-4 py-2 rounded-xl border border-primary/10 shadow-sm">
                     {activeTab === "sales" && (
@@ -514,7 +550,7 @@ export default function ReportsPage() {
 
         <TabsContent value="dashboard" className="flex flex-col gap-6 animate-in fade-in duration-500">
           {/* Date Filters Banner */}
-          <Card className="bg-muted/30 border-primary/20 overflow-hidden">
+          <Card className="bg-muted/30 border-primary/20 overflow-hidden print:hidden">
             <CardContent className="p-6">
               <div className="flex flex-col md:flex-row items-end gap-6">
                 <div className="grid gap-2 w-full md:w-auto">

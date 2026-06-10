@@ -87676,6 +87676,13 @@ app.use(
   })
 );
 app.use("/uploads", import_express25.default.static("uploads"));
+app.use("/api", (req, res, next) => {
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
+  res.setHeader("Surrogate-Control", "no-store");
+  next();
+});
 app.use("/api", routes_default);
 app.use((err, req, res, next) => {
   req.log?.error(err, "Unhandled route error");
