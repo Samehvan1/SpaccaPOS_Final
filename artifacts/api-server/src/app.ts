@@ -66,6 +66,15 @@ app.use(
 // Serve uploaded images (drink photos, etc.)
 app.use("/uploads", express.static("uploads"));
 
+// Disable browser caching for all dynamic API endpoints to prevent stale data in browsers like Chrome
+app.use("/api", (req, res, next) => {
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
+  res.setHeader("Surrogate-Control", "no-store");
+  next();
+});
+
 app.use("/api", router);
 
 // Global error handling middleware
