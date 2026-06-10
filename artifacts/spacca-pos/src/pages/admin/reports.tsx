@@ -269,7 +269,7 @@ export default function ReportsPage() {
     if (!reportOrders || reportOrders.length === 0) return;
 
     const headers = [
-      "OrderID", "Date", "Time", "Order Number", "Customer Name", "Items Count", "Total Price (Gross)", "Before Tax (Net)", 
+      "OrderID", "Date", "Time", "Order Number", "Customer Name", "Items Count", "Drinks", "Total Price (Gross)", "Before Tax (Net)", 
       "Tax Amount", "Discount Name", "Discount Value", "Discount Amount", "Final Price", "Status", "Payment Method"
     ];
 
@@ -282,6 +282,10 @@ export default function ReportsPage() {
       const subtotalPrice = beforeTax - discountAmt;
       const finalPrice = subtotalPrice + taxAmount;
 
+      const drinksList = (order.items || [])
+        .map((item: any) => `${item.drinkName} (x${item.quantity})`)
+        .join("; ");
+
       return [
         order.id,
         order.createdAt ? format(new Date(order.createdAt), "yyyy-MM-dd") : "—",
@@ -289,6 +293,7 @@ export default function ReportsPage() {
         `#${order.orderNumber}`,
         order.customerName || "Walk-in Guest",
         (order.items || []).length,
+        drinksList,
         totalPrice.toFixed(2),
         beforeTax.toFixed(2),
         taxAmount.toFixed(2),
@@ -321,7 +326,7 @@ export default function ReportsPage() {
     }, { totalPrice: 0, beforeTax: 0, taxAmount: 0, discountAmt: 0, subtotalPrice: 0, finalPrice: 0, itemsCount: 0 });
 
     const totalRow = [
-      "TOTALS", "", "", "", "", totals.itemsCount, totals.totalPrice.toFixed(2), totals.beforeTax.toFixed(2),
+      "TOTALS", "", "", "", "", totals.itemsCount, "", totals.totalPrice.toFixed(2), totals.beforeTax.toFixed(2),
       totals.taxAmount.toFixed(2), "", "", totals.discountAmt.toFixed(2), totals.finalPrice.toFixed(2), "", ""
     ].map(v => `"${v}"`).join(",");
 
