@@ -134,6 +134,21 @@ export default function ReportsPage() {
     branchId: selectedBranchId
   } as any);
 
+  // Dashboard Range Summary Query (For Range Discount and Range Net)
+  const { data: dashRangeSummary, isLoading: loadingDashRangeSummary } = useQuery({
+    queryKey: ["sales-range-summary-dash", dashStartDate, dashEndDate, selectedBranchId],
+    queryFn: async () => {
+      const url = new URL(`${API_BASE}/finance/sales-summary`, window.location.origin);
+      url.searchParams.set("startDate", dashStartDate);
+      url.searchParams.set("endDate", dashEndDate);
+      if (selectedBranchId) url.searchParams.set("branchId", String(selectedBranchId));
+      
+      const res = await fetch(url.toString());
+      if (!res.ok) throw new Error("Failed to fetch range summary");
+      return res.json();
+    },
+  });
+
   const dashTotalRevenue = dashboardCategorySales?.reduce((s, c) => s + c.totalRevenue, 0) ?? 0;
   const dashTotalOrders = dashboardCategorySales?.reduce((s, c) => s + c.totalOrders, 0) ?? 0;
   const dashTotalDrinks = dashboardCategorySales?.reduce((s, c) => s + c.totalDrinks, 0) ?? 0;
@@ -612,7 +627,7 @@ export default function ReportsPage() {
           </Card>
 
           {/* Summary KPI cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             {[
               {
                 label: "Revenue", value: fmt(dashTotalRevenue), icon: Banknote,
@@ -629,6 +644,14 @@ export default function ReportsPage() {
               {
                 label: "Avg Order", value: fmt(dashAvgOrder), icon: TrendingUp,
                 sub: `Today avg: ${fmt(summary?.averageOrderValue ?? 0)}`, loading: loadingDashboardCategory
+              },
+              {
+                label: "Range Discount", value: fmt(dashRangeSummary?.discounts ?? 0), icon: Tag,
+                sub: `For selected period`, loading: loadingDashRangeSummary
+              },
+              {
+                label: "Range Net", value: fmt(dashRangeSummary?.netRevenue ?? 0), icon: TrendingUp,
+                sub: `For selected period`, loading: loadingDashRangeSummary
               },
             ].map(({ label, value, icon: Icon, sub, loading }) => (
               <Card key={label}>
@@ -747,6 +770,27 @@ export default function ReportsPage() {
                         <div className="font-bold text-primary shrink-0">{fmt(drink.totalRevenue)}</div>
                       </div>
                     ))}
+                    
+                    {topDrinks && topDrinks.length > 0 && (
+                      <div className="flex justify-center gap-x-4 gap-y-2 pt-4 mt-2 border-t text-[11px] text-muted-foreground flex-wrap">
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-2.5 h-2.5 rounded-full bg-yellow-400 block shrink-0" />
+                          <span>1st (Gold)</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-2.5 h-2.5 rounded-full bg-gray-300 block shrink-0" />
+                          <span>2nd (Silver)</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-2.5 h-2.5 rounded-full bg-amber-600 block shrink-0" />
+                          <span>3rd (Bronze)</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-2.5 h-2.5 rounded-full bg-muted block shrink-0" />
+                          <span>Other Ranks</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </CardContent>
