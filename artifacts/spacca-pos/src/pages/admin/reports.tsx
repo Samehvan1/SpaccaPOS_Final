@@ -664,7 +664,7 @@ export default function ReportsPage() {
                     <div className="h-8 bg-muted animate-pulse rounded" />
                   ) : (
                     <>
-                      <div className="text-3xl font-bold">{value}</div>
+                      <div className="text-2xl font-bold whitespace-nowrap">{value}</div>
                       <p className="text-xs text-muted-foreground mt-1">{sub}</p>
                     </>
                   )}
