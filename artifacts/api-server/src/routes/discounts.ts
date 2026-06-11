@@ -11,7 +11,7 @@ import {
 
 const router: IRouter = Router();
 
-router.get("/discounts", requirePermission("discounts:manage"), async (req, res): Promise<void> => {
+router.get("/discounts", requirePermission("discounts:view"), async (req, res): Promise<void> => {
   const discounts = await db.select().from(discountsTable);
   res.json(
     discounts.map((d) => ({
