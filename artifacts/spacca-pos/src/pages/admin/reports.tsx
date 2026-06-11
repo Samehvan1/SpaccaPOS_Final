@@ -358,45 +358,110 @@ export default function ReportsPage() {
   };
 
   const handleExportDrinksCSV = () => {
-    if (!drinkItems || drinkItems.length === 0) return;
+    if (drinksView === "grouped") {
+      if (!groupedDrinkItems || groupedDrinkItems.length === 0) return;
 
-    const headers = [
-      "Drink Name", "Type", "Order #", "Original (Gross)", "Before Tax", "Tax", "Discount", "After Disc.", "Final Price"
-    ];
-
-    const rows = drinkItems.map((item: any) => {
-      const itemGross = item.lineTotal;
-      const itemNet = itemGross / 1.14;
-      const itemTax = itemGross - itemNet;
-      const orderBeforeTax = item.orderSubtotal / 1.14;
-      const discountRatio = orderBeforeTax > 0 ? item.orderDiscount / orderBeforeTax : 0;
-      const itemDiscountAmt = itemNet * discountRatio;
-      const itemAfterDiscount = itemNet - itemDiscountAmt;
-      const itemFinalPrice = itemAfterDiscount + itemTax;
-
-      return [
+      const headers = ["Drink Name", "Type", "Quantity", "Revenue"];
+      const rows = groupedDrinkItems.map((item) => [
         item.drinkName,
         item.isCustomized ? "Customized" : "Standard",
-        `#${item.orderNumber}`,
-        itemGross.toFixed(2),
-        itemNet.toFixed(2),
-        itemTax.toFixed(2),
-        itemDiscountAmt.toFixed(2),
-        itemAfterDiscount.toFixed(2),
-        itemFinalPrice.toFixed(2)
-      ].map(v => `"${v}"`).join(",");
-    });
+        item.quantity,
+        item.revenue.toFixed(2)
+      ].map(v => `"${v}"`).join(","));
 
-    const csvContent = [headers.join(","), ...rows].join("\n");
-    const blob = new Blob(["\ufeff", csvContent], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute("download", `drinks_report_${reportStartDate}_to_${reportEndDate}.csv`);
-    link.style.visibility = "hidden";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+      // Calculate totals for grouped drinks
+      const totalQuantity = groupedDrinkItems.reduce((acc, item) => acc + item.quantity, 0);
+      const totalRevenue = groupedDrinkItems.reduce((acc, item) => acc + item.revenue, 0);
+      const totalRow = [
+        "TOTALS",
+        "",
+        totalQuantity,
+        totalRevenue.toFixed(2)
+      ].map(v => `"${v}"`).join(",");
+
+      const csvContent = [headers.join(","), ...rows, totalRow].join("\n");
+      const blob = new Blob(["\ufeff", csvContent], { type: "text/csv;charset=utf-8;" });
+      const link = document.createElement("a");
+      const url = URL.createObjectURL(blob);
+      link.setAttribute("href", url);
+      link.setAttribute("download", `grouped_drinks_report_${reportStartDate}_to_${reportEndDate}.csv`);
+      link.style.visibility = "hidden";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } else {
+      if (!drinkItems || drinkItems.length === 0) return;
+
+      const headers = [
+        "Drink Name", "Type", "Order #", "Original (Gross)", "Before Tax", "Tax", "Discount", "After Disc.", "Final Price"
+      ];
+
+      const rows = drinkItems.map((item: any) => {
+        const itemGross = item.lineTotal;
+        const itemNet = itemGross / 1.14;
+        const itemTax = itemGross - itemNet;
+        const orderBeforeTax = item.orderSubtotal / 1.14;
+        const discountRatio = orderBeforeTax > 0 ? item.orderDiscount / orderBeforeTax : 0;
+        const itemDiscountAmt = itemNet * discountRatio;
+        const itemAfterDiscount = itemNet - itemDiscountAmt;
+        const itemFinalPrice = itemAfterDiscount + itemTax;
+
+        return [
+          item.drinkName,
+          item.isCustomized ? "Customized" : "Standard",
+          `#${item.orderNumber}`,
+          itemGross.toFixed(2),
+          itemNet.toFixed(2),
+          itemTax.toFixed(2),
+          itemDiscountAmt.toFixed(2),
+          itemAfterDiscount.toFixed(2),
+          itemFinalPrice.toFixed(2)
+        ].map(v => `"${v}"`).join(",");
+      });
+
+      // Calculate totals for individual drinks
+      const totals = drinkItems.reduce((acc: any, item: any) => {
+        const itemGross = item.lineTotal;
+        const itemNet = itemGross / 1.14;
+        const itemTax = itemGross - itemNet;
+        const orderBeforeTax = item.orderSubtotal / 1.14;
+        const discountRatio = orderBeforeTax > 0 ? item.orderDiscount / orderBeforeTax : 0;
+        const itemDiscountAmt = itemNet * discountRatio;
+        const itemAfterDiscount = itemNet - itemDiscountAmt;
+        const itemFinalPrice = itemAfterDiscount + itemTax;
+
+        acc.gross += itemGross;
+        acc.net += itemNet;
+        acc.tax += itemTax;
+        acc.discount += itemDiscountAmt;
+        acc.afterDiscount += itemAfterDiscount;
+        acc.finalPrice += itemFinalPrice;
+        return acc;
+      }, { gross: 0, net: 0, tax: 0, discount: 0, afterDiscount: 0, finalPrice: 0 });
+
+      const totalRow = [
+        "TOTALS",
+        "",
+        "",
+        totals.gross.toFixed(2),
+        totals.net.toFixed(2),
+        totals.tax.toFixed(2),
+        totals.discount.toFixed(2),
+        totals.afterDiscount.toFixed(2),
+        totals.finalPrice.toFixed(2)
+      ].map(v => `"${v}"`).join(",");
+
+      const csvContent = [headers.join(","), ...rows, totalRow].join("\n");
+      const blob = new Blob(["\ufeff", csvContent], { type: "text/csv;charset=utf-8;" });
+      const link = document.createElement("a");
+      const url = URL.createObjectURL(blob);
+      link.setAttribute("href", url);
+      link.setAttribute("download", `individual_drinks_report_${reportStartDate}_to_${reportEndDate}.csv`);
+      link.style.visibility = "hidden";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
   };
 
   return (
@@ -1138,7 +1203,7 @@ export default function ReportsPage() {
                       size="sm"
                       className="gap-2 h-8 px-3"
                       onClick={handleExportDrinksCSV}
-                      disabled={!drinkItems || drinkItems.length === 0}
+                      disabled={drinksView === "grouped" ? (!groupedDrinkItems || groupedDrinkItems.length === 0) : (!drinkItems || drinkItems.length === 0)}
                     >
                       <Download className="h-4 w-4" /> Export Drinks
                     </Button>
