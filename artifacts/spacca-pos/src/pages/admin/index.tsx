@@ -89,6 +89,23 @@ export default function AdminHub() {
       bg: "bg-pink-500/10"
     },
     {
+      title: "Customer Rewards",
+      description: "Manage customer profiles, loyalty points, and discounts",
+      icon: UserCheck,
+      href: "/admin/customers",
+      color: "text-amber-500",
+      bg: "bg-amber-500/10"
+    },
+    {
+      title: "Customer Group Tags",
+      description: "Manage customer categories for group discounts",
+      icon: Tag,
+      href: "/admin/tags",
+      color: "text-orange-500",
+      bg: "bg-orange-500/10"
+    },
+
+    {
       title: "Cashier Performance",
       description: "Track per-cashier sales, revenue, and shift history",
       icon: UserCheck,

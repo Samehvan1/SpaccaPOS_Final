@@ -1,4 +1,5 @@
 import { pgTable, serial, text, integer, timestamp, numeric, boolean } from "drizzle-orm/pg-core";
+import { discountsTable } from "./discounts";
 
 export const customersTable = pgTable("customers", {
   id: serial("id").primaryKey(),
@@ -13,4 +14,6 @@ export const customersTable = pgTable("customers", {
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
+  discountId: integer("discount_id").references(() => discountsTable.id),
 });
+

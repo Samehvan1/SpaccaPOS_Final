@@ -14,6 +14,7 @@ import predefinedSlotsRouter from "./predefined-slots";
 import usersRouter from "./users";
 import discountsRouter from "./discounts";
 import customersRouter from "./customers";
+import tagsRouter from "./tags";
 import cashierSessionsRouter from "./cashier-sessions";
 import adminRouter from "./admin";
 import stockAuditsRouter from "./stock-audits";
@@ -26,6 +27,7 @@ import { db, branchesTable } from "@workspace/db";
 import { addSseClient } from "../lib/sse";
 
 const router: IRouter = Router();
+
 
 // Simple health check
 router.get("/health-test", (req, res) => res.send("OK"));
@@ -47,7 +49,9 @@ router.use(predefinedSlotsRouter);
 router.use(usersRouter);
 router.use(discountsRouter);
 router.use(customersRouter);
+router.use(tagsRouter);
 router.use(cashierSessionsRouter);
+
 router.use(adminRouter);
 router.use(stockAuditsRouter);
 router.use("/roles", rolesRouter);

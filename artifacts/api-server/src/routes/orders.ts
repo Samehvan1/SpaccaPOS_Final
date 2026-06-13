@@ -569,12 +569,43 @@ router.post("/orders", async (req, res): Promise<void> => {
   // ── All writes in a single Drizzle transaction ─────────────────────────────
   const orderNumber = await generateOrderNumber(targetBranchId);
   const { order, savedItems } = await db.transaction(async (tx) => {
+    let finalCustomerName = parsed.data.customerName ?? null;
+
+    if (parsed.data.customerPhone) {
+      const [existingCust] = await tx
+        .select()
+        .from(customersTable)
+        .where(eq(customersTable.phone, parsed.data.customerPhone.trim()))
+        .limit(1);
+
+      if (existingCust) {
+        if (!finalCustomerName) {
+          finalCustomerName = existingCust.name;
+        }
+
+        // Award points & update statistics
+        const pointsToEarn = Math.floor((total / 1.14) / 10);
+        await tx
+          .update(customersTable)
+          .set({
+            points: sql`${customersTable.points} + cast(${pointsToEarn} as integer)`,
+            totalSpent: sql`${customersTable.totalSpent} + cast(${String(total)} as numeric)`,
+            visitCount: sql`${customersTable.visitCount} + 1`,
+            updatedAt: new Date(),
+          })
+          .where(eq(customersTable.id, existingCust.id));
+        console.log(`[loyalty] Updated registered customer ${existingCust.name} (${parsed.data.customerPhone}): +${pointsToEarn} points`);
+      } else {
+        console.log(`[loyalty] Phone ${parsed.data.customerPhone} is not registered. Skipping points.`);
+      }
+    }
+
     const [order] = await tx.insert(ordersTable).values({
       branchId: targetBranchId,
       orderNumber,
       baristaId: sessionUserId,
       status: "pending",
-      customerName: parsed.data.customerName ?? null,
+      customerName: finalCustomerName,
       customerPhone: parsed.data.customerPhone ?? null,
       subtotal: String(subtotal),
       discount: String(discountAmount),
@@ -589,32 +620,6 @@ router.post("/orders", async (req, res): Promise<void> => {
       changeDue: changeDue != null ? String(changeDue) : null,
       notes: parsed.data.notes ?? null,
     }).returning();
-
-    // ── Loyalty Points Logic ────────────────────────────────────────────────
-    if (parsed.data.customerPhone) {
-      // 1 point per 10 currency units before tax (14% tax assumed)
-      const pointsToEarn = Math.floor((subtotal / 1.14) / 10);
-      if (pointsToEarn > 0) {
-        await tx.insert(customersTable)
-          .values({
-            phone: parsed.data.customerPhone,
-            name: parsed.data.customerName || "Customer",
-            points: pointsToEarn,
-            totalSpent: String(total),
-            visitCount: 1,
-          })
-          .onConflictDoUpdate({
-            target: [customersTable.phone],
-            set: {
-              points: sql`${customersTable.points} + cast(${pointsToEarn} as integer)`,
-              totalSpent: sql`${customersTable.totalSpent} + cast(${String(total)} as numeric)`,
-              visitCount: sql`${customersTable.visitCount} + 1`,
-              updatedAt: new Date(),
-            }
-          });
-        console.log(`[loyalty] Awarded ${pointsToEarn} points to ${parsed.data.customerPhone}`);
-      }
-    }
 
     // Pre-fetch ingredient stock levels for all ingredients in one query for this branch
     const allIngredientIds = [

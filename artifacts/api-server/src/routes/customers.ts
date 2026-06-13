@@ -1,9 +1,12 @@
 import { Router, type IRouter } from "express";
-import { db } from "@workspace/db";
-import { sql } from "drizzle-orm";
+import { db, customerTagsTable, customersTable, discountsTable } from "@workspace/db";
+import { sql, eq } from "drizzle-orm";
 import { createHash } from "crypto";
+import { requirePermission } from "../middleware/permissions";
+import { logActivity } from "../lib/activity-logger";
 
 const router: IRouter = Router();
+
 
 // ─── Ensure customers table exists ────────────────────────────────────────────
 async function ensureCustomersTable() {
@@ -28,12 +31,13 @@ async function ensureCustomersTable() {
     await db.execute(sql`
       ALTER TABLE customers ALTER COLUMN password_hash DROP NOT NULL;
     `);
-    console.log("[customers] Table ready");
+    console.log("[customers] Table schema ready");
   } catch (e) {
     console.error("[customers] Table init error:", e);
   }
 }
 ensureCustomersTable();
+
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function hashPassword(password: string): string {
@@ -208,16 +212,325 @@ router.get("/customers/me/orders", async (req, res): Promise<void> => {
 });
 
 // ─── Admin: list all customers ────────────────────────────────────────────────
-router.get("/admin/customers", async (req, res): Promise<void> => {
+router.get("/admin/customers", requirePermission("admin:view"), async (req, res): Promise<void> => {
   try {
-    const result = await db.execute(sql`
-      SELECT id, name, phone, email, points, total_spent, visit_count, is_active, created_at
-      FROM customers ORDER BY created_at DESC
+    const customersRes = await db.execute(sql`
+      SELECT c.id, c.name, c.phone, c.email, c.points, c.total_spent, c.visit_count, c.is_active, c.created_at, c.discount_id, c.notes,
+             d.code AS discount_code, d.type AS discount_type, d.value AS discount_value
+      FROM customers c
+      LEFT JOIN discounts d ON c.discount_id = d.id
+      ORDER BY c.created_at DESC
     `);
-    res.json({ customers: result.rows });
+
+    const tagsRes = await db.execute(sql`
+      SELECT customer_id, tag_id FROM customer_tags
+    `);
+
+    const tagsMap: Record<number, number[]> = {};
+    for (const row of tagsRes.rows as any[]) {
+      if (!tagsMap[row.customer_id]) {
+        tagsMap[row.customer_id] = [];
+      }
+      tagsMap[row.customer_id].push(row.tag_id);
+    }
+
+    const customers = (customersRes.rows as any[]).map((c) => ({
+      ...c,
+      points: parseInt(c.points || 0),
+      visit_count: parseInt(c.visit_count || 0),
+      total_spent: parseFloat(c.total_spent || 0),
+      discount_value: c.discount_value ? parseFloat(c.discount_value) : null,
+      tagIds: tagsMap[c.id] || [],
+    }));
+
+    res.json({ customers });
   } catch (e: any) {
     console.error("[admin/customers] error:", e?.message);
     res.status(500).json({ error: "Failed to list customers" });
+  }
+});
+
+// ─── Admin: create a customer ────────────────────────────────────────────────
+router.post("/admin/customers", requirePermission("admin:view"), async (req, res): Promise<void> => {
+  const { name, phone, email, points, notes, isActive, discountId, tagIds } = req.body ?? {};
+  
+  if (!name || typeof name !== "string" || name.trim().length < 2) {
+    res.status(400).json({ error: "Name is required (at least 2 characters)" });
+    return;
+  }
+  if (!phone || typeof phone !== "string" || phone.trim().length < 4) {
+    res.status(400).json({ error: "Phone number is required" });
+    return;
+  }
+
+  try {
+    const cleanPhone = phone.trim();
+    const cleanName = name.trim();
+    const cleanEmail = typeof email === "string" && email.trim() ? email.trim() : null;
+
+    // Check if phone already exists
+    const existing = await db.select().from(customersTable).where(eq(customersTable.phone, cleanPhone)).limit(1);
+    if (existing.length > 0) {
+      res.status(409).json({ error: "Phone number already registered" });
+      return;
+    }
+
+    const customer = await db.transaction(async (tx) => {
+      const [cust] = await tx.insert(customersTable).values({
+        name: cleanName,
+        phone: cleanPhone,
+        email: cleanEmail,
+        points: points || 0,
+        notes: notes || null,
+        isActive: isActive ?? true,
+        discountId: discountId || null,
+      }).returning();
+
+      if (Array.isArray(tagIds) && tagIds.length > 0) {
+        await tx.insert(customerTagsTable).values(
+          tagIds.map((tagId) => ({
+            customerId: cust.id,
+            tagId: tagId,
+          }))
+        );
+      }
+
+      return {
+        ...cust,
+        tagIds: tagIds || [],
+      };
+    });
+
+    await logActivity(req, "CREATE_CUSTOMER", "customer", customer.id, { name: cleanName });
+    res.status(201).json({ customer });
+  } catch (e: any) {
+    console.error("[admin/customers POST] error:", e?.message);
+    res.status(500).json({ error: "Failed to create customer: " + e.message });
+  }
+});
+
+// ─── Admin: update a customer ────────────────────────────────────────────────
+router.patch("/admin/customers/:id", requirePermission("admin:view"), async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id as string);
+  const { name, phone, email, points, notes, isActive, discountId, tagIds } = req.body ?? {};
+
+  try {
+    await db.transaction(async (tx) => {
+      const updateData: any = {};
+      if (name !== undefined) updateData.name = name.trim();
+      if (phone !== undefined) updateData.phone = phone.trim();
+      if (email !== undefined) updateData.email = email ? email.trim() : null;
+      if (points !== undefined) updateData.points = parseInt(points);
+      if (notes !== undefined) updateData.notes = notes ? notes.trim() : null;
+      if (isActive !== undefined) updateData.isActive = isActive;
+      if (discountId !== undefined) updateData.discountId = discountId || null;
+      updateData.updatedAt = new Date();
+
+      const [updated] = await tx.update(customersTable).set(updateData).where(eq(customersTable.id, id)).returning();
+      if (!updated) {
+        throw new Error("Customer not found");
+      }
+
+      if (tagIds !== undefined) {
+        await tx.delete(customerTagsTable).where(eq(customerTagsTable.customerId, id));
+        if (Array.isArray(tagIds) && tagIds.length > 0) {
+          await tx.insert(customerTagsTable).values(
+            tagIds.map((tagId) => ({
+              customerId: id,
+              tagId: tagId,
+            }))
+          );
+        }
+      }
+    });
+
+    await logActivity(req, "UPDATE_CUSTOMER", "customer", id, req.body);
+    res.json({ success: true });
+  } catch (e: any) {
+    console.error("[admin/customers/:id PATCH] error:", e?.message);
+    if (e.message === "Customer not found") {
+      res.status(404).json({ error: "Customer not found" });
+      return;
+    }
+    res.status(500).json({ error: "Failed to update customer: " + e.message });
+  }
+});
+
+// ─── Admin: customer order history ──────────────────────────────────────────
+router.get("/admin/customers/:id/history", requirePermission("admin:view"), async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id as string);
+  try {
+    const [cust] = await db.select().from(customersTable).where(eq(customersTable.id, id)).limit(1);
+    if (!cust) {
+      res.status(404).json({ error: "Customer not found" });
+      return;
+    }
+
+    const result = await db.execute(sql`
+      SELECT o.id, o.order_number, o.status, o.total, o.discount, o.discount_code, o.payment_method, o.created_at,
+             COUNT(oi.id)::int AS item_count
+      FROM orders o
+      LEFT JOIN order_items oi ON oi.order_id = o.id
+      WHERE o.customer_phone = ${cust.phone} OR (o.customer_name ILIKE ${cust.name} AND o.customer_phone IS NULL)
+      GROUP BY o.id
+      ORDER BY o.created_at DESC
+    `);
+
+    res.json({ orders: result.rows });
+  } catch (e: any) {
+    console.error("[admin/customers/:id/history] error:", e?.message);
+    res.status(500).json({ error: "Failed to get customer history" });
+  }
+});
+
+// ─── Admin: reports and stats ────────────────────────────────────────────────
+router.get("/admin/customer-reports", requirePermission("reports:view"), async (req, res): Promise<void> => {
+  try {
+    // 1. General Stats
+    const generalRes = await db.execute(sql`
+      SELECT 
+        COUNT(*)::int AS total_customers,
+        COALESCE(SUM(total_spent), 0)::numeric AS total_spent,
+        COALESCE(SUM(visit_count), 0)::int AS total_visits,
+        COALESCE(SUM(points), 0)::int AS total_points
+      FROM customers
+    `);
+    const general = generalRes.rows[0];
+
+    // 2. Discount usage from orders
+    const discountUsageRes = await db.execute(sql`
+      SELECT 
+        COALESCE(discount_code, 'NO_CODE') AS code, 
+        COUNT(id)::int AS usage_count, 
+        COALESCE(SUM(discount), 0)::numeric AS total_saved
+      FROM orders
+      WHERE discount > 0 AND status = 'completed'
+      GROUP BY discount_code
+      ORDER BY usage_count DESC
+    `);
+
+    // 3. Group tags stats
+    const tagStatsRes = await db.execute(sql`
+      SELECT t.id, t.name, COUNT(ct.customer_id)::int AS count,
+             COALESCE(SUM(c.total_spent), 0)::numeric AS total_spent,
+             COALESCE(SUM(c.visit_count), 0)::int AS total_visits,
+             COALESCE(SUM(c.points), 0)::int AS total_points
+      FROM tags t
+      LEFT JOIN customer_tags ct ON t.id = ct.tag_id
+      LEFT JOIN customers c ON ct.customer_id = c.id
+      GROUP BY t.id, t.name
+      ORDER BY count DESC
+    `);
+
+    res.json({
+      general: {
+        total_customers: parseInt(String(general.total_customers ?? 0)),
+        total_spent: parseFloat(String(general.total_spent ?? 0)),
+        total_visits: parseInt(String(general.total_visits ?? 0)),
+        total_points: parseInt(String(general.total_points ?? 0)),
+      },
+      discountUsage: discountUsageRes.rows.map((row: any) => ({
+        ...row,
+        usage_count: parseInt(row.usage_count || 0),
+        total_saved: parseFloat(row.total_saved || 0),
+      })),
+      tagStats: tagStatsRes.rows.map((row: any) => ({
+        ...row,
+        count: parseInt(row.count || 0),
+        total_spent: parseFloat(row.total_spent || 0),
+        total_visits: parseInt(row.total_visits || 0),
+        total_points: parseInt(row.total_points || 0),
+      })),
+    });
+  } catch (e: any) {
+    console.error("[admin/customer-reports] error:", e?.message);
+    res.status(500).json({ error: "Failed to generate customer reports" });
+  }
+});
+
+// ─── Available Discounts Lookup ─────────────────────────────────────────────
+router.get("/customers/available-discounts", async (req, res): Promise<void> => {
+  const phone = req.query.phone as string | undefined;
+  const customerId = getCustomerId(req);
+
+  try {
+    let customer: any = null;
+
+    if (customerId) {
+      const result = await db.select().from(customersTable).where(eq(customersTable.id, customerId)).limit(1);
+      customer = result[0];
+    } else if (phone && phone.trim()) {
+      const result = await db.select().from(customersTable).where(eq(customersTable.phone, phone.trim())).limit(1);
+      customer = result[0];
+    }
+
+    if (!customer) {
+      res.json({ discounts: [] });
+      return;
+    }
+
+    // Fetch customer tag mappings
+    const customerTagsRes = await db.execute(sql`
+      SELECT tag_id FROM customer_tags WHERE customer_id = ${customer.id}
+    `);
+    const customerTagIds = (customerTagsRes.rows as any[]).map((r) => r.tag_id);
+
+    // Fetch all active discounts
+    const activeDiscounts = await db.select().from(discountsTable).where(eq(discountsTable.isActive, true));
+    
+    // Fetch all discount tag mappings
+    const discountTagsRes = await db.execute(sql`
+      SELECT discount_id, tag_id FROM discount_tags
+    `);
+    const discountTagsMap: Record<number, number[]> = {};
+    for (const r of discountTagsRes.rows as any[]) {
+      if (!discountTagsMap[r.discount_id]) {
+        discountTagsMap[r.discount_id] = [];
+      }
+      discountTagsMap[r.discount_id].push(r.tag_id);
+    }
+
+    const applicable: any[] = [];
+
+    for (const d of activeDiscounts) {
+      let isApplicable = false;
+      let reason = "";
+
+      // 1. Check direct assignment
+      if (customer.discountId === d.id) {
+        isApplicable = true;
+        reason = "Customer-assigned discount";
+      }
+      // 2. Check first-order discount
+      else if (d.isFirstOrder && parseInt(customer.visitCount || 0) === 0) {
+        isApplicable = true;
+        reason = "First order promotion";
+      }
+      // 3. Check tag-based discount
+      else {
+        const associatedTagIds = discountTagsMap[d.id] || [];
+        const matchesTag = associatedTagIds.some((tagId) => customerTagIds.includes(tagId));
+        if (matchesTag) {
+          isApplicable = true;
+          reason = "Group tag discount";
+        }
+      }
+
+      if (isApplicable) {
+        applicable.push({
+          id: d.id,
+          code: d.code,
+          type: d.type,
+          value: parseFloat(d.value),
+          reason,
+        });
+      }
+    }
+
+    res.json({ discounts: applicable });
+  } catch (e: any) {
+    console.error("[customers/available-discounts] error:", e?.message);
+    res.status(500).json({ error: "Failed to fetch available discounts" });
   }
 });
 
@@ -241,3 +554,4 @@ router.get("/customers/points/:phone", async (req, res): Promise<void> => {
 });
 
 export default router;
+

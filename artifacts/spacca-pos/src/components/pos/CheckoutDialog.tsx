@@ -16,6 +16,7 @@ interface CheckoutDialogProps {
   setCustomerName: (val: string) => void;
   customerPhone: string;
   setCustomerPhone: (val: string) => void;
+  customerInfo?: { name: string; points: number } | null;
   paymentMethod: "cash" | "card" | "wallet" | "hospitality";
   setPaymentMethod: (val: "cash" | "card" | "wallet" | "hospitality") => void;
   adminPin: string;
@@ -45,6 +46,7 @@ export const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
   setCustomerName,
   customerPhone,
   setCustomerPhone,
+  customerInfo,
   paymentMethod,
   setPaymentMethod,
   adminPin,
@@ -95,6 +97,12 @@ export const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
               onChange={(e) => setCustomerPhone(e.target.value)}
               placeholder="Phone for loyalty points"
             />
+            {customerInfo && (
+              <div className="flex items-center gap-1.5 text-xs text-green-600 font-bold bg-green-500/10 p-2 rounded-lg border border-green-500/20">
+                <Check className="h-4 w-4 shrink-0" />
+                <span>Customer: {customerInfo.name} ({customerInfo.points} pts)</span>
+              </div>
+            )}
             <p className="text-[10px] text-muted-foreground italic">
               Enter phone for loyalty points and future health tracking system.
             </p>
@@ -185,8 +193,10 @@ export const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
               <p className="text-[10px] text-green-600 font-bold uppercase tracking-wider flex items-center gap-1 mt-0.5">
                 <Check className="h-3 w-3" />
                 Applied: {appliedDiscount.type === 'percentage' ? `${appliedDiscount.value}%` : fmt(appliedDiscount.value)} Off
+                {appliedDiscount.reason && <span className="text-muted-foreground font-semibold lowercase"> ({appliedDiscount.reason})</span>}
               </p>
             )}
+
           </div>
 
           <div className="space-y-1.5 py-4 border-t border-b">

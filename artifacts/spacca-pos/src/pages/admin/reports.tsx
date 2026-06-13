@@ -202,6 +202,27 @@ export default function ReportsPage() {
     enabled: activeTab === "stats"
   });
 
+  // Customers Tab Queries
+  const { data: customerReports, isLoading: loadingCustomerReports } = useQuery<any>({
+    queryKey: ["customer-reports"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/admin/customer-reports`);
+      if (!res.ok) throw new Error("Failed to fetch customer reports");
+      return res.json();
+    },
+    enabled: activeTab === "customers"
+  });
+
+  const { data: adminCustomers, isLoading: loadingAdminCustomers } = useQuery<any>({
+    queryKey: ["admin-customers"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/admin/customers`);
+      if (!res.ok) throw new Error("Failed to fetch admin customers");
+      return res.json();
+    },
+    enabled: activeTab === "customers"
+  });
+
   // Sales Range Summary Query (Accurate totals for banner)
   const { data: rangeSummary, isLoading: loadingRangeSummary } = useQuery({
     queryKey: ["sales-range-summary", reportStartDate, reportEndDate, selectedBranchId],
@@ -499,13 +520,15 @@ export default function ReportsPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-5 mb-8 h-12 print:hidden">
+        <TabsList className="grid w-full grid-cols-6 mb-8 h-12 print:hidden">
           <TabsTrigger value="dashboard" className="text-base font-semibold">Dashboard</TabsTrigger>
           <TabsTrigger value="sales" className="text-base font-semibold">Sales Report</TabsTrigger>
           <TabsTrigger value="drinks" className="text-base font-semibold">Drinks Report</TabsTrigger>
           <TabsTrigger value="stats" className="text-base font-semibold">Order Statistics</TabsTrigger>
           <TabsTrigger value="performance" className="text-base font-semibold">Performance</TabsTrigger>
+          <TabsTrigger value="customers" className="text-base font-semibold">Customers Report</TabsTrigger>
         </TabsList>
+
 
         {activeTab !== "dashboard" && (
           <div className="flex flex-col gap-6 mb-8 animate-in fade-in duration-500">
@@ -1708,6 +1731,265 @@ export default function ReportsPage() {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="customers" className="flex flex-col gap-6 animate-in fade-in duration-500">
+          {loadingCustomerReports || loadingAdminCustomers ? (
+            <div className="flex flex-col items-center justify-center py-20 bg-card/50 backdrop-blur-sm rounded-xl border border-primary/10 shadow-md">
+              <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+              <p className="text-muted-foreground animate-pulse font-medium">Crunching customer statistics...</p>
+            </div>
+          ) : (
+            <>
+              {/* Customer KPI Metric Cards */}
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                {[
+                  {
+                    label: "Total Customers",
+                    value: customerReports?.general?.total_customers ?? 0,
+                    icon: User,
+                    sub: "Registered customers"
+                  },
+                  {
+                    label: "Lifetime Spent",
+                    value: fmt(customerReports?.general?.total_spent ?? 0),
+                    icon: Banknote,
+                    sub: "Total customer revenue"
+                  },
+                  {
+                    label: "Average LTV",
+                    value: fmt(
+                      (customerReports?.general?.total_customers ?? 0) > 0
+                        ? (customerReports?.general?.total_spent ?? 0) / (customerReports?.general?.total_customers ?? 1)
+                        : 0
+                    ),
+                    icon: TrendingUp,
+                    sub: "Spent per customer"
+                  },
+                  {
+                    label: "Total Visits",
+                    value: customerReports?.general?.total_visits ?? 0,
+                    icon: Clock,
+                    sub: "Accumulated visits"
+                  },
+                  {
+                    label: "Loyalty Points",
+                    value: customerReports?.general?.total_points ?? 0,
+                    icon: Medal,
+                    sub: "Active points pool"
+                  }
+                ].map(({ label, value, icon: Icon, sub }) => (
+                  <Card key={label} className="border-none shadow-md bg-card/50 backdrop-blur-sm">
+                    <CardHeader className="flex flex-row items-center justify-between pb-2">
+                      <CardTitle className="text-xs font-bold uppercase tracking-tight text-muted-foreground">{label}</CardTitle>
+                      <Icon className="h-4 w-4 text-primary" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold whitespace-nowrap">{value}</div>
+                      <p className="text-[10px] text-muted-foreground mt-1">{sub}</p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+
+              {/* Coupon Usage & Tags Distribution Charts */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Coupon Usage Chart */}
+                <Card className="border-none shadow-xl bg-card/50 backdrop-blur-sm">
+                  <CardHeader>
+                    <CardTitle className="text-lg font-bold flex items-center gap-2 italic uppercase tracking-tighter">
+                      <Tag className="h-5 w-5 text-primary" />
+                      Discount Code Usage
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {!customerReports?.discountUsage || customerReports.discountUsage.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center h-[300px]">
+                        <Tag className="h-12 w-12 text-muted-foreground mb-4 opacity-20" />
+                        <p className="text-muted-foreground">No discount usage records found.</p>
+                      </div>
+                    ) : (
+                      <div className="h-[300px] w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={customerReports.discountUsage}>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.1} />
+                            <XAxis dataKey="code" axisLine={false} tickLine={false} className="font-bold text-[10px]" />
+                            <YAxis yAxisId="left" axisLine={false} tickLine={false} className="text-[10px]" />
+                            <YAxis yAxisId="right" orientation="right" axisLine={false} tickLine={false} className="text-[10px]" tickFormatter={(v) => pure(v)} />
+                            <Tooltip
+                              contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                              formatter={(value: any, name: string) => {
+                                if (name === "usage_count") return [value, "Usage Count"];
+                                return [fmt(value), "Total Saved"];
+                              }}
+                            />
+                            <Legend verticalAlign="top" height={36} />
+                            <Bar yAxisId="left" dataKey="usage_count" name="Usage Count" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                            <Bar yAxisId="right" dataKey="total_saved" name="Total Saved" fill="#D96B43" radius={[4, 4, 0, 0]} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Tag Distribution Pie Chart */}
+                <Card className="border-none shadow-xl bg-card/50 backdrop-blur-sm">
+                  <CardHeader>
+                    <CardTitle className="text-lg font-bold flex items-center gap-2 italic uppercase tracking-tighter">
+                      <Layers className="h-5 w-5 text-primary" />
+                      Customers by Tag Group
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {!customerReports?.tagStats || customerReports.tagStats.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center h-[300px]">
+                        <Layers className="h-12 w-12 text-muted-foreground mb-4 opacity-20" />
+                        <p className="text-muted-foreground">No tags configured or assigned.</p>
+                      </div>
+                    ) : (
+                      <div className="h-[300px] w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={customerReports.tagStats}
+                              dataKey="count"
+                              nameKey="name"
+                              cx="50%"
+                              cy="50%"
+                              outerRadius={80}
+                              fill="#8884d8"
+                              label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                            >
+                              {customerReports.tagStats.map((entry: any, index: number) => (
+                                <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                              ))}
+                            </Pie>
+                            <Tooltip
+                              contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                              formatter={(value: any) => [`${value} Customers`, 'Count']}
+                            />
+                            <Legend verticalAlign="bottom" height={36} />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Tag Spending Performance & Top Customers Leaderboard */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Tag Revenue Performance */}
+                <Card className="border-none shadow-xl bg-card/50 backdrop-blur-sm">
+                  <CardHeader>
+                    <CardTitle className="text-lg font-bold flex items-center gap-2 italic uppercase tracking-tighter">
+                      <TrendingUp className="h-5 w-5 text-primary" />
+                      Lifetime Spending by Tag Group
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {!customerReports?.tagStats || customerReports.tagStats.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center h-[300px]">
+                        <TrendingUp className="h-12 w-12 text-muted-foreground mb-4 opacity-20" />
+                        <p className="text-muted-foreground">No stats available.</p>
+                      </div>
+                    ) : (
+                      <div className="h-[300px] w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={customerReports.tagStats}>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.1} />
+                            <XAxis dataKey="name" axisLine={false} tickLine={false} className="font-bold text-[10px]" />
+                            <YAxis axisLine={false} tickLine={false} className="text-[10px]" tickFormatter={(v) => pure(v)} />
+                            <Tooltip
+                              contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                              formatter={(value: any) => [fmt(value), 'Total Spent']}
+                            />
+                            <Bar dataKey="total_spent" fill="#6BA3D9" radius={[4, 4, 0, 0]} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Top Customers Leaderboard */}
+                <Card className="border-none shadow-xl bg-card/50 backdrop-blur-sm flex flex-col">
+                  <CardHeader>
+                    <CardTitle className="text-lg font-bold flex items-center gap-2 italic uppercase tracking-tighter">
+                      <Medal className="h-5 w-5 text-primary" />
+                      Top Customers by Spending
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="flex-1 overflow-auto">
+                    {(() => {
+                      const topCustomers = [...(adminCustomers?.customers || [])]
+                        .sort((a: any, b: any) => b.total_spent - a.total_spent)
+                        .slice(0, 10);
+
+                      if (topCustomers.length === 0) {
+                        return (
+                          <div className="flex flex-col items-center justify-center h-full py-12">
+                            <User className="h-12 w-12 text-muted-foreground mb-4 opacity-20" />
+                            <p className="text-muted-foreground">No customer records found.</p>
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <div className="rounded-xl border overflow-hidden shadow-sm bg-background/30">
+                          <Table>
+                            <TableHeader className="bg-muted/50">
+                              <TableRow>
+                                <TableHead className="w-[60px] text-center text-xs uppercase font-bold">Rank</TableHead>
+                                <TableHead className="text-xs uppercase font-bold">Customer</TableHead>
+                                <TableHead className="text-center text-xs uppercase font-bold">Visits</TableHead>
+                                <TableHead className="text-center text-xs uppercase font-bold">Points</TableHead>
+                                <TableHead className="text-right text-xs uppercase font-bold">Total Spent</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {topCustomers.map((c: any, index: number) => {
+                                let badgeColor = "bg-muted text-muted-foreground";
+                                if (index === 0) badgeColor = "bg-yellow-500 text-yellow-950 font-bold";
+                                else if (index === 1) badgeColor = "bg-gray-300 text-gray-900 font-bold";
+                                else if (index === 2) badgeColor = "bg-amber-600 text-amber-50 font-bold";
+
+                                return (
+                                  <TableRow key={c.id} className="hover:bg-primary/5">
+                                    <TableCell className="text-center font-bold">
+                                      <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs ${badgeColor}`}>
+                                        {index + 1}
+                                      </span>
+                                    </TableCell>
+                                    <TableCell>
+                                      <div>
+                                        <p className="font-bold text-sm">{c.name}</p>
+                                        <p className="text-xs text-muted-foreground">{c.phone}</p>
+                                      </div>
+                                    </TableCell>
+                                    <TableCell className="text-center font-semibold text-sm">
+                                      {c.visit_count}
+                                    </TableCell>
+                                    <TableCell className="text-center font-semibold text-sm">
+                                      {c.points}
+                                    </TableCell>
+                                    <TableCell className="text-right font-black text-primary text-sm">
+                                      {fmt(c.total_spent)}
+                                    </TableCell>
+                                  </TableRow>
+                                );
+                              })}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      );
+                    })()}
+                  </CardContent>
+                </Card>
+              </div>
+            </>
+          )}
         </TabsContent>
       </Tabs>
 

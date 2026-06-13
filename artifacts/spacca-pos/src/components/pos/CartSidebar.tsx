@@ -1,5 +1,5 @@
 import React from "react";
-import { ShoppingCart, Trash2, X, Minus, Plus, ChevronRight } from "lucide-react";
+import { ShoppingCart, Trash2, X, Minus, Plus, ChevronRight, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { fmt } from "@/lib/currency";
@@ -40,6 +40,7 @@ interface CartSidebarProps {
   onUpdateQuantity: (id: string, delta: number) => void;
   onRemoveItem: (id: string) => void;
   onCheckout: () => void;
+  availableDiscounts?: any[];
 }
 
 export const CartSidebar: React.FC<CartSidebarProps> = ({
@@ -52,7 +53,9 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({
   onUpdateQuantity,
   onRemoveItem,
   onCheckout,
+  availableDiscounts = [],
 }) => {
+
   return (
     <>
       {/* Backdrop */}
@@ -164,10 +167,21 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({
         </ScrollArea>
 
         <div className="p-4 border-t bg-muted/30 shrink-0 space-y-3">
+          {availableDiscounts.length > 0 && (
+            <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200/50 p-2.5 rounded-lg text-xs text-amber-800 dark:text-amber-200 font-semibold space-y-1">
+              <div className="font-bold flex items-center gap-1">
+                <Tag className="h-3.5 w-3.5 text-amber-500" /> Customer Discount Available!
+              </div>
+              <div className="text-[10px] text-amber-700/80 dark:text-amber-300/80">
+                {availableDiscounts[0].reason}: <span className="font-bold">{availableDiscounts[0].code}</span> ({availableDiscounts[0].type === 'percentage' ? `${availableDiscounts[0].value}%` : fmt(availableDiscounts[0].value)} Off) will apply at checkout.
+              </div>
+            </div>
+          )}
           <div className="flex justify-between items-center text-lg font-bold">
             <span>Total</span>
             <span className="text-primary">{fmt(cartTotal)}</span>
           </div>
+
           <Button
             className="w-full h-12 text-base font-bold shadow-md flex items-center gap-2"
             disabled={cart.length === 0}

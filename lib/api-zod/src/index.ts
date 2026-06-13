@@ -321,12 +321,24 @@ export const GetTopDrinksResponse = api.GetTopDrinksResponse;
 export type GetTopDrinksResponse = Infer<typeof api.GetTopDrinksResponse>;
 
 // Discounts
-export const Discount = api.ListDiscountsResponseItem;
-export type Discount = Infer<typeof api.ListDiscountsResponseItem>;
-export const CreateDiscountBody = api.CreateDiscountBody;
-export type CreateDiscountBody = Infer<typeof api.CreateDiscountBody>;
-export const UpdateDiscountBody = api.UpdateDiscountBody;
-export type UpdateDiscountBody = Infer<typeof api.UpdateDiscountBody>;
+export const Discount = api.ListDiscountsResponseItem.extend({
+  tagIds: z.array(z.number()).optional(),
+  isFirstOrder: z.boolean().optional(),
+});
+export type Discount = Infer<typeof Discount>;
+
+export const CreateDiscountBody = api.CreateDiscountBody.extend({
+  tagIds: z.array(z.number()).optional(),
+  isFirstOrder: z.boolean().optional(),
+});
+export type CreateDiscountBody = Infer<typeof CreateDiscountBody>;
+
+export const UpdateDiscountBody = api.UpdateDiscountBody.extend({
+  tagIds: z.array(z.number()).optional(),
+  isFirstOrder: z.boolean().optional(),
+});
+export type UpdateDiscountBody = Infer<typeof UpdateDiscountBody>;
+
 
 // Users
 export const ListUsersResponseItem = api.ListUsersResponseItem.extend({

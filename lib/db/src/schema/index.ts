@@ -14,4 +14,6 @@ export * from "./stock-audit";
 export * from "./customers";
 export * from "./signatures";
 export * from "./purchases";
+export * from "./tags";
+
 

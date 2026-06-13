@@ -32,6 +32,7 @@ const api = async (path: string, opts?: RequestInit) => {
 export default function DiscountsAdmin() {
   const { toast } = useToast();
   const [discounts, setDiscounts] = useState<Discount[]>([]);
+  const [tags, setTags] = useState<{ id: number; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [showForm, setShowForm] = useState(false);
@@ -43,11 +44,16 @@ export default function DiscountsAdmin() {
   const [type, setType] = useState<"percentage" | "fixed">("percentage");
   const [value, setValue] = useState("0");
   const [isActive, setIsActive] = useState(true);
+  const [isFirstOrder, setIsFirstOrder] = useState(false);
+  const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      setDiscounts(await api("/api/discounts"));
+      const discountsData = await api("/api/discounts");
+      setDiscounts(discountsData || []);
+      const tagsData = await api("/api/admin/tags");
+      setTags(tagsData.tags || []);
     } catch {
       toast({ variant: "destructive", title: "Failed to load discounts" });
     } finally {
@@ -59,11 +65,14 @@ export default function DiscountsAdmin() {
 
   const openAdd = () => {
     setEditId(null); setCode(""); setType("percentage"); setValue("0"); setIsActive(true);
+    setIsFirstOrder(false); setSelectedTagIds([]);
     setShowForm(true);
   };
 
   const openEdit = (d: Discount) => {
     setEditId(d.id); setCode(d.code); setType(d.type); setValue(String(d.value)); setIsActive(d.isActive);
+    setIsFirstOrder((d as any).isFirstOrder || false);
+    setSelectedTagIds((d as any).tagIds || []);
     setShowForm(true);
   };
 
@@ -71,7 +80,14 @@ export default function DiscountsAdmin() {
     if (!code.trim() || !value) return;
     setSaving(true);
     try {
-      const payload = { code: code.trim().toUpperCase(), type, value: parseFloat(value), isActive };
+      const payload = {
+        code: code.trim().toUpperCase(),
+        type,
+        value: parseFloat(value),
+        isActive,
+        isFirstOrder,
+        tagIds: selectedTagIds,
+      };
       if (editId) {
         await api(`/api/discounts/${editId}`, { method: "PATCH", body: JSON.stringify(payload) });
         toast({ title: "Discount updated" });
@@ -101,6 +117,7 @@ export default function DiscountsAdmin() {
   const filtered = discounts.filter(d => 
     d.code.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
 
   return (
     <div className="space-y-6">
@@ -217,10 +234,44 @@ export default function DiscountsAdmin() {
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-2 pt-2">
+            <div className="flex items-center gap-2 pt-1">
+              <Switch id="firstOrder" checked={isFirstOrder} onCheckedChange={setIsFirstOrder} />
+              <Label htmlFor="firstOrder" className="cursor-pointer">Applies to the customer's first order only</Label>
+            </div>
+            <div className="grid gap-1.5 pt-1">
+              <Label>Restricted to Group Tags (Optional)</Label>
+              <div className="flex flex-wrap gap-2 p-3 border rounded-md bg-muted/20">
+                {tags.length === 0 ? (
+                  <span className="text-muted-foreground text-xs italic">No tags defined. Configure them in Customer Group Tags.</span>
+                ) : tags.map(tag => {
+                  const isSelected = selectedTagIds.includes(tag.id);
+                  return (
+                    <button
+                      key={tag.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedTagIds(prev => 
+                          prev.includes(tag.id) ? prev.filter(id => id !== tag.id) : [...prev, tag.id]
+                        );
+                      }}
+                      className={`px-2.5 py-1.5 rounded-full text-xs font-semibold border transition-all ${
+                        isSelected 
+                          ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                          : "bg-background text-muted-foreground hover:bg-muted border-input"
+                      }`}
+                    >
+                      {tag.name}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-[10px] text-muted-foreground italic">If selected, this discount will apply automatically to customers who have any of these tags.</p>
+            </div>
+            <div className="flex items-center gap-2 pt-1">
               <Switch id="active" checked={isActive} onCheckedChange={setIsActive} />
               <Label htmlFor="active" className="cursor-pointer">Coupon is active and can be used</Label>
             </div>
+
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowForm(false)}>Cancel</Button>

@@ -598,6 +598,7 @@ export default function PosTerminal() {
   const [isLoyaltyDialogOpen, setIsLoyaltyDialogOpen] = useState(false);
   const [loyaltyPoints, setLoyaltyPoints] = useState<number | null>(null);
   const [createdOrder, setCreatedOrder] = useState<any>(null);
+  const [customerInfo, setCustomerInfo] = useState<{ name: string; points: number } | null>(null);
 
   const cartSubtotal = cart.reduce((sum, item) => sum + item.totalPrice * item.quantity, 0);
   const discountAmount = useMemo(() => {
@@ -684,6 +685,7 @@ export default function PosTerminal() {
         setIsLoyaltyDialogOpen(false);
         setCustomerName("");
         setCustomerPhone("");
+        setCustomerInfo(null);
         setCreatedOrder(null);
       } else {
         throw new Error("Failed to save signature");
@@ -739,8 +741,90 @@ export default function PosTerminal() {
 
   const { customer: loggedCustomer } = useCustomerAuth();
 
+  const [loggedCustomerDiscounts, setLoggedCustomerDiscounts] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchLoggedCustomerDiscounts = async () => {
+      if (!loggedCustomer) {
+        setLoggedCustomerDiscounts([]);
+        return;
+      }
+      try {
+        const res = await fetch(`${API_BASE}/customers/available-discounts`);
+        if (res.ok) {
+          const data = await res.json();
+          setLoggedCustomerDiscounts(data.discounts || []);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    fetchLoggedCustomerDiscounts();
+  }, [loggedCustomer]);
+
+  // Auto-apply customer discount and fetch loyalty details
+  useEffect(() => {
+    const fetchCustomerDetails = async () => {
+      const targetPhone = customerPhone.trim();
+      if (!targetPhone) {
+        setCustomerInfo(null);
+        setAppliedDiscount(null);
+        setDiscountCode("");
+        return;
+      }
+      try {
+        // 1. Fetch points & name
+        const pointsRes = await fetch(`${API_BASE}/customers/points/${encodeURIComponent(targetPhone)}`);
+        if (pointsRes.ok) {
+          const pointsData = await pointsRes.json();
+          if (pointsData.name) {
+            setCustomerInfo({ name: pointsData.name, points: pointsData.points });
+            // Auto-populate customer name if blank or generic
+            setCustomerName(prev => !prev || prev === "Walk-in Guest" || prev === "Walk-in" ? pointsData.name : prev);
+          } else {
+            setCustomerInfo(null);
+          }
+        } else {
+          setCustomerInfo(null);
+        }
+
+        // 2. Fetch available discounts
+        const res = await fetch(`${API_BASE}/customers/available-discounts?phone=${encodeURIComponent(targetPhone)}`);
+        if (res.ok) {
+          const data = await res.json();
+          const list = data.discounts || [];
+          if (list.length > 0) {
+            // Find the best discount
+            let best = list[0];
+            let maxSavings = 0;
+            for (const d of list) {
+              const savings = d.type === "percentage" ? (cartSubtotal * d.value) / 100 : d.value;
+              if (savings > maxSavings) {
+                maxSavings = savings;
+                best = d;
+              }
+            }
+            setAppliedDiscount(best);
+            setDiscountCode(best.code);
+          } else {
+            setAppliedDiscount(null);
+            setDiscountCode("");
+          }
+        } else {
+          setAppliedDiscount(null);
+          setDiscountCode("");
+        }
+      } catch (e) {
+        console.error("Failed to fetch customer discounts/points", e);
+      }
+    };
+
+    fetchCustomerDetails();
+  }, [customerPhone, cartSubtotal]);
+
   return (
     <div className="flex flex-col h-full w-full bg-muted/20 overflow-hidden">
+
 
       {/* Top bar: category tabs + cart button */}
       <div className="flex items-center gap-2 px-3 sm:px-4 py-3 bg-background border-b shadow-sm z-10 shrink-0">
@@ -900,7 +984,9 @@ export default function PosTerminal() {
           }
           setIsCheckoutOpen(true);
         }}
+        availableDiscounts={loggedCustomerDiscounts}
       />
+
 
       <CustomizerDialog
         isOpen={isCustomizing}
@@ -933,6 +1019,7 @@ export default function PosTerminal() {
         setCustomerName={setCustomerName}
         customerPhone={customerPhone}
         setCustomerPhone={setCustomerPhone}
+        customerInfo={customerInfo}
         paymentMethod={paymentMethod}
         setPaymentMethod={setPaymentMethod}
         adminPin={adminPin}
@@ -1014,6 +1101,7 @@ export default function PosTerminal() {
           setIsLoyaltyDialogOpen(false);
           setCustomerName("");
           setCustomerPhone("");
+          setCustomerInfo(null);
           setCreatedOrder(null);
         }}
         loyaltyPoints={loyaltyPoints}

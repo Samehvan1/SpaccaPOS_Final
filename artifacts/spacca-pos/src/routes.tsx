@@ -17,10 +17,13 @@ import KitchenStationsAdmin from "@/pages/admin/kitchen-stations";
 import AdminUsers from "@/pages/admin/users";
 import BranchesAdmin from "@/pages/admin/branches";
 import DiscountsAdmin from "@/pages/admin/discounts";
+import CustomersAdmin from "@/pages/admin/customers";
+import TagsAdmin from "@/pages/admin/tags";
 import ActivityLogs from "@/pages/admin/activity-logs";
 import PermissionsAdmin from "@/pages/admin/permissions";
 import CustomerAuth from "@/pages/customer-auth";
 import CustomerProfile from "@/pages/customer-profile";
+
 import CashierPerformancePage from "@/pages/admin/cashier-performance";
 import KioskPage from "@/pages/kiosk";
 import SystemSettingsAdmin from "@/pages/admin/settings";
@@ -102,7 +105,10 @@ export const appRoutes: RouteConfig[] = [
   // Settings & Users
   { path: "/admin/kitchen-stations", component: KitchenStationsAdmin, permission: "admin:view" },
   { path: "/admin/discounts", component: DiscountsAdmin, permission: "discounts:view" },
+  { path: "/admin/customers", component: CustomersAdmin, permission: "admin:view" },
+  { path: "/admin/tags", component: TagsAdmin, permission: "admin:view" },
   { path: "/admin/users", component: AdminUsers, permission: "users:view" },
+
   { path: "/admin/branches", component: BranchesAdmin, permission: "branches:manage" },
   { path: "/admin/activity-logs", component: ActivityLogs, permission: "admin:view" },
   { path: "/admin/permissions", component: PermissionsAdmin, permission: "roles:manage" },

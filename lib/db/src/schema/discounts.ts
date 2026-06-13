@@ -10,7 +10,9 @@ export const discountsTable = pgTable("discounts", {
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
+  isFirstOrder: boolean("is_first_order").notNull().default(false),
 });
+
 
 export const insertDiscountSchema = createInsertSchema(discountsTable).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertDiscount = z.infer<typeof insertDiscountSchema>;

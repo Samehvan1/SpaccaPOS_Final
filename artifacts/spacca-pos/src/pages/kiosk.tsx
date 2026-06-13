@@ -956,7 +956,7 @@ export default function KioskPage() {
                 <h2 className="text-8xl font-black text-primary italic leading-none">
                   {loyaltyPoints !== null ? loyaltyPoints : "..."}
                 </h2>
-                <p className="text-xl font-bold opacity-80">Points earned from this order: {createdOrder ? Math.floor((parseFloat(createdOrder.subtotal) / 1.14) / 10) : 0}</p>
+                <p className="text-xl font-bold opacity-80">Points earned from this order: {createdOrder ? Math.floor((parseFloat(createdOrder.total) / 1.14) / 10) : 0}</p>
               </div>
 
               <div className="space-y-6">
