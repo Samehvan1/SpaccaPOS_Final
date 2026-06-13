@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db, customerTagsTable, customersTable, discountsTable } from "@workspace/db";
-import { sql, eq } from "drizzle-orm";
+import { sql, eq, and } from "drizzle-orm";
 import { createHash } from "crypto";
 import { requirePermission } from "../middleware/permissions";
 import { logActivity } from "../lib/activity-logger";
@@ -236,6 +236,9 @@ router.get("/admin/customers", requirePermission("admin:view"), async (req, res)
 
     const customers = (customersRes.rows as any[]).map((c) => ({
       ...c,
+      isActive: c.is_active ?? true,
+      createdAt: c.created_at,
+      discountId: c.discount_id,
       points: parseInt(c.points || 0),
       visit_count: parseInt(c.visit_count || 0),
       total_spent: parseFloat(c.total_spent || 0),
@@ -457,10 +460,10 @@ router.get("/customers/available-discounts", async (req, res): Promise<void> => 
     let customer: any = null;
 
     if (customerId) {
-      const result = await db.select().from(customersTable).where(eq(customersTable.id, customerId)).limit(1);
+      const result = await db.select().from(customersTable).where(and(eq(customersTable.id, customerId), eq(customersTable.isActive, true))).limit(1);
       customer = result[0];
     } else if (phone && phone.trim()) {
-      const result = await db.select().from(customersTable).where(eq(customersTable.phone, phone.trim())).limit(1);
+      const result = await db.select().from(customersTable).where(and(eq(customersTable.phone, phone.trim()), eq(customersTable.isActive, true))).limit(1);
       customer = result[0];
     }
 
@@ -539,7 +542,7 @@ router.get("/customers/points/:phone", async (req, res): Promise<void> => {
   const { phone } = req.params;
   try {
     const result = await db.execute(sql`
-      SELECT points, name FROM customers WHERE phone = ${phone} LIMIT 1
+      SELECT points, name FROM customers WHERE phone = ${phone} AND is_active = true LIMIT 1
     `);
     const customer = (result.rows as any[])[0];
     if (!customer) {

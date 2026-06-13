@@ -575,7 +575,10 @@ router.post("/orders", async (req, res): Promise<void> => {
       const [existingCust] = await tx
         .select()
         .from(customersTable)
-        .where(eq(customersTable.phone, parsed.data.customerPhone.trim()))
+        .where(and(
+          eq(customersTable.phone, parsed.data.customerPhone.trim()),
+          eq(customersTable.isActive, true)
+        ))
         .limit(1);
 
       if (existingCust) {

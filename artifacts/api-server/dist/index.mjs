@@ -83413,12 +83413,34 @@ router5.post("/orders", async (req, res) => {
   const changeDue = amountTendered != null ? amountTendered - total : null;
   const orderNumber = await generateOrderNumber(targetBranchId);
   const { order, savedItems } = await db.transaction(async (tx) => {
+    let finalCustomerName = parsed.data.customerName ?? null;
+    if (parsed.data.customerPhone) {
+      const [existingCust] = await tx.select().from(customersTable).where(and(
+        eq(customersTable.phone, parsed.data.customerPhone.trim()),
+        eq(customersTable.isActive, true)
+      )).limit(1);
+      if (existingCust) {
+        if (!finalCustomerName) {
+          finalCustomerName = existingCust.name;
+        }
+        const pointsToEarn = Math.floor(total / 1.14 / 10);
+        await tx.update(customersTable).set({
+          points: sql`${customersTable.points} + cast(${pointsToEarn} as integer)`,
+          totalSpent: sql`${customersTable.totalSpent} + cast(${String(total)} as numeric)`,
+          visitCount: sql`${customersTable.visitCount} + 1`,
+          updatedAt: /* @__PURE__ */ new Date()
+        }).where(eq(customersTable.id, existingCust.id));
+        console.log(`[loyalty] Updated registered customer ${existingCust.name} (${parsed.data.customerPhone}): +${pointsToEarn} points`);
+      } else {
+        console.log(`[loyalty] Phone ${parsed.data.customerPhone} is not registered. Skipping points.`);
+      }
+    }
     const [order2] = await tx.insert(ordersTable).values({
       branchId: targetBranchId,
       orderNumber,
       baristaId: sessionUserId,
       status: "pending",
-      customerName: parsed.data.customerName ?? null,
+      customerName: finalCustomerName,
       customerPhone: parsed.data.customerPhone ?? null,
       subtotal: String(subtotal),
       discount: String(discountAmount),
@@ -83433,27 +83455,6 @@ router5.post("/orders", async (req, res) => {
       changeDue: changeDue != null ? String(changeDue) : null,
       notes: parsed.data.notes ?? null
     }).returning();
-    if (parsed.data.customerPhone) {
-      const pointsToEarn = Math.floor(subtotal / 1.14 / 10);
-      if (pointsToEarn > 0) {
-        await tx.insert(customersTable).values({
-          phone: parsed.data.customerPhone,
-          name: parsed.data.customerName || "Customer",
-          points: pointsToEarn,
-          totalSpent: String(total),
-          visitCount: 1
-        }).onConflictDoUpdate({
-          target: [customersTable.phone],
-          set: {
-            points: sql`${customersTable.points} + cast(${pointsToEarn} as integer)`,
-            totalSpent: sql`${customersTable.totalSpent} + cast(${String(total)} as numeric)`,
-            visitCount: sql`${customersTable.visitCount} + 1`,
-            updatedAt: /* @__PURE__ */ new Date()
-          }
-        });
-        console.log(`[loyalty] Awarded ${pointsToEarn} points to ${parsed.data.customerPhone}`);
-      }
-    }
     const allIngredientIds = [
       ...new Set(itemDetails.flatMap((d) => d.customizations.map((c) => c.ingredientId).filter((id) => id !== null)))
     ];
@@ -85546,6 +85547,9 @@ router14.get("/admin/customers", requirePermission("admin:view"), async (req, re
     }
     const customers = customersRes.rows.map((c) => ({
       ...c,
+      isActive: c.is_active ?? true,
+      createdAt: c.created_at,
+      discountId: c.discount_id,
       points: parseInt(c.points || 0),
       visit_count: parseInt(c.visit_count || 0),
       total_spent: parseFloat(c.total_spent || 0),
@@ -85734,10 +85738,10 @@ router14.get("/customers/available-discounts", async (req, res) => {
   try {
     let customer = null;
     if (customerId) {
-      const result = await db.select().from(customersTable).where(eq(customersTable.id, customerId)).limit(1);
+      const result = await db.select().from(customersTable).where(and(eq(customersTable.id, customerId), eq(customersTable.isActive, true))).limit(1);
       customer = result[0];
     } else if (phone && phone.trim()) {
-      const result = await db.select().from(customersTable).where(eq(customersTable.phone, phone.trim())).limit(1);
+      const result = await db.select().from(customersTable).where(and(eq(customersTable.phone, phone.trim()), eq(customersTable.isActive, true))).limit(1);
       customer = result[0];
     }
     if (!customer) {
@@ -85797,7 +85801,7 @@ router14.get("/customers/points/:phone", async (req, res) => {
   const { phone } = req.params;
   try {
     const result = await db.execute(sql`
-      SELECT points, name FROM customers WHERE phone = ${phone} LIMIT 1
+      SELECT points, name FROM customers WHERE phone = ${phone} AND is_active = true LIMIT 1
     `);
     const customer = result.rows[0];
     if (!customer) {
