@@ -70,6 +70,8 @@ export default function CustomersAdmin() {
   const [discounts, setDiscounts] = useState<Discount[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
@@ -187,9 +189,14 @@ export default function CustomersAdmin() {
             <Link href="/admin"><ArrowLeft className="h-5 w-5" /></Link>
           </Button>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
+            <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2 flex-wrap">
               <User className="h-7 w-7 text-amber-500" />
               <span>Customers Rewards & Accounts</span>
+              {!loading && (
+                <Badge variant="secondary" className="bg-amber-500/10 text-amber-500 hover:bg-amber-500/10 font-bold text-xs rounded-full">
+                  {customers.length} Total
+                </Badge>
+              )}
             </h1>
             <p className="text-muted-foreground mt-1">Manage customer profiles, group tags, loyalty points, and custom discounts.</p>
           </div>
@@ -207,7 +214,7 @@ export default function CustomersAdmin() {
               placeholder="Search by name, phone, or email..." 
               className="pl-9" 
               value={searchTerm} 
-              onChange={e => setSearchTerm(e.target.value)} 
+              onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }} 
             />
           </div>
         </CardHeader>
@@ -231,66 +238,132 @@ export default function CustomersAdmin() {
                   <TableRow><TableCell colSpan={8} className="text-center py-8"><Loader2 className="h-6 w-6 animate-spin mx-auto text-primary" /></TableCell></TableRow>
                 ) : filtered.length === 0 ? (
                   <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">No customers found.</TableCell></TableRow>
-                ) : filtered.map(c => (
-                  <TableRow key={c.id} className={c.isActive ? "" : "opacity-60"}>
-                    <TableCell>
-                      <div className="font-bold text-foreground capitalize flex items-center gap-2">
-                        {c.name}
-                        {!c.isActive && <Badge variant="secondary" className="text-[9px] scale-90">Inactive</Badge>}
-                      </div>
-                      <div className="text-muted-foreground text-xs font-semibold">{c.email || "No email"}</div>
-                    </TableCell>
-                    <TableCell className="font-semibold text-sm">
-                      <div className="flex items-center gap-1.5"><Phone className="h-3 w-3 text-muted-foreground" />{c.phone}</div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {c.tagIds && c.tagIds.length > 0 ? (
-                          c.tagIds.map(tagId => {
-                            const found = tags.find(t => t.id === tagId);
-                            return found ? (
-                              <Badge key={tagId} variant="outline" className="bg-amber-100/50 dark:bg-amber-950/50 text-amber-800 dark:text-amber-200 border-amber-200/50">
-                                {found.name}
-                              </Badge>
-                            ) : null;
-                          })
-                        ) : (
-                          <span className="text-xs text-muted-foreground italic">None</span>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {c.discount_code ? (
-                        <div className="flex items-center gap-1 text-green-600 dark:text-green-400 font-mono font-bold text-xs bg-green-50 dark:bg-green-950/50 px-2 py-1 rounded border border-green-200/50">
-                          <Ticket className="h-3.5 w-3.5" />
-                          {c.discount_code}
-                        </div>
-                      ) : (
-                        <span className="text-xs text-muted-foreground italic">None</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="font-bold text-primary">
-                      <div className="flex items-center gap-1"><Award className="h-4 w-4" />{c.points}</div>
-                    </TableCell>
-                    <TableCell className="font-black text-sm">
-                      {fmt(c.total_spent)}
-                    </TableCell>
-                    <TableCell className="font-bold text-sm">
-                      {c.visit_count}
-                    </TableCell>
-                    <TableCell className="text-right whitespace-nowrap">
-                      <Button variant="ghost" size="icon" title="Order History" onClick={() => openHistory(c)}>
-                        <History className="h-4 w-4 text-muted-foreground" />
-                      </Button>
-                      <Button variant="ghost" size="icon" title="Edit Customer" onClick={() => openEdit(c)}>
-                        <Edit className="h-4 w-4 text-muted-foreground" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                ) : (
+                  (() => {
+                    const totalPages = Math.ceil(filtered.length / pageSize) || 1;
+                    const paginated = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+                    return paginated.map(c => (
+                      <TableRow key={c.id} className={c.isActive ? "" : "opacity-60"}>
+                        <TableCell>
+                          <div className="font-bold text-foreground capitalize flex items-center gap-2">
+                            {c.name}
+                            {!c.isActive && <Badge variant="secondary" className="text-[9px] scale-90">Inactive</Badge>}
+                          </div>
+                          <div className="text-muted-foreground text-xs font-semibold">{c.email || "No email"}</div>
+                        </TableCell>
+                        <TableCell className="font-semibold text-sm">
+                          <div className="flex items-center gap-1.5"><Phone className="h-3 w-3 text-muted-foreground" />{c.phone}</div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-wrap gap-1">
+                            {c.tagIds && c.tagIds.length > 0 ? (
+                              c.tagIds.map(tagId => {
+                                const found = tags.find(t => t.id === tagId);
+                                return found ? (
+                                  <Badge key={tagId} variant="outline" className="bg-amber-100/50 dark:bg-amber-950/50 text-amber-800 dark:text-amber-200 border-amber-200/50">
+                                    {found.name}
+                                  </Badge>
+                                ) : null;
+                              })
+                            ) : (
+                              <span className="text-xs text-muted-foreground italic">None</span>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {c.discount_code ? (
+                            <div className="flex items-center gap-1 text-green-600 dark:text-green-400 font-mono font-bold text-xs bg-green-50 dark:bg-green-950/50 px-2 py-1 rounded border border-green-200/50">
+                              <Ticket className="h-3.5 w-3.5" />
+                              {c.discount_code}
+                            </div>
+                          ) : (
+                            <span className="text-xs text-muted-foreground italic">None</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="font-bold text-primary">
+                          <div className="flex items-center gap-1"><Award className="h-4 w-4" />{c.points}</div>
+                        </TableCell>
+                        <TableCell className="font-black text-sm">
+                          {fmt(c.total_spent)}
+                        </TableCell>
+                        <TableCell className="font-bold text-sm">
+                          {c.visit_count}
+                        </TableCell>
+                        <TableCell className="text-right whitespace-nowrap">
+                          <Button variant="ghost" size="icon" title="Order History" onClick={() => openHistory(c)}>
+                            <History className="h-4 w-4 text-muted-foreground" />
+                          </Button>
+                          <Button variant="ghost" size="icon" title="Edit Customer" onClick={() => openEdit(c)}>
+                            <Edit className="h-4 w-4 text-muted-foreground" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ));
+                  })()
+                )}
               </TableBody>
             </Table>
           </div>
+
+          {/* Pagination Controls */}
+          {filtered.length > 0 && (
+            (() => {
+              const totalPages = Math.ceil(filtered.length / pageSize) || 1;
+              return (
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 pt-4 border-t px-2">
+                  <div className="text-xs text-muted-foreground font-semibold">
+                    Showing {Math.min(filtered.length, (currentPage - 1) * pageSize + 1)}–{Math.min(filtered.length, currentPage * pageSize)} of {filtered.length} customers
+                  </div>
+                  <div className="flex items-center gap-6">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground font-semibold">Rows per page:</span>
+                      <Select
+                        value={String(pageSize)}
+                        onValueChange={(val) => {
+                          setPageSize(Number(val));
+                          setCurrentPage(1);
+                        }}
+                      >
+                        <SelectTrigger className="w-[70px] h-8 text-xs font-bold bg-background">
+                          <SelectValue placeholder={String(pageSize)} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {[10, 25, 50, 100].map((size) => (
+                            <SelectItem key={size} value={String(size)} className="text-xs font-semibold">
+                              {size}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                        disabled={currentPage === 1}
+                        className="h-8 w-20 font-bold bg-background"
+                      >
+                        Previous
+                      </Button>
+                      <span className="text-xs font-bold text-muted-foreground whitespace-nowrap">
+                        Page {currentPage} of {totalPages}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                        disabled={currentPage === totalPages}
+                        className="h-8 w-20 font-bold bg-background"
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()
+          )}
         </CardContent>
       </Card>
 
