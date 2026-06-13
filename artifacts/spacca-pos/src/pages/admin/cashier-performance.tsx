@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { ArrowLeft, Users, TrendingUp, ShoppingBag, CreditCard, Banknote, Wallet, Clock, Calendar, BarChart2 } from "lucide-react";
+import { ArrowLeft, Users, TrendingUp, ShoppingBag, CreditCard, Banknote, Wallet, Clock, Calendar, BarChart2, Gift } from "lucide-react";
 import { Link } from "wouter";
 
 const API = (path: string) => fetch(path, { credentials: "include" }).then(r => {
@@ -340,17 +340,33 @@ export default function CashierPerformancePage() {
                 </div>
               </div>
               <div className="space-y-2">
-                <div className="flex justify-between text-sm">
+                <div className="flex justify-between text-sm items-center">
                   <span className="flex items-center gap-2"><Banknote className="h-3.5 w-3.5 opacity-60" /> Cash</span>
-                  <span className="font-semibold">{fmt(viewingSessionStats.cashRevenue)}</span>
+                  <div className="text-right">
+                    <span className="font-semibold">{fmt(viewingSessionStats.cashRevenue)}</span>
+                    <span className="text-[10px] text-muted-foreground ml-1.5 font-bold">({viewingSessionStats.cashOrders || 0} orders)</span>
+                  </div>
                 </div>
-                <div className="flex justify-between text-sm">
+                <div className="flex justify-between text-sm items-center">
                   <span className="flex items-center gap-2"><CreditCard className="h-3.5 w-3.5 opacity-60" /> Card</span>
-                  <span className="font-semibold">{fmt(viewingSessionStats.cardRevenue)}</span>
+                  <div className="text-right">
+                    <span className="font-semibold">{fmt(viewingSessionStats.cardRevenue)}</span>
+                    <span className="text-[10px] text-muted-foreground ml-1.5 font-bold">({viewingSessionStats.cardOrders || 0} orders)</span>
+                  </div>
                 </div>
-                <div className="flex justify-between text-sm">
+                <div className="flex justify-between text-sm items-center">
                   <span className="flex items-center gap-2"><Wallet className="h-3.5 w-3.5 opacity-60" /> Wallet</span>
-                  <span className="font-semibold">{fmt(viewingSessionStats.walletRevenue)}</span>
+                  <div className="text-right">
+                    <span className="font-semibold">{fmt(viewingSessionStats.walletRevenue)}</span>
+                    <span className="text-[10px] text-muted-foreground ml-1.5 font-bold">({viewingSessionStats.walletOrders || 0} orders)</span>
+                  </div>
+                </div>
+                <div className="flex justify-between text-sm items-center">
+                  <span className="flex items-center gap-2 text-pink-600"><Gift className="h-3.5 w-3.5 opacity-60" /> Hospitality</span>
+                  <div className="text-right">
+                    <span className="font-semibold text-pink-600">{fmt(viewingSessionStats.hospitalityRevenue)}</span>
+                    <span className="text-[10px] text-muted-foreground ml-1.5 font-bold">({viewingSessionStats.hospitalityOrders || 0} orders)</span>
+                  </div>
                 </div>
               </div>
               <div className="pt-2 border-t mt-2">

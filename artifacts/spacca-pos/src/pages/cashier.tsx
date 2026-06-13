@@ -856,19 +856,37 @@ export default function CashierPage() {
                   <div className="flex items-center gap-3 text-sm font-bold">
                     <Banknote className="h-4 w-4 text-amber-500" /> Cash
                   </div>
-                  <div className="font-black">{fmt(shiftSummary.cashRevenue)}</div>
+                  <div className="text-right">
+                    <div className="font-black">{fmt(shiftSummary.cashRevenue)}</div>
+                    <div className="text-[10px] text-muted-foreground font-bold">{shiftSummary.cashOrders || 0} orders</div>
+                  </div>
                 </div>
                 <div className="flex justify-between items-center p-3 rounded-xl bg-white/[0.02] border border-white/5">
                   <div className="flex items-center gap-3 text-sm font-bold">
                     <CreditCard className="h-4 w-4 text-purple-500" /> Card
                   </div>
-                  <div className="font-black">{fmt(shiftSummary.cardRevenue)}</div>
+                  <div className="text-right">
+                    <div className="font-black">{fmt(shiftSummary.cardRevenue)}</div>
+                    <div className="text-[10px] text-muted-foreground font-bold">{shiftSummary.cardOrders || 0} orders</div>
+                  </div>
                 </div>
                 <div className="flex justify-between items-center p-3 rounded-xl bg-white/[0.02] border border-white/5">
                   <div className="flex items-center gap-3 text-sm font-bold">
                     <Wallet className="h-4 w-4 text-neon-cyan" /> Wallet
                   </div>
-                  <div className="font-black">{fmt(shiftSummary.walletRevenue)}</div>
+                  <div className="text-right">
+                    <div className="font-black">{fmt(shiftSummary.walletRevenue)}</div>
+                    <div className="text-[10px] text-muted-foreground font-bold">{shiftSummary.walletOrders || 0} orders</div>
+                  </div>
+                </div>
+                <div className="flex justify-between items-center p-3 rounded-xl bg-white/[0.02] border border-white/5">
+                  <div className="flex items-center gap-3 text-sm font-bold">
+                    <Gift className="h-4 w-4 text-pink-500" /> Hospitality
+                  </div>
+                  <div className="text-right">
+                    <div className="font-black text-pink-400">{fmt(shiftSummary.hospitalityRevenue)}</div>
+                    <div className="text-[10px] text-muted-foreground font-bold">{shiftSummary.hospitalityOrders || 0} orders</div>
+                  </div>
                 </div>
               </div>
 

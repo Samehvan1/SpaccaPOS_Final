@@ -211,20 +211,40 @@ router.get("/cashier/performance/:cashierId", requirePermission("cashier:view_re
   const totalRevenue = completedOrders.reduce((sum, o) => sum + parseFloat(o.total as any), 0);
   const orderIds = completedOrders.map(o => o.id);
   let cashRevenue = 0, cardRevenue = 0, walletRevenue = 0, hospitalityRevenue = 0;
+  let cashOrders = 0, cardOrders = 0, walletOrders = 0, hospitalityOrders = 0;
 
   if (orderIds.length > 0) {
     const payments = await db
-      .select({ paymentMethod: orderPaymentsTable.paymentMethod, amount: orderPaymentsTable.amount })
+      .select({ orderId: orderPaymentsTable.orderId, paymentMethod: orderPaymentsTable.paymentMethod, amount: orderPaymentsTable.amount })
       .from(orderPaymentsTable)
       .where(inArray(orderPaymentsTable.orderId, orderIds));
     
+    const cashOrderIds = new Set<number>();
+    const cardOrderIds = new Set<number>();
+    const walletOrderIds = new Set<number>();
+    const hospitalityOrderIds = new Set<number>();
+
     for (const p of payments) {
       const amt = parseFloat(p.amount);
-      if (p.paymentMethod === "cash") cashRevenue += amt;
-      else if (p.paymentMethod === "card") cardRevenue += amt;
-      else if (p.paymentMethod === "wallet") walletRevenue += amt;
-      else if (p.paymentMethod === "hospitality") hospitalityRevenue += amt;
+      if (p.paymentMethod === "cash") {
+        cashRevenue += amt;
+        cashOrderIds.add(p.orderId);
+      } else if (p.paymentMethod === "card") {
+        cardRevenue += amt;
+        cardOrderIds.add(p.orderId);
+      } else if (p.paymentMethod === "wallet") {
+        walletRevenue += amt;
+        walletOrderIds.add(p.orderId);
+      } else if (p.paymentMethod === "hospitality") {
+        hospitalityRevenue += amt;
+        hospitalityOrderIds.add(p.orderId);
+      }
     }
+
+    cashOrders = cashOrderIds.size;
+    cardOrders = cardOrderIds.size;
+    walletOrders = walletOrderIds.size;
+    hospitalityOrders = hospitalityOrderIds.size;
   }
 
   const [cashier] = await db
@@ -237,9 +257,13 @@ router.get("/cashier/performance/:cashierId", requirePermission("cashier:view_re
     totalOrders: completedOrders.length,
     totalRevenue,
     cashRevenue,
+    cashOrders,
     cardRevenue,
+    cardOrders,
     walletRevenue,
+    walletOrders,
     hospitalityRevenue,
+    hospitalityOrders,
     avgOrderValue: completedOrders.length > 0 ? totalRevenue / completedOrders.length : 0,
   });
 });
@@ -326,19 +350,39 @@ router.get("/cashier/sessions/:id/performance", requirePermission("cashier:view_
     const totalRevenue = completedOrders.reduce((sum, o) => sum + parseFloat(o.total as any), 0);
 
     let cashRevenue = 0, cardRevenue = 0, walletRevenue = 0, hospitalityRevenue = 0;
+    let cashOrders = 0, cardOrders = 0, walletOrders = 0, hospitalityOrders = 0;
     if (orderIds.length > 0) {
       const payments = await db
-        .select({ method: orderPaymentsTable.paymentMethod, amount: orderPaymentsTable.amount })
+        .select({ orderId: orderPaymentsTable.orderId, method: orderPaymentsTable.paymentMethod, amount: orderPaymentsTable.amount })
         .from(orderPaymentsTable)
         .where(inArray(orderPaymentsTable.orderId, orderIds));
       
+      const cashOrderIds = new Set<number>();
+      const cardOrderIds = new Set<number>();
+      const walletOrderIds = new Set<number>();
+      const hospitalityOrderIds = new Set<number>();
+
       for (const p of payments) {
         const amt = parseFloat(p.amount);
-        if (p.method === "cash") cashRevenue += amt;
-        else if (p.method === "card") cardRevenue += amt;
-        else if (p.method === "wallet") walletRevenue += amt;
-        else if (p.method === "hospitality") hospitalityRevenue += amt;
+        if (p.method === "cash") {
+          cashRevenue += amt;
+          cashOrderIds.add(p.orderId);
+        } else if (p.method === "card") {
+          cardRevenue += amt;
+          cardOrderIds.add(p.orderId);
+        } else if (p.method === "wallet") {
+          walletRevenue += amt;
+          walletOrderIds.add(p.orderId);
+        } else if (p.method === "hospitality") {
+          hospitalityRevenue += amt;
+          hospitalityOrderIds.add(p.orderId);
+        }
       }
+
+      cashOrders = cashOrderIds.size;
+      cardOrders = cardOrderIds.size;
+      walletOrders = walletOrderIds.size;
+      hospitalityOrders = hospitalityOrderIds.size;
     }
 
   const [cashier] = await db
@@ -353,9 +397,13 @@ router.get("/cashier/sessions/:id/performance", requirePermission("cashier:view_
     totalOrders: completedOrders.length,
     totalRevenue,
     cashRevenue,
+    cashOrders,
     cardRevenue,
+    cardOrders,
     walletRevenue,
+    walletOrders,
     hospitalityRevenue,
+    hospitalityOrders,
   });
 });
 
@@ -406,19 +454,39 @@ router.get("/cashier/sessions/:id/report", requirePermission("cashier:view_repor
   const totalRevenue = completedOrders.reduce((sum, o) => sum + parseFloat(o.total as any), 0);
   
   let cashRevenue = 0, cardRevenue = 0, walletRevenue = 0, hospitalityRevenue = 0;
+  let cashOrders = 0, cardOrders = 0, walletOrders = 0, hospitalityOrders = 0;
   if (orderIds.length > 0) {
     const payments = await db
-      .select({ method: orderPaymentsTable.paymentMethod, amount: orderPaymentsTable.amount })
+      .select({ orderId: orderPaymentsTable.orderId, method: orderPaymentsTable.paymentMethod, amount: orderPaymentsTable.amount })
       .from(orderPaymentsTable)
       .where(inArray(orderPaymentsTable.orderId, orderIds));
     
+    const cashOrderIds = new Set<number>();
+    const cardOrderIds = new Set<number>();
+    const walletOrderIds = new Set<number>();
+    const hospitalityOrderIds = new Set<number>();
+
     for (const p of payments) {
       const amt = parseFloat(p.amount);
-      if (p.method === "cash") cashRevenue += amt;
-      else if (p.method === "card") cardRevenue += amt;
-      else if (p.method === "wallet") walletRevenue += amt;
-      else if (p.method === "hospitality") hospitalityRevenue += amt;
+      if (p.method === "cash") {
+        cashRevenue += amt;
+        cashOrderIds.add(p.orderId);
+      } else if (p.method === "card") {
+        cardRevenue += amt;
+        cardOrderIds.add(p.orderId);
+      } else if (p.method === "wallet") {
+        walletRevenue += amt;
+        walletOrderIds.add(p.orderId);
+      } else if (p.method === "hospitality") {
+        hospitalityRevenue += amt;
+        hospitalityOrderIds.add(p.orderId);
+      }
     }
+
+    cashOrders = cashOrderIds.size;
+    cardOrders = cardOrderIds.size;
+    walletOrders = walletOrderIds.size;
+    hospitalityOrders = hospitalityOrderIds.size;
   }
 
   // Statistics: Top 5 Orders by Price
@@ -514,9 +582,13 @@ router.get("/cashier/sessions/:id/report", requirePermission("cashier:view_repor
     totals: {
       totalRevenue,
       cashRevenue,
+      cashOrders,
       cardRevenue,
+      cardOrders,
       walletRevenue,
+      walletOrders,
       hospitalityRevenue,
+      hospitalityOrders,
       orderCount: completedOrders.length,
     },
     statistics,
