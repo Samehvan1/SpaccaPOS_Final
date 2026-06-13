@@ -127,6 +127,19 @@ export default function CustomersAdmin() {
 
   const handleSave = async () => {
     if (!name.trim() || !phone.trim()) return;
+    
+    const targetPhone = phone.trim();
+    const isEgLocal = /^01[0125][0-9]{8}$/.test(targetPhone);
+    const isEgIntl = /^(?:\+20|20)1[0125][0-9]{8}$/.test(targetPhone);
+    if (!isEgLocal && !isEgIntl) {
+      toast({
+        variant: "destructive",
+        title: "Invalid Phone Number",
+        description: "Please enter a valid Egyptian mobile number (e.g. 010xxxxxxxx or +201xxxxxxxxx)."
+      });
+      return;
+    }
+
     setSaving(true);
     try {
       const payload = {
@@ -380,8 +393,33 @@ export default function CustomersAdmin() {
                 <Input id="cust-name" value={name} onChange={e => setName(e.target.value)} placeholder="Full Name" />
               </div>
               <div className="grid gap-1.5">
-                <Label htmlFor="cust-phone">Phone Number</Label>
-                <Input id="cust-phone" value={phone} onChange={e => setPhone(e.target.value)} placeholder="+20 1xx xxx xxxx" />
+                <Label htmlFor="cust-phone" className={phone.trim() && !(/^01[0125][0-9]{8}$/.test(phone.trim()) || /^(?:\+20|20)1[0125][0-9]{8}$/.test(phone.trim())) ? "text-destructive" : ""}>Phone Number</Label>
+                <Input
+                  id="cust-phone"
+                  type="tel"
+                  inputMode="tel"
+                  pattern="[0-9+]*"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value.replace(/[^0-9+]/g, ""))}
+                  onKeyDown={(e) => {
+                    if (
+                      ["Backspace", "Delete", "Tab", "Escape", "Enter", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"].includes(e.key) ||
+                      (e.ctrlKey || e.metaKey)
+                    ) {
+                      return;
+                    }
+                    if (!/^[0-9+]$/.test(e.key)) {
+                      e.preventDefault();
+                    }
+                  }}
+                  placeholder="e.g. 01012345678"
+                  className={phone.trim() && !(/^01[0125][0-9]{8}$/.test(phone.trim()) || /^(?:\+20|20)1[0125][0-9]{8}$/.test(phone.trim())) ? "border-destructive focus-visible:ring-destructive" : ""}
+                />
+                {phone.trim() && !(/^01[0125][0-9]{8}$/.test(phone.trim()) || /^(?:\+20|20)1[0125][0-9]{8}$/.test(phone.trim())) && (
+                  <p className="text-[10px] text-destructive font-semibold">
+                    Invalid Egyptian format. Use 01XXXXXXXXX or +201XXXXXXXXX.
+                  </p>
+                )}
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">

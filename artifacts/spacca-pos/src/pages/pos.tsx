@@ -156,6 +156,39 @@ export default function PosTerminal() {
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
+  // Idle timer to clear category filters & search input after 1 minute of inactivity
+  useEffect(() => {
+    if (selectedCategoryId === null && !searchQuery.trim()) {
+      return;
+    }
+
+    let timeoutId: NodeJS.Timeout;
+
+    const resetTimer = () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        setSelectedCategoryId(null);
+        setSearchQuery("");
+      }, 60000); // 1 minute
+    };
+
+    resetTimer();
+
+    const events = ["mousemove", "keydown", "click", "touchstart", "scroll"];
+    const handler = () => resetTimer();
+
+    events.forEach(event => {
+      window.addEventListener(event, handler);
+    });
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      events.forEach(event => {
+        window.removeEventListener(event, handler);
+      });
+    };
+  }, [selectedCategoryId, searchQuery]);
+
   const filteredDrinks = useMemo(() => {
     if (!drinks) return [];
     
@@ -706,6 +739,20 @@ export default function PosTerminal() {
         description: `Please enter customer name for ${paymentMethod === "hospitality" ? "Hospitality" : "high discount"} orders.`
       });
       return;
+    }
+
+    if (customerPhone.trim()) {
+      const phoneVal = customerPhone.trim();
+      const isEgLocal = /^01[0125][0-9]{8}$/.test(phoneVal);
+      const isEgIntl = /^(?:\+20|20)1[0125][0-9]{8}$/.test(phoneVal);
+      if (!isEgLocal && !isEgIntl) {
+        toast({
+          variant: "destructive",
+          title: "Invalid Phone Number",
+          description: "Please enter a valid Egyptian mobile number (e.g. 010xxxxxxxx or +201xxxxxxxxx)."
+        });
+        return;
+      }
     }
 
     createOrder({

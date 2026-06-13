@@ -90,6 +90,39 @@ export default function KioskPage() {
   useOrderEvents();
   const [step, setStep] = useState<"start" | "menu" | "checkout" | "success">("start");
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
+
+  // Idle timer to clear category filters after 1 minute of inactivity
+  useEffect(() => {
+    if (selectedCategoryId === null) {
+      return;
+    }
+
+    let timeoutId: NodeJS.Timeout;
+
+    const resetTimer = () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        setSelectedCategoryId(null);
+      }, 60000); // 1 minute
+    };
+
+    resetTimer();
+
+    const events = ["mousemove", "keydown", "click", "touchstart", "scroll"];
+    const handler = () => resetTimer();
+
+    events.forEach(event => {
+      window.addEventListener(event, handler);
+    });
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      events.forEach(event => {
+        window.removeEventListener(event, handler);
+      });
+    };
+  }, [selectedCategoryId]);
+
   const [cart, setCart] = useState<any[]>([]);
   const [selectedBranchId, setSelectedBranchId] = useState<number | null>(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -478,6 +511,20 @@ export default function KioskPage() {
   });
 
   const handleFinish = () => {
+    if (customerPhone.trim()) {
+      const phoneVal = customerPhone.trim();
+      const isEgLocal = /^01[0125][0-9]{8}$/.test(phoneVal);
+      const isEgIntl = /^(?:\+20|20)1[0125][0-9]{8}$/.test(phoneVal);
+      if (!isEgLocal && !isEgIntl) {
+        toast({
+          variant: "destructive",
+          title: "Invalid Phone Number",
+          description: "Please enter a valid Egyptian mobile number (e.g. 010xxxxxxxx or +201xxxxxxxxx)."
+        });
+        return;
+      }
+    }
+
     createOrder({
       data: {
         branchId: selectedBranchId || undefined,
@@ -916,14 +963,40 @@ export default function KioskPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs font-black uppercase tracking-widest opacity-60">Customer Phone (Loyalty)</Label>
+                  <Label className={`text-xs font-black uppercase tracking-widest ${
+                    customerPhone.trim() && !(/^01[0125][0-9]{8}$/.test(customerPhone.trim()) || /^(?:\+20|20)1[0125][0-9]{8}$/.test(customerPhone.trim()))
+                      ? "text-destructive"
+                      : "opacity-60"
+                  }`}>Customer Phone (Loyalty)</Label>
                   <input 
                     type="tel" 
+                    inputMode="tel"
+                    pattern="[0-9+]*"
                     value={customerPhone}
-                    onChange={(e) => setCustomerPhone(e.target.value)}
-                    placeholder="Enter phone for points"
-                    className="w-full h-16 rounded-2xl px-6 bg-white/5 border border-white/10 text-xl font-bold focus:border-primary outline-none transition-colors"
+                    onChange={(e) => setCustomerPhone(e.target.value.replace(/[^0-9+]/g, ""))}
+                    onKeyDown={(e) => {
+                      if (
+                        ["Backspace", "Delete", "Tab", "Escape", "Enter", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"].includes(e.key) ||
+                        (e.ctrlKey || e.metaKey)
+                      ) {
+                        return;
+                      }
+                      if (!/^[0-9+]$/.test(e.key)) {
+                        e.preventDefault();
+                      }
+                    }}
+                    placeholder="e.g. 01012345678"
+                    className={`w-full h-16 rounded-2xl px-6 bg-white/5 border text-xl font-bold focus:border-primary outline-none transition-colors ${
+                      customerPhone.trim() && !(/^01[0125][0-9]{8}$/.test(customerPhone.trim()) || /^(?:\+20|20)1[0125][0-9]{8}$/.test(customerPhone.trim()))
+                        ? "border-destructive text-destructive"
+                        : "border-white/10"
+                    }`}
                   />
+                  {customerPhone.trim() && !(/^01[0125][0-9]{8}$/.test(customerPhone.trim()) || /^(?:\+20|20)1[0125][0-9]{8}$/.test(customerPhone.trim())) && (
+                    <p className="text-xs text-destructive font-semibold px-2">
+                      Invalid Egyptian phone format. Use 01XXXXXXXXX or +201XXXXXXXXX.
+                    </p>
+                  )}
                   <p className="text-[10px] text-muted-foreground italic px-2">
                     Enter phone for loyalty points and future health tracking system.
                   </p>

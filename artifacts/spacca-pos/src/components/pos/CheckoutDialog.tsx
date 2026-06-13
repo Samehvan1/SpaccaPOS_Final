@@ -90,13 +90,33 @@ export const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
             />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="phone">Customer Phone (Loyalty)</Label>
+            <Label htmlFor="phone" className={customerPhone.trim() && !(/^01[0125][0-9]{8}$/.test(customerPhone.trim()) || /^(?:\+20|20)1[0125][0-9]{8}$/.test(customerPhone.trim())) ? "text-destructive" : ""}>Customer Phone (Loyalty)</Label>
             <Input
               id="phone"
+              type="tel"
+              inputMode="tel"
+              pattern="[0-9+]*"
               value={customerPhone}
-              onChange={(e) => setCustomerPhone(e.target.value)}
-              placeholder="Phone for loyalty points"
+              onChange={(e) => setCustomerPhone(e.target.value.replace(/[^0-9+]/g, ""))}
+              onKeyDown={(e) => {
+                if (
+                  ["Backspace", "Delete", "Tab", "Escape", "Enter", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"].includes(e.key) ||
+                  (e.ctrlKey || e.metaKey)
+                ) {
+                  return;
+                }
+                if (!/^[0-9+]$/.test(e.key)) {
+                  e.preventDefault();
+                }
+              }}
+              placeholder="e.g. 01012345678"
+              className={customerPhone.trim() && !(/^01[0125][0-9]{8}$/.test(customerPhone.trim()) || /^(?:\+20|20)1[0125][0-9]{8}$/.test(customerPhone.trim())) ? "border-destructive focus-visible:ring-destructive" : ""}
             />
+            {customerPhone.trim() && !(/^01[0125][0-9]{8}$/.test(customerPhone.trim()) || /^(?:\+20|20)1[0125][0-9]{8}$/.test(customerPhone.trim())) && (
+              <p className="text-[10px] text-destructive font-semibold">
+                Invalid Egyptian phone format. Use 01XXXXXXXXX or +201XXXXXXXXX.
+              </p>
+            )}
             {customerInfo && (
               <div className="flex items-center gap-1.5 text-xs text-green-600 font-bold bg-green-500/10 p-2 rounded-lg border border-green-500/20">
                 <Check className="h-4 w-4 shrink-0" />
