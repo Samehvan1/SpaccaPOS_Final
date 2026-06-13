@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { fmt } from "@/lib/currency";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -81,7 +81,6 @@ export default function CashierPerformancePage() {
   const [selectedCashier, setSelectedCashier] = useState<string>("all");
   const [startDate, setStartDate] = useState(new Date().toISOString().split("T")[0]);
   const [endDate, setEndDate] = useState(new Date().toISOString().split("T")[0]);
-  const [performances, setPerformances] = useState<Performance[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(false);
   const [viewingSessionStats, setViewingSessionStats] = useState<any>(null);
@@ -101,21 +100,10 @@ export default function CashierPerformancePage() {
         API(`/api/cashier/sessions?${params}`),
       ]);
       setSessions(sessionsData);
-
-      const targetIds = selectedCashier !== "all"
-        ? [parseInt(selectedCashier)]
-        : cashiers.map(c => c.id);
-
-      const perfs = await Promise.all(
-        targetIds.map(id =>
-          API(`/api/cashier/performance/${id}?startDate=${startDate}&endDate=${endDate}`)
-        )
-      );
-      setPerformances(perfs);
     } catch {
       toast({ variant: "destructive", title: "Failed to load data" });
     } finally { setLoading(false); }
-  }, [selectedCashier, startDate, endDate, cashiers, toast]);
+  }, [selectedCashier, startDate, endDate, toast]);
 
   const loadSessionStats = async (sessionId: number) => {
     try {
@@ -131,10 +119,39 @@ export default function CashierPerformancePage() {
     if (cashiers.length > 0) load();
   }, [cashiers]);
 
-  const totalRevenue = performances.reduce((s, p) => s + p.totalRevenue, 0);
-  const totalOrders = performances.reduce((s, p) => s + p.totalOrders, 0);
-  const totalCash = performances.reduce((s, p) => s + p.cashRevenue, 0);
-  const totalCard = performances.reduce((s, p) => s + p.cardRevenue, 0);
+  const performances = useMemo<Performance[]>(() => {
+    const map = new Map<number, Performance>();
+    for (const s of sessions) {
+      const cid = s.cashierId;
+      if (!map.has(cid)) {
+        map.set(cid, {
+          cashier: { id: cid, name: s.cashierName || "Unknown", role: "cashier" },
+          totalOrders: 0,
+          totalRevenue: 0,
+          cashRevenue: 0,
+          cardRevenue: 0,
+          walletRevenue: 0,
+          avgOrderValue: 0,
+        });
+      }
+      const p = map.get(cid)!;
+      p.totalOrders += (s as any).totalOrders || 0;
+      p.totalRevenue += (s as any).totalRevenue || 0;
+      p.cashRevenue += (s as any).cashRevenue || 0;
+      p.cardRevenue += (s as any).cardRevenue || 0;
+      p.walletRevenue += (s as any).walletRevenue || 0;
+    }
+    
+    return Array.from(map.values()).map(p => ({
+      ...p,
+      avgOrderValue: p.totalOrders > 0 ? p.totalRevenue / p.totalOrders : 0
+    }));
+  }, [sessions]);
+
+  const totalRevenue = useMemo(() => sessions.reduce((s, p: any) => s + (p.totalRevenue || 0), 0), [sessions]);
+  const totalOrders = useMemo(() => sessions.reduce((s, p: any) => s + (p.totalOrders || 0), 0), [sessions]);
+  const totalCash = useMemo(() => sessions.reduce((s, p: any) => s + (p.cashRevenue || 0), 0), [sessions]);
+  const totalCard = useMemo(() => sessions.reduce((s, p: any) => s + (p.cardRevenue || 0), 0), [sessions]);
 
   return (
     <div className="p-6 w-full overflow-y-auto h-full space-y-6">

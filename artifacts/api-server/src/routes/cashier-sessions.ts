@@ -296,10 +296,84 @@ router.get("/cashier/sessions", requirePermission("cashier:view_reports"), async
     : [];
   const cashierMap = new Map(cashiers.map(c => [c.id, c.name]));
 
-  res.json(sessions.map(s => ({
-    ...s,
-    cashierName: cashierMap.get(s.cashierId) ?? "Unknown",
-  })));
+  // Fetch all completed orders for these cashiers to match them to sessions in memory
+  let orders: any[] = [];
+  const paymentsMap = new Map<number, { method: string; amount: number }[]>();
+
+  if (cashierIds.length > 0) {
+    orders = await db
+      .select({
+        id: ordersTable.id,
+        total: ordersTable.total,
+        cashierId: ordersTable.cashierId,
+        time: sql`COALESCE(${ordersTable.paidAt}, ${ordersTable.createdAt})`
+      })
+      .from(ordersTable)
+      .where(and(
+        inArray(ordersTable.cashierId, cashierIds),
+        inArray(ordersTable.status, ["completed", "paid", "ready", "in_progress"])
+      ));
+
+    const orderIds = orders.map(o => o.id);
+    if (orderIds.length > 0) {
+      const payments = await db
+        .select({ orderId: orderPaymentsTable.orderId, method: orderPaymentsTable.paymentMethod, amount: orderPaymentsTable.amount })
+        .from(orderPaymentsTable)
+        .where(inArray(orderPaymentsTable.orderId, orderIds));
+
+      for (const p of payments) {
+        if (!paymentsMap.has(p.orderId)) {
+          paymentsMap.set(p.orderId, []);
+        }
+        paymentsMap.get(p.orderId)!.push({
+          method: p.method,
+          amount: parseFloat(p.amount),
+        });
+      }
+    }
+  }
+
+  const responseSessions = sessions.map(s => {
+    const start = new Date(s.startedAt).getTime();
+    const end = s.endedAt ? new Date(s.endedAt).getTime() : Date.now();
+    
+    let totalRevenue = 0;
+    let totalOrders = 0;
+    let cashRevenue = 0;
+    let cardRevenue = 0;
+    let walletRevenue = 0;
+    let hospitalityRevenue = 0;
+
+    for (const o of orders) {
+      if (o.cashierId !== s.cashierId) continue;
+      const oTime = new Date(o.time).getTime();
+      if (oTime >= start && oTime <= end) {
+        totalOrders++;
+        totalRevenue += parseFloat(o.total as any);
+        
+        const payments = paymentsMap.get(o.id) || [];
+        for (const p of payments) {
+          if (p.method === "cash") cashRevenue += p.amount;
+          else if (p.method === "card") cardRevenue += p.amount;
+          else if (p.method === "wallet") walletRevenue += p.amount;
+          else if (p.method === "hospitality") hospitalityRevenue += p.amount;
+        }
+      }
+    }
+
+    return {
+      ...s,
+      cashierName: cashierMap.get(s.cashierId) ?? "Unknown",
+      totalOrders,
+      totalRevenue,
+      cashRevenue,
+      cardRevenue,
+      walletRevenue,
+      hospitalityRevenue,
+    };
+  });
+
+  res.json(responseSessions);
 });
 
 // GET /cashier/list — list all users with cashier/admin role
