@@ -11,6 +11,7 @@ interface Customization {
   optionLabel: string;
   baristaSortOrder?: number | null;
   customerSortOrder?: number | null;
+  producedQty?: number | string | null;
 }
 
 interface OrderItem {
@@ -178,9 +179,18 @@ export function printAgentReceipts(order: CompletedOrder) {
         .sort((a, b) => (a.baristaSortOrder ?? 1) - (b.baristaSortOrder ?? 1));
 
       const customs = filteredCustoms.length
-        ? filteredCustoms.map(c =>
-            `<div class="row"><span class="label" style="color:#555">${c.slotLabel}</span><span class="value bold">${c.optionLabel}</span></div>`
-          ).join("")
+        ? filteredCustoms.map(c => {
+            const displayQty = c.producedQty && Number(c.producedQty) > 0 ? Number(c.producedQty) : 0;
+            let qtyStr = "";
+            if (displayQty > 0) {
+              const qtyRounded = Math.round(displayQty);
+              const alreadyHasQty = c.optionLabel.includes(`(${qtyRounded}ml)`) || c.optionLabel.includes(`(${displayQty}ml)`);
+              if (!alreadyHasQty) {
+                qtyStr = ` (${qtyRounded}ml)`;
+              }
+            }
+            return `<div class="row"><span class="label" style="color:#555">${c.slotLabel}</span><span class="value bold">${c.optionLabel}${qtyStr}</span></div>`;
+          }).join("")
         : `<div class="indent" style="color:#aaa">No customizations</div>`;
       const notes = item.specialNotes ? `
         <div class="divider"></div>
