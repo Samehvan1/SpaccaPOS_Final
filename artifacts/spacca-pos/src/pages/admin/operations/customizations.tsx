@@ -5,11 +5,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Coffee, Filter, BarChart3, ListFilter, TrendingUp, Percent, DollarSign } from "lucide-react";
+import { Coffee, Filter, BarChart3, ListFilter, TrendingUp, Percent, DollarSign, Download } from "lucide-react";
 import { format } from "date-fns";
 import { Progress } from "@/components/ui/progress";
+import { useToast } from "@/hooks/use-toast";
 
 export default function CustomizationsAnalysisPage() {
+  const { toast } = useToast();
   const [selectedBranch, setSelectedBranch] = useState<string>("all");
   const [localStartDate, setLocalStartDate] = useState(format(new Date().setDate(new Date().getDate() - 30), "yyyy-MM-dd"));
   const [localEndDate, setLocalEndDate] = useState(format(new Date(), "yyyy-MM-dd"));
@@ -51,6 +53,134 @@ export default function CustomizationsAnalysisPage() {
     });
   };
 
+  const handleExportAll = () => {
+    if (!analytics || (!drinks.length && !slots.length && !options.length)) {
+      toast({ variant: "destructive", title: "No data to export" });
+      return;
+    }
+
+    const branchName = selectedBranch === "all" 
+      ? "All Branches" 
+      : (branches.find((b: any) => String(b.id) === selectedBranch)?.name || `Branch #${selectedBranch}`);
+
+    let csvContent = `Customizations Analysis Report\n`;
+    csvContent += `Branch,${branchName}\n`;
+    csvContent += `Period,${filterState.start} to ${filterState.end}\n\n`;
+
+    // Section 1: Most Customized Drinks
+    csvContent += `Most Customized Drinks\n`;
+    const drinksHeaders = ["Drink Name", "Total Drinks", "Customized Count", "Percentage of Drinks", "Total Price (EGP)", "Customization Price (EGP)", "Percentage of Price"];
+    csvContent += drinksHeaders.join(",") + "\n";
+    drinks.forEach((d: any) => {
+      const row = [
+        d.name,
+        d.totalCount,
+        d.customizedCount,
+        `${d.percentage.toFixed(1)}%`,
+        d.totalRevenue,
+        d.customizedRevenue,
+        `${d.percentageRevenue.toFixed(1)}%`
+      ];
+      csvContent += row.map((val: any) => `"${String(val).replace(/"/g, '""')}"`).join(",") + "\n";
+    });
+    csvContent += "\n";
+
+    // Section 2: Most Customized Slots
+    csvContent += `Most Customized Slots\n`;
+    const slotsHeaders = ["Slot (Component)", "Changes Count"];
+    csvContent += slotsHeaders.join(",") + "\n";
+    slots.forEach((s: any) => {
+      const row = [s.label, s.count];
+      csvContent += row.map((val: any) => `"${String(val).replace(/"/g, '""')}"`).join(",") + "\n";
+    });
+    csvContent += "\n";
+
+    // Section 3: Most Chosen Options
+    csvContent += `Most Chosen Options\n`;
+    const optionsHeaders = ["Option Name", "Slot Context", "Usage Count"];
+    csvContent += optionsHeaders.join(",") + "\n";
+    options.forEach((o: any) => {
+      const row = [o.label, o.slot, o.count];
+      csvContent += row.map((val: any) => `"${String(val).replace(/"/g, '""')}"`).join(",") + "\n";
+    });
+
+    const blob = new Blob(["\ufeff", csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `customizations_report_${filterState.start}_to_${filterState.end}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast({ title: "Export successful", description: "Full report CSV file has been downloaded." });
+  };
+
+  const handleExportDrinks = () => {
+    if (!drinks.length) {
+      toast({ variant: "destructive", title: "No drink customization data to export" });
+      return;
+    }
+    const headers = ["Drink Name", "Total Drinks", "Customized Count", "Percentage of Drinks", "Total Price (EGP)", "Customization Price (EGP)", "Percentage of Price"];
+    const rows = drinks.map((d: any) => [
+      d.name,
+      d.totalCount,
+      d.customizedCount,
+      `${d.percentage.toFixed(1)}%`,
+      d.totalRevenue,
+      d.customizedRevenue,
+      `${d.percentageRevenue.toFixed(1)}%`
+    ]);
+    const csvContent = [headers.join(","), ...rows.map((r: any) => r.map((val: any) => `"${String(val).replace(/"/g, '""')}"`).join(","))].join("\n");
+    const blob = new Blob(["\ufeff", csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `customized_drinks_${filterState.start}_to_${filterState.end}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast({ title: "Export successful", description: "Drinks analysis CSV file downloaded." });
+  };
+
+  const handleExportSlots = () => {
+    if (!slots.length) {
+      toast({ variant: "destructive", title: "No slot customization data to export" });
+      return;
+    }
+    const headers = ["Slot (Component)", "Changes Count"];
+    const rows = slots.map((s: any) => [s.label, s.count]);
+    const csvContent = [headers.join(","), ...rows.map((r: any) => r.map((val: any) => `"${String(val).replace(/"/g, '""')}"`).join(","))].join("\n");
+    const blob = new Blob(["\ufeff", csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `customized_slots_${filterState.start}_to_${filterState.end}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast({ title: "Export successful", description: "Slots analysis CSV file downloaded." });
+  };
+
+  const handleExportOptions = () => {
+    if (!options.length) {
+      toast({ variant: "destructive", title: "No option usage data to export" });
+      return;
+    }
+    const headers = ["Option Name", "Slot Context", "Usage Count"];
+    const rows = options.map((o: any) => [o.label, o.slot, o.count]);
+    const csvContent = [headers.join(","), ...rows.map((r: any) => r.map((val: any) => `"${String(val).replace(/"/g, '""')}"`).join(","))].join("\n");
+    const blob = new Blob(["\ufeff", csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `customized_options_${filterState.start}_to_${filterState.end}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast({ title: "Export successful", description: "Options usage CSV file downloaded." });
+  };
+
   if (isLoading) {
     return (
       <div className="p-8 space-y-6">
@@ -79,12 +209,20 @@ export default function CustomizationsAnalysisPage() {
             <CardTitle className="text-sm font-bold flex items-center gap-2 uppercase tracking-wider text-primary">
               <Filter className="h-4 w-4" /> Filter Analytics Period
             </CardTitle>
-            <button 
-              onClick={handleApply}
-              className="bg-primary text-primary-foreground px-4 py-1.5 rounded-md text-xs font-bold hover:opacity-90 transition-opacity flex items-center gap-2 shadow-sm"
-            >
-              <TrendingUp className="h-3 w-3" /> Apply Filters
-            </button>
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={handleExportAll}
+                className="bg-background border border-input text-foreground px-4 py-1.5 rounded-md text-xs font-bold hover:bg-accent hover:text-accent-foreground transition-all flex items-center gap-2 shadow-sm"
+              >
+                <Download className="h-3 w-3" /> Export Report
+              </button>
+              <button 
+                onClick={handleApply}
+                className="bg-primary text-primary-foreground px-4 py-1.5 rounded-md text-xs font-bold hover:opacity-90 transition-opacity flex items-center gap-2 shadow-sm"
+              >
+                <TrendingUp className="h-3 w-3" /> Apply Filters
+              </button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -123,9 +261,17 @@ export default function CustomizationsAnalysisPage() {
               <CardTitle className="text-lg font-bold flex items-center gap-2">
                 <Coffee className="h-5 w-5 text-primary" /> Most Customized Drinks
               </CardTitle>
-              <Badge variant="outline" className="font-mono text-[10px]">
-                {drinks.length} Drinks Analyzed
-              </Badge>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleExportDrinks}
+                  className="bg-background border border-input text-foreground px-3 py-1 rounded-md text-xs font-bold hover:bg-accent hover:text-accent-foreground transition-all flex items-center gap-1.5 shadow-sm"
+                >
+                  <Download className="h-3 w-3" /> Export CSV
+                </button>
+                <Badge variant="outline" className="font-mono text-[10px]">
+                  {drinks.length} Drinks Analyzed
+                </Badge>
+              </div>
             </div>
           </CardHeader>
           <CardContent className="p-0">
@@ -188,9 +334,17 @@ export default function CustomizationsAnalysisPage() {
         {/* Most Customized Slots */}
         <Card className="shadow-sm border-muted-foreground/10 overflow-hidden">
           <CardHeader className="bg-muted/30 border-b">
-            <CardTitle className="text-lg font-bold flex items-center gap-2">
-              <ListFilter className="h-5 w-5 text-orange-500" /> Most Customized Slots
-            </CardTitle>
+            <div className="flex justify-between items-center">
+              <CardTitle className="text-lg font-bold flex items-center gap-2">
+                <ListFilter className="h-5 w-5 text-orange-500" /> Most Customized Slots
+              </CardTitle>
+              <button
+                onClick={handleExportSlots}
+                className="bg-background border border-input text-foreground px-3 py-1 rounded-md text-xs font-bold hover:bg-accent hover:text-accent-foreground transition-all flex items-center gap-1.5 shadow-sm"
+              >
+                <Download className="h-3 w-3" /> Export CSV
+              </button>
+            </div>
           </CardHeader>
           <CardContent className="p-0">
             <Table>
@@ -224,9 +378,17 @@ export default function CustomizationsAnalysisPage() {
         {/* Most Customized Options */}
         <Card className="shadow-sm border-muted-foreground/10 overflow-hidden">
           <CardHeader className="bg-muted/30 border-b">
-            <CardTitle className="text-lg font-bold flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-indigo-500" /> Most Chosen Options
-            </CardTitle>
+            <div className="flex justify-between items-center">
+              <CardTitle className="text-lg font-bold flex items-center gap-2">
+                <TrendingUp className="h-5 w-5 text-indigo-500" /> Most Chosen Options
+              </CardTitle>
+              <button
+                onClick={handleExportOptions}
+                className="bg-background border border-input text-foreground px-3 py-1 rounded-md text-xs font-bold hover:bg-accent hover:text-accent-foreground transition-all flex items-center gap-1.5 shadow-sm"
+              >
+                <Download className="h-3 w-3" /> Export CSV
+              </button>
+            </div>
           </CardHeader>
           <CardContent className="p-0">
             <Table>

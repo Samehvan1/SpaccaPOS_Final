@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Search, Plus, Edit, History, ArrowLeft, Loader2, User, Phone, Mail, Award, Landmark, Calendar, Ticket } from "lucide-react";
+import { Search, Plus, Edit, History, ArrowLeft, Loader2, User, Phone, Mail, Award, Landmark, Calendar, Ticket, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
 import { fmt } from "@/lib/currency";
@@ -194,6 +194,40 @@ export default function CustomersAdmin() {
     (c.email && c.email.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
+  const handleExportCSV = () => {
+    if (!filtered.length) {
+      toast({ variant: "destructive", title: "No customer data to export" });
+      return;
+    }
+
+    const headers = ["Customer ID", "Name", "Phone", "Email", "Group Tags", "Discount Coupon", "Loyalty Points", "Total Spent (EGP)", "Visits", "Status", "Created At"];
+    const rows = filtered.map(c => [
+      c.id,
+      c.name,
+      c.phone,
+      c.email || "",
+      (c.tagIds || []).map(tagId => tags.find(t => t.id === tagId)?.name || "").filter(Boolean).join("; "),
+      c.discount_code || "",
+      c.points,
+      c.total_spent,
+      c.visit_count,
+      c.isActive ? "Active" : "Inactive",
+      c.createdAt ? format(new Date(c.createdAt), "yyyy-MM-dd HH:mm:ss") : ""
+    ]);
+
+    const csvContent = [headers.join(","), ...rows.map((r: any[]) => r.map((val: any) => `"${String(val).replace(/"/g, '""')}"`).join(","))].join("\n");
+    const blob = new Blob(["\ufeff", csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `customers_report_${format(new Date(), "yyyyMMdd_HHmm")}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast({ title: "Export successful", description: "Customer list CSV file has been downloaded." });
+  };
+
   return (
     <div className="space-y-6 p-6">
       <div className="flex items-center justify-between">
@@ -214,9 +248,14 @@ export default function CustomersAdmin() {
             <p className="text-muted-foreground mt-1">Manage customer profiles, group tags, loyalty points, and custom discounts.</p>
           </div>
         </div>
-        <Button onClick={openAdd} className="gap-2">
-          <Plus className="h-4 w-4" /> Add Customer
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={handleExportCSV} className="gap-2" disabled={loading || filtered.length === 0}>
+            <Download className="h-4 w-4" /> Export CSV
+          </Button>
+          <Button onClick={openAdd} className="gap-2">
+            <Plus className="h-4 w-4" /> Add Customer
+          </Button>
+        </div>
       </div>
 
       <Card className="shadow-lg">
