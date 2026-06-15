@@ -1995,7 +1995,7 @@ export default function ReportsPage() {
 
       {/* Order Details Modal */}
       <Dialog open={!!selectedOrderDetails} onOpenChange={(open) => !open && setSelectedOrderDetails(null)}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Receipt className="h-5 w-5 text-primary" />
@@ -2111,7 +2111,7 @@ export default function ReportsPage() {
 
       {/* Customization Details Modal */}
       <Dialog open={!!selectedCustomizedItem} onOpenChange={(open) => !open && setSelectedCustomizedItem(null)}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Layers className="h-5 w-5 text-amber-500" />

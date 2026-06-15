@@ -349,7 +349,7 @@ export default function AllOrdersReport() {
 
       {/* Order Details Modal */}
       <Dialog open={!!selectedOrderDetails} onOpenChange={(open) => !open && setSelectedOrderDetails(null)}>
-        <DialogContent className="max-w-2xl bg-card border shadow-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-card border shadow-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 font-black italic tracking-tighter text-xl">
               <Receipt className="h-5 w-5 text-primary" />
