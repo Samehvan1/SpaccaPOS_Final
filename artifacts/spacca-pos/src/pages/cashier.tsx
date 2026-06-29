@@ -10,7 +10,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Check, X, Loader2, Calculator, ClipboardList, User, ListChecks, CreditCard, Banknote, Wallet, Receipt, Printer, FileText, LogOut, Clock, ShoppingBag, TrendingUp, Lock, RotateCcw, Search, History, Gift, Tag, Plus, Trash2, LayoutGrid } from "lucide-react";
 import { fmt } from "@/lib/currency";
-import { printCustomerReceipt, printAgentReceipts } from "@/components/receipt-printer";
+import { printCustomerReceipt, printAgentReceipts, printSimpleDrinksReceipt } from "@/components/receipt-printer";
 import { useSettings } from "@/hooks/use-settings";
 import { useGetActiveOrders, useUpdateOrderStatus, useListOrders } from "@workspace/api-client-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -191,7 +191,7 @@ export default function CashierPage() {
   const { mutate: updateStatus, isPending } = useUpdateOrderStatus();
 
   const handlePrintAll = (order: any) => {
-    printCustomerReceipt(order);
+    printSimpleDrinksReceipt(order);
     printAgentReceipts(order);
   };
 
@@ -378,7 +378,7 @@ export default function CashierPage() {
             const fullOrderData = { ...currentOrder, ...data, items: (data as any).items || currentOrder?.items || [] };
             setCompletedOrder(fullOrderData);
             setIsReceiptOpen(true);
-            if (autoPrintCustomer) printCustomerReceipt(fullOrderData as any);
+            if (autoPrintCustomer) printSimpleDrinksReceipt(fullOrderData as any);
             if (autoPrintAgent) printAgentReceipts(fullOrderData as any);
           } else if (status === "cancelled") {
             toast({ title: "Order Cancelled", description: `Order ${data.orderNumber || currentOrder?.orderNumber} cancelled.` });
@@ -774,7 +774,7 @@ export default function CashierPage() {
                         )}
                       </div>
                       <div className="flex items-center gap-2">
-                        <Button variant="outline" size="sm" className="h-10 px-3 border-white/10 hover:bg-neon-cyan/10 hover:text-neon-cyan gap-2 rounded-xl" onClick={() => handlePrintAll(order)}>
+                        <Button variant="outline" size="sm" className="h-10 px-3 border-white/10 hover:bg-neon-cyan/10 hover:text-neon-cyan gap-2 rounded-xl" onClick={() => printSimpleDrinksReceipt(order)}>
                           <Printer className="h-4 w-4" /> <span className="text-xs font-bold">Reprint</span>
                         </Button>
                         {order.status !== 'refunded' && (
@@ -811,14 +811,17 @@ export default function CashierPage() {
           <div className="grid gap-4 py-2">
             <Button className="h-16 gap-4 text-base bg-white/5 hover:bg-neon-cyan/20 border border-neon-cyan/50 text-white transition-all duration-300 rounded-2xl group" onClick={() => completedOrder && handlePrintAll(completedOrder)}>
               <Receipt className="h-6 w-6 text-neon-cyan" />
-              <div className="text-left"><div className="font-black uppercase tracking-tight">Print All (Both)</div><div className="text-[10px] opacity-50 font-bold uppercase tracking-widest">Full receipt + all tickets</div></div>
+              <div className="text-left"><div className="font-black uppercase tracking-tight">Print All (Both)</div><div className="text-[10px] opacity-50 font-bold uppercase tracking-widest">Quick receipt + all tickets</div></div>
             </Button>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-3">
+              <Button variant="outline" className="h-20 flex-col gap-2 bg-white/5 hover:bg-neon-cyan/10 border-neon-cyan/30 hover:border-neon-cyan/60 text-neon-cyan transition-all duration-300 rounded-2xl group" onClick={() => completedOrder && printSimpleDrinksReceipt(completedOrder)}>
+                <Receipt className="h-5 w-5" /><div className="text-[10px] font-black uppercase tracking-tight">Quick Print</div><div className="text-[8px] opacity-60 font-bold uppercase tracking-widest">Drinks Only</div>
+              </Button>
               <Button variant="outline" className="h-20 flex-col gap-2 bg-white/5 hover:bg-neon-cyan/10 border-white/10 hover:border-neon-cyan/40 text-white transition-all duration-300 rounded-2xl group" onClick={() => completedOrder && printCustomerReceipt(completedOrder)}>
-                <FileText className="h-5 w-5 text-neon-cyan" /><div className="text-[10px] font-black uppercase tracking-tight">Customer</div>
+                <FileText className="h-5 w-5 text-neon-cyan" /><div className="text-[10px] font-black uppercase tracking-tight">Detailed Print</div><div className="text-[8px] opacity-60 font-bold uppercase tracking-widest">With Recipe</div>
               </Button>
               <Button variant="outline" className="h-20 flex-col gap-2 bg-white/5 hover:bg-neon-green/10 border-white/10 hover:border-neon-green/40 text-white transition-all duration-300 rounded-2xl group" onClick={() => completedOrder && printAgentReceipts(completedOrder)}>
-                <Printer className="h-5 w-5 text-neon-green" /><div className="text-[10px] font-black uppercase tracking-tight">Barista</div>
+                <Printer className="h-5 w-5 text-neon-green" /><div className="text-[10px] font-black uppercase tracking-tight">Barista</div><div className="text-[8px] opacity-60 font-bold uppercase tracking-widest">Kitchen Tickets</div>
               </Button>
             </div>
           </div>

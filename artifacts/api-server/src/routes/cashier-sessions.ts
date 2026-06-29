@@ -9,6 +9,9 @@ const router: IRouter = Router();
 import bcrypt from "bcryptjs";
 import { requirePermission } from "../middleware/permissions";
 import { resolveUserPermissions } from "../lib/permissions";
+import { RateLimiter } from "./auth";
+
+const cashierLoginLimiter = new RateLimiter(15 * 60 * 1000, 10); // 10 attempts per 15 mins per IP
 
 const CashierLoginBody = z.object({
   username: z.string().min(1),
@@ -17,6 +20,13 @@ const CashierLoginBody = z.object({
 
 // POST /cashier/login — verify PIN and start a session
 router.post("/cashier/login", async (req, res): Promise<void> => {
+  const ip = req.ip || "unknown-ip";
+  const rateLimitKey = `cashier-login:${ip}`;
+  if (cashierLoginLimiter.isLimitExceeded(rateLimitKey)) {
+    res.status(429).json({ error: "Too many login attempts. Please try again in 15 minutes." });
+    return;
+  }
+
   const parsed = CashierLoginBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "cashierId and pin required" });
@@ -185,6 +195,14 @@ router.get("/cashier/performance/:cashierId", requirePermission("cashier:view_re
   const cashierId = parseInt(req.params.cashierId as string);
   if (isNaN(cashierId)) {
     res.status(400).json({ error: "Invalid cashierId" });
+    return;
+  }
+
+  // IDOR protection: non-admins can only view their own performance stats
+  const sessionUserId = (req.session as any).userId as number | undefined;
+  const sessionRole = (req.session as any).role as string | undefined;
+  if (sessionRole !== "admin" && cashierId !== sessionUserId) {
+    res.status(403).json({ error: "Access denied: you may only view your own performance stats" });
     return;
   }
 

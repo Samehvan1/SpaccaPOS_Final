@@ -1,11 +1,16 @@
 import { Router, type IRouter } from "express";
 import { db, customerTagsTable, customersTable, discountsTable } from "@workspace/db";
 import { sql, eq, and } from "drizzle-orm";
-import { createHash } from "crypto";
+import bcrypt from "bcryptjs";
 import { requirePermission } from "../middleware/permissions";
 import { logActivity } from "../lib/activity-logger";
+import { RateLimiter } from "./auth";
 
 const router: IRouter = Router();
+
+// Rate limiters for customer-facing auth endpoints
+const customerRegisterLimiter = new RateLimiter(60 * 60 * 1000, 5); // 5 registrations per hour per IP
+const customerLoginLimiter = new RateLimiter(15 * 60 * 1000, 10);   // 10 attempts per 15 mins per IP
 
 
 // ─── Ensure customers table exists ────────────────────────────────────────────
@@ -40,8 +45,15 @@ ensureCustomersTable();
 
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-function hashPassword(password: string): string {
-  return createHash("sha256").update(`spacca_salt_${password}_2024`).digest("hex");
+async function hashPassword(password: string): Promise<string> {
+  return bcrypt.hash(password, 10);
+}
+async function verifyPassword(password: string, hash: string): Promise<boolean> {
+  // Support legacy SHA-256 hashes for backward compatibility during migration
+  const { createHash } = await import("crypto");
+  const legacyHash = createHash("sha256").update(`spacca_salt_${password}_2024`).digest("hex");
+  if (hash === legacyHash) return true;
+  return bcrypt.compare(password, hash);
 }
 
 function getCustomerId(req: any): number | null {
@@ -50,6 +62,11 @@ function getCustomerId(req: any): number | null {
 
 // ─── Register ─────────────────────────────────────────────────────────────────
 router.post("/customers/register", async (req, res): Promise<void> => {
+  const ip = req.ip || "unknown-ip";
+  if (customerRegisterLimiter.isLimitExceeded(`register:${ip}`)) {
+    res.status(429).json({ error: "Too many registration attempts. Please try again later." }); return;
+  }
+
   const { name, phone, email, password } = req.body ?? {};
 
   if (!name || typeof name !== "string" || name.trim().length < 2) {
@@ -74,7 +91,7 @@ router.post("/customers/register", async (req, res): Promise<void> => {
       res.status(409).json({ error: "Phone number already registered" }); return;
     }
 
-    const passwordHash = hashPassword(password);
+    const passwordHash = await hashPassword(password);
     const result = await db.execute(sql`
       INSERT INTO customers (name, phone, email, password_hash)
       VALUES (${cleanName}, ${cleanPhone}, ${cleanEmail}, ${passwordHash})
@@ -92,19 +109,22 @@ router.post("/customers/register", async (req, res): Promise<void> => {
 
 // ─── Login ────────────────────────────────────────────────────────────────────
 router.post("/customers/login", async (req, res): Promise<void> => {
+  const ip = req.ip || "unknown-ip";
+  if (customerLoginLimiter.isLimitExceeded(`customer-login:${ip}`)) {
+    res.status(429).json({ error: "Too many login attempts. Please try again in 15 minutes." }); return;
+  }
+
   const { phone, password } = req.body ?? {};
 
   if (!phone || !password) {
     res.status(400).json({ error: "Phone and password are required" }); return;
   }
 
-  const passwordHash = hashPassword(String(password));
-
   try {
     const result = await db.execute(sql`
-      SELECT id, name, phone, email, points, total_spent, visit_count, created_at
+      SELECT id, name, phone, email, points, total_spent, visit_count, created_at, password_hash
       FROM customers
-      WHERE phone = ${String(phone).trim()} AND password_hash = ${passwordHash} AND is_active = TRUE
+      WHERE phone = ${String(phone).trim()} AND is_active = TRUE
       LIMIT 1
     `);
     const customer = (result.rows as any[])[0];
@@ -113,8 +133,16 @@ router.post("/customers/login", async (req, res): Promise<void> => {
       res.status(401).json({ error: "Invalid phone or password" }); return;
     }
 
-    (req.session as any).customerId = customer.id;
-    req.session.save(() => res.json({ customer }));
+    const isValid = await verifyPassword(String(password), customer.password_hash);
+    if (!isValid) {
+      res.status(401).json({ error: "Invalid phone or password" }); return;
+    }
+
+    // Return customer without the password_hash field
+    const { password_hash, ...safeCustomer } = customer;
+
+    (req.session as any).customerId = safeCustomer.id;
+    req.session.save(() => res.json({ customer: safeCustomer }));
   } catch (e: any) {
     console.error("[customers/login] error:", e?.message);
     res.status(500).json({ error: "Login failed" });
