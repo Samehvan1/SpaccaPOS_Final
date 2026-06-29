@@ -774,7 +774,7 @@ export default function CashierPage() {
                         )}
                       </div>
                       <div className="flex items-center gap-2">
-                        <Button variant="outline" size="sm" className="h-10 px-3 border-white/10 hover:bg-neon-cyan/10 hover:text-neon-cyan gap-2 rounded-xl" onClick={() => printSimpleDrinksReceipt(order)}>
+                        <Button variant="outline" size="sm" className="h-10 px-3 border-white/10 hover:bg-neon-cyan/10 hover:text-neon-cyan gap-2 rounded-xl" onClick={() => printSimpleDrinksReceipt(order as any)}>
                           <Printer className="h-4 w-4" /> <span className="text-xs font-bold">Reprint</span>
                         </Button>
                         {order.status !== 'refunded' && (
