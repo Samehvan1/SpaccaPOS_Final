@@ -95,7 +95,6 @@ import {
   settingsTable,
 } from "@workspace/db";
 import {
-  ListOrdersQueryParams,
   ListOrdersResponse,
   CreateOrderBody,
   GetOrderParams,
@@ -229,33 +228,35 @@ async function buildOrderDetail(orderId: number) {
 }
 
 router.get("/orders", requirePermission("cashier:view"), async (req, res): Promise<void> => {
-  const params = ListOrdersQueryParams.safeParse(req.query);
+  const statusStr = req.query.status as string | undefined;
+  const startDateStr = req.query.startDate as string | undefined;
+  const endDateStr = req.query.endDate as string | undefined;
   const sessionUser = (req.session as any);
   const isAdmin = sessionUser.role === "admin";
   const sessionBranchId = sessionUser.branchId;
 
-  const targetBranchId = (isAdmin && req.query.branchId && req.query.branchId !== 'all') 
+  const targetBranchId = (isAdmin && req.query.branchId && req.query.branchId !== 'all' && req.query.branchId !== 'null' && req.query.branchId !== 'undefined') 
     ? parseInt(req.query.branchId as string) 
-    : (isAdmin && req.query.branchId === 'all') ? null : sessionBranchId;
+    : (isAdmin && (req.query.branchId === 'all' || req.query.branchId === 'null' || req.query.branchId === 'undefined')) ? null : sessionBranchId;
 
   const conditions = [];
   if (targetBranchId) {
     conditions.push(eq(ordersTable.branchId, targetBranchId));
   }
 
-  if (params.success && params.data.status) {
-    const statuses = params.data.status.split(",") as any[];
+  if (statusStr && statusStr !== 'null' && statusStr !== 'undefined' && statusStr !== '') {
+    const statuses = statusStr.split(",") as any[];
     conditions.push(inArray(ordersTable.status, statuses));
   }
-  if (params.success && params.data.startDate) {
-    conditions.push(gte(ordersTable.createdAt, startOfDay(parseLocalDate(params.data.startDate))));
+  if (startDateStr && startDateStr !== 'null' && startDateStr !== 'undefined' && startDateStr !== '') {
+    conditions.push(gte(ordersTable.createdAt, startOfDay(parseLocalDate(startDateStr))));
   }
-  if (params.success && params.data.endDate) {
-    conditions.push(lte(ordersTable.createdAt, endOfDay(parseLocalDate(params.data.endDate))));
+  if (endDateStr && endDateStr !== 'null' && endDateStr !== 'undefined' && endDateStr !== '') {
+    conditions.push(lte(ordersTable.createdAt, endOfDay(parseLocalDate(endDateStr))));
   }
 
-  const limit = params.success && params.data.limit ? params.data.limit : 50;
-  const offset = params.success && params.data.offset ? params.data.offset : 0;
+  const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 50;
+  const offset = req.query.offset ? parseInt(req.query.offset as string, 10) : 0;
 
   // If no status provided in reports/dashboard context, we usually want to exclude cancelled/refunded
   // but for the general list, we allow everything unless filtered.
