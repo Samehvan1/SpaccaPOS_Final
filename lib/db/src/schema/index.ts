@@ -15,5 +15,7 @@ export * from "./customers";
 export * from "./signatures";
 export * from "./purchases";
 export * from "./tags";
+export * from "./stock-batches";
+
 
 

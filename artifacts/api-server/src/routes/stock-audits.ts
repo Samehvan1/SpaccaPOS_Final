@@ -215,6 +215,13 @@ router.post("/stock-audits/:id/approve", async (req, res) => {
         const diff = parseFloat(finalQty) - parseFloat(currentQty);
         
         if (diff !== 0) {
+          const { addStockBatch, deductStockFromBatches } = await import("../lib/stock-utils");
+          if (diff > 0) {
+            await addStockBatch(tx, audit.branchId, item.ingredientId, diff, null, "AUDIT-ADJUSTMENT");
+          } else {
+            await deductStockFromBatches(tx, audit.branchId, item.ingredientId, -diff);
+          }
+
           await tx.insert(stockMovementsTable).values({
             branchId: audit.branchId,
             ingredientId: item.ingredientId,

@@ -31,6 +31,7 @@ type IngredientType = typeof INGREDIENT_TYPES[number];
 type Ingredient = {
   id: number; name: string; ingredientType: IngredientType; unit: string;
   costPerUnit: number; stockQuantity: number; startupQuantity: number; lowStockThreshold: number; isActive: boolean;
+  openedShelfLifeDays?: number | null;
   linkedTypeCount?: number; linkedProductCount?: number;
   conversions?: { id: number; unitName: string; conversionFactor: number; isDefaultPurchase: boolean }[];
 };
@@ -1073,6 +1074,7 @@ function InventoryTab() {
   const [costUnit, setCostUnit] = useState<string>("base");
   const [lowThreshold, setLowThreshold] = useState("0");
   const [startupQuantity, setStartupQuantity] = useState("0");
+  const [openedShelfLife, setOpenedShelfLife] = useState("");
   const [isActive, setIsActive] = useState(true);
 
   const [options, setOptions] = useState<IngredientOption[]>([]);
@@ -1114,7 +1116,7 @@ function InventoryTab() {
     },
   });
 
-  const resetForm = () => { setName(""); setType("coffee"); setUnit("g"); setCost(""); setLowThreshold("0"); setStartupQuantity("0"); setIsActive(true); setEditId(null); setOptions([]); setShowAddOption(false); resetNewOption(); setConversions([]); setShowAddConversion(false); resetNewConversion(); setCostUnit("base"); };
+  const resetForm = () => { setName(""); setType("coffee"); setUnit("g"); setCost(""); setLowThreshold("0"); setStartupQuantity("0"); setOpenedShelfLife(""); setIsActive(true); setEditId(null); setOptions([]); setShowAddOption(false); resetNewOption(); setConversions([]); setShowAddConversion(false); resetNewConversion(); setCostUnit("base"); };
   const resetNewOption = () => { setNewOptLabel(""); setNewOptExtraCost("0"); setNewOptLinkedId("none"); setNewOptProcessedQty("1"); setNewOptProducedQty("1"); setNewOptProducedUnit(""); setNewOptIsDefault(false); };
   const resetNewConversion = () => { setNewConvUnit(""); setNewConvFactor("1"); setNewConvIsDefault(false); };
 
@@ -1142,6 +1144,7 @@ function InventoryTab() {
     setEditId(ing.id); setName(ing.name); setType(ing.ingredientType); setUnit(ing.unit);
     setCost(String(ing.costPerUnit)); setLowThreshold(String(ing.lowStockThreshold)); 
     setStartupQuantity(String(ing.startupQuantity ?? 0));
+    setOpenedShelfLife(ing.openedShelfLifeDays ? String(ing.openedShelfLifeDays) : "");
     setIsActive(ing.isActive);
     setCostUnit("base");
     setMode("edit"); loadDetails(ing.id, ing.costPerUnit);
@@ -1157,10 +1160,12 @@ function InventoryTab() {
       baseCost = baseCost / factor;
     }
 
+    const openedShelfDays = openedShelfLife ? parseInt(openedShelfLife) : null;
+
     if (mode === "add") {
-      createIngredient({ data: { name, ingredientType: type, unit, costPerUnit: baseCost, startupQuantity: parseFloat(startupQuantity) } });
+      createIngredient({ data: { name, ingredientType: type, unit, costPerUnit: baseCost, startupQuantity: parseFloat(startupQuantity), openedShelfLifeDays: openedShelfDays } as any });
     } else if (mode === "edit" && editId !== null) {
-      updateIngredient({ id: editId, data: { name, ingredientType: type, unit, costPerUnit: baseCost, lowStockThreshold: parseFloat(lowThreshold), startupQuantity: parseFloat(startupQuantity), isActive } });
+      updateIngredient({ id: editId, data: { name, ingredientType: type, unit, costPerUnit: baseCost, lowStockThreshold: parseFloat(lowThreshold), startupQuantity: parseFloat(startupQuantity), isActive, openedShelfLifeDays: openedShelfDays } as any });
     }
   };
 
@@ -1456,6 +1461,11 @@ function InventoryTab() {
                 <Label htmlFor="i-startup">Startup Stock (Opening)</Label>
                 <Input id="i-startup" type="number" step="0.01" value={startupQuantity} onChange={e => setStartupQuantity(e.target.value)} />
                 <p className="text-[10px] text-muted-foreground italic">Quantities you started the business with.</p>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="i-opened-shelf-life">Opened Shelf Life (Days)</Label>
+                <Input id="i-opened-shelf-life" type="number" value={openedShelfLife} onChange={e => setOpenedShelfLife(e.target.value)} placeholder="e.g. 30" />
+                <p className="text-[10px] text-muted-foreground italic">Shelf life in days once opened (optional).</p>
               </div>
             </div>
             {mode === "edit" && (

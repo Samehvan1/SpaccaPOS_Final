@@ -433,6 +433,13 @@ purchasesRouter.post("/purchases/:id/receive", requirePermission("purchases:mana
             set: { stockQuantity: String(newQty) }
           });
 
+        const expiryDate = inputItem?.expiryDate ? new Date(inputItem.expiryDate) : null;
+        const batchNumber = inputItem?.batchNumber || null;
+        const { addStockBatch } = await import("../lib/stock-utils");
+        if (finalQuantityAdded > 0) {
+          await addStockBatch(tx, po.branchId, item.ingredientId, finalQuantityAdded, expiryDate, batchNumber);
+        }
+
         // Insert stock movement log
         await tx
           .insert(stockMovementsTable)

@@ -29,6 +29,8 @@ type DeliveryItem = {
   quantity: string;
   unitId: string;
   note: string;
+  expiryDate: string;
+  batchNumber: string;
 };
 
 export default function ReceiveDeliveryPage() {
@@ -43,7 +45,7 @@ export default function ReceiveDeliveryPage() {
 
   const [openPopovers, setOpenPopovers] = useState<Record<number, boolean>>({});
   const [deliveryItems, setDeliveryItems] = useState<DeliveryItem[]>([
-    { ingredientId: "", quantity: "", unitId: "base", note: "" },
+    { ingredientId: "", quantity: "", unitId: "base", note: "", expiryDate: "", batchNumber: "" },
   ]);
   const [note, setNote] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -63,7 +65,7 @@ export default function ReceiveDeliveryPage() {
   };
 
   const addItem = () => {
-    setDeliveryItems((prev) => [...prev, { ingredientId: "", quantity: "", unitId: "base", note: "" }]);
+    setDeliveryItems((prev) => [...prev, { ingredientId: "", quantity: "", unitId: "base", note: "", expiryDate: "", batchNumber: "" }]);
   };
 
   const removeItem = (index: number) => {
@@ -99,6 +101,8 @@ export default function ReceiveDeliveryPage() {
           unitId: item.unitId === "base" ? undefined : parseInt(item.unitId),
           note: itemNote || undefined,
           branchId: selectedBranchId,
+          expiryDate: item.expiryDate || undefined,
+          batchNumber: item.batchNumber || undefined,
         } as any,
       });
       saved++;
@@ -278,18 +282,44 @@ export default function ReceiveDeliveryPage() {
                       )}
                     </div>
 
-                    {/* Bottom row: per-item note */}
-                    <div className="grid gap-1">
-                      <Label htmlFor={`item-note-${index}`} className="text-xs text-muted-foreground">
-                        Item Note (optional)
-                      </Label>
-                      <Input
-                        id={`item-note-${index}`}
-                        value={item.note}
-                        onChange={(e) => updateItem(index, "note", e.target.value)}
-                        placeholder="e.g. Exp: 2026-08-15, damaged packaging, different brand..."
-                        className="h-9 text-sm"
-                      />
+                    {/* Bottom row: Batch, Expiry, Note */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <div className="grid gap-1">
+                        <Label htmlFor={`item-batch-${index}`} className="text-xs text-muted-foreground">
+                          Batch Number (optional)
+                        </Label>
+                        <Input
+                          id={`item-batch-${index}`}
+                          value={item.batchNumber || ""}
+                          onChange={(e) => updateItem(index, "batchNumber", e.target.value)}
+                          placeholder="e.g. B-1234"
+                          className="h-9 text-sm"
+                        />
+                      </div>
+                      <div className="grid gap-1">
+                        <Label htmlFor={`item-expiry-${index}`} className="text-xs text-muted-foreground">
+                          Expiry Date (optional)
+                        </Label>
+                        <Input
+                          id={`item-expiry-${index}`}
+                          type="date"
+                          value={item.expiryDate || ""}
+                          onChange={(e) => updateItem(index, "expiryDate", e.target.value)}
+                          className="h-9 text-sm text-muted-foreground"
+                        />
+                      </div>
+                      <div className="grid gap-1">
+                        <Label htmlFor={`item-note-${index}`} className="text-xs text-muted-foreground">
+                          Item Note (optional)
+                        </Label>
+                        <Input
+                          id={`item-note-${index}`}
+                          value={item.note}
+                          onChange={(e) => updateItem(index, "note", e.target.value)}
+                          placeholder="e.g. damaged packaging, etc."
+                          className="h-9 text-sm"
+                        />
+                      </div>
                     </div>
                   </div>
                 );

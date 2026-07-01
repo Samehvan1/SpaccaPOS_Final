@@ -195,6 +195,8 @@ export default function PurchasesAdmin() {
 
   // Receive form state
   const [receiveQuantities, setReceiveQuantities] = useState<Record<number, string>>({});
+  const [receiveExpiries, setReceiveExpiries] = useState<Record<number, string>>({});
+  const [receiveBatches, setReceiveBatches] = useState<Record<number, string>>({});
 
   // Payment form state
   const [paymentAmount, setPaymentAmount] = useState("");
@@ -395,17 +397,22 @@ export default function PurchasesAdmin() {
     }
   };
 
-  // Open receiving
   const openReceiveDialog = async (po: Purchase) => {
     try {
       const fullPo = await api(`/api/purchases/${po.id}`);
       setSelectedPo(fullPo);
       
       const initialQty: Record<number, string> = {};
+      const initialExpiries: Record<number, string> = {};
+      const initialBatches: Record<number, string> = {};
       fullPo.items.forEach((item: any) => {
         initialQty[item.id] = String(item.quantityOrdered);
+        initialExpiries[item.id] = "";
+        initialBatches[item.id] = "";
       });
       setReceiveQuantities(initialQty);
+      setReceiveExpiries(initialExpiries);
+      setReceiveBatches(initialBatches);
       setShowReceive(true);
     } catch (err: any) {
       toast({ variant: "destructive", title: "Error loading details", description: err.message });
@@ -418,10 +425,15 @@ export default function PurchasesAdmin() {
     setSavingReceive(true);
     try {
       const payload = {
-        items: Object.entries(receiveQuantities).map(([itemId, qty]) => ({
-          itemId: parseInt(itemId),
-          quantityReceived: parseFloat(qty) || 0
-        }))
+        items: Object.entries(receiveQuantities).map(([itemId, qty]) => {
+          const idNum = parseInt(itemId);
+          return {
+            itemId: idNum,
+            quantityReceived: parseFloat(qty) || 0,
+            expiryDate: receiveExpiries[idNum] || undefined,
+            batchNumber: receiveBatches[idNum] || undefined,
+          };
+        })
       };
 
       await api(`/api/purchases/${selectedPo.id}/receive`, { method: "POST", body: JSON.stringify(payload) });
@@ -1077,12 +1089,12 @@ export default function PurchasesAdmin() {
 
       {/* Receive Deliveries Dialog */}
       <Dialog open={showReceive} onOpenChange={setShowReceive}>
-        <DialogContent className="max-w-2xl border-primary/10 bg-card max-h-[85vh] flex flex-col overflow-hidden">
+        <DialogContent className="max-w-3xl border-primary/10 bg-card max-h-[85vh] flex flex-col overflow-hidden">
           <DialogHeader className="shrink-0 border-b border-primary/5 pb-4">
             <DialogTitle className="font-bold text-xl flex items-center gap-2">
               Receive Delivery: <span className="font-mono text-primary">{selectedPo?.poNumber}</span>
             </DialogTitle>
-            <DialogDescription>Input the actual quantities delivered by the supplier. Stock levels will automatically adjust.</DialogDescription>
+            <DialogDescription>Input the actual quantities delivered by the supplier, along with batch numbers and expiry dates. Stock levels will automatically adjust.</DialogDescription>
           </DialogHeader>
 
           {selectedPo && (
@@ -1100,8 +1112,10 @@ export default function PurchasesAdmin() {
                     <TableRow className="hover:bg-transparent border-primary/10">
                       <TableHead className="font-bold text-foreground">Ingredient</TableHead>
                       <TableHead className="font-bold text-foreground">Unit</TableHead>
-                      <TableHead className="font-bold text-foreground text-right w-[120px]">Qty Ordered</TableHead>
-                      <TableHead className="font-bold text-foreground text-right w-[150px]">Qty Received</TableHead>
+                      <TableHead className="font-bold text-foreground text-right w-[100px]">Qty Ordered</TableHead>
+                      <TableHead className="font-bold text-foreground w-[120px]">Batch Number</TableHead>
+                      <TableHead className="font-bold text-foreground w-[150px]">Expiry Date</TableHead>
+                      <TableHead className="font-bold text-foreground text-right w-[120px]">Qty Received</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -1110,7 +1124,29 @@ export default function PurchasesAdmin() {
                         <TableCell className="font-bold text-foreground">{item.ingredientName}</TableCell>
                         <TableCell className="font-medium text-muted-foreground">{item.unitName}</TableCell>
                         <TableCell className="text-right font-medium text-foreground">{item.quantityOrdered}</TableCell>
-                        <TableCell className="text-right p-2">
+                        <TableCell className="p-1">
+                          <Input 
+                            value={receiveBatches[item.id] || ""} 
+                            onChange={(e) => setReceiveBatches({
+                              ...receiveBatches,
+                              [item.id]: e.target.value
+                            })}
+                            className="bg-background border-primary/10 h-8 text-xs font-semibold"
+                            placeholder="Batch#"
+                          />
+                        </TableCell>
+                        <TableCell className="p-1">
+                          <Input 
+                            type="date"
+                            value={receiveExpiries[item.id] || ""} 
+                            onChange={(e) => setReceiveExpiries({
+                              ...receiveExpiries,
+                              [item.id]: e.target.value
+                            })}
+                            className="bg-background border-primary/10 h-8 text-xs text-muted-foreground"
+                          />
+                        </TableCell>
+                        <TableCell className="text-right p-1">
                           <Input 
                             type="number" 
                             value={receiveQuantities[item.id] || ""} 

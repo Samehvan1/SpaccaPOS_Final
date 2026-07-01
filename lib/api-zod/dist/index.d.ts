@@ -924,6 +924,8 @@ export declare const CreateIngredientBody: z.ZodObject<{
     startupQuantity: z.ZodOptional<z.ZodNumber>;
     lowStockThreshold: z.ZodOptional<z.ZodNumber>;
     isActive: z.ZodOptional<z.ZodBoolean>;
+} & {
+    openedShelfLifeDays: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
 }, "strip", z.ZodTypeAny, {
     name: string;
     ingredientType: "coffee" | "milk" | "syrup" | "sauce" | "sweetener" | "topping" | "base" | "cup" | "tea" | "packing" | "other";
@@ -933,6 +935,7 @@ export declare const CreateIngredientBody: z.ZodObject<{
     stockQuantity?: number | undefined;
     startupQuantity?: number | undefined;
     lowStockThreshold?: number | undefined;
+    openedShelfLifeDays?: number | null | undefined;
 }, {
     name: string;
     ingredientType: "coffee" | "milk" | "syrup" | "sauce" | "sweetener" | "topping" | "base" | "cup" | "tea" | "packing" | "other";
@@ -942,8 +945,9 @@ export declare const CreateIngredientBody: z.ZodObject<{
     stockQuantity?: number | undefined;
     startupQuantity?: number | undefined;
     lowStockThreshold?: number | undefined;
+    openedShelfLifeDays?: number | null | undefined;
 }>;
-export type CreateIngredientBody = Infer<typeof api.CreateIngredientBody>;
+export type CreateIngredientBody = Infer<typeof CreateIngredientBody>;
 export declare const GetIngredientParams: z.ZodObject<{
     id: z.ZodNumber;
 }, "strip", z.ZodTypeAny, {
@@ -1115,6 +1119,8 @@ export declare const UpdateIngredientBody: z.ZodObject<{
     startupQuantity: z.ZodOptional<z.ZodNumber>;
     lowStockThreshold: z.ZodOptional<z.ZodNumber>;
     isActive: z.ZodOptional<z.ZodBoolean>;
+} & {
+    openedShelfLifeDays: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
 }, "strip", z.ZodTypeAny, {
     name?: string | undefined;
     isActive?: boolean | undefined;
@@ -1124,6 +1130,7 @@ export declare const UpdateIngredientBody: z.ZodObject<{
     stockQuantity?: number | undefined;
     startupQuantity?: number | undefined;
     lowStockThreshold?: number | undefined;
+    openedShelfLifeDays?: number | null | undefined;
 }, {
     name?: string | undefined;
     isActive?: boolean | undefined;
@@ -1133,8 +1140,9 @@ export declare const UpdateIngredientBody: z.ZodObject<{
     stockQuantity?: number | undefined;
     startupQuantity?: number | undefined;
     lowStockThreshold?: number | undefined;
+    openedShelfLifeDays?: number | null | undefined;
 }>;
-export type UpdateIngredientBody = Infer<typeof api.UpdateIngredientBody>;
+export type UpdateIngredientBody = Infer<typeof UpdateIngredientBody>;
 export declare const UpdateIngredientResponse: z.ZodObject<{
     id: z.ZodNumber;
     name: z.ZodString;
@@ -1320,16 +1328,23 @@ export declare const RestockIngredientBody: z.ZodObject<{
     quantity: z.ZodNumber;
     unitId: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
     note: z.ZodOptional<z.ZodString>;
+} & {
+    expiryDate: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    batchNumber: z.ZodOptional<z.ZodNullable<z.ZodString>>;
 }, "strip", z.ZodTypeAny, {
     quantity: number;
     unitId?: number | null | undefined;
     note?: string | undefined;
+    expiryDate?: string | null | undefined;
+    batchNumber?: string | null | undefined;
 }, {
     quantity: number;
     unitId?: number | null | undefined;
     note?: string | undefined;
+    expiryDate?: string | null | undefined;
+    batchNumber?: string | null | undefined;
 }>;
-export type RestockIngredientBody = Infer<typeof api.RestockIngredientBody>;
+export type RestockIngredientBody = Infer<typeof RestockIngredientBody>;
 export declare const RestockIngredientResponse: z.ZodObject<{
     id: z.ZodNumber;
     name: z.ZodString;
@@ -1953,20 +1968,27 @@ export declare const CreateStockAdjustmentBody: z.ZodObject<{
     quantity: z.ZodNumber;
     unitId: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
     note: z.ZodOptional<z.ZodString>;
+} & {
+    expiryDate: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    batchNumber: z.ZodOptional<z.ZodNullable<z.ZodString>>;
 }, "strip", z.ZodTypeAny, {
     ingredientId: number;
     quantity: number;
     movementType: "adjustment" | "waste" | "opening" | "calibration" | "testing";
     unitId?: number | null | undefined;
     note?: string | undefined;
+    expiryDate?: string | null | undefined;
+    batchNumber?: string | null | undefined;
 }, {
     ingredientId: number;
     quantity: number;
     movementType: "adjustment" | "waste" | "opening" | "calibration" | "testing";
     unitId?: number | null | undefined;
     note?: string | undefined;
+    expiryDate?: string | null | undefined;
+    batchNumber?: string | null | undefined;
 }>;
-export type CreateStockAdjustmentBody = Infer<typeof api.CreateStockAdjustmentBody>;
+export type CreateStockAdjustmentBody = Infer<typeof CreateStockAdjustmentBody>;
 export declare const GetDashboardSummaryResponse: z.ZodObject<{
     todayRevenue: z.ZodNumber;
     todayCashRevenue: z.ZodNumber;

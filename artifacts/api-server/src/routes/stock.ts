@@ -10,6 +10,7 @@ import {
   ingredientConversionsTable,
   usersTable,
   branchesTable,
+  branchInventoryBatchesTable,
 } from "@workspace/db";
 import {
   ListStockMovementsQueryParams,
@@ -143,38 +144,55 @@ router.post("/stock/adjustments", async (req, res): Promise<void> => {
 
   const newQty = Math.max(0, adjustedQty);
 
-  await db
-    .insert(branchStockTable)
-    .values({
-      branchId: targetBranchId,
-      ingredientId: parsed.data.ingredientId,
-      stockQuantity: String(newQty),
-    })
-    .onConflictDoUpdate({
-      target: [branchStockTable.branchId, branchStockTable.ingredientId],
-      set: { stockQuantity: String(newQty) }
-    });
+  const { addStockBatch, deductStockFromBatches } = await import("../lib/stock-utils");
 
-  const ledgerQuantity =
-    (parsed.data.movementType === "waste" || parsed.data.movementType === "calibration" || parsed.data.movementType === "testing") ? -finalQuantity : finalQuantity;
+  const [movement] = await db.transaction(async (tx) => {
+    await tx
+      .insert(branchStockTable)
+      .values({
+        branchId: targetBranchId,
+        ingredientId: parsed.data.ingredientId,
+        stockQuantity: String(newQty),
+      })
+      .onConflictDoUpdate({
+        target: [branchStockTable.branchId, branchStockTable.ingredientId],
+        set: { stockQuantity: String(newQty) }
+      });
 
-  const movementNote = selectedUnitName 
-    ? `${parsed.data.note ?? ""} (Converted from ${parsed.data.quantity} ${selectedUnitName})`.trim()
-    : parsed.data.note ?? null;
+    if (parsed.data.movementType === "waste" || parsed.data.movementType === "calibration" || parsed.data.movementType === "testing") {
+      await deductStockFromBatches(tx, targetBranchId!, parsed.data.ingredientId, finalQuantity);
+    } else {
+      await addStockBatch(
+        tx,
+        targetBranchId!,
+        parsed.data.ingredientId,
+        finalQuantity,
+        parsed.data.expiryDate ? new Date(parsed.data.expiryDate) : null,
+        parsed.data.batchNumber
+      );
+    }
 
-  const [movement] = await db
-    .insert(stockMovementsTable)
-    .values({
-      branchId: targetBranchId,
-      ingredientId: parsed.data.ingredientId,
-      orderId: null,
-      movementType: parsed.data.movementType,
-      quantity: String(ledgerQuantity),
-      quantityAfter: String(newQty),
-      note: movementNote,
-      createdBy: sessionUserId,
-    })
-    .returning();
+    const ledgerQuantity =
+      (parsed.data.movementType === "waste" || parsed.data.movementType === "calibration" || parsed.data.movementType === "testing") ? -finalQuantity : finalQuantity;
+
+    const movementNote = selectedUnitName 
+      ? `${parsed.data.note ?? ""} (Converted from ${parsed.data.quantity} ${selectedUnitName})`.trim()
+      : parsed.data.note ?? null;
+
+    return tx
+      .insert(stockMovementsTable)
+      .values({
+        branchId: targetBranchId,
+        ingredientId: parsed.data.ingredientId,
+        orderId: null,
+        movementType: parsed.data.movementType,
+        quantity: String(ledgerQuantity),
+        quantityAfter: String(newQty),
+        note: movementNote,
+        createdBy: sessionUserId,
+      })
+      .returning();
+  });
 
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, sessionUserId));
 
@@ -190,6 +208,188 @@ router.post("/stock/adjustments", async (req, res): Promise<void> => {
   globalCache.clear();
   const { broadcastEvent } = await import("../lib/sse");
   broadcastEvent("inventory_updated", { ingredientId: parsed.data.ingredientId });
+});
+
+router.get("/stock/expiry/reports", async (req, res): Promise<void> => {
+  const sessionUser = (req.session as any);
+  const isAdmin = sessionUser.role === "admin" || sessionUser.role === "supervisor";
+  const sessionBranchId = sessionUser.branchId;
+
+  const targetBranchId = req.query.branchId && req.query.branchId !== "all"
+    ? parseInt(req.query.branchId as string)
+    : (isAdmin && (req.query.branchId === "all" || !req.query.branchId)) ? null : sessionBranchId;
+
+  const days = req.query.days ? parseInt(req.query.days as string) : 3;
+
+  const conditions = [
+    sql`quantity > 0`
+  ];
+
+  if (targetBranchId) {
+    conditions.push(eq(branchInventoryBatchesTable.branchId, targetBranchId));
+  }
+
+  const batches = await db
+    .select({
+      id: branchInventoryBatchesTable.id,
+      branchId: branchInventoryBatchesTable.branchId,
+      branchName: branchesTable.name,
+      ingredientId: branchInventoryBatchesTable.ingredientId,
+      ingredientName: ingredientsTable.name,
+      ingredientUnit: ingredientsTable.unit,
+      batchNumber: branchInventoryBatchesTable.batchNumber,
+      sealedExpiryDate: branchInventoryBatchesTable.sealedExpiryDate,
+      expiryDate: branchInventoryBatchesTable.expiryDate,
+      isOpened: branchInventoryBatchesTable.isOpened,
+      openedAt: branchInventoryBatchesTable.openedAt,
+      quantity: branchInventoryBatchesTable.quantity,
+      createdAt: branchInventoryBatchesTable.createdAt,
+    })
+    .from(branchInventoryBatchesTable)
+    .innerJoin(ingredientsTable, eq(branchInventoryBatchesTable.ingredientId, ingredientsTable.id))
+    .innerJoin(branchesTable, eq(branchInventoryBatchesTable.branchId, branchesTable.id))
+    .where(and(...conditions))
+    .orderBy(asc(branchInventoryBatchesTable.expiryDate));
+
+  const now = new Date();
+  const reports = batches.map(b => {
+    let diffDays = null;
+    let status: "expired" | "expiring_soon" | "ok" = "ok";
+    
+    if (b.expiryDate) {
+      const expiry = new Date(b.expiryDate);
+      const diffTime = expiry.getTime() - now.getTime();
+      diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      
+      if (diffDays < 0) {
+        status = "expired";
+      } else if (diffDays <= days) {
+        status = "expiring_soon";
+      }
+    }
+
+    return {
+      ...b,
+      quantity: parseFloat(String(b.quantity)),
+      daysLeft: diffDays,
+      status,
+    };
+  });
+
+  const statusFilter = req.query.status as string;
+  let filteredReports = reports;
+  if (statusFilter === "expired") {
+    filteredReports = reports.filter(r => r.status === "expired");
+  } else if (statusFilter === "expiring_soon") {
+    filteredReports = reports.filter(r => r.status === "expiring_soon");
+  } else if (statusFilter === "alert") {
+    filteredReports = reports.filter(r => r.status === "expired" || r.status === "expiring_soon");
+  } else if (statusFilter === "ok") {
+    filteredReports = reports.filter(r => r.status === "ok");
+  }
+
+  res.json(serializeDates(filteredReports));
+});
+
+router.post("/stock/expiry/batches/:id/open", async (req, res): Promise<void> => {
+  const batchId = parseInt(req.params.id);
+  if (isNaN(batchId)) {
+    res.status(400).json({ error: "Invalid batch ID" });
+    return;
+  }
+
+  try {
+    const { openStockBatch } = await import("../lib/stock-utils");
+    const updated = await openStockBatch(db, batchId);
+    
+    const { globalCache } = await import("../lib/cache");
+    globalCache.clear();
+    const { broadcastEvent } = await import("../lib/sse");
+    broadcastEvent("inventory_updated", {});
+
+    res.json(serializeDates(updated));
+  } catch (error: any) {
+    console.error("POST /stock/expiry/batches/:id/open error:", error);
+    res.status(500).json({ error: error?.message || "Failed to open batch" });
+  }
+});
+
+router.post("/stock/expiry/batches/:id/discard", async (req, res): Promise<void> => {
+  const batchId = parseInt(req.params.id);
+  const sessionUserId = ((req.session as any).userId as number) ?? 1;
+
+  if (isNaN(batchId)) {
+    res.status(400).json({ error: "Invalid batch ID" });
+    return;
+  }
+
+  try {
+    await db.transaction(async (tx) => {
+      const [batch] = await tx
+        .select()
+        .from(branchInventoryBatchesTable)
+        .where(eq(branchInventoryBatchesTable.id, batchId))
+        .limit(1);
+
+      if (!batch) {
+        throw new Error("Batch not found");
+      }
+
+      const qty = parseFloat(batch.quantity);
+      if (qty <= 0) {
+        throw new Error("Batch is already empty");
+      }
+
+      await tx
+        .update(branchInventoryBatchesTable)
+        .set({ quantity: "0", updatedAt: new Date() })
+        .where(eq(branchInventoryBatchesTable.id, batchId));
+
+      const [stock] = await tx
+        .select()
+        .from(branchStockTable)
+        .where(and(eq(branchStockTable.ingredientId, batch.ingredientId), eq(branchStockTable.branchId, batch.branchId)))
+        .limit(1);
+
+      const currentQty = stock ? parseFloat(stock.stockQuantity) : 0;
+      const newQty = Math.max(0, currentQty - qty);
+
+      await tx
+        .insert(branchStockTable)
+        .values({
+          branchId: batch.branchId,
+          ingredientId: batch.ingredientId,
+          stockQuantity: String(newQty),
+        })
+        .onConflictDoUpdate({
+          target: [branchStockTable.branchId, branchStockTable.ingredientId],
+          set: { stockQuantity: String(newQty) }
+        });
+
+      await tx
+        .insert(stockMovementsTable)
+        .values({
+          branchId: batch.branchId,
+          ingredientId: batch.ingredientId,
+          orderId: null,
+          movementType: "waste",
+          quantity: String(-qty),
+          quantityAfter: String(newQty),
+          note: `Discarded batch #${batch.batchNumber || batch.id}`,
+          createdBy: sessionUserId,
+        });
+    });
+
+    const { globalCache } = await import("../lib/cache");
+    globalCache.clear();
+    const { broadcastEvent } = await import("../lib/sse");
+    broadcastEvent("inventory_updated", {});
+
+    res.json({ success: true });
+  } catch (error: any) {
+    console.error("POST /stock/expiry/batches/:id/discard error:", error);
+    res.status(500).json({ error: error?.message || "Failed to discard batch" });
+  }
 });
 
 export default router;

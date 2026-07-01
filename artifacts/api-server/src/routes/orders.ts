@@ -679,6 +679,7 @@ router.post("/orders", async (req, res): Promise<void> => {
 
       // Batch stock deductions: compute new quantities, then do 1 update + 1 insert per ingredient
       const stockUpdates: Array<{ id: number; newQty: number; delta: number }> = [];
+      const { deductStockFromBatches } = await import("../lib/stock-utils");
       for (const c of item.customizations) {
         if (!c.ingredientId || c.consumedQty === 0) {
           if (c.ingredientId && c.consumedQty === 0) console.log(`[stock] Skipping deduction for ${c.slotLabel} because consumedQty is 0`);
@@ -689,6 +690,9 @@ router.post("/orders", async (req, res): Promise<void> => {
         console.log(`[stock] Deducting ${c.consumedQty} from ${c.ingredientId} in branch ${targetBranchId}. ${current} -> ${newQty}`);
         stockMap.set(c.ingredientId, newQty);
         stockUpdates.push({ id: c.ingredientId, newQty, delta: c.consumedQty });
+
+        // Deduct from batches using FEFO
+        await deductStockFromBatches(tx, targetBranchId, c.ingredientId, c.consumedQty);
       }
 
       // Batch-update branch stock and insert movements in parallel

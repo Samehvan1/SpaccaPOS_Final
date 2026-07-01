@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useListStockMovements, useGetLowStockIngredients, useRestockIngredient, useListIngredients, useUpdateIngredient } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ArrowLeft, Plus, AlertTriangle, ArrowDownToLine, ArrowUpFromLine, PackageOpen, Download, Settings2 } from "lucide-react";
@@ -13,6 +15,13 @@ import { Link } from "wouter";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
+
+const api = async (path: string, opts?: RequestInit) => {
+  const res = await fetch(path, { headers: { "Content-Type": "application/json" }, ...opts });
+  if (!res.ok) throw new Error(await res.text());
+  if (res.status === 204) return null;
+  return res.json();
+};
 
 type LowStockItem = {
   id: number;
@@ -65,6 +74,30 @@ export default function StockAdmin() {
   // Low-stock threshold editing
   const [thresholdEdit, setThresholdEdit] = useState<LowStockItem | null>(null);
   const [newThreshold, setNewThreshold] = useState("");
+
+  const [daysThreshold, setDaysThreshold] = useState("3");
+  const [statusFilter, setStatusFilter] = useState("alert");
+  const [activeTab, setActiveTab] = useState("movements");
+
+  const { data: expiryReports, refetch: refetchExpiryReports } = useQuery<any[]>({
+    queryKey: ["expiry-reports", selectedBranchId, daysThreshold, statusFilter],
+    queryFn: async () => {
+      const branch = (selectedBranchId === null || selectedBranchId === undefined) ? 'all' : selectedBranchId;
+      const res = await fetch(`/api/stock/expiry/reports?branchId=${branch}&days=${daysThreshold}&status=${statusFilter}`);
+      if (!res.ok) throw new Error("Failed to fetch expiry reports");
+      return res.json();
+    }
+  });
+
+  const { data: expiryAlerts, refetch: refetchExpiryAlerts } = useQuery<any[]>({
+    queryKey: ["expiry-alerts-banner", selectedBranchId],
+    queryFn: async () => {
+      const branch = (selectedBranchId === null || selectedBranchId === undefined) ? 'all' : selectedBranchId;
+      const res = await fetch(`/api/stock/expiry/reports?branchId=${branch}&days=3&status=alert`);
+      if (!res.ok) throw new Error("Failed to fetch expiry alerts");
+      return res.json();
+    }
+  });
 
   const { mutate: updateLowThreshold } = useUpdateIngredient({
     mutation: {
@@ -200,6 +233,25 @@ export default function StockAdmin() {
         </div>
       </div>
 
+      {expiryAlerts && expiryAlerts.length > 0 && (
+        <Card className="border-amber-500/50 bg-amber-500/5">
+          <CardHeader className="pb-3 bg-amber-500/10">
+            <CardTitle className="text-amber-500 flex items-center justify-between text-lg font-bold">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5" />
+                <span>Inventory Expiry Warnings</span>
+              </div>
+              <Button size="sm" variant="ghost" className="h-8 text-amber-500 hover:text-amber-600 hover:bg-amber-500/20 font-semibold" onClick={() => setActiveTab("expiry")}>
+                View Batches
+              </Button>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-3 text-sm text-amber-500">
+            There are <strong>{expiryAlerts.filter((a: any) => a.status === "expired").length}</strong> expired batch(es) and <strong>{expiryAlerts.filter((a: any) => a.status === "expiring_soon").length}</strong> batch(es) expiring within 3 days. Immediate action is recommended.
+          </CardContent>
+        </Card>
+      )}
+
       {lowStock && lowStock.length > 0 && (
         <Card className="border-destructive/50">
           <CardHeader className="pb-3 bg-destructive/5">
@@ -230,11 +282,14 @@ export default function StockAdmin() {
         </Card>
       )}
 
-      <Tabs defaultValue="movements">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="mb-2">
           <TabsTrigger value="movements">Stock Movements</TabsTrigger>
           <TabsTrigger value="startup" className="gap-1.5">
             <PackageOpen className="h-4 w-4" /> Startup Stock
+          </TabsTrigger>
+          <TabsTrigger value="expiry" className="gap-1.5">
+            <AlertTriangle className="h-4 w-4" /> Expiry Tracking
           </TabsTrigger>
         </TabsList>
 
@@ -362,6 +417,160 @@ export default function StockAdmin() {
                         </TableCell>
                       </TableRow>
                     ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="expiry">
+          <Card>
+            <CardHeader className="pb-4">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                  <CardTitle>Expiry Tracking & Batches</CardTitle>
+                  <p className="text-sm text-muted-foreground mt-1">Track individual ingredient batches, monitor shelf lives, and open or discard packages.</p>
+                </div>
+                
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="days-input" className="text-xs shrink-0 font-medium">Alert Threshold (Days)</Label>
+                    <Input 
+                      id="days-input" 
+                      type="number" 
+                      min="1" 
+                      value={daysThreshold} 
+                      onChange={e => setDaysThreshold(e.target.value)} 
+                      className="w-16 h-8 text-center text-xs font-semibold" 
+                    />
+                  </div>
+                  
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="h-8 w-[140px] text-xs">
+                      <SelectValue placeholder="Filter status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Batches</SelectItem>
+                      <SelectItem value="alert">Alerts (Expired/Expiring)</SelectItem>
+                      <SelectItem value="expired">Expired Only</SelectItem>
+                      <SelectItem value="expiring_soon">Expiring Soon</SelectItem>
+                      <SelectItem value="ok">Safe / OK</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="font-bold">Ingredient</TableHead>
+                      <TableHead className="font-bold">Batch#</TableHead>
+                      <TableHead className="font-bold">State</TableHead>
+                      <TableHead className="text-right font-bold">Qty Remaining</TableHead>
+                      <TableHead className="font-bold">Sealed Expiry</TableHead>
+                      <TableHead className="font-bold">Active Expiry</TableHead>
+                      <TableHead className="text-right font-bold">Days Left</TableHead>
+                      <TableHead className="text-center font-bold w-[200px]">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {!expiryReports ? (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center py-8">Loading...</TableCell>
+                      </TableRow>
+                    ) : expiryReports.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">No matching batches found.</TableCell>
+                      </TableRow>
+                    ) : (
+                      expiryReports.map(batch => {
+                        let badgeColor = "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400";
+                        if (batch.status === "expired") {
+                          badgeColor = "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 font-bold border border-red-200 dark:border-red-900/50";
+                        } else if (batch.status === "expiring_soon") {
+                          badgeColor = "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 font-semibold";
+                        }
+
+                        return (
+                          <TableRow key={batch.id} className="hover:bg-muted/10">
+                            <TableCell className="font-bold text-foreground">{batch.ingredientName}</TableCell>
+                            <TableCell className="font-mono text-xs text-muted-foreground">{batch.batchNumber || `B-${batch.id}`}</TableCell>
+                            <TableCell>
+                              <Badge variant={batch.isOpened ? "default" : "outline"} className={batch.isOpened ? "bg-blue-600 hover:bg-blue-600 text-white border-transparent" : "text-muted-foreground"}>
+                                {batch.isOpened ? "Opened" : "Sealed"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right font-mono font-bold text-foreground">
+                              {batch.quantity} <span className="text-xs font-normal text-muted-foreground">{batch.ingredientUnit}</span>
+                            </TableCell>
+                            <TableCell className="text-xs text-muted-foreground">
+                              {batch.sealedExpiryDate ? format(new Date(batch.sealedExpiryDate), "MMM d, yyyy") : "-"}
+                            </TableCell>
+                            <TableCell className="text-xs font-semibold text-foreground">
+                              {batch.expiryDate ? format(new Date(batch.expiryDate), "MMM d, yyyy") : "-"}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {batch.daysLeft !== null ? (
+                                <Badge className={badgeColor}>
+                                  {batch.daysLeft < 0 ? `Expired (${Math.abs(batch.daysLeft)}d ago)` : `${batch.daysLeft} days`}
+                                </Badge>
+                              ) : (
+                                <Badge variant="secondary">No Expiry</Badge>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <div className="flex items-center justify-center gap-1.5">
+                                {!batch.isOpened && (
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline" 
+                                    className="h-7 text-xs border-blue-200 hover:bg-blue-50 text-blue-600 hover:text-blue-700 font-semibold dark:border-blue-900/40 dark:hover:bg-blue-900/10"
+                                    onClick={async () => {
+                                      try {
+                                        await api(`/api/stock/expiry/batches/${batch.id}/open`, { method: "POST" });
+                                        toast({ title: "Batch opened", description: "Active expiry date updated based on ingredient shelf life." });
+                                        refetchExpiryReports();
+                                        refetchExpiryAlerts();
+                                        refetchIngredients();
+                                      } catch (err: any) {
+                                        toast({ variant: "destructive", title: "Failed to open batch", description: err.message });
+                                      }
+                                    }}
+                                  >
+                                    Open
+                                  </Button>
+                                )}
+                                <Button 
+                                  size="sm" 
+                                  variant="destructive" 
+                                  className="h-7 text-xs"
+                                  onClick={async () => {
+                                    if (confirm(`Are you sure you want to discard this batch of ${batch.ingredientName}? This will set remaining quantity to 0 and log a waste movement.`)) {
+                                      try {
+                                        await api(`/api/stock/expiry/batches/${batch.id}/discard`, { method: "POST" });
+                                        toast({ title: "Batch discarded", description: "Stock and movement logs updated." });
+                                        refetchExpiryReports();
+                                        refetchExpiryAlerts();
+                                        refetchIngredients();
+                                        refetchMovements();
+                                        refetchLowStock();
+                                      } catch (err: any) {
+                                        toast({ variant: "destructive", title: "Failed to discard batch", description: err.message });
+                                      }
+                                    }
+                                  }}
+                                >
+                                  Discard
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    )}
                   </TableBody>
                 </Table>
               </div>

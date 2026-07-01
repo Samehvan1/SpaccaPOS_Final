@@ -99,6 +99,13 @@
       "when": 1781345725548,
       "tag": "0013_huge_dazzler",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1782919215746,
+      "tag": "0014_add_stock_batches",
+      "breakpoints": true
     }
   ]
 }

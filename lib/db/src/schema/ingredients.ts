@@ -13,6 +13,7 @@ export const ingredientsTable = pgTable("ingredients", {
   }).notNull(),
   unit: text("unit").notNull(),
   costPerUnit: numeric("cost_per_unit", { precision: 10, scale: 4 }).notNull(),
+  openedShelfLifeDays: integer("opened_shelf_life_days"),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),

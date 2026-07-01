@@ -346,6 +346,7 @@ router.post("/ingredients", requirePermission("inventory:manage"), async (req, r
       unit: parsed.data.unit,
       costPerUnit: String(parsed.data.costPerUnit),
       isActive: parsed.data.isActive ?? true,
+      openedShelfLifeDays: parsed.data.openedShelfLifeDays,
     })
     .returning();
 
@@ -432,6 +433,7 @@ router.patch("/ingredients/:id", requirePermission("inventory:manage"), async (r
   if (parsed.data.unit !== undefined) updateData.unit = parsed.data.unit;
   if (parsed.data.costPerUnit !== undefined) updateData.costPerUnit = String(parsed.data.costPerUnit);
   if (parsed.data.isActive !== undefined) updateData.isActive = parsed.data.isActive;
+  if (parsed.data.openedShelfLifeDays !== undefined) updateData.openedShelfLifeDays = parsed.data.openedShelfLifeDays;
 
   if (parsed.data.stockQuantity !== undefined) stockUpdateData.stockQuantity = String(parsed.data.stockQuantity);
   if (parsed.data.startupQuantity !== undefined) stockUpdateData.startupQuantity = String(parsed.data.startupQuantity);
@@ -697,6 +699,18 @@ router.post("/ingredients/:id/restock", requirePermission("inventory:adjust"), a
   const movementNote = selectedUnitName 
     ? `${parsed.data.note ?? ""} (Converted from ${parsed.data.quantity} ${selectedUnitName})`.trim()
     : parsed.data.note ?? null;
+
+  const { addStockBatch } = await import("../lib/stock-utils");
+  if (finalQuantity > 0) {
+    await addStockBatch(
+      db,
+      targetBranchId,
+      params.data.id,
+      finalQuantity,
+      parsed.data.expiryDate ? new Date(parsed.data.expiryDate) : null,
+      parsed.data.batchNumber
+    );
+  }
 
   await db.insert(stockMovementsTable).values({
     branchId: targetBranchId,

@@ -77,8 +77,10 @@ export type ListIngredientsResponseItem = Infer<
 export const ListIngredientsResponse = api.ListIngredientsResponse;
 export type ListIngredientsResponse = Infer<typeof api.ListIngredientsResponse>;
 
-export const CreateIngredientBody = api.CreateIngredientBody;
-export type CreateIngredientBody = Infer<typeof api.CreateIngredientBody>;
+export const CreateIngredientBody = api.CreateIngredientBody.extend({
+  openedShelfLifeDays: z.number().nullish(),
+});
+export type CreateIngredientBody = Infer<typeof CreateIngredientBody>;
 export const GetIngredientParams = api.GetIngredientParams;
 export type GetIngredientParams = Infer<typeof api.GetIngredientParams>;
 export const GetIngredientResponse = api.GetIngredientResponse;
@@ -86,8 +88,10 @@ export type GetIngredientResponse = Infer<typeof api.GetIngredientResponse>;
 
 export const UpdateIngredientParams = api.UpdateIngredientParams;
 export type UpdateIngredientParams = Infer<typeof api.UpdateIngredientParams>;
-export const UpdateIngredientBody = api.UpdateIngredientBody;
-export type UpdateIngredientBody = Infer<typeof api.UpdateIngredientBody>;
+export const UpdateIngredientBody = api.UpdateIngredientBody.extend({
+  openedShelfLifeDays: z.number().nullish(),
+});
+export type UpdateIngredientBody = Infer<typeof UpdateIngredientBody>;
 export const UpdateIngredientResponse = api.UpdateIngredientResponse;
 export type UpdateIngredientResponse = Infer<
   typeof api.UpdateIngredientResponse
@@ -116,8 +120,11 @@ export type DeleteIngredientOptionParams = Infer<
 
 export const RestockIngredientParams = api.RestockIngredientParams;
 export type RestockIngredientParams = Infer<typeof api.RestockIngredientParams>;
-export const RestockIngredientBody = api.RestockIngredientBody;
-export type RestockIngredientBody = Infer<typeof api.RestockIngredientBody>;
+export const RestockIngredientBody = api.RestockIngredientBody.extend({
+  expiryDate: z.string().nullish(),
+  batchNumber: z.string().nullish(),
+});
+export type RestockIngredientBody = Infer<typeof RestockIngredientBody>;
 export const RestockIngredientResponse = api.RestockIngredientResponse;
 export type RestockIngredientResponse = Infer<
   typeof api.RestockIngredientResponse
@@ -264,9 +271,12 @@ export type ListStockMovementsResponse = Infer<
   typeof ListStockMovementsResponse
 >;
 
-export const CreateStockAdjustmentBody = api.CreateStockAdjustmentBody;
+export const CreateStockAdjustmentBody = api.CreateStockAdjustmentBody.extend({
+  expiryDate: z.string().nullish(),
+  batchNumber: z.string().nullish(),
+});
 export type CreateStockAdjustmentBody = Infer<
-  typeof api.CreateStockAdjustmentBody
+  typeof CreateStockAdjustmentBody
 >;
 
 // Dashboard
