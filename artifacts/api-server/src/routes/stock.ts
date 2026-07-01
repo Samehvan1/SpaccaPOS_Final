@@ -229,6 +229,10 @@ router.get("/stock/expiry/reports", async (req, res): Promise<void> => {
     conditions.push(eq(branchInventoryBatchesTable.branchId, targetBranchId));
   }
 
+  if (req.query.ingredientId && req.query.ingredientId !== "all") {
+    conditions.push(eq(branchInventoryBatchesTable.ingredientId, parseInt(req.query.ingredientId as string)));
+  }
+
   const batches = await db
     .select({
       id: branchInventoryBatchesTable.id,
