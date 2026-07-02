@@ -73724,12 +73724,13 @@ async function deductStockFromBatches(tx, branchId, ingredientId, quantityToDedu
     }
   }
 }
-async function openStockBatch(tx, batchId) {
+async function openStockBatch(tx, batchId, quantityToOpen) {
   const executor = tx || db;
   const [batch] = await executor.select().from(branchInventoryBatchesTable).where(eq(branchInventoryBatchesTable.id, batchId)).limit(1);
   if (!batch) {
     throw new Error("Batch not found");
   }
+  const currentQty = parseFloat(batch.quantity);
   if (batch.isOpened) {
     return batch;
   }
@@ -73745,6 +73746,25 @@ async function openStockBatch(tx, batchId) {
     } else {
       newExpiryDate = openedExpiry;
     }
+  }
+  if (quantityToOpen !== void 0 && quantityToOpen > 0 && quantityToOpen < currentQty) {
+    const remainingQty = currentQty - quantityToOpen;
+    await executor.update(branchInventoryBatchesTable).set({
+      quantity: String(remainingQty),
+      updatedAt: now
+    }).where(eq(branchInventoryBatchesTable.id, batchId));
+    const [newOpenedBatch] = await executor.insert(branchInventoryBatchesTable).values({
+      branchId: batch.branchId,
+      ingredientId: batch.ingredientId,
+      batchNumber: batch.batchNumber ? `${batch.batchNumber}-OPEN` : `BATCH-${Date.now()}-OPEN`,
+      sealedExpiryDate: batch.sealedExpiryDate,
+      expiryDate: newExpiryDate,
+      isOpened: true,
+      openedAt: now,
+      quantity: String(quantityToOpen),
+      initialQuantity: String(quantityToOpen)
+    }).returning();
+    return newOpenedBatch;
   }
   const [updated] = await executor.update(branchInventoryBatchesTable).set({
     isOpened: true,
@@ -83201,6 +83221,85 @@ router4.delete("/ingredients/:id/conversions/:conversionId", requirePermission("
   res.sendStatus(204);
   globalCache.clear();
 });
+router4.get("/ingredients/:id/links", async (req, res) => {
+  const ingId = parseInt(req.params.id);
+  if (Number.isNaN(ingId)) {
+    res.status(400).json({ error: "Invalid ingredient ID" });
+    return;
+  }
+  try {
+    const types3 = await db.select({ id: ingredientTypesTable.id, name: ingredientTypesTable.name }).from(ingredientTypesTable).where(eq(ingredientTypesTable.inventoryIngredientId, ingId));
+    const options = await db.select({ id: ingredientOptionsTable.id, name: ingredientOptionsTable.label }).from(ingredientOptionsTable).where(eq(ingredientOptionsTable.linkedIngredientId, ingId));
+    const linkedTypes = [
+      ...types3.map((t) => ({ id: t.id, name: t.name, kind: "Ingredient Type" })),
+      ...options.map((o) => ({ id: o.id, name: o.name, kind: "Customization Option" }))
+    ];
+    const cupDrinks = await db.select({ id: drinksTable.id, name: drinksTable.name }).from(drinksTable).where(eq(drinksTable.cupIngredientId, ingId));
+    const legacySlotDrinks = await db.selectDistinct({ id: drinksTable.id, name: drinksTable.name }).from(drinksTable).innerJoin(drinkIngredientSlotsTable, eq(drinkIngredientSlotsTable.drinkId, drinksTable.id)).where(eq(drinkIngredientSlotsTable.ingredientId, ingId));
+    const seenDrinkIds = /* @__PURE__ */ new Set();
+    const linkedProducts = [];
+    for (const d of cupDrinks) {
+      if (!seenDrinkIds.has(d.id)) {
+        seenDrinkIds.add(d.id);
+        linkedProducts.push({ id: d.id, name: d.name, kind: "Cup Package" });
+      }
+    }
+    for (const d of legacySlotDrinks) {
+      if (!seenDrinkIds.has(d.id)) {
+        seenDrinkIds.add(d.id);
+        linkedProducts.push({ id: d.id, name: d.name, kind: "Legacy Slot Recipe" });
+      }
+    }
+    res.json({
+      types: linkedTypes,
+      products: linkedProducts
+    });
+  } catch (error40) {
+    console.error("Error fetching ingredient links:", error40);
+    res.status(500).json({ error: "Failed to fetch ingredient links" });
+  }
+});
+router4.get("/ingredients/types/:id/links", async (req, res) => {
+  const typeId = parseInt(req.params.id);
+  if (Number.isNaN(typeId)) {
+    res.status(400).json({ error: "Invalid type ID" });
+    return;
+  }
+  try {
+    const slotDrinks = await db.select({
+      id: drinksTable.id,
+      name: drinksTable.name,
+      slotLabel: drinkIngredientSlotsTable.slotLabel
+    }).from(drinksTable).innerJoin(drinkIngredientSlotsTable, eq(drinkIngredientSlotsTable.drinkId, drinksTable.id)).where(eq(drinkIngredientSlotsTable.ingredientTypeId, typeId));
+    const optionDrinks = await db.select({
+      id: drinksTable.id,
+      name: drinksTable.name,
+      slotLabel: drinkIngredientSlotsTable.slotLabel
+    }).from(drinksTable).innerJoin(drinkIngredientSlotsTable, eq(drinkIngredientSlotsTable.drinkId, drinksTable.id)).innerJoin(drinkSlotTypeOptionsTable, eq(drinkSlotTypeOptionsTable.slotId, drinkIngredientSlotsTable.id)).where(eq(drinkSlotTypeOptionsTable.ingredientTypeId, typeId));
+    const seenKeys = /* @__PURE__ */ new Set();
+    const linkedDrinks = [];
+    for (const d of slotDrinks) {
+      const key = `${d.id}-slot-${d.slotLabel}`;
+      if (!seenKeys.has(key)) {
+        seenKeys.add(key);
+        linkedDrinks.push({ id: d.id, name: d.name, kind: `Primary Slot: ${d.slotLabel}` });
+      }
+    }
+    for (const d of optionDrinks) {
+      const key = `${d.id}-option-${d.slotLabel}`;
+      if (!seenKeys.has(key)) {
+        seenKeys.add(key);
+        linkedDrinks.push({ id: d.id, name: d.name, kind: `Option in: ${d.slotLabel}` });
+      }
+    }
+    res.json({
+      drinks: linkedDrinks
+    });
+  } catch (error40) {
+    console.error("Error fetching type links:", error40);
+    res.status(500).json({ error: "Failed to fetch type links" });
+  }
+});
 var ingredients_default = router4;
 
 // src/routes/orders.ts
@@ -84356,8 +84455,9 @@ router6.post("/stock/expiry/batches/:id/open", async (req, res) => {
     return;
   }
   try {
+    const quantityToOpen = req.body.quantity !== void 0 ? parseFloat(req.body.quantity) : void 0;
     const { openStockBatch: openStockBatch2 } = await Promise.resolve().then(() => (init_stock_utils(), stock_utils_exports));
-    const updated = await openStockBatch2(db, batchId);
+    const updated = await openStockBatch2(db, batchId, quantityToOpen);
     const { globalCache: globalCache2 } = await Promise.resolve().then(() => (init_cache2(), cache_exports));
     globalCache2.clear();
     const { broadcastEvent: broadcastEvent2 } = await Promise.resolve().then(() => (init_sse(), sse_exports));
@@ -84416,6 +84516,63 @@ router6.post("/stock/expiry/batches/:id/discard", async (req, res) => {
   } catch (error40) {
     console.error("POST /stock/expiry/batches/:id/discard error:", error40);
     res.status(500).json({ error: error40?.message || "Failed to discard batch" });
+  }
+});
+router6.post("/stock/expiry/batches/initialize", async (req, res) => {
+  const { branchId, ingredientId, quantity, batchNumber, expiryDate, isOpened } = req.body;
+  if (!branchId || !ingredientId || !quantity || quantity <= 0) {
+    res.status(400).json({ error: "Missing required parameters or invalid quantity" });
+    return;
+  }
+  try {
+    await db.transaction(async (tx) => {
+      const [stock] = await tx.select().from(branchStockTable).where(
+        and(
+          eq(branchStockTable.branchId, branchId),
+          eq(branchStockTable.ingredientId, ingredientId)
+        )
+      ).limit(1);
+      const totalStock = stock ? parseFloat(stock.stockQuantity) : 0;
+      const activeBatches = await tx.select().from(branchInventoryBatchesTable).where(
+        and(
+          eq(branchInventoryBatchesTable.branchId, branchId),
+          eq(branchInventoryBatchesTable.ingredientId, ingredientId)
+        )
+      );
+      const sumBatchQty = activeBatches.reduce((sum2, b) => sum2 + parseFloat(b.quantity), 0);
+      const unbatchedStock = Math.max(0, totalStock - sumBatchQty);
+      if (quantity > unbatchedStock + 1e-4) {
+        throw new Error(`Quantity to initialize (${quantity}) exceeds unbatched stock (${unbatchedStock.toFixed(2)})`);
+      }
+      const activeExpiry = expiryDate ? new Date(expiryDate) : null;
+      let finalExpiry = activeExpiry;
+      if (isOpened && !activeExpiry) {
+        const [ingredient] = await tx.select().from(ingredientsTable).where(eq(ingredientsTable.id, ingredientId)).limit(1);
+        const openedShelfLife = ingredient?.openedShelfLifeDays;
+        if (openedShelfLife != null) {
+          finalExpiry = new Date(Date.now() + openedShelfLife * 24 * 60 * 60 * 1e3);
+        }
+      }
+      await tx.insert(branchInventoryBatchesTable).values({
+        branchId,
+        ingredientId,
+        batchNumber: batchNumber || `BULK-${Date.now()}`,
+        sealedExpiryDate: isOpened ? null : activeExpiry,
+        expiryDate: finalExpiry,
+        isOpened: !!isOpened,
+        openedAt: isOpened ? /* @__PURE__ */ new Date() : null,
+        quantity: String(quantity),
+        initialQuantity: String(quantity)
+      });
+    });
+    const { globalCache: globalCache2 } = await Promise.resolve().then(() => (init_cache2(), cache_exports));
+    globalCache2.clear();
+    const { broadcastEvent: broadcastEvent2 } = await Promise.resolve().then(() => (init_sse(), sse_exports));
+    broadcastEvent2("inventory_updated", {});
+    res.json({ success: true });
+  } catch (error40) {
+    console.error("POST /stock/expiry/batches/initialize error:", error40);
+    res.status(500).json({ error: error40?.message || "Failed to initialize batch" });
   }
 });
 var stock_default = router6;

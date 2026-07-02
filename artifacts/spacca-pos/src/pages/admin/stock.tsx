@@ -9,8 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ArrowLeft, Plus, AlertTriangle, ArrowDownToLine, ArrowUpFromLine, PackageOpen, Download, Settings2 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { ArrowLeft, Plus, AlertTriangle, ArrowDownToLine, ArrowUpFromLine, PackageOpen, Download, Settings2, Clock } from "lucide-react";
 import { Link } from "wouter";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -78,6 +78,13 @@ export default function StockAdmin() {
   const [daysThreshold, setDaysThreshold] = useState("3");
   const [statusFilter, setStatusFilter] = useState("alert");
   const [activeTab, setActiveTab] = useState("movements");
+
+  // State for unsealing packages
+  const [unsealBatch, setUnsealBatch] = useState<any | null>(null);
+  const [unsealMode, setUnsealMode] = useState<"entire" | "package" | "custom">("entire");
+  const [selectedConversionId, setSelectedConversionId] = useState<string>("");
+  const [packageCount, setPackageCount] = useState<number>(1);
+  const [customQtyToOpen, setCustomQtyToOpen] = useState<string>("");
 
   const { data: expiryReports, refetch: refetchExpiryReports } = useQuery<any[]>({
     queryKey: ["expiry-reports", selectedBranchId, daysThreshold, statusFilter],
@@ -528,16 +535,11 @@ export default function StockAdmin() {
                                     size="sm" 
                                     variant="outline" 
                                     className="h-7 text-xs border-blue-200 hover:bg-blue-50 text-blue-600 hover:text-blue-700 font-semibold dark:border-blue-900/40 dark:hover:bg-blue-900/10"
-                                    onClick={async () => {
-                                      try {
-                                        await api(`/api/stock/expiry/batches/${batch.id}/open`, { method: "POST" });
-                                        toast({ title: "Batch opened", description: "Active expiry date updated based on ingredient shelf life." });
-                                        refetchExpiryReports();
-                                        refetchExpiryAlerts();
-                                        refetchIngredients();
-                                      } catch (err: any) {
-                                        toast({ variant: "destructive", title: "Failed to open batch", description: err.message });
-                                      }
+                                    onClick={() => {
+                                      setUnsealBatch(batch);
+                                      setUnsealMode("entire");
+                                      setPackageCount(1);
+                                      setCustomQtyToOpen("");
                                     }}
                                   >
                                     Open
@@ -627,6 +629,153 @@ export default function StockAdmin() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Unseal Quantity Selector Dialog */}
+      <Dialog open={unsealBatch !== null} onOpenChange={(open) => { if (!open) setUnsealBatch(null); }}>
+        <DialogContent className="sm:max-w-md bg-card border-primary/20">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Clock className="h-5 w-5 text-primary" /> Unseal Package / Open Batch
+            </DialogTitle>
+            <DialogDescription>
+              Ingredient: <strong className="text-foreground">{unsealBatch?.ingredientName}</strong><br />
+              Batch Number: <span className="font-mono text-xs">{unsealBatch?.batchNumber || `B-${unsealBatch?.id}`}</span>
+            </DialogDescription>
+          </DialogHeader>
+
+          {unsealBatch && (() => {
+            const ingredientObj = ingredients?.find((i: any) => i.id === unsealBatch.ingredientId);
+            const conversions = ingredientObj?.conversions || [];
+            const unit = unsealBatch.ingredientUnit || ingredientObj?.unit || "units";
+            const batchQty = parseFloat(unsealBatch.quantity);
+
+            // Calculate current preview of amount to open
+            let quantityToOpen = batchQty;
+            let displayDetails = "";
+
+            if (unsealMode === "package" && conversions.length > 0) {
+              const conv = conversions.find((c: any) => String(c.id) === selectedConversionId);
+              if (conv) {
+                const factor = parseFloat(String(conv.conversionFactor));
+                quantityToOpen = packageCount * factor;
+                displayDetails = `Opening ${packageCount} ${conv.unitName}(s) = ${quantityToOpen} ${unit}. Remaining ${batchQty - quantityToOpen} ${unit} will stay sealed.`;
+              }
+            } else if (unsealMode === "custom") {
+              quantityToOpen = parseFloat(customQtyToOpen) || 0;
+              displayDetails = `Opening ${quantityToOpen} ${unit}. Remaining ${batchQty - quantityToOpen} ${unit} will stay sealed.`;
+            } else {
+              displayDetails = `Opening the entire batch of ${batchQty} ${unit}.`;
+            }
+
+            const canSubmit = quantityToOpen > 0 && quantityToOpen <= batchQty;
+
+            return (
+              <div className="space-y-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="unseal-mode" className="font-bold text-sm">How would you like to open this batch?</Label>
+                  <Select value={unsealMode} onValueChange={(val: any) => {
+                    setUnsealMode(val);
+                    if (val === "package" && conversions.length > 0) {
+                      setSelectedConversionId(String(conversions[0].id));
+                    }
+                  }}>
+                    <SelectTrigger id="unseal-mode" className="bg-background">
+                      <SelectValue placeholder="Select open mode" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="entire">Open Entire Batch ({batchQty} {unit})</SelectItem>
+                      {conversions.length > 0 && (
+                        <SelectItem value="package">Open by Package (Bottle/Box/Bag)</SelectItem>
+                      )}
+                      <SelectItem value="custom">Open Custom Quantity</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {unsealMode === "package" && conversions.length > 0 && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="pkg-select" className="font-bold text-sm">Package Unit</Label>
+                      <Select value={selectedConversionId} onValueChange={setSelectedConversionId}>
+                        <SelectTrigger id="pkg-select" className="bg-background">
+                          <SelectValue placeholder="Select unit" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {conversions.map((c: any) => (
+                            <SelectItem key={c.id} value={String(c.id)}>
+                              {c.unitName} ({c.conversionFactor} {unit})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="pkg-count" className="font-bold text-sm">Quantity to Open</Label>
+                      <Input 
+                        id="pkg-count"
+                        type="number"
+                        min="1"
+                        value={packageCount}
+                        onChange={e => setPackageCount(Math.max(1, parseInt(e.target.value) || 1))}
+                        className="bg-background"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {unsealMode === "custom" && (
+                  <div className="grid gap-2">
+                    <Label htmlFor="custom-qty" className="font-bold text-sm">Quantity to Open ({unit})</Label>
+                    <Input 
+                      id="custom-qty"
+                      type="number"
+                      min="0.0001"
+                      step="any"
+                      placeholder={`e.g. 1000`}
+                      value={customQtyToOpen}
+                      onChange={e => setCustomQtyToOpen(e.target.value)}
+                      className="bg-background"
+                    />
+                  </div>
+                )}
+
+                <div className="p-3 bg-muted/50 rounded-lg text-xs text-muted-foreground border">
+                  {displayDetails}
+                </div>
+
+                <div className="flex justify-end gap-2 pt-4">
+                  <Button variant="outline" onClick={() => setUnsealBatch(null)}>
+                    Cancel
+                  </Button>
+                  <Button 
+                    disabled={!canSubmit}
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold"
+                    onClick={async () => {
+                      try {
+                        const payload = unsealMode === "entire" ? {} : { quantity: quantityToOpen };
+                        await api(`/api/stock/expiry/batches/${unsealBatch.id}/open`, {
+                          method: "POST",
+                          body: JSON.stringify(payload),
+                        });
+                        
+                        toast({ title: "Batch unsealed", description: "Successfully opened the requested quantity." });
+                        setUnsealBatch(null);
+                        refetchExpiryReports();
+                        refetchExpiryAlerts();
+                        refetchIngredients();
+                      } catch (err: any) {
+                        toast({ variant: "destructive", title: "Failed to open package", description: err.message });
+                      }
+                    }}
+                  >
+                    Confirm Open
+                  </Button>
+                </div>
+              </div>
+            );
+          })() }
         </DialogContent>
       </Dialog>
     </div>

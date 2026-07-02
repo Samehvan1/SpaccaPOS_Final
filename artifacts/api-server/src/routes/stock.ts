@@ -303,8 +303,9 @@ router.post("/stock/expiry/batches/:id/open", async (req, res): Promise<void> =>
   }
 
   try {
+    const quantityToOpen = req.body.quantity !== undefined ? parseFloat(req.body.quantity) : undefined;
     const { openStockBatch } = await import("../lib/stock-utils");
-    const updated = await openStockBatch(db, batchId);
+    const updated = await openStockBatch(db, batchId, quantityToOpen);
     
     const { globalCache } = await import("../lib/cache");
     globalCache.clear();
@@ -393,6 +394,92 @@ router.post("/stock/expiry/batches/:id/discard", async (req, res): Promise<void>
   } catch (error: any) {
     console.error("POST /stock/expiry/batches/:id/discard error:", error);
     res.status(500).json({ error: error?.message || "Failed to discard batch" });
+  }
+});
+
+router.post("/stock/expiry/batches/initialize", async (req, res): Promise<void> => {
+  const { branchId, ingredientId, quantity, batchNumber, expiryDate, isOpened } = req.body;
+
+  if (!branchId || !ingredientId || !quantity || quantity <= 0) {
+    res.status(400).json({ error: "Missing required parameters or invalid quantity" });
+    return;
+  }
+
+  try {
+    await db.transaction(async (tx) => {
+      // 1. Fetch branch stock
+      const [stock] = await tx
+        .select()
+        .from(branchStockTable)
+        .where(
+          and(
+            eq(branchStockTable.branchId, branchId),
+            eq(branchStockTable.ingredientId, ingredientId)
+          )
+        )
+        .limit(1);
+
+      const totalStock = stock ? parseFloat(stock.stockQuantity) : 0;
+
+      // 2. Fetch sum of active batches
+      const activeBatches = await tx
+        .select()
+        .from(branchInventoryBatchesTable)
+        .where(
+          and(
+            eq(branchInventoryBatchesTable.branchId, branchId),
+            eq(branchInventoryBatchesTable.ingredientId, ingredientId)
+          )
+        );
+      
+      const sumBatchQty = activeBatches.reduce((sum: number, b: any) => sum + parseFloat(b.quantity), 0);
+      const unbatchedStock = Math.max(0, totalStock - sumBatchQty);
+
+      if (quantity > unbatchedStock + 0.0001) {
+        throw new Error(`Quantity to initialize (${quantity}) exceeds unbatched stock (${unbatchedStock.toFixed(2)})`);
+      }
+
+      // 3. Create the batch record
+      const activeExpiry = expiryDate ? new Date(expiryDate) : null;
+      
+      let finalExpiry = activeExpiry;
+      if (isOpened && !activeExpiry) {
+        // If unsealing directly, calculate based on ingredient opened shelf life
+        const [ingredient] = await tx
+          .select()
+          .from(ingredientsTable)
+          .where(eq(ingredientsTable.id, ingredientId))
+          .limit(1);
+        const openedShelfLife = ingredient?.openedShelfLifeDays;
+        if (openedShelfLife != null) {
+          finalExpiry = new Date(Date.now() + openedShelfLife * 24 * 60 * 60 * 1000);
+        }
+      }
+
+      await tx
+        .insert(branchInventoryBatchesTable)
+        .values({
+          branchId,
+          ingredientId,
+          batchNumber: batchNumber || `BULK-${Date.now()}`,
+          sealedExpiryDate: isOpened ? null : activeExpiry,
+          expiryDate: finalExpiry,
+          isOpened: !!isOpened,
+          openedAt: isOpened ? new Date() : null,
+          quantity: String(quantity),
+          initialQuantity: String(quantity),
+        });
+    });
+
+    const { globalCache } = await import("../lib/cache");
+    globalCache.clear();
+    const { broadcastEvent } = await import("../lib/sse");
+    broadcastEvent("inventory_updated", {});
+
+    res.json({ success: true });
+  } catch (error: any) {
+    console.error("POST /stock/expiry/batches/initialize error:", error);
+    res.status(500).json({ error: error?.message || "Failed to initialize batch" });
   }
 });
 

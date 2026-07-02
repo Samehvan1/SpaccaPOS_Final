@@ -153,7 +153,8 @@ export async function deductStockFromBatches(
 
 export async function openStockBatch(
   tx: any,
-  batchId: number
+  batchId: number,
+  quantityToOpen?: number
 ) {
   const executor = tx || db;
 
@@ -166,6 +167,8 @@ export async function openStockBatch(
   if (!batch) {
     throw new Error("Batch not found");
   }
+
+  const currentQty = parseFloat(batch.quantity);
 
   if (batch.isOpened) {
     return batch;
@@ -191,6 +194,38 @@ export async function openStockBatch(
     }
   }
 
+  // Handle optional quantity splitting
+  if (quantityToOpen !== undefined && quantityToOpen > 0 && quantityToOpen < currentQty) {
+    // 1. Deduct the opened quantity from the sealed batch
+    const remainingQty = currentQty - quantityToOpen;
+    await executor
+      .update(branchInventoryBatchesTable)
+      .set({
+        quantity: String(remainingQty),
+        updatedAt: now,
+      })
+      .where(eq(branchInventoryBatchesTable.id, batchId));
+
+    // 2. Insert a new opened batch for the unsealed portion
+    const [newOpenedBatch] = await executor
+      .insert(branchInventoryBatchesTable)
+      .values({
+        branchId: batch.branchId,
+        ingredientId: batch.ingredientId,
+        batchNumber: batch.batchNumber ? `${batch.batchNumber}-OPEN` : `BATCH-${Date.now()}-OPEN`,
+        sealedExpiryDate: batch.sealedExpiryDate,
+        expiryDate: newExpiryDate,
+        isOpened: true,
+        openedAt: now,
+        quantity: String(quantityToOpen),
+        initialQuantity: String(quantityToOpen),
+      })
+      .returning();
+
+    return newOpenedBatch;
+  }
+
+  // Otherwise, open the entire batch
   const [updated] = await executor
     .update(branchInventoryBatchesTable)
     .set({

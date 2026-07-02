@@ -15,7 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { ArrowLeft, Plus, Search, Edit, Trash2, Link2, Star, StarOff, ChevronRight, Package, Tag, Layers, FlaskConical, Check, X, Droplet, Droplets, RefreshCw, CheckCircle2, ChevronsUpDown } from "lucide-react";
+import { ArrowLeft, Plus, Search, Edit, Trash2, Link2, Star, StarOff, ChevronRight, Package, Tag, Layers, FlaskConical, Check, X, Droplet, Droplets, RefreshCw, CheckCircle2, ChevronsUpDown, Loader2 } from "lucide-react";
 
 const COMMON_UNITS = [
   "Kg", "Gram", "Liter", "ML", "Box", "Bag", "Bottle", "Cup", "Case", "Pack", "Gallon"
@@ -223,6 +223,28 @@ function TypesTab({ inventoryItems }: { inventoryItems: Ingredient[] }) {
   const [drinkOverrides, setDrinkOverrides] = useState<DrinkOverride[]>([]);
   const [loadingOverrides, setLoadingOverrides] = useState(false);
   const [syncing, setSyncing] = useState<number | null>(null);
+
+  // States for linked drinks modal in Types tab
+  const [showDrinksModal, setShowDrinksModal] = useState(false);
+  const [modalTitle, setModalTitle] = useState("");
+  const [modalLoading, setModalLoading] = useState(false);
+  const [modalItems, setModalItems] = useState<{ name: string; kind: string }[]>([]);
+
+  const handleOpenDrinks = async (typeId: number, typeName: string) => {
+    setModalTitle(`Linked Drinks / Products for ${typeName}`);
+    setModalItems([]);
+    setModalLoading(true);
+    setShowDrinksModal(true);
+    try {
+      const data = await api(`/api/ingredients/types/${typeId}/links`);
+      setModalItems(data.drinks || []);
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Error", description: err.message });
+      setShowDrinksModal(false);
+    } finally {
+      setModalLoading(false);
+    }
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -513,7 +535,17 @@ function TypesTab({ inventoryItems }: { inventoryItems: Ingredient[] }) {
                   {t.inventoryIngredient ? t.inventoryIngredient.name : "—"}
                 </TableCell>
                 <TableCell className="text-center font-medium">
-                  <Badge variant="secondary" className="px-2">{t.drinkCount ?? 0}</Badge>
+                  {(t.drinkCount ?? 0) > 0 ? (
+                    <Badge 
+                      variant="secondary" 
+                      className="px-2 cursor-pointer hover:bg-primary hover:text-white transition-colors"
+                      onClick={() => handleOpenDrinks(t.id, t.name)}
+                    >
+                      {t.drinkCount}
+                    </Badge>
+                  ) : (
+                    <Badge variant="secondary" className="px-2 text-muted-foreground">0</Badge>
+                  )}
                 </TableCell>
                 <TableCell>
                   <Badge variant={t.isActive ? "default" : "secondary"}>{t.isActive ? "Active" : "Inactive"}</Badge>
@@ -904,6 +936,36 @@ function TypesTab({ inventoryItems }: { inventoryItems: Ingredient[] }) {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Dialogue/Modal showing Drinks links for the selected type */}
+      <Dialog open={showDrinksModal} onOpenChange={setShowDrinksModal}>
+        <DialogContent className="sm:max-w-md bg-card border-primary/20">
+          <DialogHeader>
+            <DialogTitle>{modalTitle}</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            {modalLoading ? (
+              <div className="flex justify-center items-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : modalItems.length === 0 ? (
+              <p className="text-center text-muted-foreground py-8 text-sm">No linked drinks found.</p>
+            ) : (
+              <div className="max-h-[300px] overflow-y-auto space-y-2 pr-2">
+                {modalItems.map((item, idx) => (
+                  <div key={idx} className="flex justify-between items-center p-3 border rounded-lg bg-background hover:bg-muted/10 transition-colors">
+                    <span className="font-semibold text-sm text-foreground">{item.name}</span>
+                    <Badge variant="secondary" className="text-xs capitalize">{item.kind}</Badge>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="flex justify-end pt-4 mt-2">
+              <Button variant="outline" onClick={() => setShowDrinksModal(false)}>Close</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -1094,6 +1156,29 @@ function InventoryTab() {
   const [newConvFactor, setNewConvFactor] = useState("1");
   const [newConvIsDefault, setNewConvIsDefault] = useState(false);
   const [isAddingConversion, setIsAddingConversion] = useState(false);
+
+  // State for linked Types and Products modal
+  const [showLinksModal, setShowLinksModal] = useState(false);
+  const [modalTitle, setModalTitle] = useState("");
+  const [modalLoading, setModalLoading] = useState(false);
+  const [modalItems, setModalItems] = useState<{ name: string; kind: string }[]>([]);
+
+  const handleOpenLinks = async (ingredientId: number, name: string, type: "types" | "products") => {
+    setModalTitle(`${type === "types" ? "Linked Types / Customization Options" : "Linked Drinks / Products"} for ${name}`);
+    setModalItems([]);
+    setModalLoading(true);
+    setShowLinksModal(true);
+    try {
+      const data = await api(`/api/ingredients/${ingredientId}/links`);
+      const items = type === "types" ? data.types : data.products;
+      setModalItems(items);
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Error", description: err.message });
+      setShowLinksModal(false);
+    } finally {
+      setModalLoading(false);
+    }
+  };
 
   const { mutate: createIngredient, isPending: isCreating } = useCreateIngredient({
     mutation: {
@@ -1372,10 +1457,30 @@ function InventoryTab() {
                       <TableCell className="text-muted-foreground">{ing.lowStockThreshold} {ing.unit}</TableCell>
                       <TableCell>{fmt(ing.costPerUnit, 4)}</TableCell>
                       <TableCell className="text-center">
-                        <Badge variant="outline" className="font-mono">{ing.linkedTypeCount ?? 0}</Badge>
+                        {(ing.linkedTypeCount ?? 0) > 0 ? (
+                          <Badge 
+                            variant="outline" 
+                            className="font-mono cursor-pointer hover:bg-primary hover:text-white transition-colors"
+                            onClick={() => handleOpenLinks(ing.id, ing.name, "types")}
+                          >
+                            {ing.linkedTypeCount}
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="font-mono text-muted-foreground">0</Badge>
+                        )}
                       </TableCell>
                       <TableCell className="text-center">
-                        <Badge variant="outline" className="font-mono">{ing.linkedProductCount ?? 0}</Badge>
+                        {(ing.linkedProductCount ?? 0) > 0 ? (
+                          <Badge 
+                            variant="outline" 
+                            className="font-mono cursor-pointer hover:bg-primary hover:text-white transition-colors"
+                            onClick={() => handleOpenLinks(ing.id, ing.name, "products")}
+                          >
+                            {ing.linkedProductCount}
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="font-mono text-muted-foreground">0</Badge>
+                        )}
                       </TableCell>
                       <TableCell>
                         <Badge variant={ing.isActive ? "default" : "secondary"}>{ing.isActive ? "Active" : "Inactive"}</Badge>
@@ -1669,6 +1774,36 @@ function InventoryTab() {
               {(isCreating || isUpdating) ? "Saving…" : "Save"}
             </Button>
           </DialogFooter>
+         </DialogContent>
+      </Dialog>
+
+      {/* Dialogue/Modal showing Types/Products links */}
+      <Dialog open={showLinksModal} onOpenChange={setShowLinksModal}>
+        <DialogContent className="sm:max-w-md bg-card border-primary/20">
+          <DialogHeader>
+            <DialogTitle>{modalTitle}</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            {modalLoading ? (
+              <div className="flex justify-center items-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : modalItems.length === 0 ? (
+              <p className="text-center text-muted-foreground py-8 text-sm">No linked items found.</p>
+            ) : (
+              <div className="max-h-[300px] overflow-y-auto space-y-2 pr-2">
+                {modalItems.map((item, idx) => (
+                  <div key={idx} className="flex justify-between items-center p-3 border rounded-lg bg-background hover:bg-muted/10 transition-colors">
+                    <span className="font-semibold text-sm text-foreground">{item.name}</span>
+                    <Badge variant="secondary" className="text-xs capitalize">{item.kind}</Badge>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="flex justify-end pt-4 mt-2">
+              <Button variant="outline" onClick={() => setShowLinksModal(false)}>Close</Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </>

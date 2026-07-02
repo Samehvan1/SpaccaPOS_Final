@@ -2,7 +2,7 @@ import { Router, type IRouter } from "express";
 import fs from "fs";
 import path from "path";
 import { eq, and, sql, asc } from "drizzle-orm";
-import { db, ingredientsTable, branchStockTable, ingredientOptionsTable, ingredientConversionsTable, stockMovementsTable, ingredientTypesTable, drinkIngredientSlotsTable, drinksTable, orderItemCustomizationsTable, orderItemsTable, ordersTable, usersTable, branchesTable } from "@workspace/db";
+import { db, ingredientsTable, branchStockTable, ingredientOptionsTable, ingredientConversionsTable, stockMovementsTable, ingredientTypesTable, drinkIngredientSlotsTable, drinksTable, drinkSlotTypeOptionsTable, orderItemCustomizationsTable, orderItemsTable, ordersTable, usersTable, branchesTable } from "@workspace/db";
 import { serializeDates } from "../lib/serialize";
 import { globalCache } from "../lib/cache";
 import { logActivity } from "../lib/activity-logger";
@@ -794,6 +794,127 @@ router.delete("/ingredients/:id/conversions/:conversionId", requirePermission("i
 
   res.sendStatus(204);
   globalCache.clear();
+});
+
+router.get("/ingredients/:id/links", async (req, res): Promise<void> => {
+  const ingId = parseInt(req.params.id);
+  if (Number.isNaN(ingId)) {
+    res.status(400).json({ error: "Invalid ingredient ID" });
+    return;
+  }
+
+  try {
+    // 1. Fetch Types
+    const types = await db
+      .select({ id: ingredientTypesTable.id, name: ingredientTypesTable.name })
+      .from(ingredientTypesTable)
+      .where(eq(ingredientTypesTable.inventoryIngredientId, ingId));
+
+    const options = await db
+      .select({ id: ingredientOptionsTable.id, name: ingredientOptionsTable.label })
+      .from(ingredientOptionsTable)
+      .where(eq(ingredientOptionsTable.linkedIngredientId, ingId));
+
+    const linkedTypes = [
+      ...types.map(t => ({ id: t.id, name: t.name, kind: "Ingredient Type" })),
+      ...options.map(o => ({ id: o.id, name: o.name, kind: "Customization Option" }))
+    ];
+
+    // 2. Fetch Products
+    const cupDrinks = await db
+      .select({ id: drinksTable.id, name: drinksTable.name })
+      .from(drinksTable)
+      .where(eq(drinksTable.cupIngredientId, ingId));
+
+    const legacySlotDrinks = await db
+      .selectDistinct({ id: drinksTable.id, name: drinksTable.name })
+      .from(drinksTable)
+      .innerJoin(drinkIngredientSlotsTable, eq(drinkIngredientSlotsTable.drinkId, drinksTable.id))
+      .where(eq(drinkIngredientSlotsTable.ingredientId, ingId));
+
+    const seenDrinkIds = new Set<number>();
+    const linkedProducts: { id: number; name: string; kind: string }[] = [];
+
+    for (const d of cupDrinks) {
+      if (!seenDrinkIds.has(d.id)) {
+        seenDrinkIds.add(d.id);
+        linkedProducts.push({ id: d.id, name: d.name, kind: "Cup Package" });
+      }
+    }
+    for (const d of legacySlotDrinks) {
+      if (!seenDrinkIds.has(d.id)) {
+        seenDrinkIds.add(d.id);
+        linkedProducts.push({ id: d.id, name: d.name, kind: "Legacy Slot Recipe" });
+      }
+    }
+
+    res.json({
+      types: linkedTypes,
+      products: linkedProducts
+    });
+  } catch (error) {
+    console.error("Error fetching ingredient links:", error);
+    res.status(500).json({ error: "Failed to fetch ingredient links" });
+  }
+});
+
+router.get("/ingredients/types/:id/links", async (req, res): Promise<void> => {
+  const typeId = parseInt(req.params.id);
+  if (Number.isNaN(typeId)) {
+    res.status(400).json({ error: "Invalid type ID" });
+    return;
+  }
+
+  try {
+    // 1. Drinks linked directly via slot
+    const slotDrinks = await db
+      .select({
+        id: drinksTable.id,
+        name: drinksTable.name,
+        slotLabel: drinkIngredientSlotsTable.slotLabel
+      })
+      .from(drinksTable)
+      .innerJoin(drinkIngredientSlotsTable, eq(drinkIngredientSlotsTable.drinkId, drinksTable.id))
+      .where(eq(drinkIngredientSlotsTable.ingredientTypeId, typeId));
+
+    // 2. Drinks linked via slot option overrides (drinkSlotTypeOptionsTable)
+    const optionDrinks = await db
+      .select({
+        id: drinksTable.id,
+        name: drinksTable.name,
+        slotLabel: drinkIngredientSlotsTable.slotLabel
+      })
+      .from(drinksTable)
+      .innerJoin(drinkIngredientSlotsTable, eq(drinkIngredientSlotsTable.drinkId, drinksTable.id))
+      .innerJoin(drinkSlotTypeOptionsTable, eq(drinkSlotTypeOptionsTable.slotId, drinkIngredientSlotsTable.id))
+      .where(eq(drinkSlotTypeOptionsTable.ingredientTypeId, typeId));
+
+    // Deduplicate drinks based on id + slotLabel
+    const seenKeys = new Set<string>();
+    const linkedDrinks: { id: number; name: string; kind: string }[] = [];
+
+    for (const d of slotDrinks) {
+      const key = `${d.id}-slot-${d.slotLabel}`;
+      if (!seenKeys.has(key)) {
+        seenKeys.add(key);
+        linkedDrinks.push({ id: d.id, name: d.name, kind: `Primary Slot: ${d.slotLabel}` });
+      }
+    }
+    for (const d of optionDrinks) {
+      const key = `${d.id}-option-${d.slotLabel}`;
+      if (!seenKeys.has(key)) {
+        seenKeys.add(key);
+        linkedDrinks.push({ id: d.id, name: d.name, kind: `Option in: ${d.slotLabel}` });
+      }
+    }
+
+    res.json({
+      drinks: linkedDrinks
+    });
+  } catch (error) {
+    console.error("Error fetching type links:", error);
+    res.status(500).json({ error: "Failed to fetch type links" });
+  }
 });
 
 export default router;
