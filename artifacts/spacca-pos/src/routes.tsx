@@ -12,6 +12,7 @@ import StockAdmin from "@/pages/admin/stock";
 import ReceiveDeliveryPage from "@/pages/admin/stock/receive-delivery";
 import DrinkRecipe from "@/pages/admin/drink-recipe";
 import ReportsPage from "@/pages/admin/reports";
+import ExpiryReportPage from "@/pages/admin/expiry-report";
 import CategoriesAdmin from "@/pages/admin/categories";
 import KitchenStationsAdmin from "@/pages/admin/kitchen-stations";
 import AdminUsers from "@/pages/admin/users";
@@ -90,6 +91,7 @@ export const appRoutes: RouteConfig[] = [
   { path: "/admin/finance/pl", component: PLReport, permission: "reports:view" },
   { path: "/admin/finance/all-orders", component: AllOrdersReport, permission: "reports:view" },
   { path: "/admin/reports", component: ReportsPage, permission: "reports:view" },
+  { path: "/admin/reports/expiry", component: ExpiryReportPage, permission: "reports:view" },
   { path: "/admin/cashier-performance", component: CashierPerformancePage, permission: "reports:view" },
 
   // Operations
