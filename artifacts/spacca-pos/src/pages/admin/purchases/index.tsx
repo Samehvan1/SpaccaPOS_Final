@@ -121,7 +121,7 @@ function SearchableSelect({
       </Button>
       
       {isOpen && (
-        <div className="absolute z-[100] mt-1 w-full rounded-md border border-primary/10 bg-card text-popover-foreground shadow-lg outline-none animate-in fade-in-0 zoom-in-95">
+        <div className="absolute z-[100] mt-1 min-w-full w-max max-w-[400px] rounded-md border border-primary/10 bg-card text-popover-foreground shadow-lg outline-none animate-in fade-in-0 zoom-in-95">
           <div className="p-2 border-b border-primary/5">
             <Input 
               placeholder="Search..." 
@@ -144,7 +144,7 @@ function SearchableSelect({
                     setIsOpen(false);
                   }}
                 >
-                  <span className="truncate">{opt.label}</span>
+                  <span className="whitespace-normal break-words">{opt.label}</span>
                 </div>
               ))
             )}
@@ -860,7 +860,7 @@ export default function PurchasesAdmin() {
               </div>
 
               <div className="rounded-lg border border-primary/10 bg-background/30 overflow-visible">
-                <Table className="overflow-visible">
+                <Table className="overflow-visible" wrapperClassName="overflow-visible">
                   <TableHeader className="bg-primary/5">
                     <TableRow className="hover:bg-transparent border-primary/10 overflow-visible">
                       <TableHead className="font-bold text-foreground min-w-[250px]">Ingredient</TableHead>

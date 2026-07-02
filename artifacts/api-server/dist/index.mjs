@@ -36340,10 +36340,10 @@ var init_subquery = __esm({
     init_entity();
     Subquery = class {
       static [entityKind] = "Subquery";
-      constructor(sql4, fields, alias, isWith = false, usedTables = []) {
+      constructor(sql3, fields, alias, isWith = false, usedTables = []) {
         this._ = {
           brand: "Subquery",
-          sql: sql4,
+          sql: sql3,
           selectedFields: fields,
           alias,
           isWith,
@@ -42967,10 +42967,10 @@ var init_raw = __esm({
     init_entity();
     init_query_promise();
     PgRaw = class extends QueryPromise {
-      constructor(execute, sql4, query, mapBatchResult) {
+      constructor(execute, sql3, query, mapBatchResult) {
         super();
         this.execute = execute;
-        this.sql = sql4;
+        this.sql = sql3;
         this.query = query;
         this.mapBatchResult = mapBatchResult;
       }
@@ -43290,8 +43290,8 @@ var init_db = __esm({
 });
 
 // ../../node_modules/.pnpm/drizzle-orm@0.45.1_@types+pg@8.18.0_pg@8.20.0/node_modules/drizzle-orm/cache/core/cache.js
-async function hashQuery(sql4, params) {
-  const dataToHash = `${sql4}-${JSON.stringify(params)}`;
+async function hashQuery(sql3, params) {
+  const dataToHash = `${sql3}-${JSON.stringify(params)}`;
   const encoder = new TextEncoder();
   const data = encoder.encode(dataToHash);
   const hashBuffer = await crypto.subtle.digest("SHA-256", data);
@@ -55916,6 +55916,7 @@ var init_ingredients = __esm({
       }).notNull(),
       unit: text("unit").notNull(),
       costPerUnit: numeric("cost_per_unit", { precision: 10, scale: 4 }).notNull(),
+      openedShelfLifeDays: integer("opened_shelf_life_days"),
       isActive: boolean("is_active").notNull().default(true),
       createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
       updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => /* @__PURE__ */ new Date())
@@ -56640,10 +56641,38 @@ var init_tags = __esm({
   }
 });
 
+// ../../lib/db/src/schema/stock-batches.ts
+var branchInventoryBatchesTable, insertBranchInventoryBatchSchema;
+var init_stock_batches = __esm({
+  "../../lib/db/src/schema/stock-batches.ts"() {
+    "use strict";
+    init_pg_core();
+    init_drizzle_zod();
+    init_branches();
+    init_ingredients();
+    branchInventoryBatchesTable = pgTable("branch_inventory_batches", {
+      id: serial("id").primaryKey(),
+      branchId: integer("branch_id").notNull().references(() => branchesTable.id, { onDelete: "cascade" }),
+      ingredientId: integer("ingredient_id").notNull().references(() => ingredientsTable.id, { onDelete: "cascade" }),
+      batchNumber: text("batch_number"),
+      sealedExpiryDate: timestamp("sealed_expiry_date", { withTimezone: true }),
+      expiryDate: timestamp("expiry_date", { withTimezone: true }),
+      isOpened: boolean("is_opened").notNull().default(false),
+      openedAt: timestamp("opened_at", { withTimezone: true }),
+      quantity: numeric("quantity", { precision: 12, scale: 4 }).notNull().default("0"),
+      initialQuantity: numeric("initial_quantity", { precision: 12, scale: 4 }).notNull().default("0"),
+      createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+      updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => /* @__PURE__ */ new Date())
+    });
+    insertBranchInventoryBatchSchema = createInsertSchema(branchInventoryBatchesTable).omit({ id: true, createdAt: true, updatedAt: true });
+  }
+});
+
 // ../../lib/db/src/schema/index.ts
 var schema_exports = {};
 __export(schema_exports, {
   activityLogsTable: () => activityLogsTable,
+  branchInventoryBatchesTable: () => branchInventoryBatchesTable,
   branchStockTable: () => branchStockTable,
   branchesTable: () => branchesTable,
   cashierSessionsTable: () => cashierSessionsTable,
@@ -56664,6 +56693,7 @@ __export(schema_exports, {
   ingredientVolumesTable: () => ingredientVolumesTable,
   ingredientsTable: () => ingredientsTable,
   insertActivityLogSchema: () => insertActivityLogSchema,
+  insertBranchInventoryBatchSchema: () => insertBranchInventoryBatchSchema,
   insertBranchSchema: () => insertBranchSchema,
   insertBranchStockSchema: () => insertBranchStockSchema,
   insertDiscountSchema: () => insertDiscountSchema,
@@ -56741,6 +56771,7 @@ var init_schema2 = __esm({
     init_signatures();
     init_purchases();
     init_tags();
+    init_stock_batches();
   }
 });
 
@@ -56795,6 +56826,7 @@ var init_migrator2 = __esm({
 var src_exports = {};
 __export(src_exports, {
   activityLogsTable: () => activityLogsTable,
+  branchInventoryBatchesTable: () => branchInventoryBatchesTable,
   branchStockTable: () => branchStockTable,
   branchesTable: () => branchesTable,
   cashierSessionsTable: () => cashierSessionsTable,
@@ -56816,6 +56848,7 @@ __export(src_exports, {
   ingredientVolumesTable: () => ingredientVolumesTable,
   ingredientsTable: () => ingredientsTable,
   insertActivityLogSchema: () => insertActivityLogSchema,
+  insertBranchInventoryBatchSchema: () => insertBranchInventoryBatchSchema,
   insertBranchSchema: () => insertBranchSchema,
   insertBranchStockSchema: () => insertBranchStockSchema,
   insertDiscountSchema: () => insertDiscountSchema,
@@ -73586,6 +73619,149 @@ var init_sse = __esm({
   }
 });
 
+// src/lib/stock-utils.ts
+var stock_utils_exports = {};
+__export(stock_utils_exports, {
+  addStockBatch: () => addStockBatch,
+  deductStockFromBatches: () => deductStockFromBatches,
+  openStockBatch: () => openStockBatch
+});
+async function addStockBatch(tx, branchId, ingredientId, quantity, expiryDate, batchNumber) {
+  if (quantity <= 0) return;
+  const executor = tx || db;
+  const activeExpiry = expiryDate ? new Date(expiryDate) : null;
+  let existingBatch = null;
+  if (activeExpiry) {
+    const conditions = [
+      eq(branchInventoryBatchesTable.branchId, branchId),
+      eq(branchInventoryBatchesTable.ingredientId, ingredientId),
+      eq(branchInventoryBatchesTable.expiryDate, activeExpiry)
+    ];
+    if (batchNumber) {
+      conditions.push(eq(branchInventoryBatchesTable.batchNumber, batchNumber));
+    } else {
+      conditions.push(isNull(branchInventoryBatchesTable.batchNumber));
+    }
+    const results = await executor.select().from(branchInventoryBatchesTable).where(and(...conditions)).limit(1);
+    existingBatch = results[0];
+  }
+  if (existingBatch) {
+    const currentQty = parseFloat(existingBatch.quantity);
+    const currentInitial = parseFloat(existingBatch.initialQuantity);
+    await executor.update(branchInventoryBatchesTable).set({
+      quantity: String(currentQty + quantity),
+      initialQuantity: String(currentInitial + quantity),
+      updatedAt: /* @__PURE__ */ new Date()
+    }).where(eq(branchInventoryBatchesTable.id, existingBatch.id));
+  } else {
+    await executor.insert(branchInventoryBatchesTable).values({
+      branchId,
+      ingredientId,
+      batchNumber: batchNumber || `BATCH-${Date.now()}`,
+      sealedExpiryDate: activeExpiry,
+      expiryDate: activeExpiry,
+      isOpened: false,
+      quantity: String(quantity),
+      initialQuantity: String(quantity)
+    });
+  }
+}
+async function deductStockFromBatches(tx, branchId, ingredientId, quantityToDeduct) {
+  if (quantityToDeduct <= 0) return;
+  const executor = tx || db;
+  const activeBatches = await executor.select().from(branchInventoryBatchesTable).where(
+    and(
+      eq(branchInventoryBatchesTable.branchId, branchId),
+      eq(branchInventoryBatchesTable.ingredientId, ingredientId)
+    )
+  );
+  const eligibleBatches = activeBatches.filter((b) => parseFloat(b.quantity) > 0);
+  const sortedBatches = eligibleBatches.sort((a, b) => {
+    if (a.isOpened !== b.isOpened) {
+      return a.isOpened ? -1 : 1;
+    }
+    if (!a.expiryDate && !b.expiryDate) return 0;
+    if (!a.expiryDate) return 1;
+    if (!b.expiryDate) return -1;
+    return new Date(a.expiryDate).getTime() - new Date(b.expiryDate).getTime();
+  });
+  let remaining = quantityToDeduct;
+  for (const batch of sortedBatches) {
+    const qty = parseFloat(batch.quantity);
+    if (qty >= remaining) {
+      const newQty = qty - remaining;
+      await executor.update(branchInventoryBatchesTable).set({ quantity: String(newQty), updatedAt: /* @__PURE__ */ new Date() }).where(eq(branchInventoryBatchesTable.id, batch.id));
+      remaining = 0;
+      break;
+    } else {
+      await executor.update(branchInventoryBatchesTable).set({ quantity: "0", updatedAt: /* @__PURE__ */ new Date() }).where(eq(branchInventoryBatchesTable.id, batch.id));
+      remaining -= qty;
+    }
+  }
+  if (remaining > 0) {
+    const [systemBatch] = await executor.select().from(branchInventoryBatchesTable).where(
+      and(
+        eq(branchInventoryBatchesTable.branchId, branchId),
+        eq(branchInventoryBatchesTable.ingredientId, ingredientId),
+        isNull(branchInventoryBatchesTable.expiryDate),
+        eq(branchInventoryBatchesTable.batchNumber, "SYSTEM-AUTO-DEDUCT")
+      )
+    ).limit(1);
+    if (systemBatch) {
+      const currentQty = parseFloat(systemBatch.quantity);
+      await executor.update(branchInventoryBatchesTable).set({ quantity: String(currentQty - remaining), updatedAt: /* @__PURE__ */ new Date() }).where(eq(branchInventoryBatchesTable.id, systemBatch.id));
+    } else {
+      await executor.insert(branchInventoryBatchesTable).values({
+        branchId,
+        ingredientId,
+        batchNumber: "SYSTEM-AUTO-DEDUCT",
+        sealedExpiryDate: null,
+        expiryDate: null,
+        isOpened: false,
+        quantity: String(-remaining),
+        initialQuantity: "0"
+      });
+    }
+  }
+}
+async function openStockBatch(tx, batchId) {
+  const executor = tx || db;
+  const [batch] = await executor.select().from(branchInventoryBatchesTable).where(eq(branchInventoryBatchesTable.id, batchId)).limit(1);
+  if (!batch) {
+    throw new Error("Batch not found");
+  }
+  if (batch.isOpened) {
+    return batch;
+  }
+  const [ingredient] = await executor.select().from(ingredientsTable).where(eq(ingredientsTable.id, batch.ingredientId)).limit(1);
+  const openedShelfLife = ingredient?.openedShelfLifeDays;
+  const now = /* @__PURE__ */ new Date();
+  let newExpiryDate = batch.sealedExpiryDate;
+  if (openedShelfLife != null) {
+    const openedExpiry = new Date(now.getTime() + openedShelfLife * 24 * 60 * 60 * 1e3);
+    if (batch.sealedExpiryDate) {
+      const sealedExpiry = new Date(batch.sealedExpiryDate);
+      newExpiryDate = openedExpiry < sealedExpiry ? openedExpiry : sealedExpiry;
+    } else {
+      newExpiryDate = openedExpiry;
+    }
+  }
+  const [updated] = await executor.update(branchInventoryBatchesTable).set({
+    isOpened: true,
+    openedAt: now,
+    expiryDate: newExpiryDate,
+    updatedAt: now
+  }).where(eq(branchInventoryBatchesTable.id, batchId)).returning();
+  return updated;
+}
+var init_stock_utils = __esm({
+  "src/lib/stock-utils.ts"() {
+    "use strict";
+    init_src();
+    init_drizzle_orm();
+  }
+});
+
 // src/env.ts
 var import_dotenv = __toESM(require_main(), 1);
 import { dirname, resolve } from "path";
@@ -78913,20 +79089,26 @@ var DeleteDrinkParams2 = DeleteDrinkParams;
 var CalculateDrinkPriceParams2 = CalculateDrinkPriceParams;
 var ListIngredientsQueryParams2 = ListIngredientsQueryParams;
 var ListIngredientsResponse2 = ListIngredientsResponse;
-var CreateIngredientBody2 = CreateIngredientBody;
+var CreateIngredientBody2 = CreateIngredientBody.extend({
+  openedShelfLifeDays: external_exports2.number().nullish()
+});
 var GetIngredientParams2 = GetIngredientParams;
 var GetIngredientResponse2 = GetIngredientResponse;
 var UpdateIngredientParams2 = UpdateIngredientParams;
-var UpdateIngredientBody2 = UpdateIngredientBody;
+var UpdateIngredientBody2 = UpdateIngredientBody.extend({
+  openedShelfLifeDays: external_exports2.number().nullish()
+});
 var UpdateIngredientResponse2 = UpdateIngredientResponse;
 var CreateIngredientOptionParams2 = CreateIngredientOptionParams;
 var CreateIngredientOptionBody2 = CreateIngredientOptionBody;
 var UpdateIngredientOptionParams2 = UpdateIngredientOptionParams;
 var UpdateIngredientOptionBody2 = UpdateIngredientOptionBody;
 var DeleteIngredientOptionParams2 = DeleteIngredientOptionParams;
-var RestockIngredientBody2 = RestockIngredientBody;
+var RestockIngredientBody2 = RestockIngredientBody.extend({
+  expiryDate: external_exports2.string().nullish(),
+  batchNumber: external_exports2.string().nullish()
+});
 var RestockIngredientResponse2 = RestockIngredientResponse;
-var ListOrdersQueryParams2 = ListOrdersQueryParams;
 var ListOrdersResponseItem2 = ListOrdersResponseItem._def.left.extend({
   discountCode: external_exports2.string().nullish(),
   branchName: external_exports2.string().optional(),
@@ -79022,7 +79204,10 @@ var ListStockMovementsResponseItem2 = ListStockMovementsResponseItem.extend({
 var ListStockMovementsResponse2 = external_exports2.array(
   ListStockMovementsResponseItem2
 );
-var CreateStockAdjustmentBody2 = CreateStockAdjustmentBody;
+var CreateStockAdjustmentBody2 = CreateStockAdjustmentBody.extend({
+  expiryDate: external_exports2.string().nullish(),
+  batchNumber: external_exports2.string().nullish()
+});
 var GetDashboardSummaryResponse2 = GetDashboardSummaryResponse;
 var GetActiveOrdersResponseItem2 = GetActiveOrdersResponseItem.and(
   external_exports2.object({
@@ -82685,7 +82870,8 @@ router4.post("/ingredients", requirePermission("inventory:manage"), async (req, 
     ingredientType: parsed.data.ingredientType,
     unit: parsed.data.unit,
     costPerUnit: String(parsed.data.costPerUnit),
-    isActive: parsed.data.isActive ?? true
+    isActive: parsed.data.isActive ?? true,
+    openedShelfLifeDays: parsed.data.openedShelfLifeDays
   }).returning();
   const [stock] = await db.insert(branchStockTable).values({
     branchId: targetBranchId,
@@ -82753,6 +82939,7 @@ router4.patch("/ingredients/:id", requirePermission("inventory:manage"), async (
   if (parsed.data.unit !== void 0) updateData.unit = parsed.data.unit;
   if (parsed.data.costPerUnit !== void 0) updateData.costPerUnit = String(parsed.data.costPerUnit);
   if (parsed.data.isActive !== void 0) updateData.isActive = parsed.data.isActive;
+  if (parsed.data.openedShelfLifeDays !== void 0) updateData.openedShelfLifeDays = parsed.data.openedShelfLifeDays;
   if (parsed.data.stockQuantity !== void 0) stockUpdateData.stockQuantity = String(parsed.data.stockQuantity);
   if (parsed.data.startupQuantity !== void 0) stockUpdateData.startupQuantity = String(parsed.data.startupQuantity);
   if (parsed.data.lowStockThreshold !== void 0) stockUpdateData.lowStockThreshold = String(parsed.data.lowStockThreshold);
@@ -82939,6 +83126,17 @@ router4.post("/ingredients/:id/restock", requirePermission("inventory:adjust"), 
   const newQty = currentQty + finalQuantity;
   const sessionUserId = req.session.userId ?? 1;
   const movementNote = selectedUnitName ? `${parsed.data.note ?? ""} (Converted from ${parsed.data.quantity} ${selectedUnitName})`.trim() : parsed.data.note ?? null;
+  const { addStockBatch: addStockBatch2 } = await Promise.resolve().then(() => (init_stock_utils(), stock_utils_exports));
+  if (finalQuantity > 0) {
+    await addStockBatch2(
+      db,
+      targetBranchId,
+      params.data.id,
+      finalQuantity,
+      parsed.data.expiryDate ? new Date(parsed.data.expiryDate) : null,
+      parsed.data.batchNumber
+    );
+  }
   await db.insert(stockMovementsTable).values({
     branchId: targetBranchId,
     ingredientId: params.data.id,
@@ -83165,27 +83363,29 @@ async function buildOrderDetail(orderId) {
   };
 }
 router5.get("/orders", requirePermission("cashier:view"), async (req, res) => {
-  const params = ListOrdersQueryParams2.safeParse(req.query);
+  const statusStr = req.query.status;
+  const startDateStr = req.query.startDate;
+  const endDateStr = req.query.endDate;
   const sessionUser = req.session;
   const isAdmin = sessionUser.role === "admin";
   const sessionBranchId = sessionUser.branchId;
-  const targetBranchId = isAdmin && req.query.branchId && req.query.branchId !== "all" ? parseInt(req.query.branchId) : isAdmin && req.query.branchId === "all" ? null : sessionBranchId;
+  const targetBranchId = isAdmin && req.query.branchId && req.query.branchId !== "all" && req.query.branchId !== "null" && req.query.branchId !== "undefined" ? parseInt(req.query.branchId) : isAdmin && (req.query.branchId === "all" || req.query.branchId === "null" || req.query.branchId === "undefined") ? null : sessionBranchId;
   const conditions = [];
   if (targetBranchId) {
     conditions.push(eq(ordersTable.branchId, targetBranchId));
   }
-  if (params.success && params.data.status) {
-    const statuses = params.data.status.split(",");
+  if (statusStr && statusStr !== "null" && statusStr !== "undefined" && statusStr !== "") {
+    const statuses = statusStr.split(",");
     conditions.push(inArray(ordersTable.status, statuses));
   }
-  if (params.success && params.data.startDate) {
-    conditions.push(gte(ordersTable.createdAt, startOfDay(parseLocalDate(params.data.startDate))));
+  if (startDateStr && startDateStr !== "null" && startDateStr !== "undefined" && startDateStr !== "") {
+    conditions.push(gte(ordersTable.createdAt, startOfDay(parseLocalDate(startDateStr))));
   }
-  if (params.success && params.data.endDate) {
-    conditions.push(lte(ordersTable.createdAt, endOfDay(parseLocalDate(params.data.endDate))));
+  if (endDateStr && endDateStr !== "null" && endDateStr !== "undefined" && endDateStr !== "") {
+    conditions.push(lte(ordersTable.createdAt, endOfDay(parseLocalDate(endDateStr))));
   }
-  const limit = params.success && params.data.limit ? params.data.limit : 50;
-  const offset = params.success && params.data.offset ? params.data.offset : 0;
+  const limit = req.query.limit ? parseInt(req.query.limit, 10) : 50;
+  const offset = req.query.offset ? parseInt(req.query.offset, 10) : 0;
   let query = db.select().from(ordersTable).$dynamic();
   let countQuery = db.select({ count: sql`cast(count(*) as int)` }).from(ordersTable).$dynamic();
   if (conditions.length > 0) {
@@ -83495,6 +83695,7 @@ router5.post("/orders", async (req, res) => {
         );
       }
       const stockUpdates = [];
+      const { deductStockFromBatches: deductStockFromBatches2 } = await Promise.resolve().then(() => (init_stock_utils(), stock_utils_exports));
       for (const c of item.customizations) {
         if (!c.ingredientId || c.consumedQty === 0) {
           if (c.ingredientId && c.consumedQty === 0) console.log(`[stock] Skipping deduction for ${c.slotLabel} because consumedQty is 0`);
@@ -83505,6 +83706,7 @@ router5.post("/orders", async (req, res) => {
         console.log(`[stock] Deducting ${c.consumedQty} from ${c.ingredientId} in branch ${targetBranchId}. ${current} -> ${newQty}`);
         stockMap.set(c.ingredientId, newQty);
         stockUpdates.push({ id: c.ingredientId, newQty, delta: c.consumedQty });
+        await deductStockFromBatches2(tx, targetBranchId, c.ingredientId, c.consumedQty);
       }
       await Promise.all(
         stockUpdates.map(
@@ -84034,26 +84236,41 @@ router6.post("/stock/adjustments", async (req, res) => {
   const currentQty = stock ? parseFloat(stock.stockQuantity) : 0;
   const adjustedQty = parsed.data.movementType === "waste" || parsed.data.movementType === "calibration" || parsed.data.movementType === "testing" ? currentQty - finalQuantity : currentQty + finalQuantity;
   const newQty = Math.max(0, adjustedQty);
-  await db.insert(branchStockTable).values({
-    branchId: targetBranchId,
-    ingredientId: parsed.data.ingredientId,
-    stockQuantity: String(newQty)
-  }).onConflictDoUpdate({
-    target: [branchStockTable.branchId, branchStockTable.ingredientId],
-    set: { stockQuantity: String(newQty) }
+  const { addStockBatch: addStockBatch2, deductStockFromBatches: deductStockFromBatches2 } = await Promise.resolve().then(() => (init_stock_utils(), stock_utils_exports));
+  const [movement] = await db.transaction(async (tx) => {
+    await tx.insert(branchStockTable).values({
+      branchId: targetBranchId,
+      ingredientId: parsed.data.ingredientId,
+      stockQuantity: String(newQty)
+    }).onConflictDoUpdate({
+      target: [branchStockTable.branchId, branchStockTable.ingredientId],
+      set: { stockQuantity: String(newQty) }
+    });
+    if (parsed.data.movementType === "waste" || parsed.data.movementType === "calibration" || parsed.data.movementType === "testing") {
+      await deductStockFromBatches2(tx, targetBranchId, parsed.data.ingredientId, finalQuantity);
+    } else {
+      await addStockBatch2(
+        tx,
+        targetBranchId,
+        parsed.data.ingredientId,
+        finalQuantity,
+        parsed.data.expiryDate ? new Date(parsed.data.expiryDate) : null,
+        parsed.data.batchNumber
+      );
+    }
+    const ledgerQuantity = parsed.data.movementType === "waste" || parsed.data.movementType === "calibration" || parsed.data.movementType === "testing" ? -finalQuantity : finalQuantity;
+    const movementNote = selectedUnitName ? `${parsed.data.note ?? ""} (Converted from ${parsed.data.quantity} ${selectedUnitName})`.trim() : parsed.data.note ?? null;
+    return tx.insert(stockMovementsTable).values({
+      branchId: targetBranchId,
+      ingredientId: parsed.data.ingredientId,
+      orderId: null,
+      movementType: parsed.data.movementType,
+      quantity: String(ledgerQuantity),
+      quantityAfter: String(newQty),
+      note: movementNote,
+      createdBy: sessionUserId
+    }).returning();
   });
-  const ledgerQuantity = parsed.data.movementType === "waste" || parsed.data.movementType === "calibration" || parsed.data.movementType === "testing" ? -finalQuantity : finalQuantity;
-  const movementNote = selectedUnitName ? `${parsed.data.note ?? ""} (Converted from ${parsed.data.quantity} ${selectedUnitName})`.trim() : parsed.data.note ?? null;
-  const [movement] = await db.insert(stockMovementsTable).values({
-    branchId: targetBranchId,
-    ingredientId: parsed.data.ingredientId,
-    orderId: null,
-    movementType: parsed.data.movementType,
-    quantity: String(ledgerQuantity),
-    quantityAfter: String(newQty),
-    note: movementNote,
-    createdBy: sessionUserId
-  }).returning();
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, sessionUserId));
   res.status(201).json({
     ...movement,
@@ -84067,6 +84284,139 @@ router6.post("/stock/adjustments", async (req, res) => {
   globalCache2.clear();
   const { broadcastEvent: broadcastEvent2 } = await Promise.resolve().then(() => (init_sse(), sse_exports));
   broadcastEvent2("inventory_updated", { ingredientId: parsed.data.ingredientId });
+});
+router6.get("/stock/expiry/reports", async (req, res) => {
+  const sessionUser = req.session;
+  const isAdmin = sessionUser.role === "admin" || sessionUser.role === "supervisor";
+  const sessionBranchId = sessionUser.branchId;
+  const targetBranchId = req.query.branchId && req.query.branchId !== "all" ? parseInt(req.query.branchId) : isAdmin && (req.query.branchId === "all" || !req.query.branchId) ? null : sessionBranchId;
+  const days = req.query.days ? parseInt(req.query.days) : 3;
+  const conditions = [
+    sql`quantity > 0`
+  ];
+  if (targetBranchId) {
+    conditions.push(eq(branchInventoryBatchesTable.branchId, targetBranchId));
+  }
+  if (req.query.ingredientId && req.query.ingredientId !== "all") {
+    conditions.push(eq(branchInventoryBatchesTable.ingredientId, parseInt(req.query.ingredientId)));
+  }
+  const batches = await db.select({
+    id: branchInventoryBatchesTable.id,
+    branchId: branchInventoryBatchesTable.branchId,
+    branchName: branchesTable.name,
+    ingredientId: branchInventoryBatchesTable.ingredientId,
+    ingredientName: ingredientsTable.name,
+    ingredientUnit: ingredientsTable.unit,
+    batchNumber: branchInventoryBatchesTable.batchNumber,
+    sealedExpiryDate: branchInventoryBatchesTable.sealedExpiryDate,
+    expiryDate: branchInventoryBatchesTable.expiryDate,
+    isOpened: branchInventoryBatchesTable.isOpened,
+    openedAt: branchInventoryBatchesTable.openedAt,
+    quantity: branchInventoryBatchesTable.quantity,
+    createdAt: branchInventoryBatchesTable.createdAt
+  }).from(branchInventoryBatchesTable).innerJoin(ingredientsTable, eq(branchInventoryBatchesTable.ingredientId, ingredientsTable.id)).innerJoin(branchesTable, eq(branchInventoryBatchesTable.branchId, branchesTable.id)).where(and(...conditions)).orderBy(asc(branchInventoryBatchesTable.expiryDate));
+  const now = /* @__PURE__ */ new Date();
+  const reports = batches.map((b) => {
+    let diffDays = null;
+    let status = "ok";
+    if (b.expiryDate) {
+      const expiry = new Date(b.expiryDate);
+      const diffTime = expiry.getTime() - now.getTime();
+      diffDays = Math.ceil(diffTime / (1e3 * 60 * 60 * 24));
+      if (diffDays < 0) {
+        status = "expired";
+      } else if (diffDays <= days) {
+        status = "expiring_soon";
+      }
+    }
+    return {
+      ...b,
+      quantity: parseFloat(String(b.quantity)),
+      daysLeft: diffDays,
+      status
+    };
+  });
+  const statusFilter = req.query.status;
+  let filteredReports = reports;
+  if (statusFilter === "expired") {
+    filteredReports = reports.filter((r) => r.status === "expired");
+  } else if (statusFilter === "expiring_soon") {
+    filteredReports = reports.filter((r) => r.status === "expiring_soon");
+  } else if (statusFilter === "alert") {
+    filteredReports = reports.filter((r) => r.status === "expired" || r.status === "expiring_soon");
+  } else if (statusFilter === "ok") {
+    filteredReports = reports.filter((r) => r.status === "ok");
+  }
+  res.json(serializeDates(filteredReports));
+});
+router6.post("/stock/expiry/batches/:id/open", async (req, res) => {
+  const batchId = parseInt(req.params.id);
+  if (isNaN(batchId)) {
+    res.status(400).json({ error: "Invalid batch ID" });
+    return;
+  }
+  try {
+    const { openStockBatch: openStockBatch2 } = await Promise.resolve().then(() => (init_stock_utils(), stock_utils_exports));
+    const updated = await openStockBatch2(db, batchId);
+    const { globalCache: globalCache2 } = await Promise.resolve().then(() => (init_cache2(), cache_exports));
+    globalCache2.clear();
+    const { broadcastEvent: broadcastEvent2 } = await Promise.resolve().then(() => (init_sse(), sse_exports));
+    broadcastEvent2("inventory_updated", {});
+    res.json(serializeDates(updated));
+  } catch (error40) {
+    console.error("POST /stock/expiry/batches/:id/open error:", error40);
+    res.status(500).json({ error: error40?.message || "Failed to open batch" });
+  }
+});
+router6.post("/stock/expiry/batches/:id/discard", async (req, res) => {
+  const batchId = parseInt(req.params.id);
+  const sessionUserId = req.session.userId ?? 1;
+  if (isNaN(batchId)) {
+    res.status(400).json({ error: "Invalid batch ID" });
+    return;
+  }
+  try {
+    await db.transaction(async (tx) => {
+      const [batch] = await tx.select().from(branchInventoryBatchesTable).where(eq(branchInventoryBatchesTable.id, batchId)).limit(1);
+      if (!batch) {
+        throw new Error("Batch not found");
+      }
+      const qty = parseFloat(batch.quantity);
+      if (qty <= 0) {
+        throw new Error("Batch is already empty");
+      }
+      await tx.update(branchInventoryBatchesTable).set({ quantity: "0", updatedAt: /* @__PURE__ */ new Date() }).where(eq(branchInventoryBatchesTable.id, batchId));
+      const [stock] = await tx.select().from(branchStockTable).where(and(eq(branchStockTable.ingredientId, batch.ingredientId), eq(branchStockTable.branchId, batch.branchId))).limit(1);
+      const currentQty = stock ? parseFloat(stock.stockQuantity) : 0;
+      const newQty = Math.max(0, currentQty - qty);
+      await tx.insert(branchStockTable).values({
+        branchId: batch.branchId,
+        ingredientId: batch.ingredientId,
+        stockQuantity: String(newQty)
+      }).onConflictDoUpdate({
+        target: [branchStockTable.branchId, branchStockTable.ingredientId],
+        set: { stockQuantity: String(newQty) }
+      });
+      await tx.insert(stockMovementsTable).values({
+        branchId: batch.branchId,
+        ingredientId: batch.ingredientId,
+        orderId: null,
+        movementType: "waste",
+        quantity: String(-qty),
+        quantityAfter: String(newQty),
+        note: `Discarded batch #${batch.batchNumber || batch.id}`,
+        createdBy: sessionUserId
+      });
+    });
+    const { globalCache: globalCache2 } = await Promise.resolve().then(() => (init_cache2(), cache_exports));
+    globalCache2.clear();
+    const { broadcastEvent: broadcastEvent2 } = await Promise.resolve().then(() => (init_sse(), sse_exports));
+    broadcastEvent2("inventory_updated", {});
+    res.json({ success: true });
+  } catch (error40) {
+    console.error("POST /stock/expiry/batches/:id/discard error:", error40);
+    res.status(500).json({ error: error40?.message || "Failed to discard batch" });
+  }
 });
 var stock_default = router6;
 
@@ -85343,8 +85693,9 @@ var discounts_default = router13;
 var import_express15 = __toESM(require_express2(), 1);
 init_src();
 init_drizzle_orm();
-import { createHash } from "crypto";
 var router14 = (0, import_express15.Router)();
+var customerRegisterLimiter = new RateLimiter(60 * 60 * 1e3, 5);
+var customerLoginLimiter = new RateLimiter(15 * 60 * 1e3, 10);
 async function ensureCustomersTable() {
   try {
     await db.execute(sql`
@@ -85372,13 +85723,24 @@ async function ensureCustomersTable() {
   }
 }
 ensureCustomersTable();
-function hashPassword(password) {
-  return createHash("sha256").update(`spacca_salt_${password}_2024`).digest("hex");
+async function hashPassword(password) {
+  return bcryptjs_default.hash(password, 10);
+}
+async function verifyPassword(password, hash2) {
+  const { createHash } = await import("crypto");
+  const legacyHash = createHash("sha256").update(`spacca_salt_${password}_2024`).digest("hex");
+  if (hash2 === legacyHash) return true;
+  return bcryptjs_default.compare(password, hash2);
 }
 function getCustomerId(req) {
   return req.session?.customerId ?? null;
 }
 router14.post("/customers/register", async (req, res) => {
+  const ip = req.ip || "unknown-ip";
+  if (customerRegisterLimiter.isLimitExceeded(`register:${ip}`)) {
+    res.status(429).json({ error: "Too many registration attempts. Please try again later." });
+    return;
+  }
   const { name, phone, email: email3, password } = req.body ?? {};
   if (!name || typeof name !== "string" || name.trim().length < 2) {
     res.status(400).json({ error: "Name must be at least 2 characters" });
@@ -85403,7 +85765,7 @@ router14.post("/customers/register", async (req, res) => {
       res.status(409).json({ error: "Phone number already registered" });
       return;
     }
-    const passwordHash = hashPassword(password);
+    const passwordHash = await hashPassword(password);
     const result = await db.execute(sql`
       INSERT INTO customers (name, phone, email, password_hash)
       VALUES (${cleanName}, ${cleanPhone}, ${cleanEmail}, ${passwordHash})
@@ -85418,17 +85780,21 @@ router14.post("/customers/register", async (req, res) => {
   }
 });
 router14.post("/customers/login", async (req, res) => {
+  const ip = req.ip || "unknown-ip";
+  if (customerLoginLimiter.isLimitExceeded(`customer-login:${ip}`)) {
+    res.status(429).json({ error: "Too many login attempts. Please try again in 15 minutes." });
+    return;
+  }
   const { phone, password } = req.body ?? {};
   if (!phone || !password) {
     res.status(400).json({ error: "Phone and password are required" });
     return;
   }
-  const passwordHash = hashPassword(String(password));
   try {
     const result = await db.execute(sql`
-      SELECT id, name, phone, email, points, total_spent, visit_count, created_at
+      SELECT id, name, phone, email, points, total_spent, visit_count, created_at, password_hash
       FROM customers
-      WHERE phone = ${String(phone).trim()} AND password_hash = ${passwordHash} AND is_active = TRUE
+      WHERE phone = ${String(phone).trim()} AND is_active = TRUE
       LIMIT 1
     `);
     const customer = result.rows[0];
@@ -85436,8 +85802,14 @@ router14.post("/customers/login", async (req, res) => {
       res.status(401).json({ error: "Invalid phone or password" });
       return;
     }
-    req.session.customerId = customer.id;
-    req.session.save(() => res.json({ customer }));
+    const isValid2 = await verifyPassword(String(password), customer.password_hash);
+    if (!isValid2) {
+      res.status(401).json({ error: "Invalid phone or password" });
+      return;
+    }
+    const { password_hash, ...safeCustomer } = customer;
+    req.session.customerId = safeCustomer.id;
+    req.session.save(() => res.json({ customer: safeCustomer }));
   } catch (e) {
     console.error("[customers/login] error:", e?.message);
     res.status(500).json({ error: "Login failed" });
@@ -85906,11 +86278,18 @@ var import_express17 = __toESM(require_express2(), 1);
 init_drizzle_orm();
 init_src();
 var router16 = (0, import_express17.Router)();
+var cashierLoginLimiter = new RateLimiter(15 * 60 * 1e3, 10);
 var CashierLoginBody = external_exports2.object({
   username: external_exports2.string().min(1),
   password: external_exports2.string().min(1)
 });
 router16.post("/cashier/login", async (req, res) => {
+  const ip = req.ip || "unknown-ip";
+  const rateLimitKey = `cashier-login:${ip}`;
+  if (cashierLoginLimiter.isLimitExceeded(rateLimitKey)) {
+    res.status(429).json({ error: "Too many login attempts. Please try again in 15 minutes." });
+    return;
+  }
   const parsed = CashierLoginBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "cashierId and pin required" });
@@ -86015,6 +86394,12 @@ router16.get("/cashier/performance/:cashierId", requirePermission("cashier:view_
     res.status(400).json({ error: "Invalid cashierId" });
     return;
   }
+  const sessionUserId = req.session.userId;
+  const sessionRole = req.session.role;
+  if (sessionRole !== "admin" && cashierId !== sessionUserId) {
+    res.status(403).json({ error: "Access denied: you may only view your own performance stats" });
+    return;
+  }
   const { startDate, endDate } = req.query;
   const conditions = [eq(ordersTable.cashierId, cashierId)];
   if (startDate) conditions.push(gte(ordersTable.createdAt, startOfDay2(new Date(startDate))));
@@ -86032,15 +86417,33 @@ router16.get("/cashier/performance/:cashierId", requirePermission("cashier:view_
   const totalRevenue = completedOrders.reduce((sum2, o) => sum2 + parseFloat(o.total), 0);
   const orderIds = completedOrders.map((o) => o.id);
   let cashRevenue = 0, cardRevenue = 0, walletRevenue = 0, hospitalityRevenue = 0;
+  let cashOrders = 0, cardOrders = 0, walletOrders = 0, hospitalityOrders = 0;
   if (orderIds.length > 0) {
-    const payments = await db.select({ paymentMethod: orderPaymentsTable.paymentMethod, amount: orderPaymentsTable.amount }).from(orderPaymentsTable).where(inArray(orderPaymentsTable.orderId, orderIds));
+    const payments = await db.select({ orderId: orderPaymentsTable.orderId, paymentMethod: orderPaymentsTable.paymentMethod, amount: orderPaymentsTable.amount }).from(orderPaymentsTable).where(inArray(orderPaymentsTable.orderId, orderIds));
+    const cashOrderIds = /* @__PURE__ */ new Set();
+    const cardOrderIds = /* @__PURE__ */ new Set();
+    const walletOrderIds = /* @__PURE__ */ new Set();
+    const hospitalityOrderIds = /* @__PURE__ */ new Set();
     for (const p of payments) {
       const amt = parseFloat(p.amount);
-      if (p.paymentMethod === "cash") cashRevenue += amt;
-      else if (p.paymentMethod === "card") cardRevenue += amt;
-      else if (p.paymentMethod === "wallet") walletRevenue += amt;
-      else if (p.paymentMethod === "hospitality") hospitalityRevenue += amt;
+      if (p.paymentMethod === "cash") {
+        cashRevenue += amt;
+        cashOrderIds.add(p.orderId);
+      } else if (p.paymentMethod === "card") {
+        cardRevenue += amt;
+        cardOrderIds.add(p.orderId);
+      } else if (p.paymentMethod === "wallet") {
+        walletRevenue += amt;
+        walletOrderIds.add(p.orderId);
+      } else if (p.paymentMethod === "hospitality") {
+        hospitalityRevenue += amt;
+        hospitalityOrderIds.add(p.orderId);
+      }
     }
+    cashOrders = cashOrderIds.size;
+    cardOrders = cardOrderIds.size;
+    walletOrders = walletOrderIds.size;
+    hospitalityOrders = hospitalityOrderIds.size;
   }
   const [cashier] = await db.select({ id: usersTable.id, name: usersTable.name }).from(usersTable).where(eq(usersTable.id, cashierId));
   res.json({
@@ -86048,9 +86451,13 @@ router16.get("/cashier/performance/:cashierId", requirePermission("cashier:view_
     totalOrders: completedOrders.length,
     totalRevenue,
     cashRevenue,
+    cashOrders,
     cardRevenue,
+    cardOrders,
     walletRevenue,
+    walletOrders,
     hospitalityRevenue,
+    hospitalityOrders,
     avgOrderValue: completedOrders.length > 0 ? totalRevenue / completedOrders.length : 0
   });
 });
@@ -86066,10 +86473,68 @@ router16.get("/cashier/sessions", requirePermission("cashier:view_reports"), asy
   const cashierIds = [...new Set(sessions.map((s) => s.cashierId))];
   const cashiers = cashierIds.length > 0 ? await db.select({ id: usersTable.id, name: usersTable.name }).from(usersTable) : [];
   const cashierMap = new Map(cashiers.map((c) => [c.id, c.name]));
-  res.json(sessions.map((s) => ({
-    ...s,
-    cashierName: cashierMap.get(s.cashierId) ?? "Unknown"
-  })));
+  let orders = [];
+  const paymentsMap = /* @__PURE__ */ new Map();
+  if (cashierIds.length > 0) {
+    orders = await db.select({
+      id: ordersTable.id,
+      total: ordersTable.total,
+      cashierId: ordersTable.cashierId,
+      time: sql`COALESCE(${ordersTable.paidAt}, ${ordersTable.createdAt})`
+    }).from(ordersTable).where(and(
+      inArray(ordersTable.cashierId, cashierIds),
+      inArray(ordersTable.status, ["completed", "paid", "ready", "in_progress"])
+    ));
+    const orderIds = orders.map((o) => o.id);
+    if (orderIds.length > 0) {
+      const payments = await db.select({ orderId: orderPaymentsTable.orderId, method: orderPaymentsTable.paymentMethod, amount: orderPaymentsTable.amount }).from(orderPaymentsTable).where(inArray(orderPaymentsTable.orderId, orderIds));
+      for (const p of payments) {
+        if (!paymentsMap.has(p.orderId)) {
+          paymentsMap.set(p.orderId, []);
+        }
+        paymentsMap.get(p.orderId).push({
+          method: p.method,
+          amount: parseFloat(p.amount)
+        });
+      }
+    }
+  }
+  const responseSessions = sessions.map((s) => {
+    const start = new Date(s.startedAt).getTime();
+    const end = s.endedAt ? new Date(s.endedAt).getTime() : Date.now();
+    let totalRevenue = 0;
+    let totalOrders = 0;
+    let cashRevenue = 0;
+    let cardRevenue = 0;
+    let walletRevenue = 0;
+    let hospitalityRevenue = 0;
+    for (const o of orders) {
+      if (o.cashierId !== s.cashierId) continue;
+      const oTime = new Date(o.time).getTime();
+      if (oTime >= start && oTime <= end) {
+        totalOrders++;
+        totalRevenue += parseFloat(o.total);
+        const payments = paymentsMap.get(o.id) || [];
+        for (const p of payments) {
+          if (p.method === "cash") cashRevenue += p.amount;
+          else if (p.method === "card") cardRevenue += p.amount;
+          else if (p.method === "wallet") walletRevenue += p.amount;
+          else if (p.method === "hospitality") hospitalityRevenue += p.amount;
+        }
+      }
+    }
+    return {
+      ...s,
+      cashierName: cashierMap.get(s.cashierId) ?? "Unknown",
+      totalOrders,
+      totalRevenue,
+      cashRevenue,
+      cardRevenue,
+      walletRevenue,
+      hospitalityRevenue
+    };
+  });
+  res.json(responseSessions);
 });
 router16.get("/cashier/list", requirePermission("cashier:view"), async (_req, res) => {
   const cashiers = await db.select({ id: usersTable.id, name: usersTable.name, role: usersTable.role }).from(usersTable).where(inArray(usersTable.role, ["cashier", "admin"]));
@@ -86101,15 +86566,33 @@ router16.get("/cashier/sessions/:id/performance", requirePermission("cashier:vie
   const orderIds = completedOrders.map((o) => o.id);
   const totalRevenue = completedOrders.reduce((sum2, o) => sum2 + parseFloat(o.total), 0);
   let cashRevenue = 0, cardRevenue = 0, walletRevenue = 0, hospitalityRevenue = 0;
+  let cashOrders = 0, cardOrders = 0, walletOrders = 0, hospitalityOrders = 0;
   if (orderIds.length > 0) {
-    const payments = await db.select({ method: orderPaymentsTable.paymentMethod, amount: orderPaymentsTable.amount }).from(orderPaymentsTable).where(inArray(orderPaymentsTable.orderId, orderIds));
+    const payments = await db.select({ orderId: orderPaymentsTable.orderId, method: orderPaymentsTable.paymentMethod, amount: orderPaymentsTable.amount }).from(orderPaymentsTable).where(inArray(orderPaymentsTable.orderId, orderIds));
+    const cashOrderIds = /* @__PURE__ */ new Set();
+    const cardOrderIds = /* @__PURE__ */ new Set();
+    const walletOrderIds = /* @__PURE__ */ new Set();
+    const hospitalityOrderIds = /* @__PURE__ */ new Set();
     for (const p of payments) {
       const amt = parseFloat(p.amount);
-      if (p.method === "cash") cashRevenue += amt;
-      else if (p.method === "card") cardRevenue += amt;
-      else if (p.method === "wallet") walletRevenue += amt;
-      else if (p.method === "hospitality") hospitalityRevenue += amt;
+      if (p.method === "cash") {
+        cashRevenue += amt;
+        cashOrderIds.add(p.orderId);
+      } else if (p.method === "card") {
+        cardRevenue += amt;
+        cardOrderIds.add(p.orderId);
+      } else if (p.method === "wallet") {
+        walletRevenue += amt;
+        walletOrderIds.add(p.orderId);
+      } else if (p.method === "hospitality") {
+        hospitalityRevenue += amt;
+        hospitalityOrderIds.add(p.orderId);
+      }
     }
+    cashOrders = cashOrderIds.size;
+    cardOrders = cardOrderIds.size;
+    walletOrders = walletOrderIds.size;
+    hospitalityOrders = hospitalityOrderIds.size;
   }
   const [cashier] = await db.select({ name: usersTable.name }).from(usersTable).where(eq(usersTable.id, session2.cashierId));
   res.json({
@@ -86119,9 +86602,13 @@ router16.get("/cashier/sessions/:id/performance", requirePermission("cashier:vie
     totalOrders: completedOrders.length,
     totalRevenue,
     cashRevenue,
+    cashOrders,
     cardRevenue,
+    cardOrders,
     walletRevenue,
-    hospitalityRevenue
+    walletOrders,
+    hospitalityRevenue,
+    hospitalityOrders
   });
 });
 router16.get("/cashier/sessions/:id/report", requirePermission("cashier:view_reports"), async (req, res) => {
@@ -86154,15 +86641,33 @@ router16.get("/cashier/sessions/:id/report", requirePermission("cashier:view_rep
   const orderIds = completedOrders.map((o) => o.id);
   const totalRevenue = completedOrders.reduce((sum2, o) => sum2 + parseFloat(o.total), 0);
   let cashRevenue = 0, cardRevenue = 0, walletRevenue = 0, hospitalityRevenue = 0;
+  let cashOrders = 0, cardOrders = 0, walletOrders = 0, hospitalityOrders = 0;
   if (orderIds.length > 0) {
-    const payments = await db.select({ method: orderPaymentsTable.paymentMethod, amount: orderPaymentsTable.amount }).from(orderPaymentsTable).where(inArray(orderPaymentsTable.orderId, orderIds));
+    const payments = await db.select({ orderId: orderPaymentsTable.orderId, method: orderPaymentsTable.paymentMethod, amount: orderPaymentsTable.amount }).from(orderPaymentsTable).where(inArray(orderPaymentsTable.orderId, orderIds));
+    const cashOrderIds = /* @__PURE__ */ new Set();
+    const cardOrderIds = /* @__PURE__ */ new Set();
+    const walletOrderIds = /* @__PURE__ */ new Set();
+    const hospitalityOrderIds = /* @__PURE__ */ new Set();
     for (const p of payments) {
       const amt = parseFloat(p.amount);
-      if (p.method === "cash") cashRevenue += amt;
-      else if (p.method === "card") cardRevenue += amt;
-      else if (p.method === "wallet") walletRevenue += amt;
-      else if (p.method === "hospitality") hospitalityRevenue += amt;
+      if (p.method === "cash") {
+        cashRevenue += amt;
+        cashOrderIds.add(p.orderId);
+      } else if (p.method === "card") {
+        cardRevenue += amt;
+        cardOrderIds.add(p.orderId);
+      } else if (p.method === "wallet") {
+        walletRevenue += amt;
+        walletOrderIds.add(p.orderId);
+      } else if (p.method === "hospitality") {
+        hospitalityRevenue += amt;
+        hospitalityOrderIds.add(p.orderId);
+      }
     }
+    cashOrders = cashOrderIds.size;
+    cardOrders = cardOrderIds.size;
+    walletOrders = walletOrderIds.size;
+    hospitalityOrders = hospitalityOrderIds.size;
   }
   const topOrdersByPrice = [...completedOrders].sort((a, b) => parseFloat(b.total) - parseFloat(a.total)).slice(0, 5);
   const rushByHour = {};
@@ -86225,9 +86730,13 @@ router16.get("/cashier/sessions/:id/report", requirePermission("cashier:view_rep
     totals: {
       totalRevenue,
       cashRevenue,
+      cashOrders,
       cardRevenue,
+      cardOrders,
       walletRevenue,
+      walletOrders,
       hospitalityRevenue,
+      hospitalityOrders,
       orderCount: completedOrders.length
     },
     statistics,
@@ -86524,6 +87033,12 @@ router17.post("/stock-audits/:id/approve", async (req, res) => {
         const currentQty = stockRow ? stockRow.stock : "0";
         const diff = parseFloat(finalQty) - parseFloat(currentQty);
         if (diff !== 0) {
+          const { addStockBatch: addStockBatch2, deductStockFromBatches: deductStockFromBatches2 } = await Promise.resolve().then(() => (init_stock_utils(), stock_utils_exports));
+          if (diff > 0) {
+            await addStockBatch2(tx, audit.branchId, item.ingredientId, diff, null, "AUDIT-ADJUSTMENT");
+          } else {
+            await deductStockFromBatches2(tx, audit.branchId, item.ingredientId, -diff);
+          }
           await tx.insert(stockMovementsTable).values({
             branchId: audit.branchId,
             ingredientId: item.ingredientId,
@@ -87941,6 +88456,12 @@ purchasesRouter.post("/purchases/:id/receive", requirePermission("purchases:mana
           target: [branchStockTable.branchId, branchStockTable.ingredientId],
           set: { stockQuantity: String(newQty) }
         });
+        const expiryDate = inputItem?.expiryDate ? new Date(inputItem.expiryDate) : null;
+        const batchNumber = inputItem?.batchNumber || null;
+        const { addStockBatch: addStockBatch2 } = await Promise.resolve().then(() => (init_stock_utils(), stock_utils_exports));
+        if (finalQuantityAdded > 0) {
+          await addStockBatch2(tx, po.branchId, item.ingredientId, finalQuantityAdded, expiryDate, batchNumber);
+        }
         await tx.insert(stockMovementsTable).values({
           branchId: po.branchId,
           ingredientId: item.ingredientId,
