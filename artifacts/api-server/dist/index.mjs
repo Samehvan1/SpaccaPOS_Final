@@ -83403,13 +83403,32 @@ function getCairoStartOfDay(date6) {
   utcMidnight.setUTCHours(utcMidnight.getUTCHours() - cairoHours);
   return utcMidnight;
 }
-async function generateOrderNumber(branchId) {
+async function generateOrderNumber(tx, branchId) {
   const now = /* @__PURE__ */ new Date();
   const dayOfYear = getDayOfYear(now);
   const todayStart = getCairoStartOfDay(now);
-  const [row] = await db.select({ count: sql`cast(count(*) as int)` }).from(ordersTable).where(and(eq(ordersTable.branchId, branchId), gte(ordersTable.createdAt, todayStart)));
-  const serial2 = (row?.count ?? 0) + 1;
-  return `${dayOfYear}${String(serial2).padStart(3, "0")}`;
+  const existingOrders = await tx.select({ orderNumber: ordersTable.orderNumber }).from(ordersTable).where(and(eq(ordersTable.branchId, branchId), gte(ordersTable.createdAt, todayStart)));
+  let maxSerial = 0;
+  const newPrefix = `${branchId}-${dayOfYear}`;
+  const oldPrefix = `${dayOfYear}`;
+  for (const o of existingOrders) {
+    const numStr = o.orderNumber;
+    if (numStr.startsWith(newPrefix)) {
+      const serialStr = numStr.slice(newPrefix.length);
+      const serialPart = parseInt(serialStr, 10);
+      if (!isNaN(serialPart) && serialPart > maxSerial) {
+        maxSerial = serialPart;
+      }
+    } else if (numStr.startsWith(oldPrefix) && !numStr.includes("-")) {
+      const serialStr = numStr.slice(oldPrefix.length);
+      const serialPart = parseInt(serialStr, 10);
+      if (!isNaN(serialPart) && serialPart > maxSerial) {
+        maxSerial = serialPart;
+      }
+    }
+  }
+  const serial2 = maxSerial + 1;
+  return `${newPrefix}${String(serial2).padStart(3, "0")}`;
 }
 async function buildOrderDetail(orderId) {
   const [[order], items] = await Promise.all([
@@ -83710,154 +83729,173 @@ router5.post("/orders", async (req, res) => {
   }
   const amountTendered = parsed.data.amountTendered ?? null;
   const changeDue = amountTendered != null ? amountTendered - total : null;
-  const orderNumber = await generateOrderNumber(targetBranchId);
-  const { order, savedItems } = await db.transaction(async (tx) => {
-    let finalCustomerName = parsed.data.customerName ?? null;
-    if (parsed.data.customerPhone) {
-      const [existingCust] = await tx.select().from(customersTable).where(and(
-        eq(customersTable.phone, parsed.data.customerPhone.trim()),
-        eq(customersTable.isActive, true)
-      )).limit(1);
-      if (existingCust) {
-        if (!finalCustomerName) {
-          finalCustomerName = existingCust.name;
+  let order;
+  let savedItems = [];
+  let retries = 3;
+  while (retries > 0) {
+    try {
+      const resTx = await db.transaction(async (tx) => {
+        const orderNumber = await generateOrderNumber(tx, targetBranchId);
+        let finalCustomerName = parsed.data.customerName ?? null;
+        if (parsed.data.customerPhone) {
+          const [existingCust] = await tx.select().from(customersTable).where(and(
+            eq(customersTable.phone, parsed.data.customerPhone.trim()),
+            eq(customersTable.isActive, true)
+          )).limit(1);
+          if (existingCust) {
+            if (!finalCustomerName) {
+              finalCustomerName = existingCust.name;
+            }
+            const pointsToEarn = Math.floor(total / 1.14 / 10);
+            await tx.update(customersTable).set({
+              points: sql`${customersTable.points} + cast(${pointsToEarn} as integer)`,
+              totalSpent: sql`${customersTable.totalSpent} + cast(${String(total)} as numeric)`,
+              visitCount: sql`${customersTable.visitCount} + 1`,
+              updatedAt: /* @__PURE__ */ new Date()
+            }).where(eq(customersTable.id, existingCust.id));
+            console.log(`[loyalty] Updated registered customer ${existingCust.name} (${parsed.data.customerPhone}): +${pointsToEarn} points`);
+          } else {
+            console.log(`[loyalty] Phone ${parsed.data.customerPhone} is not registered. Skipping points.`);
+          }
         }
-        const pointsToEarn = Math.floor(total / 1.14 / 10);
-        await tx.update(customersTable).set({
-          points: sql`${customersTable.points} + cast(${pointsToEarn} as integer)`,
-          totalSpent: sql`${customersTable.totalSpent} + cast(${String(total)} as numeric)`,
-          visitCount: sql`${customersTable.visitCount} + 1`,
-          updatedAt: /* @__PURE__ */ new Date()
-        }).where(eq(customersTable.id, existingCust.id));
-        console.log(`[loyalty] Updated registered customer ${existingCust.name} (${parsed.data.customerPhone}): +${pointsToEarn} points`);
-      } else {
-        console.log(`[loyalty] Phone ${parsed.data.customerPhone} is not registered. Skipping points.`);
-      }
-    }
-    const [order2] = await tx.insert(ordersTable).values({
-      branchId: targetBranchId,
-      orderNumber,
-      baristaId: sessionUserId,
-      status: "pending",
-      customerName: finalCustomerName,
-      customerPhone: parsed.data.customerPhone ?? null,
-      subtotal: String(subtotal),
-      discount: String(discountAmount),
-      discountId: discountIdToSave,
-      discountCode: discountCodeToSave,
-      discountValue: discountValue != null ? String(discountValue) : null,
-      discountType,
-      total: String(total),
-      paymentMethod: parsed.data.paymentMethod,
-      source: parsed.data.source || "pos",
-      amountTendered: amountTendered != null ? String(amountTendered) : null,
-      changeDue: changeDue != null ? String(changeDue) : null,
-      notes: parsed.data.notes ?? null
-    }).returning();
-    const allIngredientIds = [
-      ...new Set(itemDetails.flatMap((d) => d.customizations.map((c) => c.ingredientId).filter((id) => id !== null)))
-    ];
-    const stockRows = allIngredientIds.length > 0 ? await tx.select({ ingredientId: branchStockTable.ingredientId, stockQuantity: branchStockTable.stockQuantity }).from(branchStockTable).where(and(eq(branchStockTable.branchId, targetBranchId), inArray(branchStockTable.ingredientId, allIngredientIds))) : [];
-    const stockMap = new Map(stockRows.map((r) => [r.ingredientId, parseFloat(r.stockQuantity)]));
-    console.log(`[stock] Pre-fetched stock for ${allIngredientIds.length} ingredients in branch ${targetBranchId}:`, Array.from(stockMap.entries()));
-    const ingredientCosts = allIngredientIds.length > 0 ? await tx.select({ id: ingredientsTable.id, costPerUnit: ingredientsTable.costPerUnit }).from(ingredientsTable).where(inArray(ingredientsTable.id, allIngredientIds)) : [];
-    const ingredientCostMap = new Map(ingredientCosts.map((r) => [r.id, r.costPerUnit]));
-    const savedItems2 = [];
-    for (const item of itemDetails) {
-      const [orderItem] = await tx.insert(orderItemsTable).values({
-        orderId: order2.id,
-        drinkId: item.drinkId,
-        drinkName: item.drinkName,
-        quantity: item.quantity,
-        unitPrice: String(item.unitPrice),
-        lineTotal: String(item.lineTotal),
-        specialNotes: item.specialNotes,
-        kitchenStation: item.kitchenStation,
-        kitchenStationId: item.kitchenStationId
-      }).returning();
-      if (item.customizations.length > 0) {
-        await tx.insert(orderItemCustomizationsTable).values(
-          item.customizations.map((c) => ({
-            orderItemId: orderItem.id,
-            ingredientId: c.ingredientId ? Number(c.ingredientId) : null,
-            optionId: c.optionId ? Number(c.optionId) : null,
-            typeVolumeId: c.typeVolumeId ? Number(c.typeVolumeId) : null,
-            consumedQty: String(c.consumedQty || 0),
-            producedQty: String(c.producedQty || 0),
-            addedCost: String(c.addedCost || 0),
-            slotLabel: c.slotLabel,
-            optionLabel: c.optionLabel,
-            baristaSortOrder: c.baristaSortOrder,
-            customerSortOrder: c.customerSortOrder,
-            costPerUnit: c.ingredientId ? ingredientCostMap.get(c.ingredientId) || "0" : "0"
-          }))
-        );
-      }
-      const stockUpdates = [];
-      const { deductStockFromBatches: deductStockFromBatches2 } = await Promise.resolve().then(() => (init_stock_utils(), stock_utils_exports));
-      for (const c of item.customizations) {
-        if (!c.ingredientId || c.consumedQty === 0) {
-          if (c.ingredientId && c.consumedQty === 0) console.log(`[stock] Skipping deduction for ${c.slotLabel} because consumedQty is 0`);
-          continue;
+        const [newOrder] = await tx.insert(ordersTable).values({
+          branchId: targetBranchId,
+          orderNumber,
+          baristaId: sessionUserId,
+          status: "pending",
+          customerName: finalCustomerName,
+          customerPhone: parsed.data.customerPhone ?? null,
+          subtotal: String(subtotal),
+          discount: String(discountAmount),
+          discountId: discountIdToSave,
+          discountCode: discountCodeToSave,
+          discountValue: discountValue != null ? String(discountValue) : null,
+          discountType,
+          total: String(total),
+          paymentMethod: parsed.data.paymentMethod,
+          source: parsed.data.source || "pos",
+          amountTendered: amountTendered != null ? String(amountTendered) : null,
+          changeDue: changeDue != null ? String(changeDue) : null,
+          notes: parsed.data.notes ?? null
+        }).returning();
+        const allIngredientIds = [
+          ...new Set(itemDetails.flatMap((d) => d.customizations.map((c) => c.ingredientId).filter((id) => id !== null)))
+        ];
+        const stockRows = allIngredientIds.length > 0 ? await tx.select({ ingredientId: branchStockTable.ingredientId, stockQuantity: branchStockTable.stockQuantity }).from(branchStockTable).where(and(eq(branchStockTable.branchId, targetBranchId), inArray(branchStockTable.ingredientId, allIngredientIds))) : [];
+        const stockMap = new Map(stockRows.map((r) => [r.ingredientId, parseFloat(r.stockQuantity)]));
+        console.log(`[stock] Pre-fetched stock for ${allIngredientIds.length} ingredients in branch ${targetBranchId}:`, Array.from(stockMap.entries()));
+        const ingredientCosts = allIngredientIds.length > 0 ? await tx.select({ id: ingredientsTable.id, costPerUnit: ingredientsTable.costPerUnit }).from(ingredientsTable).where(inArray(ingredientsTable.id, allIngredientIds)) : [];
+        const ingredientCostMap = new Map(ingredientCosts.map((r) => [r.id, r.costPerUnit]));
+        const currentSavedItems = [];
+        for (const item of itemDetails) {
+          const [orderItem] = await tx.insert(orderItemsTable).values({
+            orderId: newOrder.id,
+            drinkId: item.drinkId,
+            drinkName: item.drinkName,
+            quantity: item.quantity,
+            unitPrice: String(item.unitPrice),
+            lineTotal: String(item.lineTotal),
+            specialNotes: item.specialNotes,
+            kitchenStation: item.kitchenStation,
+            kitchenStationId: item.kitchenStationId
+          }).returning();
+          if (item.customizations.length > 0) {
+            await tx.insert(orderItemCustomizationsTable).values(
+              item.customizations.map((c) => ({
+                orderItemId: orderItem.id,
+                ingredientId: c.ingredientId ? Number(c.ingredientId) : null,
+                optionId: c.optionId ? Number(c.optionId) : null,
+                typeVolumeId: c.typeVolumeId ? Number(c.typeVolumeId) : null,
+                consumedQty: String(c.consumedQty || 0),
+                producedQty: String(c.producedQty || 0),
+                addedCost: String(c.addedCost || 0),
+                slotLabel: c.slotLabel,
+                optionLabel: c.optionLabel,
+                baristaSortOrder: c.baristaSortOrder,
+                customerSortOrder: c.customerSortOrder,
+                costPerUnit: c.ingredientId ? ingredientCostMap.get(c.ingredientId) || "0" : "0"
+              }))
+            );
+          }
+          const stockUpdates = [];
+          const { deductStockFromBatches: deductStockFromBatches2 } = await Promise.resolve().then(() => (init_stock_utils(), stock_utils_exports));
+          for (const c of item.customizations) {
+            if (!c.ingredientId || c.consumedQty === 0) {
+              if (c.ingredientId && c.consumedQty === 0) console.log(`[stock] Skipping deduction for ${c.slotLabel} because consumedQty is 0`);
+              continue;
+            }
+            const current = stockMap.get(c.ingredientId) ?? 0;
+            const newQty = Math.max(0, current - c.consumedQty);
+            console.log(`[stock] Deducting ${c.consumedQty} from ${c.ingredientId} in branch ${targetBranchId}. ${current} -> ${newQty}`);
+            stockMap.set(c.ingredientId, newQty);
+            stockUpdates.push({ id: c.ingredientId, newQty, delta: c.consumedQty });
+            await deductStockFromBatches2(tx, targetBranchId, c.ingredientId, c.consumedQty);
+          }
+          await Promise.all(
+            stockUpdates.map(
+              (u) => tx.insert(branchStockTable).values({
+                branchId: targetBranchId,
+                ingredientId: u.id,
+                stockQuantity: String(u.newQty)
+              }).onConflictDoUpdate({
+                target: [branchStockTable.branchId, branchStockTable.ingredientId],
+                set: { stockQuantity: String(u.newQty) }
+              })
+            )
+          );
+          if (stockUpdates.length > 0) {
+            await tx.insert(stockMovementsTable).values(
+              stockUpdates.map((u) => ({
+                branchId: targetBranchId,
+                ingredientId: u.id,
+                orderId: newOrder.id,
+                movementType: "sale",
+                quantity: String(-u.delta),
+                quantityAfter: String(u.newQty),
+                note: `Order ${newOrder.orderNumber}`,
+                createdBy: sessionUserId
+              }))
+            );
+          }
+          currentSavedItems.push({ ...orderItem, customizations: item.customizations, kitchenStation: orderItem.kitchenStation });
         }
-        const current = stockMap.get(c.ingredientId) ?? 0;
-        const newQty = Math.max(0, current - c.consumedQty);
-        console.log(`[stock] Deducting ${c.consumedQty} from ${c.ingredientId} in branch ${targetBranchId}. ${current} -> ${newQty}`);
-        stockMap.set(c.ingredientId, newQty);
-        stockUpdates.push({ id: c.ingredientId, newQty, delta: c.consumedQty });
-        await deductStockFromBatches2(tx, targetBranchId, c.ingredientId, c.consumedQty);
-      }
-      await Promise.all(
-        stockUpdates.map(
-          (u) => tx.insert(branchStockTable).values({
-            branchId: targetBranchId,
-            ingredientId: u.id,
-            stockQuantity: String(u.newQty)
-          }).onConflictDoUpdate({
-            target: [branchStockTable.branchId, branchStockTable.ingredientId],
-            set: { stockQuantity: String(u.newQty) }
-          })
-        )
-      );
-      if (stockUpdates.length > 0) {
-        await tx.insert(stockMovementsTable).values(
-          stockUpdates.map((u) => ({
-            branchId: targetBranchId,
-            ingredientId: u.id,
-            orderId: order2.id,
-            movementType: "sale",
-            quantity: String(-u.delta),
-            quantityAfter: String(u.newQty),
-            note: `Order ${order2.orderNumber}`,
-            createdBy: sessionUserId
-          }))
-        );
-      }
-      savedItems2.push({ ...orderItem, customizations: item.customizations, kitchenStation: orderItem.kitchenStation });
-    }
-    const orderPayments = parsed.data.payments || [];
-    if (orderPayments.length > 0) {
-      await tx.insert(orderPaymentsTable).values(
-        orderPayments.map((p) => ({
-          orderId: order2.id,
-          paymentMethod: p.paymentMethod,
-          amount: String(p.amount),
-          transactionId: p.transactionId ?? null
-        }))
-      );
-      await tx.update(ordersTable).set({
-        paymentMethod: orderPayments.length > 1 ? "split" : orderPayments[0].paymentMethod
-      }).where(eq(ordersTable.id, order2.id));
-    } else if (parsed.data.paymentMethod) {
-      const isHospitality = parsed.data.paymentMethod === "hospitality";
-      await tx.insert(orderPaymentsTable).values({
-        orderId: order2.id,
-        paymentMethod: parsed.data.paymentMethod,
-        amount: String(isHospitality ? subtotal : total)
+        const orderPayments = parsed.data.payments || [];
+        if (orderPayments.length > 0) {
+          await tx.insert(orderPaymentsTable).values(
+            orderPayments.map((p) => ({
+              orderId: newOrder.id,
+              paymentMethod: p.paymentMethod,
+              amount: String(p.amount),
+              transactionId: p.transactionId ?? null
+            }))
+          );
+          await tx.update(ordersTable).set({
+            paymentMethod: orderPayments.length > 1 ? "split" : orderPayments[0].paymentMethod
+          }).where(eq(ordersTable.id, newOrder.id));
+        } else if (parsed.data.paymentMethod) {
+          const isHospitality = parsed.data.paymentMethod === "hospitality";
+          await tx.insert(orderPaymentsTable).values({
+            orderId: newOrder.id,
+            paymentMethod: parsed.data.paymentMethod,
+            amount: String(isHospitality ? subtotal : total)
+          });
+        }
+        return { order: newOrder, savedItems: currentSavedItems };
       });
+      order = resTx.order;
+      savedItems = resTx.savedItems;
+      break;
+    } catch (err) {
+      retries--;
+      const isUniqueViolation = err.code === "23505" || err.message?.includes("unique constraint") || err.message?.includes("duplicate key");
+      if (isUniqueViolation && retries > 0) {
+        console.warn(`[orders] Duplicate order number collision. Retrying transaction... (${retries} retries left). Error: ${err.message}`);
+        await new Promise((resolve2) => setTimeout(resolve2, Math.random() * 100 + 50));
+        continue;
+      }
+      throw err;
     }
-    return { order: order2, savedItems: savedItems2 };
-  });
+  }
   const [barista] = await db.select().from(usersTable).where(eq(usersTable.id, order.baristaId));
   broadcastEvent("order_created", { orderId: order.id, orderNumber: order.orderNumber });
   await logActivity(req, "CREATE_ORDER", "order", order.id, { total });

@@ -153,19 +153,39 @@ export function getCairoStartOfDay(date: Date): Date {
   return utcMidnight;
 }
 
-async function generateOrderNumber(branchId: number): Promise<string> {
+async function generateOrderNumber(tx: any, branchId: number): Promise<string> {
   const now = new Date();
   const dayOfYear = getDayOfYear(now);
-
-  // Count orders already created today (Cairo time) to derive the next serial
   const todayStart = getCairoStartOfDay(now);
-  const [row] = await db
-    .select({ count: sql<number>`cast(count(*) as int)` })
+
+  const existingOrders = await tx
+    .select({ orderNumber: ordersTable.orderNumber })
     .from(ordersTable)
     .where(and(eq(ordersTable.branchId, branchId), gte(ordersTable.createdAt, todayStart)));
-  const serial = ((row?.count ?? 0) + 1);
 
-  return `${dayOfYear}${String(serial).padStart(3, "0")}`;
+  let maxSerial = 0;
+  const newPrefix = `${branchId}-${dayOfYear}`;
+  const oldPrefix = `${dayOfYear}`;
+
+  for (const o of existingOrders) {
+    const numStr = o.orderNumber;
+    if (numStr.startsWith(newPrefix)) {
+      const serialStr = numStr.slice(newPrefix.length);
+      const serialPart = parseInt(serialStr, 10);
+      if (!isNaN(serialPart) && serialPart > maxSerial) {
+        maxSerial = serialPart;
+      }
+    } else if (numStr.startsWith(oldPrefix) && !numStr.includes("-")) {
+      const serialStr = numStr.slice(oldPrefix.length);
+      const serialPart = parseInt(serialStr, 10);
+      if (!isNaN(serialPart) && serialPart > maxSerial) {
+        maxSerial = serialPart;
+      }
+    }
+  }
+
+  const serial = maxSerial + 1;
+  return `${newPrefix}${String(serial).padStart(3, "0")}`;
 }
 
 async function buildOrderDetail(orderId: number) {
@@ -568,193 +588,214 @@ router.post("/orders", async (req, res): Promise<void> => {
   const changeDue = amountTendered != null ? amountTendered - total : null;
 
   // ── All writes in a single Drizzle transaction ─────────────────────────────
-  const orderNumber = await generateOrderNumber(targetBranchId);
-  const { order, savedItems } = await db.transaction(async (tx) => {
-    let finalCustomerName = parsed.data.customerName ?? null;
+  let order: any;
+  let savedItems: any[] = [];
+  let retries = 3;
 
-    if (parsed.data.customerPhone) {
-      const [existingCust] = await tx
-        .select()
-        .from(customersTable)
-        .where(and(
-          eq(customersTable.phone, parsed.data.customerPhone.trim()),
-          eq(customersTable.isActive, true)
-        ))
-        .limit(1);
+  while (retries > 0) {
+    try {
+      const resTx = await db.transaction(async (tx) => {
+        const orderNumber = await generateOrderNumber(tx, targetBranchId);
+        let finalCustomerName = parsed.data.customerName ?? null;
 
-      if (existingCust) {
-        if (!finalCustomerName) {
-          finalCustomerName = existingCust.name;
+        if (parsed.data.customerPhone) {
+          const [existingCust] = await tx
+            .select()
+            .from(customersTable)
+            .where(and(
+              eq(customersTable.phone, parsed.data.customerPhone.trim()),
+              eq(customersTable.isActive, true)
+            ))
+            .limit(1);
+
+          if (existingCust) {
+            if (!finalCustomerName) {
+              finalCustomerName = existingCust.name;
+            }
+
+            // Award points & update statistics
+            const pointsToEarn = Math.floor((total / 1.14) / 10);
+            await tx
+              .update(customersTable)
+              .set({
+                points: sql`${customersTable.points} + cast(${pointsToEarn} as integer)`,
+                totalSpent: sql`${customersTable.totalSpent} + cast(${String(total)} as numeric)`,
+                visitCount: sql`${customersTable.visitCount} + 1`,
+                updatedAt: new Date(),
+              })
+              .where(eq(customersTable.id, existingCust.id));
+            console.log(`[loyalty] Updated registered customer ${existingCust.name} (${parsed.data.customerPhone}): +${pointsToEarn} points`);
+          } else {
+            console.log(`[loyalty] Phone ${parsed.data.customerPhone} is not registered. Skipping points.`);
+          }
         }
 
-        // Award points & update statistics
-        const pointsToEarn = Math.floor((total / 1.14) / 10);
-        await tx
-          .update(customersTable)
-          .set({
-            points: sql`${customersTable.points} + cast(${pointsToEarn} as integer)`,
-            totalSpent: sql`${customersTable.totalSpent} + cast(${String(total)} as numeric)`,
-            visitCount: sql`${customersTable.visitCount} + 1`,
-            updatedAt: new Date(),
-          })
-          .where(eq(customersTable.id, existingCust.id));
-        console.log(`[loyalty] Updated registered customer ${existingCust.name} (${parsed.data.customerPhone}): +${pointsToEarn} points`);
-      } else {
-        console.log(`[loyalty] Phone ${parsed.data.customerPhone} is not registered. Skipping points.`);
-      }
-    }
+        const [newOrder] = await tx.insert(ordersTable).values({
+          branchId: targetBranchId,
+          orderNumber,
+          baristaId: sessionUserId,
+          status: "pending",
+          customerName: finalCustomerName,
+          customerPhone: parsed.data.customerPhone ?? null,
+          subtotal: String(subtotal),
+          discount: String(discountAmount),
+          discountId: discountIdToSave,
+          discountCode: discountCodeToSave,
+          discountValue: discountValue != null ? String(discountValue) : null,
+          discountType,
+          total: String(total),
+          paymentMethod: parsed.data.paymentMethod,
+          source: (parsed.data as any).source || "pos",
+          amountTendered: amountTendered != null ? String(amountTendered) : null,
+          changeDue: changeDue != null ? String(changeDue) : null,
+          notes: parsed.data.notes ?? null,
+        }).returning();
 
-    const [order] = await tx.insert(ordersTable).values({
-      branchId: targetBranchId,
-      orderNumber,
-      baristaId: sessionUserId,
-      status: "pending",
-      customerName: finalCustomerName,
-      customerPhone: parsed.data.customerPhone ?? null,
-      subtotal: String(subtotal),
-      discount: String(discountAmount),
-      discountId: discountIdToSave,
-      discountCode: discountCodeToSave,
-      discountValue: discountValue != null ? String(discountValue) : null,
-      discountType,
-      total: String(total),
-      paymentMethod: parsed.data.paymentMethod,
-      source: (parsed.data as any).source || "pos",
-      amountTendered: amountTendered != null ? String(amountTendered) : null,
-      changeDue: changeDue != null ? String(changeDue) : null,
-      notes: parsed.data.notes ?? null,
-    }).returning();
+        // Pre-fetch ingredient stock levels for all ingredients in one query for this branch
+        const allIngredientIds = [
+          ...new Set(itemDetails.flatMap((d) => d.customizations.map((c) => c.ingredientId).filter((id): id is number => id !== null))),
+        ];
+        const stockRows = allIngredientIds.length > 0
+          ? await tx.select({ ingredientId: branchStockTable.ingredientId, stockQuantity: branchStockTable.stockQuantity })
+              .from(branchStockTable)
+              .where(and(eq(branchStockTable.branchId, targetBranchId), inArray(branchStockTable.ingredientId, allIngredientIds)))
+          : [];
+        const stockMap = new Map(stockRows.map((r) => [r.ingredientId, parseFloat(r.stockQuantity)]));
+        console.log(`[stock] Pre-fetched stock for ${allIngredientIds.length} ingredients in branch ${targetBranchId}:`, Array.from(stockMap.entries()));
 
-    // Pre-fetch ingredient stock levels for all ingredients in one query for this branch
-    const allIngredientIds = [
-      ...new Set(itemDetails.flatMap((d) => d.customizations.map((c) => c.ingredientId).filter((id): id is number => id !== null))),
-    ];
-    const stockRows = allIngredientIds.length > 0
-      ? await tx.select({ ingredientId: branchStockTable.ingredientId, stockQuantity: branchStockTable.stockQuantity })
-          .from(branchStockTable)
-          .where(and(eq(branchStockTable.branchId, targetBranchId), inArray(branchStockTable.ingredientId, allIngredientIds)))
-      : [];
-    const stockMap = new Map(stockRows.map((r) => [r.ingredientId, parseFloat(r.stockQuantity)]));
-    console.log(`[stock] Pre-fetched stock for ${allIngredientIds.length} ingredients in branch ${targetBranchId}:`, Array.from(stockMap.entries()));
+        const ingredientCosts = allIngredientIds.length > 0
+          ? await tx.select({ id: ingredientsTable.id, costPerUnit: ingredientsTable.costPerUnit })
+              .from(ingredientsTable)
+              .where(inArray(ingredientsTable.id, allIngredientIds))
+          : [];
+        const ingredientCostMap = new Map(ingredientCosts.map((r) => [r.id, r.costPerUnit]));
 
-    const ingredientCosts = allIngredientIds.length > 0
-      ? await tx.select({ id: ingredientsTable.id, costPerUnit: ingredientsTable.costPerUnit })
-          .from(ingredientsTable)
-          .where(inArray(ingredientsTable.id, allIngredientIds))
-      : [];
-    const ingredientCostMap = new Map(ingredientCosts.map((r) => [r.id, r.costPerUnit]));
+        const currentSavedItems = [];
+        for (const item of itemDetails) {
+          const [orderItem] = await tx.insert(orderItemsTable).values({
+            orderId: newOrder.id,
+            drinkId: item.drinkId,
+            drinkName: item.drinkName,
+            quantity: item.quantity,
+            unitPrice: String(item.unitPrice),
+            lineTotal: String(item.lineTotal),
+            specialNotes: item.specialNotes,
+            kitchenStation: item.kitchenStation,
+            kitchenStationId: item.kitchenStationId,
+          }).returning();
 
-    const savedItems = [];
-    for (const item of itemDetails) {
-      const [orderItem] = await tx.insert(orderItemsTable).values({
-        orderId: order.id,
-        drinkId: item.drinkId,
-        drinkName: item.drinkName,
-        quantity: item.quantity,
-        unitPrice: String(item.unitPrice),
-        lineTotal: String(item.lineTotal),
-        specialNotes: item.specialNotes,
-        kitchenStation: item.kitchenStation,
-        kitchenStationId: item.kitchenStationId,
-      }).returning();
+          if (item.customizations.length > 0) {
+            await tx.insert(orderItemCustomizationsTable).values(
+              item.customizations.map((c) => ({
+                orderItemId: orderItem.id,
+                ingredientId: c.ingredientId ? Number(c.ingredientId) : null,
+                optionId: c.optionId ? Number(c.optionId) : null,
+                typeVolumeId: c.typeVolumeId ? Number(c.typeVolumeId) : null,
+                consumedQty: String(c.consumedQty || 0),
+                producedQty: String(c.producedQty || 0),
+                addedCost: String(c.addedCost || 0),
+                slotLabel: c.slotLabel,
+                optionLabel: c.optionLabel,
+                baristaSortOrder: c.baristaSortOrder,
+                customerSortOrder: c.customerSortOrder,
+                costPerUnit: c.ingredientId ? (ingredientCostMap.get(c.ingredientId) || "0") : "0",
+              }))
+            );
+          }
 
-      if (item.customizations.length > 0) {
-        await tx.insert(orderItemCustomizationsTable).values(
-          item.customizations.map((c) => ({
-            orderItemId: orderItem.id,
-            ingredientId: c.ingredientId ? Number(c.ingredientId) : null,
-            optionId: c.optionId ? Number(c.optionId) : null,
-            typeVolumeId: c.typeVolumeId ? Number(c.typeVolumeId) : null,
-            consumedQty: String(c.consumedQty || 0),
-            producedQty: String(c.producedQty || 0),
-            addedCost: String(c.addedCost || 0),
-            slotLabel: c.slotLabel,
-            optionLabel: c.optionLabel,
-            baristaSortOrder: c.baristaSortOrder,
-            customerSortOrder: c.customerSortOrder,
-            costPerUnit: c.ingredientId ? (ingredientCostMap.get(c.ingredientId) || "0") : "0",
-          }))
-        );
-      }
+          // Batch stock deductions: compute new quantities, then do 1 update + 1 insert per ingredient
+          const stockUpdates: Array<{ id: number; newQty: number; delta: number }> = [];
+          const { deductStockFromBatches } = await import("../lib/stock-utils");
+          for (const c of item.customizations) {
+            if (!c.ingredientId || c.consumedQty === 0) {
+              if (c.ingredientId && c.consumedQty === 0) console.log(`[stock] Skipping deduction for ${c.slotLabel} because consumedQty is 0`);
+              continue;
+            }
+            const current = stockMap.get(c.ingredientId) ?? 0;
+            const newQty = Math.max(0, current - c.consumedQty);
+            console.log(`[stock] Deducting ${c.consumedQty} from ${c.ingredientId} in branch ${targetBranchId}. ${current} -> ${newQty}`);
+            stockMap.set(c.ingredientId, newQty);
+            stockUpdates.push({ id: c.ingredientId, newQty, delta: c.consumedQty });
 
-      // Batch stock deductions: compute new quantities, then do 1 update + 1 insert per ingredient
-      const stockUpdates: Array<{ id: number; newQty: number; delta: number }> = [];
-      const { deductStockFromBatches } = await import("../lib/stock-utils");
-      for (const c of item.customizations) {
-        if (!c.ingredientId || c.consumedQty === 0) {
-          if (c.ingredientId && c.consumedQty === 0) console.log(`[stock] Skipping deduction for ${c.slotLabel} because consumedQty is 0`);
-          continue;
+            // Deduct from batches using FEFO
+            await deductStockFromBatches(tx, targetBranchId, c.ingredientId, c.consumedQty);
+          }
+
+          // Batch-update branch stock and insert movements in parallel
+          await Promise.all(
+            stockUpdates.map((u) =>
+              tx.insert(branchStockTable)
+                .values({
+                  branchId: targetBranchId,
+                  ingredientId: u.id,
+                  stockQuantity: String(u.newQty),
+                })
+                .onConflictDoUpdate({
+                  target: [branchStockTable.branchId, branchStockTable.ingredientId],
+                  set: { stockQuantity: String(u.newQty) }
+                })
+            )
+          );
+          if (stockUpdates.length > 0) {
+            await tx.insert(stockMovementsTable).values(
+              stockUpdates.map((u) => ({
+                branchId: targetBranchId,
+                ingredientId: u.id,
+                orderId: newOrder.id,
+                movementType: "sale" as const,
+                quantity: String(-u.delta),
+                quantityAfter: String(u.newQty),
+                note: `Order ${newOrder.orderNumber}`,
+                createdBy: sessionUserId,
+              }))
+            );
+          }
+
+          currentSavedItems.push({ ...orderItem, customizations: item.customizations, kitchenStation: orderItem.kitchenStation });
         }
-        const current = stockMap.get(c.ingredientId) ?? 0;
-        const newQty = Math.max(0, current - c.consumedQty);
-        console.log(`[stock] Deducting ${c.consumedQty} from ${c.ingredientId} in branch ${targetBranchId}. ${current} -> ${newQty}`);
-        stockMap.set(c.ingredientId, newQty);
-        stockUpdates.push({ id: c.ingredientId, newQty, delta: c.consumedQty });
 
-        // Deduct from batches using FEFO
-        await deductStockFromBatches(tx, targetBranchId, c.ingredientId, c.consumedQty);
-      }
+        // ── Save Payments ──────────────────────────────────────────────────────
+        const orderPayments = parsed.data.payments || [];
+        if (orderPayments.length > 0) {
+          await tx.insert(orderPaymentsTable).values(
+            orderPayments.map((p) => ({
+              orderId: newOrder.id,
+              paymentMethod: p.paymentMethod,
+              amount: String(p.amount),
+              transactionId: p.transactionId ?? null,
+            }))
+          );
+          // Update main order paymentMethod to 'split' if multiple, or the single method
+          await tx.update(ordersTable).set({ 
+            paymentMethod: (orderPayments.length > 1 ? "split" : orderPayments[0].paymentMethod) as any
+          }).where(eq(ordersTable.id, newOrder.id));
+        } else if (parsed.data.paymentMethod) {
+          // Fallback for backward compatibility if payments array is missing
+          const isHospitality = parsed.data.paymentMethod === "hospitality";
+          await tx.insert(orderPaymentsTable).values({
+            orderId: newOrder.id,
+            paymentMethod: parsed.data.paymentMethod as any,
+            amount: String(isHospitality ? subtotal : total),
+          });
+        }
 
-      // Batch-update branch stock and insert movements in parallel
-      await Promise.all(
-        stockUpdates.map((u) =>
-          tx.insert(branchStockTable)
-            .values({
-              branchId: targetBranchId,
-              ingredientId: u.id,
-              stockQuantity: String(u.newQty),
-            })
-            .onConflictDoUpdate({
-              target: [branchStockTable.branchId, branchStockTable.ingredientId],
-              set: { stockQuantity: String(u.newQty) }
-            })
-        )
-      );
-      if (stockUpdates.length > 0) {
-        await tx.insert(stockMovementsTable).values(
-          stockUpdates.map((u) => ({
-            branchId: targetBranchId,
-            ingredientId: u.id,
-            orderId: order.id,
-            movementType: "sale" as const,
-            quantity: String(-u.delta),
-            quantityAfter: String(u.newQty),
-            note: `Order ${order.orderNumber}`,
-            createdBy: sessionUserId,
-          }))
-        );
-      }
-
-      savedItems.push({ ...orderItem, customizations: item.customizations, kitchenStation: orderItem.kitchenStation });
-    }
-
-    // ── Save Payments ──────────────────────────────────────────────────────
-    const orderPayments = parsed.data.payments || [];
-    if (orderPayments.length > 0) {
-      await tx.insert(orderPaymentsTable).values(
-        orderPayments.map((p) => ({
-          orderId: order.id,
-          paymentMethod: p.paymentMethod,
-          amount: String(p.amount),
-          transactionId: p.transactionId ?? null,
-        }))
-      );
-      // Update main order paymentMethod to 'split' if multiple, or the single method
-      await tx.update(ordersTable).set({ 
-        paymentMethod: (orderPayments.length > 1 ? "split" : orderPayments[0].paymentMethod) as any
-      }).where(eq(ordersTable.id, order.id));
-    } else if (parsed.data.paymentMethod) {
-      // Fallback for backward compatibility if payments array is missing
-      const isHospitality = parsed.data.paymentMethod === "hospitality";
-      await tx.insert(orderPaymentsTable).values({
-        orderId: order.id,
-        paymentMethod: parsed.data.paymentMethod as any,
-        amount: String(isHospitality ? subtotal : total),
+        return { order: newOrder, savedItems: currentSavedItems };
       });
-    }
 
-    return { order, savedItems };
-  });
+      order = resTx.order;
+      savedItems = resTx.savedItems;
+      break; // Success!
+    } catch (err: any) {
+      retries--;
+      const isUniqueViolation = err.code === "23505" || err.message?.includes("unique constraint") || err.message?.includes("duplicate key");
+      if (isUniqueViolation && retries > 0) {
+        console.warn(`[orders] Duplicate order number collision. Retrying transaction... (${retries} retries left). Error: ${err.message}`);
+        await new Promise((resolve) => setTimeout(resolve, Math.random() * 100 + 50));
+        continue;
+      }
+      throw err;
+    }
+  }
 
   const [barista] = await db.select().from(usersTable).where(eq(usersTable.id, order.baristaId));
 
@@ -783,7 +824,7 @@ router.post("/orders", async (req, res): Promise<void> => {
           kitchenStation: item.kitchenStation,
           unitPrice: parseFloat(item.unitPrice),
           lineTotal: parseFloat(item.lineTotal),
-          customizations: item.customizations.map((c) => ({
+          customizations: item.customizations.map((c: any) => ({
             ingredientId: c.ingredientId,
             optionId: c.optionId,
             typeVolumeId: c.typeVolumeId,
