@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useListStockMovements, useGetLowStockIngredients, useRestockIngredient, useListIngredients, useUpdateIngredient } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { ArrowLeft, Plus, AlertTriangle, ArrowDownToLine, ArrowUpFromLine, PackageOpen, Download, Settings2, Clock } from "lucide-react";
+import { ArrowLeft, Plus, AlertTriangle, ArrowDownToLine, ArrowUpFromLine, PackageOpen, Download, Settings2, Clock, ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from "lucide-react";
 import { Link } from "wouter";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -74,10 +74,32 @@ export default function StockAdmin() {
   // Low-stock threshold editing
   const [thresholdEdit, setThresholdEdit] = useState<LowStockItem | null>(null);
   const [newThreshold, setNewThreshold] = useState("");
+  const [isLowStockExpanded, setIsLowStockExpanded] = useState(true);
 
   const [daysThreshold, setDaysThreshold] = useState("3");
   const [statusFilter, setStatusFilter] = useState("alert");
   const [activeTab, setActiveTab] = useState("movements");
+
+  // Pagination states
+  const [movementsPage, setMovementsPage] = useState(0);
+  const [movementsPageSize, setMovementsPageSize] = useState(10);
+
+  const [startupPage, setStartupPage] = useState(0);
+  const [startupPageSize, setStartupPageSize] = useState(10);
+
+  const [expiryPage, setExpiryPage] = useState(0);
+  const [expiryPageSize, setExpiryPageSize] = useState(10);
+
+  // Reset pages when branch or filters change
+  useEffect(() => {
+    setMovementsPage(0);
+    setStartupPage(0);
+    setExpiryPage(0);
+  }, [selectedBranchId]);
+
+  useEffect(() => {
+    setExpiryPage(0);
+  }, [daysThreshold, statusFilter]);
 
   // State for unsealing packages
   const [unsealBatch, setUnsealBatch] = useState<any | null>(null);
@@ -215,6 +237,28 @@ export default function StockAdmin() {
     return <ArrowUpFromLine className="h-4 w-4 text-destructive" />;
   };
 
+  // Stock Movements pagination calculations
+  const totalMovements = movements?.length || 0;
+  const totalMovementsPages = Math.ceil(totalMovements / movementsPageSize);
+  const movementsStartIndex = movementsPage * movementsPageSize;
+  const movementsEndIndex = movementsStartIndex + movementsPageSize;
+  const paginatedMovements = movements?.slice(movementsStartIndex, movementsEndIndex) || [];
+
+  // Startup stock pagination calculations
+  const ingredientsFiltered = ingredients ? ingredients.filter(i => i.unit !== "") : [];
+  const totalStartup = ingredientsFiltered.length;
+  const totalStartupPages = Math.ceil(totalStartup / startupPageSize);
+  const startupStartIndex = startupPage * startupPageSize;
+  const startupEndIndex = startupStartIndex + startupPageSize;
+  const paginatedStartup = ingredientsFiltered.slice(startupStartIndex, startupEndIndex);
+
+  // Expiry tracking pagination calculations
+  const totalExpiry = expiryReports?.length || 0;
+  const totalExpiryPages = Math.ceil(totalExpiry / expiryPageSize);
+  const expiryStartIndex = expiryPage * expiryPageSize;
+  const expiryEndIndex = expiryStartIndex + expiryPageSize;
+  const paginatedExpiry = expiryReports?.slice(expiryStartIndex, expiryEndIndex) || [];
+
   return (
     <div className="p-8 w-full flex flex-col gap-6 overflow-y-auto h-full">
       <div className="flex items-center justify-between">
@@ -261,31 +305,45 @@ export default function StockAdmin() {
 
       {lowStock && lowStock.length > 0 && (
         <Card className="border-destructive/50">
-          <CardHeader className="pb-3 bg-destructive/5">
-            <CardTitle className="text-destructive flex items-center gap-2 text-lg">
-              <AlertTriangle className="h-5 w-5" />
-              Low Stock Alerts
+          <CardHeader
+            className="pb-3 bg-destructive/5 cursor-pointer hover:bg-destructive/10 transition-colors select-none"
+            onClick={() => setIsLowStockExpanded(!isLowStockExpanded)}
+          >
+            <CardTitle className="text-destructive flex items-center justify-between text-lg w-full">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5" />
+                <span>Low Stock Alerts ({lowStock.length})</span>
+              </div>
+              <div className="flex items-center text-destructive">
+                {isLowStockExpanded ? (
+                  <ChevronUp className="h-5 w-5" />
+                ) : (
+                  <ChevronDown className="h-5 w-5" />
+                )}
+              </div>
             </CardTitle>
           </CardHeader>
-          <CardContent className="pt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {lowStock.map(ing => (
-              <button
-                key={ing.id}
-                type="button"
-                onClick={() => { setThresholdEdit(ing); setNewThreshold(String(ing.lowStockThreshold)); }}
-                className="flex justify-between items-center p-3 border rounded bg-background hover:bg-accent/40 hover:border-foreground/30 transition-colors text-left w-full cursor-pointer"
-              >
-                <div>
-                  <div className="font-bold">{ing.name}</div>
-                  <div className="text-sm text-muted-foreground">Threshold: {ing.lowStockThreshold} {ing.unit}</div>
-                </div>
-                <div className="text-right shrink-0">
-                  <div className="font-bold text-destructive text-lg">{ing.stockQuantity}</div>
-                  <div className="text-xs text-muted-foreground">{ing.unit}</div>
-                </div>
-              </button>
-            ))}
-          </CardContent>
+          {isLowStockExpanded && (
+            <CardContent className="pt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {lowStock.map(ing => (
+                <button
+                  key={ing.id}
+                  type="button"
+                  onClick={() => { setThresholdEdit(ing); setNewThreshold(String(ing.lowStockThreshold)); }}
+                  className="flex justify-between items-center p-3 border rounded bg-background hover:bg-accent/40 hover:border-foreground/30 transition-colors text-left w-full cursor-pointer"
+                >
+                  <div>
+                    <div className="font-bold">{ing.name}</div>
+                    <div className="text-sm text-muted-foreground">Threshold: {ing.lowStockThreshold} {ing.unit}</div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <div className="font-bold text-destructive text-lg">{ing.stockQuantity}</div>
+                    <div className="text-xs text-muted-foreground">{ing.unit}</div>
+                  </div>
+                </button>
+              ))}
+            </CardContent>
+          )}
         </Card>
       )}
 
@@ -324,12 +382,12 @@ export default function StockAdmin() {
                       <TableRow>
                         <TableCell colSpan={7} className="text-center py-8">Loading...</TableCell>
                       </TableRow>
-                    ) : movements?.length === 0 ? (
+                    ) : paginatedMovements.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">No recent movements.</TableCell>
                       </TableRow>
                     ) : (
-                      movements?.map(mov => (
+                      paginatedMovements.map(mov => (
                         <TableRow key={mov.id}>
                           <TableCell className="whitespace-nowrap">
                             {format(new Date(mov.createdAt), "MMM d, yyyy h:mm a")}
@@ -358,6 +416,60 @@ export default function StockAdmin() {
                 </Table>
               </div>
             </CardContent>
+            {totalMovements > 0 && (
+              <div className="p-4 border-t bg-muted/20 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                  <div>
+                    Showing <span className="font-medium text-foreground">{movementsStartIndex + 1}</span> to{" "}
+                    <span className="font-medium text-foreground">{Math.min(movementsEndIndex, totalMovements)}</span> of{" "}
+                    <span className="font-medium text-foreground">{totalMovements}</span> entries
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span>Show</span>
+                    <Select
+                      value={String(movementsPageSize)}
+                      onValueChange={(val) => {
+                        setMovementsPageSize(Number(val));
+                        setMovementsPage(0);
+                      }}
+                    >
+                      <SelectTrigger className="h-8 w-16 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="10">10</SelectItem>
+                        <SelectItem value="25">25</SelectItem>
+                        <SelectItem value="50">50</SelectItem>
+                        <SelectItem value="100">100</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <span>entries</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => setMovementsPage(p => Math.max(0, p - 1))} 
+                    disabled={movementsPage === 0}
+                  >
+                    <ChevronLeft className="h-4 w-4 mr-1" /> Previous
+                  </Button>
+                  <div className="flex items-center gap-1 px-2">
+                    <span className="text-sm font-medium text-foreground">Page {movementsPage + 1}</span>
+                    <span className="text-sm text-muted-foreground">of {totalMovementsPages || 1}</span>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => setMovementsPage(p => p + 1)} 
+                    disabled={movementsPage >= totalMovementsPages - 1}
+                  >
+                    Next <ChevronRight className="h-4 w-4 ml-1" />
+                  </Button>
+                </div>
+              </div>
+            )}
           </Card>
         </TabsContent>
 
@@ -396,38 +508,98 @@ export default function StockAdmin() {
                       <TableRow>
                         <TableCell colSpan={4} className="text-center py-8">Loading…</TableCell>
                       </TableRow>
-                    ) : ingredients.filter(i => i.unit !== "").map(ing => (
-                      <TableRow key={ing.id}>
-                        <TableCell className="font-medium">{ing.name}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="capitalize text-xs">{ing.ingredientType}</Badge>
-                        </TableCell>
-                        <TableCell className="text-right font-mono">
-                          <span className={(ing.stockQuantity ?? 0) <= (ing.lowStockThreshold ?? 0) ? "text-destructive font-bold" : ""}>
-                            {ing.stockQuantity ?? 0}
-                          </span>
-                          <span className="text-muted-foreground text-xs ml-1">{ing.unit}</span>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            <Input
-                              type="number"
-                              step="0.01"
-                              min="0"
-                              placeholder={String(ing.stockQuantity ?? 0)}
-                              value={startupValues[ing.id] ?? ""}
-                              onChange={e => setStartupValues(prev => ({ ...prev, [ing.id]: e.target.value }))}
-                              className="w-32 text-right"
-                            />
-                            <span className="text-muted-foreground text-xs w-8 shrink-0">{ing.unit}</span>
-                          </div>
-                        </TableCell>
+                    ) : paginatedStartup.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">No ingredients.</TableCell>
                       </TableRow>
-                    ))}
+                    ) : (
+                      paginatedStartup.map(ing => (
+                        <TableRow key={ing.id}>
+                          <TableCell className="font-medium">{ing.name}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="capitalize text-xs">{ing.ingredientType}</Badge>
+                          </TableCell>
+                          <TableCell className="text-right font-mono">
+                            <span className={(ing.stockQuantity ?? 0) <= (ing.lowStockThreshold ?? 0) ? "text-destructive font-bold" : ""}>
+                              {ing.stockQuantity ?? 0}
+                            </span>
+                            <span className="text-muted-foreground text-xs ml-1">{ing.unit}</span>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <Input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                placeholder={String(ing.stockQuantity ?? 0)}
+                                value={startupValues[ing.id] ?? ""}
+                                onChange={e => setStartupValues(prev => ({ ...prev, [ing.id]: e.target.value }))}
+                                className="w-32 text-right"
+                              />
+                              <span className="text-muted-foreground text-xs w-8 shrink-0">{ing.unit}</span>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
                   </TableBody>
                 </Table>
               </div>
             </CardContent>
+            {totalStartup > 0 && (
+              <div className="p-4 border-t bg-muted/20 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                  <div>
+                    Showing <span className="font-medium text-foreground">{startupStartIndex + 1}</span> to{" "}
+                    <span className="font-medium text-foreground">{Math.min(startupEndIndex, totalStartup)}</span> of{" "}
+                    <span className="font-medium text-foreground">{totalStartup}</span> entries
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span>Show</span>
+                    <Select
+                      value={String(startupPageSize)}
+                      onValueChange={(val) => {
+                        setStartupPageSize(Number(val));
+                        setStartupPage(0);
+                      }}
+                    >
+                      <SelectTrigger className="h-8 w-16 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="10">10</SelectItem>
+                        <SelectItem value="25">25</SelectItem>
+                        <SelectItem value="50">50</SelectItem>
+                        <SelectItem value="100">100</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <span>entries</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => setStartupPage(p => Math.max(0, p - 1))} 
+                    disabled={startupPage === 0}
+                  >
+                    <ChevronLeft className="h-4 w-4 mr-1" /> Previous
+                  </Button>
+                  <div className="flex items-center gap-1 px-2">
+                    <span className="text-sm font-medium text-foreground">Page {startupPage + 1}</span>
+                    <span className="text-sm text-muted-foreground">of {totalStartupPages || 1}</span>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => setStartupPage(p => p + 1)} 
+                    disabled={startupPage >= totalStartupPages - 1}
+                  >
+                    Next <ChevronRight className="h-4 w-4 ml-1" />
+                  </Button>
+                </div>
+              </div>
+            )}
           </Card>
         </TabsContent>
 
@@ -488,12 +660,12 @@ export default function StockAdmin() {
                       <TableRow>
                         <TableCell colSpan={8} className="text-center py-8">Loading...</TableCell>
                       </TableRow>
-                    ) : expiryReports.length === 0 ? (
+                    ) : paginatedExpiry.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">No matching batches found.</TableCell>
                       </TableRow>
                     ) : (
-                      expiryReports.map(batch => {
+                      paginatedExpiry.map(batch => {
                         let badgeColor = "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400";
                         if (batch.status === "expired") {
                           badgeColor = "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 font-bold border border-red-200 dark:border-red-900/50";
@@ -577,6 +749,60 @@ export default function StockAdmin() {
                 </Table>
               </div>
             </CardContent>
+            {totalExpiry > 0 && (
+              <div className="p-4 border-t bg-muted/20 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                  <div>
+                    Showing <span className="font-medium text-foreground">{expiryStartIndex + 1}</span> to{" "}
+                    <span className="font-medium text-foreground">{Math.min(expiryEndIndex, totalExpiry)}</span> of{" "}
+                    <span className="font-medium text-foreground">{totalExpiry}</span> entries
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span>Show</span>
+                    <Select
+                      value={String(expiryPageSize)}
+                      onValueChange={(val) => {
+                        setExpiryPageSize(Number(val));
+                        setExpiryPage(0);
+                      }}
+                    >
+                      <SelectTrigger className="h-8 w-16 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="10">10</SelectItem>
+                        <SelectItem value="25">25</SelectItem>
+                        <SelectItem value="50">50</SelectItem>
+                        <SelectItem value="100">100</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <span>entries</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => setExpiryPage(p => Math.max(0, p - 1))} 
+                    disabled={expiryPage === 0}
+                  >
+                    <ChevronLeft className="h-4 w-4 mr-1" /> Previous
+                  </Button>
+                  <div className="flex items-center gap-1 px-2">
+                    <span className="text-sm font-medium text-foreground">Page {expiryPage + 1}</span>
+                    <span className="text-sm text-muted-foreground">of {totalExpiryPages || 1}</span>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => setExpiryPage(p => p + 1)} 
+                    disabled={expiryPage >= totalExpiryPages - 1}
+                  >
+                    Next <ChevronRight className="h-4 w-4 ml-1" />
+                  </Button>
+                </div>
+              </div>
+            )}
           </Card>
         </TabsContent>
       </Tabs>
