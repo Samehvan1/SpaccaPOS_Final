@@ -451,6 +451,7 @@ export type OrderDiscountType =
 export const OrderDiscountType = {
   percentage: "percentage",
   fixed: "fixed",
+  fixed_per_item: "fixed_per_item",
 } as const;
 
 export type OrderPaymentMethod =
@@ -730,6 +731,7 @@ export type DiscountType = (typeof DiscountType)[keyof typeof DiscountType];
 export const DiscountType = {
   percentage: "percentage",
   fixed: "fixed",
+  fixed_per_item: "fixed_per_item",
 } as const;
 
 export interface Discount {
@@ -748,6 +750,7 @@ export type CreateDiscountBodyType =
 export const CreateDiscountBodyType = {
   percentage: "percentage",
   fixed: "fixed",
+  fixed_per_item: "fixed_per_item",
 } as const;
 
 export interface CreateDiscountBody {
@@ -763,6 +766,7 @@ export type UpdateDiscountBodyType =
 export const UpdateDiscountBodyType = {
   percentage: "percentage",
   fixed: "fixed",
+  fixed_per_item: "fixed_per_item",
 } as const;
 
 export interface UpdateDiscountBody {

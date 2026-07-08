@@ -1577,7 +1577,7 @@ export declare const ListOrdersResponseItem: zod.ZodIntersection<zod.ZodObject<{
     discount: zod.ZodNumber;
     discountId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
     discountValue: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
-    discountType: zod.ZodOptional<zod.ZodNullable<zod.ZodEnum<["percentage", "fixed"]>>>;
+    discountType: zod.ZodOptional<zod.ZodNullable<zod.ZodEnum<["percentage", "fixed", "fixed_per_item"]>>>;
     total: zod.ZodNumber;
     paymentMethod: zod.ZodEnum<["cash", "card", "wallet", "hospitality", "split", "refund"]>;
     amountTendered: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
@@ -1605,7 +1605,7 @@ export declare const ListOrdersResponseItem: zod.ZodIntersection<zod.ZodObject<{
     customerPhone?: string | null | undefined;
     discountId?: number | null | undefined;
     discountValue?: number | null | undefined;
-    discountType?: "percentage" | "fixed" | null | undefined;
+    discountType?: "percentage" | "fixed" | "fixed_per_item" | null | undefined;
     amountTendered?: number | null | undefined;
     changeDue?: number | null | undefined;
     notes?: string | null | undefined;
@@ -1629,7 +1629,7 @@ export declare const ListOrdersResponseItem: zod.ZodIntersection<zod.ZodObject<{
     customerPhone?: string | null | undefined;
     discountId?: number | null | undefined;
     discountValue?: number | null | undefined;
-    discountType?: "percentage" | "fixed" | null | undefined;
+    discountType?: "percentage" | "fixed" | "fixed_per_item" | null | undefined;
     amountTendered?: number | null | undefined;
     changeDue?: number | null | undefined;
     notes?: string | null | undefined;
@@ -1800,7 +1800,7 @@ export declare const ListOrdersResponse: zod.ZodArray<zod.ZodIntersection<zod.Zo
     discount: zod.ZodNumber;
     discountId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
     discountValue: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
-    discountType: zod.ZodOptional<zod.ZodNullable<zod.ZodEnum<["percentage", "fixed"]>>>;
+    discountType: zod.ZodOptional<zod.ZodNullable<zod.ZodEnum<["percentage", "fixed", "fixed_per_item"]>>>;
     total: zod.ZodNumber;
     paymentMethod: zod.ZodEnum<["cash", "card", "wallet", "hospitality", "split", "refund"]>;
     amountTendered: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
@@ -1828,7 +1828,7 @@ export declare const ListOrdersResponse: zod.ZodArray<zod.ZodIntersection<zod.Zo
     customerPhone?: string | null | undefined;
     discountId?: number | null | undefined;
     discountValue?: number | null | undefined;
-    discountType?: "percentage" | "fixed" | null | undefined;
+    discountType?: "percentage" | "fixed" | "fixed_per_item" | null | undefined;
     amountTendered?: number | null | undefined;
     changeDue?: number | null | undefined;
     notes?: string | null | undefined;
@@ -1852,7 +1852,7 @@ export declare const ListOrdersResponse: zod.ZodArray<zod.ZodIntersection<zod.Zo
     customerPhone?: string | null | undefined;
     discountId?: number | null | undefined;
     discountValue?: number | null | undefined;
-    discountType?: "percentage" | "fixed" | null | undefined;
+    discountType?: "percentage" | "fixed" | "fixed_per_item" | null | undefined;
     amountTendered?: number | null | undefined;
     changeDue?: number | null | undefined;
     notes?: string | null | undefined;
@@ -2151,7 +2151,7 @@ export declare const GetOrderResponse: zod.ZodIntersection<zod.ZodObject<{
     discount: zod.ZodNumber;
     discountId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
     discountValue: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
-    discountType: zod.ZodOptional<zod.ZodNullable<zod.ZodEnum<["percentage", "fixed"]>>>;
+    discountType: zod.ZodOptional<zod.ZodNullable<zod.ZodEnum<["percentage", "fixed", "fixed_per_item"]>>>;
     total: zod.ZodNumber;
     paymentMethod: zod.ZodEnum<["cash", "card", "wallet", "hospitality", "split", "refund"]>;
     amountTendered: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
@@ -2179,7 +2179,7 @@ export declare const GetOrderResponse: zod.ZodIntersection<zod.ZodObject<{
     customerPhone?: string | null | undefined;
     discountId?: number | null | undefined;
     discountValue?: number | null | undefined;
-    discountType?: "percentage" | "fixed" | null | undefined;
+    discountType?: "percentage" | "fixed" | "fixed_per_item" | null | undefined;
     amountTendered?: number | null | undefined;
     changeDue?: number | null | undefined;
     notes?: string | null | undefined;
@@ -2203,7 +2203,7 @@ export declare const GetOrderResponse: zod.ZodIntersection<zod.ZodObject<{
     customerPhone?: string | null | undefined;
     discountId?: number | null | undefined;
     discountValue?: number | null | undefined;
-    discountType?: "percentage" | "fixed" | null | undefined;
+    discountType?: "percentage" | "fixed" | "fixed_per_item" | null | undefined;
     amountTendered?: number | null | undefined;
     changeDue?: number | null | undefined;
     notes?: string | null | undefined;
@@ -2407,7 +2407,7 @@ export declare const UpdateOrderStatusResponse: zod.ZodObject<{
     discount: zod.ZodNumber;
     discountId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
     discountValue: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
-    discountType: zod.ZodOptional<zod.ZodNullable<zod.ZodEnum<["percentage", "fixed"]>>>;
+    discountType: zod.ZodOptional<zod.ZodNullable<zod.ZodEnum<["percentage", "fixed", "fixed_per_item"]>>>;
     total: zod.ZodNumber;
     paymentMethod: zod.ZodEnum<["cash", "card", "wallet", "hospitality", "split", "refund"]>;
     amountTendered: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
@@ -2435,7 +2435,7 @@ export declare const UpdateOrderStatusResponse: zod.ZodObject<{
     customerPhone?: string | null | undefined;
     discountId?: number | null | undefined;
     discountValue?: number | null | undefined;
-    discountType?: "percentage" | "fixed" | null | undefined;
+    discountType?: "percentage" | "fixed" | "fixed_per_item" | null | undefined;
     amountTendered?: number | null | undefined;
     changeDue?: number | null | undefined;
     notes?: string | null | undefined;
@@ -2459,7 +2459,7 @@ export declare const UpdateOrderStatusResponse: zod.ZodObject<{
     customerPhone?: string | null | undefined;
     discountId?: number | null | undefined;
     discountValue?: number | null | undefined;
-    discountType?: "percentage" | "fixed" | null | undefined;
+    discountType?: "percentage" | "fixed" | "fixed_per_item" | null | undefined;
     amountTendered?: number | null | undefined;
     changeDue?: number | null | undefined;
     notes?: string | null | undefined;
@@ -2514,7 +2514,7 @@ export declare const MarkOrderItemReadyResponse: zod.ZodObject<{
     discount: zod.ZodNumber;
     discountId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
     discountValue: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
-    discountType: zod.ZodOptional<zod.ZodNullable<zod.ZodEnum<["percentage", "fixed"]>>>;
+    discountType: zod.ZodOptional<zod.ZodNullable<zod.ZodEnum<["percentage", "fixed", "fixed_per_item"]>>>;
     total: zod.ZodNumber;
     paymentMethod: zod.ZodEnum<["cash", "card", "wallet", "hospitality", "split", "refund"]>;
     amountTendered: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
@@ -2542,7 +2542,7 @@ export declare const MarkOrderItemReadyResponse: zod.ZodObject<{
     customerPhone?: string | null | undefined;
     discountId?: number | null | undefined;
     discountValue?: number | null | undefined;
-    discountType?: "percentage" | "fixed" | null | undefined;
+    discountType?: "percentage" | "fixed" | "fixed_per_item" | null | undefined;
     amountTendered?: number | null | undefined;
     changeDue?: number | null | undefined;
     notes?: string | null | undefined;
@@ -2566,7 +2566,7 @@ export declare const MarkOrderItemReadyResponse: zod.ZodObject<{
     customerPhone?: string | null | undefined;
     discountId?: number | null | undefined;
     discountValue?: number | null | undefined;
-    discountType?: "percentage" | "fixed" | null | undefined;
+    discountType?: "percentage" | "fixed" | "fixed_per_item" | null | undefined;
     amountTendered?: number | null | undefined;
     changeDue?: number | null | undefined;
     notes?: string | null | undefined;
@@ -2762,7 +2762,7 @@ export declare const GetActiveOrdersResponseItem: zod.ZodIntersection<zod.ZodObj
     discount: zod.ZodNumber;
     discountId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
     discountValue: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
-    discountType: zod.ZodOptional<zod.ZodNullable<zod.ZodEnum<["percentage", "fixed"]>>>;
+    discountType: zod.ZodOptional<zod.ZodNullable<zod.ZodEnum<["percentage", "fixed", "fixed_per_item"]>>>;
     total: zod.ZodNumber;
     paymentMethod: zod.ZodEnum<["cash", "card", "wallet", "hospitality", "split", "refund"]>;
     amountTendered: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
@@ -2790,7 +2790,7 @@ export declare const GetActiveOrdersResponseItem: zod.ZodIntersection<zod.ZodObj
     customerPhone?: string | null | undefined;
     discountId?: number | null | undefined;
     discountValue?: number | null | undefined;
-    discountType?: "percentage" | "fixed" | null | undefined;
+    discountType?: "percentage" | "fixed" | "fixed_per_item" | null | undefined;
     amountTendered?: number | null | undefined;
     changeDue?: number | null | undefined;
     notes?: string | null | undefined;
@@ -2814,7 +2814,7 @@ export declare const GetActiveOrdersResponseItem: zod.ZodIntersection<zod.ZodObj
     customerPhone?: string | null | undefined;
     discountId?: number | null | undefined;
     discountValue?: number | null | undefined;
-    discountType?: "percentage" | "fixed" | null | undefined;
+    discountType?: "percentage" | "fixed" | "fixed_per_item" | null | undefined;
     amountTendered?: number | null | undefined;
     changeDue?: number | null | undefined;
     notes?: string | null | undefined;
@@ -2985,7 +2985,7 @@ export declare const GetActiveOrdersResponse: zod.ZodArray<zod.ZodIntersection<z
     discount: zod.ZodNumber;
     discountId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
     discountValue: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
-    discountType: zod.ZodOptional<zod.ZodNullable<zod.ZodEnum<["percentage", "fixed"]>>>;
+    discountType: zod.ZodOptional<zod.ZodNullable<zod.ZodEnum<["percentage", "fixed", "fixed_per_item"]>>>;
     total: zod.ZodNumber;
     paymentMethod: zod.ZodEnum<["cash", "card", "wallet", "hospitality", "split", "refund"]>;
     amountTendered: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
@@ -3013,7 +3013,7 @@ export declare const GetActiveOrdersResponse: zod.ZodArray<zod.ZodIntersection<z
     customerPhone?: string | null | undefined;
     discountId?: number | null | undefined;
     discountValue?: number | null | undefined;
-    discountType?: "percentage" | "fixed" | null | undefined;
+    discountType?: "percentage" | "fixed" | "fixed_per_item" | null | undefined;
     amountTendered?: number | null | undefined;
     changeDue?: number | null | undefined;
     notes?: string | null | undefined;
@@ -3037,7 +3037,7 @@ export declare const GetActiveOrdersResponse: zod.ZodArray<zod.ZodIntersection<z
     customerPhone?: string | null | undefined;
     discountId?: number | null | undefined;
     discountValue?: number | null | undefined;
-    discountType?: "percentage" | "fixed" | null | undefined;
+    discountType?: "percentage" | "fixed" | "fixed_per_item" | null | undefined;
     amountTendered?: number | null | undefined;
     changeDue?: number | null | undefined;
     notes?: string | null | undefined;
@@ -3860,7 +3860,7 @@ export declare const UpdateSettingsResponse: zod.ZodArray<zod.ZodObject<{
 export declare const ListDiscountsResponseItem: zod.ZodObject<{
     id: zod.ZodNumber;
     code: zod.ZodString;
-    type: zod.ZodEnum<["percentage", "fixed"]>;
+    type: zod.ZodEnum<["percentage", "fixed", "fixed_per_item"]>;
     value: zod.ZodNumber;
     isActive: zod.ZodBoolean;
     createdAt: zod.ZodString;
@@ -3868,7 +3868,7 @@ export declare const ListDiscountsResponseItem: zod.ZodObject<{
 }, "strip", zod.ZodTypeAny, {
     value: number;
     code: string;
-    type: "percentage" | "fixed";
+    type: "percentage" | "fixed" | "fixed_per_item";
     id: number;
     isActive: boolean;
     createdAt: string;
@@ -3876,7 +3876,7 @@ export declare const ListDiscountsResponseItem: zod.ZodObject<{
 }, {
     value: number;
     code: string;
-    type: "percentage" | "fixed";
+    type: "percentage" | "fixed" | "fixed_per_item";
     id: number;
     isActive: boolean;
     createdAt: string;
@@ -3885,7 +3885,7 @@ export declare const ListDiscountsResponseItem: zod.ZodObject<{
 export declare const ListDiscountsResponse: zod.ZodArray<zod.ZodObject<{
     id: zod.ZodNumber;
     code: zod.ZodString;
-    type: zod.ZodEnum<["percentage", "fixed"]>;
+    type: zod.ZodEnum<["percentage", "fixed", "fixed_per_item"]>;
     value: zod.ZodNumber;
     isActive: zod.ZodBoolean;
     createdAt: zod.ZodString;
@@ -3893,7 +3893,7 @@ export declare const ListDiscountsResponse: zod.ZodArray<zod.ZodObject<{
 }, "strip", zod.ZodTypeAny, {
     value: number;
     code: string;
-    type: "percentage" | "fixed";
+    type: "percentage" | "fixed" | "fixed_per_item";
     id: number;
     isActive: boolean;
     createdAt: string;
@@ -3901,7 +3901,7 @@ export declare const ListDiscountsResponse: zod.ZodArray<zod.ZodObject<{
 }, {
     value: number;
     code: string;
-    type: "percentage" | "fixed";
+    type: "percentage" | "fixed" | "fixed_per_item";
     id: number;
     isActive: boolean;
     createdAt: string;
@@ -3912,18 +3912,18 @@ export declare const ListDiscountsResponse: zod.ZodArray<zod.ZodObject<{
  */
 export declare const CreateDiscountBody: zod.ZodObject<{
     code: zod.ZodString;
-    type: zod.ZodEnum<["percentage", "fixed"]>;
+    type: zod.ZodEnum<["percentage", "fixed", "fixed_per_item"]>;
     value: zod.ZodNumber;
     isActive: zod.ZodOptional<zod.ZodBoolean>;
 }, "strip", zod.ZodTypeAny, {
     value: number;
     code: string;
-    type: "percentage" | "fixed";
+    type: "percentage" | "fixed" | "fixed_per_item";
     isActive?: boolean | undefined;
 }, {
     value: number;
     code: string;
-    type: "percentage" | "fixed";
+    type: "percentage" | "fixed" | "fixed_per_item";
     isActive?: boolean | undefined;
 }>;
 /**
@@ -3945,24 +3945,24 @@ export declare const UpdateDiscountQueryParams: zod.ZodObject<{
 }>;
 export declare const UpdateDiscountBody: zod.ZodObject<{
     code: zod.ZodOptional<zod.ZodString>;
-    type: zod.ZodOptional<zod.ZodEnum<["percentage", "fixed"]>>;
+    type: zod.ZodOptional<zod.ZodEnum<["percentage", "fixed", "fixed_per_item"]>>;
     value: zod.ZodOptional<zod.ZodNumber>;
     isActive: zod.ZodOptional<zod.ZodBoolean>;
 }, "strip", zod.ZodTypeAny, {
     value?: number | undefined;
     code?: string | undefined;
-    type?: "percentage" | "fixed" | undefined;
+    type?: "percentage" | "fixed" | "fixed_per_item" | undefined;
     isActive?: boolean | undefined;
 }, {
     value?: number | undefined;
     code?: string | undefined;
-    type?: "percentage" | "fixed" | undefined;
+    type?: "percentage" | "fixed" | "fixed_per_item" | undefined;
     isActive?: boolean | undefined;
 }>;
 export declare const UpdateDiscountResponse: zod.ZodObject<{
     id: zod.ZodNumber;
     code: zod.ZodString;
-    type: zod.ZodEnum<["percentage", "fixed"]>;
+    type: zod.ZodEnum<["percentage", "fixed", "fixed_per_item"]>;
     value: zod.ZodNumber;
     isActive: zod.ZodBoolean;
     createdAt: zod.ZodString;
@@ -3970,7 +3970,7 @@ export declare const UpdateDiscountResponse: zod.ZodObject<{
 }, "strip", zod.ZodTypeAny, {
     value: number;
     code: string;
-    type: "percentage" | "fixed";
+    type: "percentage" | "fixed" | "fixed_per_item";
     id: number;
     isActive: boolean;
     createdAt: string;
@@ -3978,7 +3978,7 @@ export declare const UpdateDiscountResponse: zod.ZodObject<{
 }, {
     value: number;
     code: string;
-    type: "percentage" | "fixed";
+    type: "percentage" | "fixed" | "fixed_per_item";
     id: number;
     isActive: boolean;
     createdAt: string;
@@ -4123,7 +4123,7 @@ export declare const ValidateDiscountParams: zod.ZodObject<{
 export declare const ValidateDiscountResponse: zod.ZodObject<{
     id: zod.ZodNumber;
     code: zod.ZodString;
-    type: zod.ZodEnum<["percentage", "fixed"]>;
+    type: zod.ZodEnum<["percentage", "fixed", "fixed_per_item"]>;
     value: zod.ZodNumber;
     isActive: zod.ZodBoolean;
     createdAt: zod.ZodString;
@@ -4131,7 +4131,7 @@ export declare const ValidateDiscountResponse: zod.ZodObject<{
 }, "strip", zod.ZodTypeAny, {
     value: number;
     code: string;
-    type: "percentage" | "fixed";
+    type: "percentage" | "fixed" | "fixed_per_item";
     id: number;
     isActive: boolean;
     createdAt: string;
@@ -4139,7 +4139,7 @@ export declare const ValidateDiscountResponse: zod.ZodObject<{
 }, {
     value: number;
     code: string;
-    type: "percentage" | "fixed";
+    type: "percentage" | "fixed" | "fixed_per_item";
     id: number;
     isActive: boolean;
     createdAt: string;

@@ -1929,7 +1929,7 @@ components:
           type: ["number", "null"]
         discountType:
           type: ["string", "null"]
-          enum: [percentage, fixed]
+          enum: [percentage, fixed, fixed_per_item]
         total:
           type: number
         paymentMethod:
@@ -2274,7 +2274,7 @@ components:
           type: string
         type:
           type: string
-          enum: [percentage, fixed]
+          enum: [percentage, fixed, fixed_per_item]
         value:
           type: number
         isActive:
@@ -2299,7 +2299,7 @@ components:
           type: string
         type:
           type: string
-          enum: [percentage, fixed]
+          enum: [percentage, fixed, fixed_per_item]
         value:
           type: number
         isActive:
@@ -2316,7 +2316,7 @@ components:
           type: string
         type:
           type: string
-          enum: [percentage, fixed]
+          enum: [percentage, fixed, fixed_per_item]
         value:
           type: number
         isActive:

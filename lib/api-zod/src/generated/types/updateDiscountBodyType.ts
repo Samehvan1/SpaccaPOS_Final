@@ -12,4 +12,5 @@ export type UpdateDiscountBodyType =
 export const UpdateDiscountBodyType = {
   percentage: "percentage",
   fixed: "fixed",
+  fixed_per_item: "fixed_per_item",
 } as const;

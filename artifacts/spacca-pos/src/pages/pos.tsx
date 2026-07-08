@@ -640,8 +640,12 @@ export default function PosTerminal() {
       const beforeTax = cartSubtotal / 1.14;
       return (beforeTax * appliedDiscount.value) / 100;
     }
+    if (appliedDiscount.type === "fixed_per_item") {
+      const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+      return totalItems * Number(appliedDiscount.value);
+    }
     return appliedDiscount.value;
-  }, [appliedDiscount, cartSubtotal]);
+  }, [appliedDiscount, cartSubtotal, cart]);
 
   const cartTotal = cartSubtotal - discountAmount;
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);

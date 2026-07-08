@@ -223,7 +223,7 @@ async function buildOrderDetail(orderId: number) {
     discountId: order.discountId,
     discountCode: order.discountCode,
     discountValue: order.discountValue ? parseFloat(order.discountValue) : null,
-    discountType: order.discountType as "percentage" | "fixed" | null,
+    discountType: order.discountType as "percentage" | "fixed" | "fixed_per_item" | null,
     total: parseFloat(order.total),
     amountTendered: order.amountTendered ? parseFloat(order.amountTendered) : null,
     changeDue: order.changeDue ? parseFloat(order.changeDue) : null,
@@ -359,7 +359,7 @@ router.get("/orders", requirePermission("cashier:view"), async (req, res): Promi
         discountId: o.discountId,
         discountCode: o.discountCode,
         discountValue: o.discountValue ? parseFloat(o.discountValue) : null,
-        discountType: o.discountType as "percentage" | "fixed" | null,
+        discountType: o.discountType as "percentage" | "fixed" | "fixed_per_item" | null,
         total: parseFloat(o.total),
         amountTendered: o.amountTendered ? parseFloat(o.amountTendered) : null,
         changeDue: o.changeDue ? parseFloat(o.changeDue) : null,
@@ -552,7 +552,7 @@ router.post("/orders", async (req, res): Promise<void> => {
   let discountId: number | null = null;
   let discountCode: string | null = null;
   let discountValue: number | null = null;
-  let discountType: "percentage" | "fixed" | null = null;
+  let discountType: "percentage" | "fixed" | "fixed_per_item" | null = null;
 
   if (parsed.data.discountCode) {
     const [discountRow] = await db
@@ -564,14 +564,18 @@ router.post("/orders", async (req, res): Promise<void> => {
       discountId = discountRow.id;
       discountCode = discountRow.code;
       discountValue = parseFloat(discountRow.value);
-      discountType = discountRow.type as "percentage" | "fixed";
+      discountType = discountRow.type as "percentage" | "fixed" | "fixed_per_item";
       
       if (discountType === "percentage") {
         const beforeTax = subtotal / 1.14;
         discountAmount = (beforeTax * discountValue) / 100;
+      } else if (discountType === "fixed_per_item") {
+        const totalItems = orderItems.reduce((sum, item) => sum + item.quantity, 0);
+        discountAmount = totalItems * discountValue;
       } else {
         discountAmount = discountValue;
       }
+      discountAmount = Math.min(discountAmount, subtotal);
     }
   }
 
@@ -815,7 +819,7 @@ router.post("/orders", async (req, res): Promise<void> => {
         discountId: order.discountId,
         discountCode: order.discountCode,
         discountValue: order.discountValue ? parseFloat(order.discountValue) : null,
-        discountType: order.discountType as "percentage" | "fixed" | null,
+        discountType: order.discountType as "percentage" | "fixed" | "fixed_per_item" | null,
         total: parseFloat(order.total),
         amountTendered: order.amountTendered ? parseFloat(order.amountTendered) : null,
         changeDue: order.changeDue ? parseFloat(order.changeDue) : null,

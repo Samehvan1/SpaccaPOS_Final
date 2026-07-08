@@ -173,7 +173,7 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({
                 <Tag className="h-3.5 w-3.5 text-amber-500" /> Customer Discount Available!
               </div>
               <div className="text-[10px] text-amber-700/80 dark:text-amber-300/80">
-                {availableDiscounts[0].reason}: <span className="font-bold">{availableDiscounts[0].code}</span> ({availableDiscounts[0].type === 'percentage' ? `${availableDiscounts[0].value}%` : fmt(availableDiscounts[0].value)} Off) will apply at checkout.
+                {availableDiscounts[0].reason}: <span className="font-bold">{availableDiscounts[0].code}</span> ({availableDiscounts[0].type === 'percentage' ? `${availableDiscounts[0].value}%` : `${fmt(availableDiscounts[0].value)}${availableDiscounts[0].type === 'fixed_per_item' ? '/item' : ''}`} Off) will apply at checkout.
               </div>
             </div>
           )}

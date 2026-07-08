@@ -16,4 +16,5 @@ export type OrderDiscountType =
 export const OrderDiscountType = {
   percentage: "percentage",
   fixed: "fixed",
+  fixed_per_item: "fixed_per_item",
 } as const;

@@ -275,9 +275,7 @@ export const CreateStockAdjustmentBody = api.CreateStockAdjustmentBody.extend({
   expiryDate: z.string().nullish(),
   batchNumber: z.string().nullish(),
 });
-export type CreateStockAdjustmentBody = Infer<
-  typeof CreateStockAdjustmentBody
->;
+export type CreateStockAdjustmentBody = Infer<typeof CreateStockAdjustmentBody>;
 
 // Dashboard
 export const GetDashboardSummaryResponse = api.GetDashboardSummaryResponse;
@@ -348,7 +346,6 @@ export const UpdateDiscountBody = api.UpdateDiscountBody.extend({
   isFirstOrder: z.boolean().optional(),
 });
 export type UpdateDiscountBody = Infer<typeof UpdateDiscountBody>;
-
 
 // Users
 export const ListUsersResponseItem = api.ListUsersResponseItem.extend({

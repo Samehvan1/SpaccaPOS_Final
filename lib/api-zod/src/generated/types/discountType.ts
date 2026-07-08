@@ -11,4 +11,5 @@ export type DiscountType = (typeof DiscountType)[keyof typeof DiscountType];
 export const DiscountType = {
   percentage: "percentage",
   fixed: "fixed",
+  fixed_per_item: "fixed_per_item",
 } as const;

@@ -15,7 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 type Discount = {
   id: number;
   code: string;
-  type: "percentage" | "fixed";
+  type: "percentage" | "fixed" | "fixed_per_item";
   value: number;
   isActive: boolean;
   createdAt: string;
@@ -41,7 +41,7 @@ export default function DiscountsAdmin() {
 
   // Form state
   const [code, setCode] = useState("");
-  const [type, setType] = useState<"percentage" | "fixed">("percentage");
+  const [type, setType] = useState<"percentage" | "fixed" | "fixed_per_item">("percentage");
   const [value, setValue] = useState("0");
   const [isActive, setIsActive] = useState(true);
   const [isFirstOrder, setIsFirstOrder] = useState(false);
@@ -166,11 +166,11 @@ export default function DiscountsAdmin() {
                     <TableCell>
                       <div className="flex items-center gap-2">
                         {d.type === "percentage" ? <Percent className="h-3.5 w-3.5" /> : <Banknote className="h-3.5 w-3.5" />}
-                        <span className="capitalize">{d.type}</span>
+                        <span className="capitalize">{d.type === "fixed_per_item" ? "Fixed Per Item" : d.type}</span>
                       </div>
                     </TableCell>
                     <TableCell className="font-semibold">
-                      {d.type === "percentage" ? `${d.value}%` : fmt(d.value)}
+                      {d.type === "percentage" ? `${d.value}%` : `${fmt(d.value)}${d.type === "fixed_per_item" ? " / item" : ""}`}
                     </TableCell>
                     <TableCell>
                       <Badge variant={d.isActive ? "default" : "secondary"}>
@@ -215,6 +215,7 @@ export default function DiscountsAdmin() {
                   <SelectContent>
                     <SelectItem value="percentage">Percentage (%)</SelectItem>
                     <SelectItem value="fixed">Fixed Amount (EGP)</SelectItem>
+                    <SelectItem value="fixed_per_item">Fixed Amount Per Item (EGP)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

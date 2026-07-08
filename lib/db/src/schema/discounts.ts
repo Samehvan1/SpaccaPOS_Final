@@ -5,7 +5,7 @@ import { z } from "zod/v4";
 export const discountsTable = pgTable("discounts", {
   id: serial("id").primaryKey(),
   code: text("code").notNull().unique(),
-  type: text("type", { enum: ["percentage", "fixed"] }).notNull(),
+  type: text("type", { enum: ["percentage", "fixed", "fixed_per_item"] }).notNull(),
   value: numeric("value", { precision: 8, scale: 2 }).notNull(),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

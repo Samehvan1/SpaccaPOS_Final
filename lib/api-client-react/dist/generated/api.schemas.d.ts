@@ -394,6 +394,7 @@ export type OrderDiscountType = (typeof OrderDiscountType)[keyof typeof OrderDis
 export declare const OrderDiscountType: {
     readonly percentage: "percentage";
     readonly fixed: "fixed";
+    readonly fixed_per_item: "fixed_per_item";
 };
 export type OrderPaymentMethod = (typeof OrderPaymentMethod)[keyof typeof OrderPaymentMethod];
 export declare const OrderPaymentMethod: {
@@ -632,6 +633,7 @@ export type DiscountType = (typeof DiscountType)[keyof typeof DiscountType];
 export declare const DiscountType: {
     readonly percentage: "percentage";
     readonly fixed: "fixed";
+    readonly fixed_per_item: "fixed_per_item";
 };
 export interface Discount {
     id: number;
@@ -646,6 +648,7 @@ export type CreateDiscountBodyType = (typeof CreateDiscountBodyType)[keyof typeo
 export declare const CreateDiscountBodyType: {
     readonly percentage: "percentage";
     readonly fixed: "fixed";
+    readonly fixed_per_item: "fixed_per_item";
 };
 export interface CreateDiscountBody {
     code: string;
@@ -657,6 +660,7 @@ export type UpdateDiscountBodyType = (typeof UpdateDiscountBodyType)[keyof typeo
 export declare const UpdateDiscountBodyType: {
     readonly percentage: "percentage";
     readonly fixed: "fixed";
+    readonly fixed_per_item: "fixed_per_item";
 };
 export interface UpdateDiscountBody {
     code?: string;
