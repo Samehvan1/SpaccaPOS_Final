@@ -219,10 +219,22 @@ router.get("/stock/expiry/reports", async (req, res): Promise<void> => {
     ? parseInt(req.query.branchId as string)
     : (isAdmin && (req.query.branchId === "all" || !req.query.branchId)) ? null : sessionBranchId;
 
+  const targetIngredientId = req.query.ingredientId && req.query.ingredientId !== "all"
+    ? parseInt(req.query.ingredientId as string)
+    : null;
+
+  // Auto-open nearest expiry batches where appropriate
+  try {
+    const { triggerAutoOpening } = await import("../lib/stock-utils");
+    await triggerAutoOpening(db, targetBranchId, targetIngredientId);
+  } catch (err) {
+    console.error("Auto-opening error in GET /stock/expiry/reports:", err);
+  }
+
   const days = req.query.days ? parseInt(req.query.days as string) : 3;
 
   const conditions = [
-    sql`quantity > 0`
+    sql`cast(quantity as numeric) > 0`
   ];
 
   if (targetBranchId) {
@@ -394,6 +406,142 @@ router.post("/stock/expiry/batches/:id/discard", async (req, res): Promise<void>
   } catch (error: any) {
     console.error("POST /stock/expiry/batches/:id/discard error:", error);
     res.status(500).json({ error: error?.message || "Failed to discard batch" });
+  }
+});
+
+router.put("/stock/expiry/batches/:id", async (req, res): Promise<void> => {
+  const batchId = parseInt(req.params.id);
+  const sessionUserId = ((req.session as any).userId as number) ?? 1;
+
+  if (isNaN(batchId)) {
+    res.status(400).json({ error: "Invalid batch ID" });
+    return;
+  }
+
+  const { batchNumber, sealedExpiryDate, expiryDate, quantity } = req.body;
+
+  try {
+    const [existingBatch] = await db
+      .select()
+      .from(branchInventoryBatchesTable)
+      .where(eq(branchInventoryBatchesTable.id, batchId))
+      .limit(1);
+
+    if (!existingBatch) {
+      res.status(404).json({ error: "Batch not found" });
+      return;
+    }
+
+    const updateFields: any = {
+      updatedAt: new Date(),
+    };
+
+    if (batchNumber !== undefined) updateFields.batchNumber = batchNumber;
+    
+    if (existingBatch.isOpened) {
+      if (expiryDate !== undefined) {
+        updateFields.expiryDate = expiryDate ? new Date(expiryDate) : null;
+      }
+      if (sealedExpiryDate !== undefined) {
+        updateFields.sealedExpiryDate = sealedExpiryDate ? new Date(sealedExpiryDate) : null;
+      }
+    } else {
+      if (sealedExpiryDate !== undefined) {
+        const dateVal = sealedExpiryDate ? new Date(sealedExpiryDate) : null;
+        updateFields.sealedExpiryDate = dateVal;
+        updateFields.expiryDate = dateVal;
+      } else if (expiryDate !== undefined) {
+        const dateVal = expiryDate ? new Date(expiryDate) : null;
+        updateFields.sealedExpiryDate = dateVal;
+        updateFields.expiryDate = dateVal;
+      }
+    }
+
+    if (quantity !== undefined) {
+      const newQty = parseFloat(quantity);
+      const oldQty = parseFloat(existingBatch.quantity);
+      const diff = newQty - oldQty;
+
+      if (isNaN(newQty) || newQty < 0) {
+        res.status(400).json({ error: "Invalid quantity value" });
+        return;
+      }
+
+      if (diff !== 0) {
+        await db.transaction(async (tx) => {
+          await tx
+            .update(branchInventoryBatchesTable)
+            .set({
+              ...updateFields,
+              quantity: String(newQty),
+              initialQuantity: String(newQty),
+            })
+            .where(eq(branchInventoryBatchesTable.id, batchId));
+
+          const [stock] = await tx
+            .select()
+            .from(branchStockTable)
+            .where(
+              and(
+                eq(branchStockTable.ingredientId, existingBatch.ingredientId),
+                eq(branchStockTable.branchId, existingBatch.branchId)
+              )
+            )
+            .limit(1);
+
+          const currentStockQty = stock ? parseFloat(stock.stockQuantity) : 0;
+          const updatedStockQty = Math.max(0, currentStockQty + diff);
+
+          await tx
+            .insert(branchStockTable)
+            .values({
+              branchId: existingBatch.branchId,
+              ingredientId: existingBatch.ingredientId,
+              stockQuantity: String(updatedStockQty),
+            })
+            .onConflictDoUpdate({
+              target: [branchStockTable.branchId, branchStockTable.ingredientId],
+              set: { stockQuantity: String(updatedStockQty) }
+            });
+
+          await tx
+            .insert(stockMovementsTable)
+            .values({
+              branchId: existingBatch.branchId,
+              ingredientId: existingBatch.ingredientId,
+              orderId: null,
+              movementType: "adjustment",
+              quantity: String(diff),
+              quantityAfter: String(updatedStockQty),
+              note: `Edited batch #${existingBatch.batchNumber || existingBatch.id} quantity from ${oldQty} to ${newQty}`,
+              createdBy: sessionUserId,
+            });
+        });
+      } else {
+        await db
+          .update(branchInventoryBatchesTable)
+          .set(updateFields)
+          .where(eq(branchInventoryBatchesTable.id, batchId));
+      }
+    } else {
+      await db
+        .update(branchInventoryBatchesTable)
+        .set(updateFields)
+        .where(eq(branchInventoryBatchesTable.id, batchId));
+    }
+
+    const { triggerAutoOpening } = await import("../lib/stock-utils");
+    await triggerAutoOpening(db, existingBatch.branchId, existingBatch.ingredientId);
+
+    const { globalCache } = await import("../lib/cache");
+    globalCache.clear();
+    const { broadcastEvent } = await import("../lib/sse");
+    broadcastEvent("inventory_updated", {});
+
+    res.json({ success: true });
+  } catch (error: any) {
+    console.error("PUT /stock/expiry/batches/:id error:", error);
+    res.status(500).json({ error: error?.message || "Failed to update batch" });
   }
 });
 

@@ -12,7 +12,7 @@ import {
   BarChart2, TrendingUp, Coffee, Receipt, 
   Banknote, Calendar, ChevronLeft, ChevronRight,
   Download, Tag, CheckCircle2, History, Layers, Sliders,
-  Eye, Package, User, Clock, MapPin, Search
+  Eye, Package, User, Clock, MapPin, Search, Loader2
 } from "lucide-react";
 import {
   Dialog,
@@ -54,6 +54,7 @@ export default function SalesAnalysisPage() {
   const [selectedOrderDetails, setSelectedOrderDetails] = useState<any>(null);
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
   const [fetchingOrder, setFetchingOrder] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   
   const rowsPerPage = 50;
 
@@ -135,122 +136,140 @@ export default function SalesAnalysisPage() {
     };
   }, [rangeSummary]);
 
-  const handleExportCSV = () => {
+  const handleExportCSV = async () => {
     let headers: string[] = [];
     let rows: any[][] = [];
     let filename = `sales_report_${reportStartDate}_to_${reportEndDate}.csv`;
 
-    if (activeTab === "orders") {
-      headers = ["OrderID", "Date", "Time", "Order Number", "Items Count", "Total Price", "Before Tax", "Tax Value", "Discount Name", "Discount Value", "Discount Amount", "Final Price", "Status", "Payment Method"];
-      
-      let totalItemsCount = 0;
-      let totalGrossPrice = 0;
-      let totalNetPrice = 0;
-      let totalTaxValue = 0;
-      let totalDiscountAmount = 0;
-      let totalFinalPrice = 0;
+    setIsExporting(true);
+    try {
+      if (activeTab === "orders") {
+        const params = new URLSearchParams({
+          startDate: reportStartDate,
+          endDate: reportEndDate,
+          status: "paid,completed,ready,in_progress",
+          limit: "1000000",
+        });
+        if (selectedBranch !== "all") params.append("branchId", selectedBranch);
 
-      rows = orders.map(o => {
-        const itemsCount = o.items?.reduce((acc: number, item: any) => acc + item.quantity, 0) || 0;
-        const grossPrice = o.subtotal || 0;
-        const netPrice = grossPrice / 1.14;
-        const taxValue = grossPrice - netPrice;
-        const discountAmount = o.discount || 0;
-        const finalPrice = o.total || 0;
+        const allOrders = await api(`/api/orders?${params.toString()}`);
+        if (!allOrders || allOrders.length === 0) return;
 
-        totalItemsCount += itemsCount;
-        totalGrossPrice += grossPrice;
-        totalNetPrice += netPrice;
-        totalTaxValue += taxValue;
-        totalDiscountAmount += discountAmount;
-        totalFinalPrice += finalPrice;
+        headers = ["OrderID", "Date", "Time", "Order Number", "Items Count", "Total Price", "Before Tax", "Tax Value", "Discount Name", "Discount Value", "Discount Amount", "Final Price", "Status", "Payment Method"];
+        
+        let totalItemsCount = 0;
+        let totalGrossPrice = 0;
+        let totalNetPrice = 0;
+        let totalTaxValue = 0;
+        let totalDiscountAmount = 0;
+        let totalFinalPrice = 0;
 
-        return [
-          o.id,
-          format(new Date(o.createdAt), "yyyy-MM-dd"),
-          format(new Date(o.createdAt), "HH:mm"),
-          `#${o.orderNumber}`,
-          itemsCount,
-          grossPrice.toFixed(2),
-          netPrice.toFixed(2),
-          taxValue.toFixed(2),
-          o.paymentMethod === "hospitality" ? "HOSPITALITY" : ((o as any).discountCode || "-"),
-          (o as any).discountValue ? ((o as any).discountType === 'percentage' ? `${(o as any).discountValue}%` : (o as any).discountValue.toFixed(2)) : "0",
-          discountAmount.toFixed(2),
-          finalPrice.toFixed(2),
-          o.status,
-          o.paymentMethod
-        ];
-      });
+        rows = allOrders.map((o: any) => {
+          const itemsCount = o.items?.reduce((acc: number, item: any) => acc + item.quantity, 0) || 0;
+          const grossPrice = o.subtotal || 0;
+          const netPrice = grossPrice / 1.14;
+          const taxValue = grossPrice - netPrice;
+          const discountAmount = o.discount || 0;
+          const finalPrice = o.total || 0;
 
-      // Add Totals row
-      rows.push([
-        "TOTALS",
-        "",
-        "",
-        "",
-        totalItemsCount,
-        totalGrossPrice.toFixed(2),
-        totalNetPrice.toFixed(2),
-        totalTaxValue.toFixed(2),
-        "",
-        "",
-        totalDiscountAmount.toFixed(2),
-        totalFinalPrice.toFixed(2),
-        "",
-        ""
-      ]);
-    } else if (activeTab === "drinks") {
-      filename = `drink_sales_${reportStartDate}_to_${reportEndDate}.csv`;
-      headers = ["Date", "Order NO", "Inv.NO", "Cashier", "Branch", "Item", "Quantity", "Standard/Customize", "Sale Price", "Total Price (Gross)", "Before Tax (Net)", "Tax Amount", "Discount Name", "Discount value", "Discount Amount", "SubTotal Price", "Final Price", "Payment Method", "Category"];
-      rows = drinkSales.map(i => [
-        format(new Date(i.date), "yyyy-MM-dd"),
-        i.orderNo,
-        i.invNo,
-        i.cashier,
-        i.branch,
-        i.item,
-        i.quantity,
-        i.isCustomized,
-        i.salePrice,
-        i.totalGross,
-        i.netBeforeTax,
-        i.taxAmount,
-        i.discountName,
-        i.discountValue,
-        i.discountAmount,
-        i.subtotalPrice,
-        i.finalPrice,
-        i.paymentMethod,
-        i.category
-      ]);
-    } else if (activeTab === "customs") {
-      filename = `customizations_${reportStartDate}_to_${reportEndDate}.csv`;
-      headers = ["Date", "Order NO", "Inv.NO", "Cashier", "Branch", "Item/Drink", "Standard Ing.", "Quantity", "Customized Ing.", "Quantity", "Unit", "Sales Price"];
-      rows = customizations.map(c => [
-        format(new Date(c.date), "yyyy-MM-dd"),
-        c.orderNumber,
-        "-",
-        c.cashier || "System",
-        c.branch,
-        c.drinkName,
-        c.defaultLabel || "Standard", 
-        "-",
-        c.replacementLabel,
-        c.consumedQty,
-        c.unit || "unit",
-        c.addedCost
-      ]);
+          totalItemsCount += itemsCount;
+          totalGrossPrice += grossPrice;
+          totalNetPrice += netPrice;
+          totalTaxValue += taxValue;
+          totalDiscountAmount += discountAmount;
+          totalFinalPrice += finalPrice;
+
+          return [
+            o.id,
+            format(new Date(o.createdAt), "yyyy-MM-dd"),
+            format(new Date(o.createdAt), "HH:mm"),
+            `#${o.orderNumber}`,
+            itemsCount,
+            grossPrice.toFixed(2),
+            netPrice.toFixed(2),
+            taxValue.toFixed(2),
+            o.paymentMethod === "hospitality" ? "HOSPITALITY" : ((o as any).discountCode || "-"),
+            (o as any).discountValue ? ((o as any).discountType === 'percentage' ? `${(o as any).discountValue}%` : (o as any).discountValue.toFixed(2)) : "0",
+            discountAmount.toFixed(2),
+            finalPrice.toFixed(2),
+            o.status,
+            o.paymentMethod
+          ];
+        });
+
+        // Add Totals row
+        rows.push([
+          "TOTALS",
+          "",
+          "",
+          "",
+          totalItemsCount,
+          totalGrossPrice.toFixed(2),
+          totalNetPrice.toFixed(2),
+          totalTaxValue.toFixed(2),
+          "",
+          "",
+          totalDiscountAmount.toFixed(2),
+          totalFinalPrice.toFixed(2),
+          "",
+          ""
+        ]);
+      } else if (activeTab === "drinks") {
+        filename = `drink_sales_${reportStartDate}_to_${reportEndDate}.csv`;
+        headers = ["Date", "Order NO", "Inv.NO", "Cashier", "Branch", "Item", "Quantity", "Standard/Customize", "Sale Price", "Total Price (Gross)", "Before Tax (Net)", "Tax Amount", "Discount Name", "Discount value", "Discount Amount", "SubTotal Price", "Final Price", "Payment Method", "Category"];
+        rows = drinkSales.map(i => [
+          format(new Date(i.date), "yyyy-MM-dd"),
+          i.orderNo,
+          i.invNo,
+          i.cashier,
+          i.branch,
+          i.item,
+          i.quantity,
+          i.isCustomized,
+          i.salePrice,
+          i.totalGross,
+          i.netBeforeTax,
+          i.taxAmount,
+          i.discountName,
+          i.discountValue,
+          i.discountAmount,
+          i.subtotalPrice,
+          i.finalPrice,
+          i.paymentMethod,
+          i.category
+        ]);
+      } else if (activeTab === "customs") {
+        filename = `customizations_${reportStartDate}_to_${reportEndDate}.csv`;
+        headers = ["Date", "Order NO", "Inv.NO", "Cashier", "Branch", "Item/Drink", "Standard Ing.", "Quantity", "Customized Ing.", "Quantity", "Unit", "Sales Price"];
+        rows = customizations.map(c => [
+          format(new Date(c.date), "yyyy-MM-dd"),
+          c.orderNumber,
+          "-",
+          c.cashier || "System",
+          c.branch,
+          c.drinkName,
+          c.defaultLabel || "Standard", 
+          "-",
+          c.replacementLabel,
+          c.consumedQty,
+          c.unit || "unit",
+          c.addedCost
+        ]);
+      }
+
+      const csvContent = [headers.join(","), ...rows.map(r => r.map(val => `"${String(val).replace(/"/g, '""')}"`).join(","))].join("\n");
+      const blob = new Blob(["\ufeff", csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.body.appendChild(document.createElement("a"));
+      link.href = url;
+      link.download = filename;
+      link.click();
+      document.body.removeChild(link);
+    } catch (e) {
+      console.error("Export error:", e);
+    } finally {
+      setIsExporting(false);
     }
-
-    const csvContent = [headers.join(","), ...rows.map(r => r.map(val => `"${String(val).replace(/"/g, '""')}"`).join(","))].join("\n");
-    const blob = new Blob(["\ufeff", csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.body.appendChild(document.createElement("a"));
-    link.href = url;
-    link.download = filename;
-    link.click();
-    document.body.removeChild(link);
   };
 
   return (
@@ -289,9 +308,22 @@ export default function SalesAnalysisPage() {
               <Switch checked={isDailyGrouped} onCheckedChange={setIsDailyGrouped} id="daily-grp" disabled={activeTab !== "orders"} />
               <Label htmlFor="daily-grp" className={`cursor-pointer ${activeTab !== "orders" ? "opacity-50" : ""}`}>Group by Day</Label>
             </div>
-            <div className="flex justify-end">
-              <Button variant="outline" className="gap-2 w-full" onClick={handleExportCSV}>
-                <Download className="h-4 w-4" /> Export CSV
+             <div className="flex justify-end">
+              <Button 
+                variant="outline" 
+                className="gap-2 w-full" 
+                onClick={handleExportCSV}
+                disabled={isExporting}
+              >
+                {isExporting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" /> Exporting...
+                  </>
+                ) : (
+                  <>
+                    <Download className="h-4 w-4" /> Export CSV
+                  </>
+                )}
               </Button>
             </div>
           </div>

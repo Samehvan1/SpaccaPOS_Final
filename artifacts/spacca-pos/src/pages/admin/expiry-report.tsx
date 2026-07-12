@@ -69,6 +69,15 @@ export default function ExpiryReportPage() {
   const [initExpiryDate, setInitExpiryDate] = useState<string>("");
   const [initQuantity, setInitQuantity] = useState<string>("");
 
+
+  // State for editing batch details
+  const [editingBatch, setEditingBatch] = useState<any | null>(null);
+  const [editBatchNumber, setEditBatchNumber] = useState<string>("");
+  const [editSealedExpiryDate, setEditSealedExpiryDate] = useState<string>("");
+  const [editExpiryDate, setEditExpiryDate] = useState<string>("");
+  const [editQuantity, setEditQuantity] = useState<string>("");
+  const [isSavingEdit, setIsSavingEdit] = useState<boolean>(false);
+
   // Expiry Report Queries
   const { data: expiryReportData, isLoading: loadingExpiryReport, refetch: refetchExpiryReport } = useQuery<any[]>({
     queryKey: ["expiry-reports-page", expiryBranchId, expiryIngredientId, expiryDays, expiryStatus],
@@ -321,23 +330,39 @@ export default function ExpiryReportPage() {
                               </Badge>
                             </TableCell>
                             <TableCell className="text-center print:hidden">
-                              {!batch.isOpened ? (
+                              <div className="flex items-center justify-center gap-2">
+                                {!batch.isOpened ? (
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline" 
+                                    className="h-7 text-xs border-blue-200 hover:bg-blue-50 text-blue-600 hover:text-blue-700 font-semibold"
+                                    onClick={() => {
+                                      setUnsealBatch(batch);
+                                      setUnsealMode("entire");
+                                      setPackageCount(1);
+                                      setCustomQtyToOpen("");
+                                    }}
+                                  >
+                                    Open
+                                  </Button>
+                                ) : (
+                                  <span className="text-xs text-muted-foreground italic mr-1">Opened</span>
+                                )}
                                 <Button 
                                   size="sm" 
                                   variant="outline" 
-                                  className="h-7 text-xs border-blue-200 hover:bg-blue-50 text-blue-600 hover:text-blue-700 font-semibold"
+                                  className="h-7 text-xs border-gray-200 hover:bg-gray-50 text-gray-600 hover:text-gray-700 font-semibold"
                                   onClick={() => {
-                                    setUnsealBatch(batch);
-                                    setUnsealMode("entire");
-                                    setPackageCount(1);
-                                    setCustomQtyToOpen("");
+                                    setEditingBatch(batch);
+                                    setEditBatchNumber(batch.batchNumber || "");
+                                    setEditSealedExpiryDate(batch.sealedExpiryDate ? format(new Date(batch.sealedExpiryDate), "yyyy-MM-dd") : "");
+                                    setEditExpiryDate(batch.expiryDate ? format(new Date(batch.expiryDate), "yyyy-MM-dd") : "");
+                                    setEditQuantity(String(batch.quantity));
                                   }}
                                 >
-                                  Open
+                                  Edit
                                 </Button>
-                              ) : (
-                                <span className="text-xs text-muted-foreground italic">Opened</span>
-                              )}
+                              </div>
                             </TableCell>
                           </TableRow>
                         );
@@ -752,6 +777,108 @@ export default function ExpiryReportPage() {
                   }}
                 >
                   Label Batch
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Batch Dialog */}
+      <Dialog open={editingBatch !== null} onOpenChange={(open) => { if (!open) setEditingBatch(null); }}>
+        <DialogContent className="sm:max-w-md bg-card border-primary/20">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Clock className="h-5 w-5 text-primary" /> Edit Batch Details
+            </DialogTitle>
+            <DialogDescription>
+              Modify the batch number, quantity, and expiry dates for <strong className="text-foreground">{editingBatch?.ingredientName}</strong>.
+            </DialogDescription>
+          </DialogHeader>
+
+          {editingBatch && (
+            <div className="space-y-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="edit-batch-number" className="font-bold text-sm">Batch Number</Label>
+                <Input 
+                  id="edit-batch-number"
+                  value={editBatchNumber}
+                  onChange={e => setEditBatchNumber(e.target.value)}
+                  className="bg-background"
+                />
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="edit-qty" className="font-bold text-sm">Quantity ({editingBatch.ingredientUnit})</Label>
+                <Input 
+                  id="edit-qty"
+                  type="number"
+                  step="any"
+                  value={editQuantity}
+                  onChange={e => setEditQuantity(e.target.value)}
+                  className="bg-background"
+                />
+                <p className="text-xs text-muted-foreground">Editing quantity will adjust the branch inventory stock levels and log a stock movement.</p>
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="edit-sealed-expiry" className="font-bold text-sm">Sealed Expiry Date</Label>
+                <Input 
+                  id="edit-sealed-expiry"
+                  type="date"
+                  value={editSealedExpiryDate}
+                  onChange={e => setEditSealedExpiryDate(e.target.value)}
+                  className="bg-background"
+                />
+              </div>
+
+              {editingBatch.isOpened && (
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-active-expiry" className="font-bold text-sm">Active Expiry Date (Opened)</Label>
+                  <Input 
+                    id="edit-active-expiry"
+                    type="date"
+                    value={editExpiryDate}
+                    onChange={e => setEditExpiryDate(e.target.value)}
+                    className="bg-background"
+                  />
+                </div>
+              )}
+
+              <div className="flex justify-end gap-2 pt-4">
+                <Button variant="outline" onClick={() => setEditingBatch(null)} disabled={isSavingEdit}>
+                  Cancel
+                </Button>
+                <Button 
+                  disabled={isSavingEdit || !editQuantity || parseFloat(editQuantity) < 0}
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold"
+                  onClick={async () => {
+                    setIsSavingEdit(true);
+                    try {
+                      const res = await fetch(`${API_BASE}/stock/expiry/batches/${editingBatch.id}`, {
+                        method: "PUT",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          batchNumber: editBatchNumber,
+                          quantity: parseFloat(editQuantity),
+                          sealedExpiryDate: editSealedExpiryDate || null,
+                          expiryDate: editingBatch.isOpened ? (editExpiryDate || null) : (editSealedExpiryDate || null),
+                        }),
+                      });
+                      if (!res.ok) throw new Error(await res.text());
+                      
+                      toast({ title: "Batch updated", description: "Successfully updated batch details." });
+                      setEditingBatch(null);
+                      refetchExpiryReport();
+                      refetchAllBatches();
+                    } catch (err: any) {
+                      toast({ variant: "destructive", title: "Failed to update batch", description: err.message });
+                    } finally {
+                      setIsSavingEdit(false);
+                    }
+                  }}
+                >
+                  {isSavingEdit ? "Saving..." : "Save Changes"}
                 </Button>
               </div>
             </div>

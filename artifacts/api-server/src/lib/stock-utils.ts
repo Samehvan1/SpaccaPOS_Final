@@ -1,5 +1,5 @@
-import { db, branchInventoryBatchesTable, ingredientsTable } from "@workspace/db";
-import { eq, and, isNull } from "drizzle-orm";
+import { db, branchInventoryBatchesTable, ingredientsTable, ingredientConversionsTable } from "@workspace/db";
+import { eq, and, isNull, isNotNull, inArray, sql } from "drizzle-orm";
 
 export async function addStockBatch(
   tx: any,
@@ -149,6 +149,9 @@ export async function deductStockFromBatches(
         });
     }
   }
+
+  // Trigger auto-opening if no open package exists for this ingredient in this branch
+  await triggerAutoOpening(executor, branchId, ingredientId);
 }
 
 export async function openStockBatch(
@@ -238,4 +241,99 @@ export async function openStockBatch(
     .returning();
 
   return updated;
+}
+
+export async function triggerAutoOpening(
+  tx: any,
+  branchId?: number | null,
+  ingredientId?: number | null
+) {
+  const executor = tx || db;
+  
+  const ingredientConditions = [
+    isNotNull(ingredientsTable.openedShelfLifeDays)
+  ];
+  if (ingredientId) {
+    ingredientConditions.push(eq(ingredientsTable.id, ingredientId));
+  }
+  
+  const eligibleIngredients = await executor
+    .select({
+      id: ingredientsTable.id,
+      openedShelfLifeDays: ingredientsTable.openedShelfLifeDays,
+    })
+    .from(ingredientsTable)
+    .where(and(...ingredientConditions))
+    .innerJoin(
+      ingredientConversionsTable,
+      eq(ingredientsTable.id, ingredientConversionsTable.ingredientId)
+    );
+
+  const ingredientIds = [...new Set(eligibleIngredients.map((i: any) => i.id))] as number[];
+  if (ingredientIds.length === 0) return;
+
+  const batchConditions = [
+    sql`cast(quantity as numeric) > 0`,
+    inArray(branchInventoryBatchesTable.ingredientId, ingredientIds)
+  ];
+  if (branchId) {
+    batchConditions.push(eq(branchInventoryBatchesTable.branchId, branchId));
+  }
+
+  const activeBatches = await executor
+    .select()
+    .from(branchInventoryBatchesTable)
+    .where(and(...batchConditions));
+
+  const groups = new Map<string, typeof activeBatches>();
+  for (const b of activeBatches) {
+    const key = `${b.branchId}_${b.ingredientId}`;
+    const list = groups.get(key) ?? [];
+    list.push(b);
+    groups.set(key, list);
+  }
+
+  for (const [key, list] of groups.entries()) {
+    const hasOpened = list.some((b: any) => b.isOpened);
+    if (!hasOpened) {
+      const sealedBatches = list.filter((b: any) => !b.isOpened);
+      if (sealedBatches.length > 0) {
+        const nearestBatch = sealedBatches.sort((a: any, b: any) => {
+          if (!a.expiryDate && !b.expiryDate) return 0;
+          if (!a.expiryDate) return 1;
+          if (!b.expiryDate) return -1;
+          return new Date(a.expiryDate).getTime() - new Date(b.expiryDate).getTime();
+        })[0];
+
+        if (nearestBatch) {
+          const [branchIdStr, ingredientIdStr] = key.split("_");
+          const ingId = parseInt(ingredientIdStr);
+          const ingInfo = eligibleIngredients.find((i: any) => i.id === ingId);
+          const openedShelfLife = ingInfo?.openedShelfLifeDays;
+          const now = new Date();
+          
+          let newExpiryDate = nearestBatch.sealedExpiryDate;
+          if (openedShelfLife != null) {
+            const openedExpiry = new Date(now.getTime() + openedShelfLife * 24 * 60 * 60 * 1000);
+            if (nearestBatch.sealedExpiryDate) {
+              const sealedExpiry = new Date(nearestBatch.sealedExpiryDate);
+              newExpiryDate = openedExpiry < sealedExpiry ? openedExpiry : sealedExpiry;
+            } else {
+              newExpiryDate = openedExpiry;
+            }
+          }
+
+          await executor
+            .update(branchInventoryBatchesTable)
+            .set({
+              isOpened: true,
+              openedAt: now,
+              expiryDate: newExpiryDate,
+              updatedAt: now,
+            })
+            .where(eq(branchInventoryBatchesTable.id, nearestBatch.id));
+        }
+      }
+    }
+  }
 }

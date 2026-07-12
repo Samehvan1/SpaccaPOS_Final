@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useGetDashboardSummary, useGetSalesByCategory, useGetTopDrinks, useListOrders, useGetDrink, useListDrinks } from "@workspace/api-client-react";
+import { useGetDashboardSummary, useGetSalesByCategory, useGetTopDrinks, useListOrders, useGetDrink, useListDrinks, listOrders } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -67,6 +67,8 @@ export default function ReportsPage() {
   const [selectedCustomizedItem, setSelectedCustomizedItem] = useState<any>(null);
   const [isDailyGrouped, setIsDailyGrouped] = useState(false);
   const [selectedOrderDetails, setSelectedOrderDetails] = useState<any>(null);
+  const [isExportingSales, setIsExportingSales] = useState(false);
+  const [isExportingDrinks, setIsExportingDrinks] = useState(false);
   const { selectedBranchId } = useAuth();
 
   const [dashStartDate, setDashStartDate] = useState(format(subDays(new Date(), 6), "yyyy-MM-dd"));
@@ -301,175 +303,85 @@ export default function ReportsPage() {
     return Object.values(groups).sort((a, b) => b.revenue - a.revenue);
   }, [drinkItems]);
 
-  const handleExportSalesCSV = () => {
-    if (!reportOrders || reportOrders.length === 0) return;
+  const handleExportSalesCSV = async () => {
+    setIsExportingSales(true);
+    try {
+      const statusParam = reportStatus === "active" 
+        ? "pending,paid,completed,ready,in_progress" 
+        : (reportStatus === "all" 
+            ? "pending,paid,completed,ready,in_progress,cancelled,refunded" 
+            : reportStatus);
 
-    const headers = [
-      "OrderID", "Date", "Time", "Order Number", "Customer Name", "Items Count", "Drinks", "Total Price (Gross)", "Before Tax (Net)", 
-      "Tax Amount", "Discount Name", "Discount Value", "Discount Amount", "Final Price", "Status", "Payment Method"
-    ];
+      const allOrders = await listOrders({
+        startDate: reportStartDate,
+        endDate: reportEndDate,
+        status: statusParam,
+        limit: 1000000,
+        branchId: selectedBranchId ? Number(selectedBranchId) : undefined
+      } as any);
 
-    const rows = (reportOrders || []).map(order => {
-      const totalPrice = order.subtotal;
-      const beforeTax = totalPrice / 1.14;
-      const taxAmount = totalPrice - beforeTax;
-      const discountAmt = order.discount;
-      const discountPercent = beforeTax > 0 ? (discountAmt / beforeTax) * 100 : 0;
-      const subtotalPrice = beforeTax - discountAmt;
-      const finalPrice = subtotalPrice + taxAmount;
-
-      const drinksList = (order.items || [])
-        .map((item: any) => `${item.drinkName} (x${item.quantity})`)
-        .join("; ");
-
-      return [
-        order.id,
-        order.createdAt ? format(new Date(order.createdAt), "yyyy-MM-dd") : "—",
-        order.createdAt ? format(new Date(order.createdAt), "HH:mm") : "—",
-        `#${order.orderNumber}`,
-        order.customerName || "Walk-in Guest",
-        (order.items || []).length,
-        drinksList,
-        totalPrice.toFixed(2),
-        beforeTax.toFixed(2),
-        taxAmount.toFixed(2),
-        order.paymentMethod === "hospitality" ? "HOSPITALITY" : ((order as any).discountCode || "None"),
-        (order as any).discountValue ? ((order as any).discountType === "percentage" ? `${(order as any).discountValue}%` : `EGP ${(order as any).discountValue}`) : "0",
-        discountAmt.toFixed(2),
-        finalPrice.toFixed(2),
-        order.status,
-        order.paymentMethod
-      ].map(v => `"${v}"`).join(",");
-    });
-
-    // Calculate totals for the CSV
-    const totals = (reportOrders || []).reduce((acc, order) => {
-      const totalPrice = order.subtotal;
-      const beforeTax = totalPrice / 1.14;
-      const taxAmount = totalPrice - beforeTax;
-      const discountAmt = order.discount;
-      const subtotalPrice = beforeTax - discountAmt;
-      const finalPrice = subtotalPrice + taxAmount;
-      
-      acc.totalPrice += totalPrice;
-      acc.beforeTax += beforeTax;
-      acc.taxAmount += taxAmount;
-      acc.discountAmt += discountAmt;
-      acc.subtotalPrice += subtotalPrice;
-      acc.finalPrice += finalPrice;
-      acc.itemsCount += (order.items || []).length;
-      return acc;
-    }, { totalPrice: 0, beforeTax: 0, taxAmount: 0, discountAmt: 0, subtotalPrice: 0, finalPrice: 0, itemsCount: 0 });
-
-    const totalRow = [
-      "TOTALS", "", "", "", "", totals.itemsCount, "", totals.totalPrice.toFixed(2), totals.beforeTax.toFixed(2),
-      totals.taxAmount.toFixed(2), "", "", totals.discountAmt.toFixed(2), totals.finalPrice.toFixed(2), "", ""
-    ].map(v => `"${v}"`).join(",");
-
-    const csvContent = [headers.join(","), ...rows, totalRow].join("\n");
-    const blob = new Blob(["\ufeff", csvContent], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute("download", `sales_report_${reportStartDate}_to_${reportEndDate}.csv`);
-    link.style.visibility = "hidden";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  const handleExportDrinksCSV = () => {
-    if (drinksView === "grouped") {
-      if (!groupedDrinkItems || groupedDrinkItems.length === 0) return;
-
-      const headers = ["Drink Name", "Type", "Quantity", "Revenue"];
-      const rows = groupedDrinkItems.map((item) => [
-        item.drinkName,
-        item.isCustomized ? "Customized" : "Standard",
-        item.quantity,
-        item.revenue.toFixed(2)
-      ].map(v => `"${v}"`).join(","));
-
-      // Calculate totals for grouped drinks
-      const totalQuantity = groupedDrinkItems.reduce((acc, item) => acc + item.quantity, 0);
-      const totalRevenue = groupedDrinkItems.reduce((acc, item) => acc + item.revenue, 0);
-      const totalRow = [
-        "TOTALS",
-        "",
-        totalQuantity,
-        totalRevenue.toFixed(2)
-      ].map(v => `"${v}"`).join(",");
-
-      const csvContent = [headers.join(","), ...rows, totalRow].join("\n");
-      const blob = new Blob(["\ufeff", csvContent], { type: "text/csv;charset=utf-8;" });
-      const link = document.createElement("a");
-      const url = URL.createObjectURL(blob);
-      link.setAttribute("href", url);
-      link.setAttribute("download", `grouped_drinks_report_${reportStartDate}_to_${reportEndDate}.csv`);
-      link.style.visibility = "hidden";
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    } else {
-      if (!drinkItems || drinkItems.length === 0) return;
+      if (!allOrders || allOrders.length === 0) return;
 
       const headers = [
-        "Drink Name", "Type", "Order #", "Original (Gross)", "Before Tax", "Tax", "Discount", "After Disc.", "Final Price"
+        "OrderID", "Date", "Time", "Order Number", "Customer Name", "Items Count", "Drinks", "Total Price (Gross)", "Before Tax (Net)", 
+        "Tax Amount", "Discount Name", "Discount Value", "Discount Amount", "Final Price", "Status", "Payment Method"
       ];
 
-      const rows = drinkItems.map((item: any) => {
-        const itemGross = item.lineTotal;
-        const itemNet = itemGross / 1.14;
-        const itemTax = itemGross - itemNet;
-        const orderBeforeTax = item.orderSubtotal / 1.14;
-        const discountRatio = orderBeforeTax > 0 ? item.orderDiscount / orderBeforeTax : 0;
-        const itemDiscountAmt = itemNet * discountRatio;
-        const itemAfterDiscount = itemNet - itemDiscountAmt;
-        const itemFinalPrice = itemAfterDiscount + itemTax;
+      const rows = allOrders.map(order => {
+        const totalPrice = order.subtotal;
+        const beforeTax = totalPrice / 1.14;
+        const taxAmount = totalPrice - beforeTax;
+        const discountAmt = order.discount;
+        const discountPercent = beforeTax > 0 ? (discountAmt / beforeTax) * 100 : 0;
+        const subtotalPrice = beforeTax - discountAmt;
+        const finalPrice = subtotalPrice + taxAmount;
+
+        const drinksList = (order.items || [])
+          .map((item: any) => `${item.drinkName} (x${item.quantity})`)
+          .join("; ");
 
         return [
-          item.drinkName,
-          item.isCustomized ? "Customized" : "Standard",
-          `#${item.orderNumber}`,
-          itemGross.toFixed(2),
-          itemNet.toFixed(2),
-          itemTax.toFixed(2),
-          itemDiscountAmt.toFixed(2),
-          itemAfterDiscount.toFixed(2),
-          itemFinalPrice.toFixed(2)
+          order.id,
+          order.createdAt ? format(new Date(order.createdAt), "yyyy-MM-dd") : "—",
+          order.createdAt ? format(new Date(order.createdAt), "HH:mm") : "—",
+          `#${order.orderNumber}`,
+          order.customerName || "Walk-in Guest",
+          (order.items || []).length,
+          drinksList,
+          totalPrice.toFixed(2),
+          beforeTax.toFixed(2),
+          taxAmount.toFixed(2),
+          order.paymentMethod === "hospitality" ? "HOSPITALITY" : ((order as any).discountCode || "None"),
+          (order as any).discountValue ? ((order as any).discountType === "percentage" ? `${(order as any).discountValue}%` : `EGP ${(order as any).discountValue}`) : "0",
+          discountAmt.toFixed(2),
+          finalPrice.toFixed(2),
+          order.status,
+          order.paymentMethod
         ].map(v => `"${v}"`).join(",");
       });
 
-      // Calculate totals for individual drinks
-      const totals = drinkItems.reduce((acc: any, item: any) => {
-        const itemGross = item.lineTotal;
-        const itemNet = itemGross / 1.14;
-        const itemTax = itemGross - itemNet;
-        const orderBeforeTax = item.orderSubtotal / 1.14;
-        const discountRatio = orderBeforeTax > 0 ? item.orderDiscount / orderBeforeTax : 0;
-        const itemDiscountAmt = itemNet * discountRatio;
-        const itemAfterDiscount = itemNet - itemDiscountAmt;
-        const itemFinalPrice = itemAfterDiscount + itemTax;
-
-        acc.gross += itemGross;
-        acc.net += itemNet;
-        acc.tax += itemTax;
-        acc.discount += itemDiscountAmt;
-        acc.afterDiscount += itemAfterDiscount;
-        acc.finalPrice += itemFinalPrice;
+      // Calculate totals for the CSV
+      const totals = allOrders.reduce((acc, order) => {
+        const totalPrice = order.subtotal;
+        const beforeTax = totalPrice / 1.14;
+        const taxAmount = totalPrice - beforeTax;
+        const discountAmt = order.discount;
+        const subtotalPrice = beforeTax - discountAmt;
+        const finalPrice = subtotalPrice + taxAmount;
+        
+        acc.totalPrice += totalPrice;
+        acc.beforeTax += beforeTax;
+        acc.taxAmount += taxAmount;
+        acc.discountAmt += discountAmt;
+        acc.subtotalPrice += subtotalPrice;
+        acc.finalPrice += finalPrice;
+        acc.itemsCount += (order.items || []).length;
         return acc;
-      }, { gross: 0, net: 0, tax: 0, discount: 0, afterDiscount: 0, finalPrice: 0 });
+      }, { totalPrice: 0, beforeTax: 0, taxAmount: 0, discountAmt: 0, subtotalPrice: 0, finalPrice: 0, itemsCount: 0 });
 
       const totalRow = [
-        "TOTALS",
-        "",
-        "",
-        totals.gross.toFixed(2),
-        totals.net.toFixed(2),
-        totals.tax.toFixed(2),
-        totals.discount.toFixed(2),
-        totals.afterDiscount.toFixed(2),
-        totals.finalPrice.toFixed(2)
+        "TOTALS", "", "", "", "", totals.itemsCount, "", totals.totalPrice.toFixed(2), totals.beforeTax.toFixed(2),
+        totals.taxAmount.toFixed(2), "", "", totals.discountAmt.toFixed(2), totals.finalPrice.toFixed(2), "", ""
       ].map(v => `"${v}"`).join(",");
 
       const csvContent = [headers.join(","), ...rows, totalRow].join("\n");
@@ -477,11 +389,184 @@ export default function ReportsPage() {
       const link = document.createElement("a");
       const url = URL.createObjectURL(blob);
       link.setAttribute("href", url);
-      link.setAttribute("download", `individual_drinks_report_${reportStartDate}_to_${reportEndDate}.csv`);
+      link.setAttribute("download", `sales_report_${reportStartDate}_to_${reportEndDate}.csv`);
       link.style.visibility = "hidden";
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+    } catch (e) {
+      console.error("Export sales error:", e);
+    } finally {
+      setIsExportingSales(false);
+    }
+  };
+
+  const handleExportDrinksCSV = async () => {
+    setIsExportingDrinks(true);
+    try {
+      const statusParam = reportStatus === "active" 
+        ? "pending,paid,completed,ready,in_progress" 
+        : (reportStatus === "all" 
+            ? "pending,paid,completed,ready,in_progress,cancelled,refunded" 
+            : reportStatus);
+
+      const allOrders = await listOrders({
+        startDate: reportStartDate,
+        endDate: reportEndDate,
+        status: statusParam,
+        limit: 1000000,
+        branchId: selectedBranchId ? Number(selectedBranchId) : undefined
+      } as any);
+
+      if (!allOrders || allOrders.length === 0) return;
+
+      const localDrinkItems = allOrders.flatMap((order: any) => (order.items || []).map((item: any) => {
+        const customizations = item.customizations || [];
+        const specialNotes = (item.specialNotes || "").trim();
+        
+        let isActuallyCustomized = false;
+        if (specialNotes !== "") {
+          isActuallyCustomized = true;
+        } else {
+          const drinkInCatalog = allDrinksCatalog?.find((d: any) => d.id === item.drinkId) as any;
+          if (drinkInCatalog?.slots) {
+            const itemDefaults = buildDrinkDefaultsMap(drinkInCatalog.slots);
+            isActuallyCustomized = customizations.some((c: any) => checkCustomization(c, itemDefaults));
+          } else {
+            isActuallyCustomized = false;
+          }
+        }
+
+        return {
+          ...item,
+          orderId: order.id,
+          orderNumber: order.orderNumber,
+          createdAt: order.createdAt,
+          orderDiscount: parseFloat(order.discount || 0),
+          orderSubtotal: parseFloat(order.subtotal || 0),
+          isCustomized: isActuallyCustomized
+        };
+      })).filter(item => !showCustomizedOnly || item.isCustomized);
+
+      if (drinksView === "grouped") {
+        const groups: Record<string, { drinkName: string; isCustomized: boolean; quantity: number; revenue: number }> = {};
+        localDrinkItems.forEach((item: any) => {
+          const key = `${item.drinkName}_${item.isCustomized}`;
+          if (!groups[key]) {
+            groups[key] = { drinkName: item.drinkName, isCustomized: item.isCustomized, quantity: 0, revenue: 0 };
+          }
+          groups[key].quantity += item.quantity;
+          groups[key].revenue += item.lineTotal;
+        });
+        const localGroupedDrinkItems = Object.values(groups).sort((a, b) => b.revenue - a.revenue);
+
+        if (localGroupedDrinkItems.length === 0) return;
+
+        const headers = ["Drink Name", "Type", "Quantity", "Revenue"];
+        const rows = localGroupedDrinkItems.map((item) => [
+          item.drinkName,
+          item.isCustomized ? "Customized" : "Standard",
+          item.quantity,
+          item.revenue.toFixed(2)
+        ].map(v => `"${v}"`).join(","));
+
+        // Calculate totals for grouped drinks
+        const totalQuantity = localGroupedDrinkItems.reduce((acc, item) => acc + item.quantity, 0);
+        const totalRevenue = localGroupedDrinkItems.reduce((acc, item) => acc + item.revenue, 0);
+        const totalRow = [
+          "TOTALS",
+          "",
+          totalQuantity,
+          totalRevenue.toFixed(2)
+        ].map(v => `"${v}"`).join(",");
+
+        const csvContent = [headers.join(","), ...rows, totalRow].join("\n");
+        const blob = new Blob(["\ufeff", csvContent], { type: "text/csv;charset=utf-8;" });
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        link.setAttribute("download", `grouped_drinks_report_${reportStartDate}_to_${reportEndDate}.csv`);
+        link.style.visibility = "hidden";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } else {
+        if (localDrinkItems.length === 0) return;
+
+        const headers = [
+          "Drink Name", "Type", "Order #", "Original (Gross)", "Before Tax", "Tax", "Discount", "After Disc.", "Final Price"
+        ];
+
+        const rows = localDrinkItems.map((item: any) => {
+          const itemGross = item.lineTotal;
+          const itemNet = itemGross / 1.14;
+          const itemTax = itemGross - itemNet;
+          const orderBeforeTax = item.orderSubtotal / 1.14;
+          const discountRatio = orderBeforeTax > 0 ? item.orderDiscount / orderBeforeTax : 0;
+          const itemDiscountAmt = itemNet * discountRatio;
+          const itemAfterDiscount = itemNet - itemDiscountAmt;
+          const itemFinalPrice = itemAfterDiscount + itemTax;
+
+          return [
+            item.drinkName,
+            item.isCustomized ? "Customized" : "Standard",
+            `#${item.orderNumber}`,
+            itemGross.toFixed(2),
+            itemNet.toFixed(2),
+            itemTax.toFixed(2),
+            itemDiscountAmt.toFixed(2),
+            itemAfterDiscount.toFixed(2),
+            itemFinalPrice.toFixed(2)
+          ].map(v => `"${v}"`).join(",");
+        });
+
+        // Calculate totals for individual drinks
+        const totals = localDrinkItems.reduce((acc: any, item: any) => {
+          const itemGross = item.lineTotal;
+          const itemNet = itemGross / 1.14;
+          const itemTax = itemGross - itemNet;
+          const orderBeforeTax = item.orderSubtotal / 1.14;
+          const discountRatio = orderBeforeTax > 0 ? item.orderDiscount / orderBeforeTax : 0;
+          const itemDiscountAmt = itemNet * discountRatio;
+          const itemAfterDiscount = itemNet - itemDiscountAmt;
+          const itemFinalPrice = itemAfterDiscount + itemTax;
+
+          acc.gross += itemGross;
+          acc.net += itemNet;
+          acc.tax += itemTax;
+          acc.discount += itemDiscountAmt;
+          acc.afterDiscount += itemAfterDiscount;
+          acc.finalPrice += itemFinalPrice;
+          return acc;
+        }, { gross: 0, net: 0, tax: 0, discount: 0, afterDiscount: 0, finalPrice: 0 });
+
+        const totalRow = [
+          "TOTALS",
+          "",
+          "",
+          totals.gross.toFixed(2),
+          totals.net.toFixed(2),
+          totals.tax.toFixed(2),
+          totals.discount.toFixed(2),
+          totals.afterDiscount.toFixed(2),
+          totals.finalPrice.toFixed(2)
+        ].map(v => `"${v}"`).join(",");
+
+        const csvContent = [headers.join(","), ...rows, totalRow].join("\n");
+        const blob = new Blob(["\ufeff", csvContent], { type: "text/csv;charset=utf-8;" });
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        link.setAttribute("download", `individual_drinks_report_${reportStartDate}_to_${reportEndDate}.csv`);
+        link.style.visibility = "hidden";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+    } catch (e) {
+      console.error("Export drinks error:", e);
+    } finally {
+      setIsExportingDrinks(false);
     }
   };
 
@@ -995,9 +1080,17 @@ export default function ReportsPage() {
                   size="sm"
                   className="gap-2 h-8 px-3"
                   onClick={handleExportSalesCSV}
-                  disabled={!reportOrders || reportOrders.length === 0}
+                  disabled={isExportingSales || !reportOrders || reportOrders.length === 0}
                 >
-                  <Download className="h-4 w-4" /> Export Sales
+                  {isExportingSales ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" /> Exporting...
+                    </>
+                  ) : (
+                    <>
+                      <Download className="h-4 w-4" /> Export Sales
+                    </>
+                  )}
                 </Button>
               </div>
               {!isDailyGrouped && (() => {
@@ -1226,9 +1319,17 @@ export default function ReportsPage() {
                       size="sm"
                       className="gap-2 h-8 px-3"
                       onClick={handleExportDrinksCSV}
-                      disabled={drinksView === "grouped" ? (!groupedDrinkItems || groupedDrinkItems.length === 0) : (!drinkItems || drinkItems.length === 0)}
+                      disabled={isExportingDrinks || (drinksView === "grouped" ? (!groupedDrinkItems || groupedDrinkItems.length === 0) : (!drinkItems || drinkItems.length === 0))}
                     >
-                      <Download className="h-4 w-4" /> Export Drinks
+                      {isExportingDrinks ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" /> Exporting...
+                        </>
+                      ) : (
+                        <>
+                          <Download className="h-4 w-4" /> Export Drinks
+                        </>
+                      )}
                     </Button>
                   </div>
                 <div className="flex items-center gap-4">
