@@ -1,9 +1,7 @@
 import { format } from "date-fns";
 
-const CURRENCY = "E\u00a3";
-
 function fmt(n: number) {
-  return `${CURRENCY}${n.toFixed(2)}`;
+  return `${n.toFixed(2)} EGP`;
 }
 
 /** Escape user-supplied strings before injecting into HTML (XSS prevention) */
@@ -177,7 +175,8 @@ export function printSimpleDrinksReceipt(order: CompletedOrder) {
     ${change}
     <div class="divider"></div>
     <div class="center" style="margin-top:8px;font-size:11px;color:#555">Thank you for your visit!</div>
-    <div class="center" style="font-size:10px;color:#777;margin-top:2px">spacca.coffee</div>
+    <div class="center" style="font-size:10px;color:#777;margin-top:2px">Spacca</div>
+    <div class="center" style="font-size:10px;color:#777;margin-top:2px">Coffee & People</div>
     <div style="height:24px"></div>
   `);
 }
@@ -192,9 +191,14 @@ export function printCustomerReceipt(order: CompletedOrder) {
     const customs = (item.customizations ?? [])
       .filter(c => (c.customerSortOrder ?? 1) > 0 && c.optionLabel?.toLowerCase() !== "none")
       .sort((a, b) => (a.customerSortOrder ?? 1) - (b.customerSortOrder ?? 1))
-      .map(c =>
-        `<div class="indent">· ${esc(c.slotLabel)}: ${esc(c.optionLabel)}</div>`
-      ).join("");
+      .map(c => {
+        // Strip parenthesized or middot quantities to not show consumedQty/producedQty on customer receipt
+        const cleanedLabel = c.optionLabel
+          .replace(/\s*\(\d+(?:\.\d+)?\s*[a-zA-Z]*\)/gi, "")
+          .replace(/\s*·\s*\d+(?:\.\d+)?\s*[a-zA-Z]*/gi, "")
+          .trim();
+        return `<div class="indent">· ${esc(c.slotLabel)}: ${esc(cleanedLabel)}</div>`;
+      }).join("");
     const notes = item.specialNotes ? `<div class="note">  "${esc(item.specialNotes)}"</div>` : "";
     const qty = item.quantity > 1 ? ` x${item.quantity}` : "";
     
@@ -252,7 +256,8 @@ export function printCustomerReceipt(order: CompletedOrder) {
     ${change}
     <div class="divider"></div>
     <div class="center" style="margin-top:8px;font-size:11px;color:#555">Thank you for your visit!</div>
-    <div class="center" style="font-size:10px;color:#777;margin-top:2px">spacca.coffee</div>
+    <div class="center" style="font-size:10px;color:#777;margin-top:2px">Spacca</div>
+    <div class="center" style="font-size:10px;color:#777;margin-top:2px">Coffee & People</div>
     <div style="height:24px"></div>
   `);
 }

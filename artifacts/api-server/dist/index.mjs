@@ -56171,7 +56171,7 @@ var init_discounts = __esm({
     discountsTable = pgTable("discounts", {
       id: serial("id").primaryKey(),
       code: text("code").notNull().unique(),
-      type: text("type", { enum: ["percentage", "fixed"] }).notNull(),
+      type: text("type", { enum: ["percentage", "fixed", "fixed_per_item"] }).notNull(),
       value: numeric("value", { precision: 8, scale: 2 }).notNull(),
       isActive: boolean("is_active").notNull().default(true),
       createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -56209,7 +56209,7 @@ var init_orders = __esm({
       discountId: integer("discount_id").references(() => discountsTable.id),
       discountCode: text("discount_code"),
       discountValue: numeric("discount_value", { precision: 8, scale: 2 }),
-      discountType: text("discount_type", { enum: ["percentage", "fixed"] }),
+      discountType: text("discount_type", { enum: ["percentage", "fixed", "fixed_per_item"] }),
       total: numeric("total", { precision: 8, scale: 2 }).notNull(),
       paymentMethod: text("payment_method", { enum: ["cash", "card", "wallet", "hospitality", "split", "refund"] }).notNull().default("cash"),
       source: text("source", { enum: ["pos", "kiosk", "web", "mobile"] }).notNull().default("pos"),
@@ -73624,7 +73624,8 @@ var stock_utils_exports = {};
 __export(stock_utils_exports, {
   addStockBatch: () => addStockBatch,
   deductStockFromBatches: () => deductStockFromBatches,
-  openStockBatch: () => openStockBatch
+  openStockBatch: () => openStockBatch,
+  triggerAutoOpening: () => triggerAutoOpening
 });
 async function addStockBatch(tx, branchId, ingredientId, quantity, expiryDate, batchNumber) {
   if (quantity <= 0) return;
@@ -73723,6 +73724,7 @@ async function deductStockFromBatches(tx, branchId, ingredientId, quantityToDedu
       });
     }
   }
+  await triggerAutoOpening(executor, branchId, ingredientId);
 }
 async function openStockBatch(tx, batchId, quantityToOpen) {
   const executor = tx || db;
@@ -73773,6 +73775,76 @@ async function openStockBatch(tx, batchId, quantityToOpen) {
     updatedAt: now
   }).where(eq(branchInventoryBatchesTable.id, batchId)).returning();
   return updated;
+}
+async function triggerAutoOpening(tx, branchId, ingredientId) {
+  const executor = tx || db;
+  const ingredientConditions = [
+    isNotNull(ingredientsTable.openedShelfLifeDays)
+  ];
+  if (ingredientId) {
+    ingredientConditions.push(eq(ingredientsTable.id, ingredientId));
+  }
+  const eligibleIngredients = await executor.select({
+    id: ingredientsTable.id,
+    openedShelfLifeDays: ingredientsTable.openedShelfLifeDays
+  }).from(ingredientsTable).where(and(...ingredientConditions)).innerJoin(
+    ingredientConversionsTable,
+    eq(ingredientsTable.id, ingredientConversionsTable.ingredientId)
+  );
+  const ingredientIds = [...new Set(eligibleIngredients.map((i) => i.id))];
+  if (ingredientIds.length === 0) return;
+  const batchConditions = [
+    sql`cast(quantity as numeric) > 0`,
+    inArray(branchInventoryBatchesTable.ingredientId, ingredientIds)
+  ];
+  if (branchId) {
+    batchConditions.push(eq(branchInventoryBatchesTable.branchId, branchId));
+  }
+  const activeBatches = await executor.select().from(branchInventoryBatchesTable).where(and(...batchConditions));
+  const groups = /* @__PURE__ */ new Map();
+  for (const b of activeBatches) {
+    const key = `${b.branchId}_${b.ingredientId}`;
+    const list = groups.get(key) ?? [];
+    list.push(b);
+    groups.set(key, list);
+  }
+  for (const [key, list] of groups.entries()) {
+    const hasOpened = list.some((b) => b.isOpened);
+    if (!hasOpened) {
+      const sealedBatches = list.filter((b) => !b.isOpened);
+      if (sealedBatches.length > 0) {
+        const nearestBatch = sealedBatches.sort((a, b) => {
+          if (!a.expiryDate && !b.expiryDate) return 0;
+          if (!a.expiryDate) return 1;
+          if (!b.expiryDate) return -1;
+          return new Date(a.expiryDate).getTime() - new Date(b.expiryDate).getTime();
+        })[0];
+        if (nearestBatch) {
+          const [branchIdStr, ingredientIdStr] = key.split("_");
+          const ingId = parseInt(ingredientIdStr);
+          const ingInfo = eligibleIngredients.find((i) => i.id === ingId);
+          const openedShelfLife = ingInfo?.openedShelfLifeDays;
+          const now = /* @__PURE__ */ new Date();
+          let newExpiryDate = nearestBatch.sealedExpiryDate;
+          if (openedShelfLife != null) {
+            const openedExpiry = new Date(now.getTime() + openedShelfLife * 24 * 60 * 60 * 1e3);
+            if (nearestBatch.sealedExpiryDate) {
+              const sealedExpiry = new Date(nearestBatch.sealedExpiryDate);
+              newExpiryDate = openedExpiry < sealedExpiry ? openedExpiry : sealedExpiry;
+            } else {
+              newExpiryDate = openedExpiry;
+            }
+          }
+          await executor.update(branchInventoryBatchesTable).set({
+            isOpened: true,
+            openedAt: now,
+            expiryDate: newExpiryDate,
+            updatedAt: now
+          }).where(eq(branchInventoryBatchesTable.id, nearestBatch.id));
+        }
+      }
+    }
+  }
 }
 var init_stock_utils = __esm({
   "src/lib/stock-utils.ts"() {
@@ -78402,7 +78474,7 @@ var ListOrdersResponseItem = objectType({
   discount: numberType(),
   discountId: numberType().nullish(),
   discountValue: numberType().nullish(),
-  discountType: enumType(["percentage", "fixed"]).nullish(),
+  discountType: enumType(["percentage", "fixed", "fixed_per_item"]).nullish(),
   total: numberType(),
   paymentMethod: enumType([
     "cash",
@@ -78516,7 +78588,7 @@ var GetOrderResponse = objectType({
   discount: numberType(),
   discountId: numberType().nullish(),
   discountValue: numberType().nullish(),
-  discountType: enumType(["percentage", "fixed"]).nullish(),
+  discountType: enumType(["percentage", "fixed", "fixed_per_item"]).nullish(),
   total: numberType(),
   paymentMethod: enumType([
     "cash",
@@ -78608,7 +78680,7 @@ var UpdateOrderStatusResponse = objectType({
   discount: numberType(),
   discountId: numberType().nullish(),
   discountValue: numberType().nullish(),
-  discountType: enumType(["percentage", "fixed"]).nullish(),
+  discountType: enumType(["percentage", "fixed", "fixed_per_item"]).nullish(),
   total: numberType(),
   paymentMethod: enumType([
     "cash",
@@ -78660,7 +78732,7 @@ var MarkOrderItemReadyResponse = objectType({
   discount: numberType(),
   discountId: numberType().nullish(),
   discountValue: numberType().nullish(),
-  discountType: enumType(["percentage", "fixed"]).nullish(),
+  discountType: enumType(["percentage", "fixed", "fixed_per_item"]).nullish(),
   total: numberType(),
   paymentMethod: enumType([
     "cash",
@@ -78763,7 +78835,7 @@ var GetActiveOrdersResponseItem = objectType({
   discount: numberType(),
   discountId: numberType().nullish(),
   discountValue: numberType().nullish(),
-  discountType: enumType(["percentage", "fixed"]).nullish(),
+  discountType: enumType(["percentage", "fixed", "fixed_per_item"]).nullish(),
   total: numberType(),
   paymentMethod: enumType([
     "cash",
@@ -78998,7 +79070,7 @@ var UpdateSettingsResponse = arrayType(UpdateSettingsResponseItem);
 var ListDiscountsResponseItem = objectType({
   id: numberType(),
   code: stringType(),
-  type: enumType(["percentage", "fixed"]),
+  type: enumType(["percentage", "fixed", "fixed_per_item"]),
   value: numberType(),
   isActive: booleanType(),
   createdAt: stringType(),
@@ -79007,7 +79079,7 @@ var ListDiscountsResponseItem = objectType({
 var ListDiscountsResponse = arrayType(ListDiscountsResponseItem);
 var CreateDiscountBody = objectType({
   code: stringType(),
-  type: enumType(["percentage", "fixed"]),
+  type: enumType(["percentage", "fixed", "fixed_per_item"]),
   value: numberType(),
   isActive: booleanType().optional()
 });
@@ -79019,14 +79091,14 @@ var UpdateDiscountQueryParams = objectType({
 });
 var UpdateDiscountBody = objectType({
   code: stringType().optional(),
-  type: enumType(["percentage", "fixed"]).optional(),
+  type: enumType(["percentage", "fixed", "fixed_per_item"]).optional(),
   value: numberType().optional(),
   isActive: booleanType().optional()
 });
 var UpdateDiscountResponse = objectType({
   id: numberType(),
   code: stringType(),
-  type: enumType(["percentage", "fixed"]),
+  type: enumType(["percentage", "fixed", "fixed_per_item"]),
   value: numberType(),
   isActive: booleanType(),
   createdAt: stringType(),
@@ -79075,7 +79147,7 @@ var ValidateDiscountParams = objectType({
 var ValidateDiscountResponse = objectType({
   id: numberType(),
   code: stringType(),
-  type: enumType(["percentage", "fixed"]),
+  type: enumType(["percentage", "fixed", "fixed_per_item"]),
   value: numberType(),
   isActive: booleanType(),
   createdAt: stringType(),
@@ -83713,9 +83785,13 @@ router5.post("/orders", async (req, res) => {
       if (discountType === "percentage") {
         const beforeTax = subtotal / 1.14;
         discountAmount = beforeTax * discountValue / 100;
+      } else if (discountType === "fixed_per_item") {
+        const totalItems = orderItems.reduce((sum2, item) => sum2 + item.quantity, 0);
+        discountAmount = totalItems * discountValue;
       } else {
         discountAmount = discountValue;
       }
+      discountAmount = Math.min(discountAmount, subtotal);
     }
   }
   let total = subtotal - discountAmount;
@@ -84427,9 +84503,16 @@ router6.get("/stock/expiry/reports", async (req, res) => {
   const isAdmin = sessionUser.role === "admin" || sessionUser.role === "supervisor";
   const sessionBranchId = sessionUser.branchId;
   const targetBranchId = req.query.branchId && req.query.branchId !== "all" ? parseInt(req.query.branchId) : isAdmin && (req.query.branchId === "all" || !req.query.branchId) ? null : sessionBranchId;
+  const targetIngredientId = req.query.ingredientId && req.query.ingredientId !== "all" ? parseInt(req.query.ingredientId) : null;
+  try {
+    const { triggerAutoOpening: triggerAutoOpening2 } = await Promise.resolve().then(() => (init_stock_utils(), stock_utils_exports));
+    await triggerAutoOpening2(db, targetBranchId, targetIngredientId);
+  } catch (err) {
+    console.error("Auto-opening error in GET /stock/expiry/reports:", err);
+  }
   const days = req.query.days ? parseInt(req.query.days) : 3;
   const conditions = [
-    sql`quantity > 0`
+    sql`cast(quantity as numeric) > 0`
   ];
   if (targetBranchId) {
     conditions.push(eq(branchInventoryBatchesTable.branchId, targetBranchId));
@@ -84554,6 +84637,102 @@ router6.post("/stock/expiry/batches/:id/discard", async (req, res) => {
   } catch (error40) {
     console.error("POST /stock/expiry/batches/:id/discard error:", error40);
     res.status(500).json({ error: error40?.message || "Failed to discard batch" });
+  }
+});
+router6.put("/stock/expiry/batches/:id", async (req, res) => {
+  const batchId = parseInt(req.params.id);
+  const sessionUserId = req.session.userId ?? 1;
+  if (isNaN(batchId)) {
+    res.status(400).json({ error: "Invalid batch ID" });
+    return;
+  }
+  const { batchNumber, sealedExpiryDate, expiryDate, quantity } = req.body;
+  try {
+    const [existingBatch] = await db.select().from(branchInventoryBatchesTable).where(eq(branchInventoryBatchesTable.id, batchId)).limit(1);
+    if (!existingBatch) {
+      res.status(404).json({ error: "Batch not found" });
+      return;
+    }
+    const updateFields = {
+      updatedAt: /* @__PURE__ */ new Date()
+    };
+    if (batchNumber !== void 0) updateFields.batchNumber = batchNumber;
+    if (existingBatch.isOpened) {
+      if (expiryDate !== void 0) {
+        updateFields.expiryDate = expiryDate ? new Date(expiryDate) : null;
+      }
+      if (sealedExpiryDate !== void 0) {
+        updateFields.sealedExpiryDate = sealedExpiryDate ? new Date(sealedExpiryDate) : null;
+      }
+    } else {
+      if (sealedExpiryDate !== void 0) {
+        const dateVal = sealedExpiryDate ? new Date(sealedExpiryDate) : null;
+        updateFields.sealedExpiryDate = dateVal;
+        updateFields.expiryDate = dateVal;
+      } else if (expiryDate !== void 0) {
+        const dateVal = expiryDate ? new Date(expiryDate) : null;
+        updateFields.sealedExpiryDate = dateVal;
+        updateFields.expiryDate = dateVal;
+      }
+    }
+    if (quantity !== void 0) {
+      const newQty = parseFloat(quantity);
+      const oldQty = parseFloat(existingBatch.quantity);
+      const diff = newQty - oldQty;
+      if (isNaN(newQty) || newQty < 0) {
+        res.status(400).json({ error: "Invalid quantity value" });
+        return;
+      }
+      if (diff !== 0) {
+        await db.transaction(async (tx) => {
+          await tx.update(branchInventoryBatchesTable).set({
+            ...updateFields,
+            quantity: String(newQty),
+            initialQuantity: String(newQty)
+          }).where(eq(branchInventoryBatchesTable.id, batchId));
+          const [stock] = await tx.select().from(branchStockTable).where(
+            and(
+              eq(branchStockTable.ingredientId, existingBatch.ingredientId),
+              eq(branchStockTable.branchId, existingBatch.branchId)
+            )
+          ).limit(1);
+          const currentStockQty = stock ? parseFloat(stock.stockQuantity) : 0;
+          const updatedStockQty = Math.max(0, currentStockQty + diff);
+          await tx.insert(branchStockTable).values({
+            branchId: existingBatch.branchId,
+            ingredientId: existingBatch.ingredientId,
+            stockQuantity: String(updatedStockQty)
+          }).onConflictDoUpdate({
+            target: [branchStockTable.branchId, branchStockTable.ingredientId],
+            set: { stockQuantity: String(updatedStockQty) }
+          });
+          await tx.insert(stockMovementsTable).values({
+            branchId: existingBatch.branchId,
+            ingredientId: existingBatch.ingredientId,
+            orderId: null,
+            movementType: "adjustment",
+            quantity: String(diff),
+            quantityAfter: String(updatedStockQty),
+            note: `Edited batch #${existingBatch.batchNumber || existingBatch.id} quantity from ${oldQty} to ${newQty}`,
+            createdBy: sessionUserId
+          });
+        });
+      } else {
+        await db.update(branchInventoryBatchesTable).set(updateFields).where(eq(branchInventoryBatchesTable.id, batchId));
+      }
+    } else {
+      await db.update(branchInventoryBatchesTable).set(updateFields).where(eq(branchInventoryBatchesTable.id, batchId));
+    }
+    const { triggerAutoOpening: triggerAutoOpening2 } = await Promise.resolve().then(() => (init_stock_utils(), stock_utils_exports));
+    await triggerAutoOpening2(db, existingBatch.branchId, existingBatch.ingredientId);
+    const { globalCache: globalCache2 } = await Promise.resolve().then(() => (init_cache2(), cache_exports));
+    globalCache2.clear();
+    const { broadcastEvent: broadcastEvent2 } = await Promise.resolve().then(() => (init_sse(), sse_exports));
+    broadcastEvent2("inventory_updated", {});
+    res.json({ success: true });
+  } catch (error40) {
+    console.error("PUT /stock/expiry/batches/:id error:", error40);
+    res.status(500).json({ error: error40?.message || "Failed to update batch" });
   }
 });
 router6.post("/stock/expiry/batches/initialize", async (req, res) => {
