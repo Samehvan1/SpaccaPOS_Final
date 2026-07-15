@@ -154,6 +154,13 @@ export function getCairoStartOfDay(date: Date): Date {
 }
 
 async function generateOrderNumber(tx: any, branchId: number): Promise<string> {
+  // Acquire a lock on the branch row to serialize order number generation and prevent collisions
+  await tx
+    .select({ id: branchesTable.id })
+    .from(branchesTable)
+    .where(eq(branchesTable.id, branchId))
+    .for("update");
+
   const now = new Date();
   const dayOfYear = getDayOfYear(now);
   const todayStart = getCairoStartOfDay(now);
@@ -594,7 +601,7 @@ router.post("/orders", async (req, res): Promise<void> => {
   // ── All writes in a single Drizzle transaction ─────────────────────────────
   let order: any;
   let savedItems: any[] = [];
-  let retries = 3;
+  let retries = 15;
 
   while (retries > 0) {
     try {
@@ -792,9 +799,10 @@ router.post("/orders", async (req, res): Promise<void> => {
     } catch (err: any) {
       retries--;
       const isUniqueViolation = err.code === "23505" || err.message?.includes("unique constraint") || err.message?.includes("duplicate key");
-      if (isUniqueViolation && retries > 0) {
-        console.warn(`[orders] Duplicate order number collision. Retrying transaction... (${retries} retries left). Error: ${err.message}`);
-        await new Promise((resolve) => setTimeout(resolve, Math.random() * 100 + 50));
+      const isLockContention = err.code === "40001" || err.code === "40P01" || err.message?.includes("deadlock") || err.message?.includes("serialization") || err.message?.includes("concurrent update");
+      if ((isUniqueViolation || isLockContention) && retries > 0) {
+        console.warn(`[orders] DB contention (code: ${err.code || "unknown"}). Retrying transaction... (${retries} retries left). Error: ${err.message}`);
+        await new Promise((resolve) => setTimeout(resolve, Math.random() * 150 + 50));
         continue;
       }
       throw err;

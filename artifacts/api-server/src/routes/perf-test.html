@@ -1,0 +1,1298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Spacca POS Load Simulation Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #0f111a;
+      --panel-bg: rgba(22, 26, 43, 0.7);
+      --border-color: rgba(255, 255, 255, 0.08);
+      --glow-purple: #9d4edd;
+      --glow-cyan: #06d6a0;
+      --glow-orange: #f77f00;
+      --glow-red: #d90429;
+      --text-main: #f8f9fa;
+      --text-muted: #8d99ae;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      font-family: 'Outfit', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    /* Gradients and Background Glows */
+    body::before {
+      content: "";
+      position: absolute;
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(circle, rgba(157, 78, 221, 0.15) 0%, rgba(0,0,0,0) 70%);
+      top: -100px;
+      left: -100px;
+      z-index: -1;
+      pointer-events: none;
+    }
+
+    body::after {
+      content: "";
+      position: absolute;
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, rgba(6, 214, 160, 0.1) 0%, rgba(0,0,0,0) 70%);
+      bottom: -150px;
+      right: -150px;
+      z-index: -1;
+      pointer-events: none;
+    }
+
+    header {
+      background: rgba(15, 17, 26, 0.8);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border-color);
+      padding: 1.2rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+    }
+
+    .logo-glow {
+      width: 14px;
+      height: 14px;
+      background-color: var(--glow-purple);
+      border-radius: 50%;
+      box-shadow: 0 0 12px var(--glow-purple);
+      animation: pulse 2s infinite;
+    }
+
+    h1 {
+      font-size: 1.4rem;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      background: linear-gradient(90deg, #fff 0%, var(--glow-purple) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .connection-badge {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.85rem;
+      padding: 0.4rem 0.8rem;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      background-color: var(--glow-red);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--glow-red);
+      transition: all 0.3s ease;
+    }
+
+    .status-dot.connected {
+      background-color: var(--glow-cyan);
+      box-shadow: 0 0 8px var(--glow-cyan);
+    }
+
+    main {
+      flex: 1;
+      padding: 2rem;
+      max-width: 1400px;
+      width: 100%;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 350px 1fr;
+      gap: 2rem;
+    }
+
+    .control-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .card {
+      background: var(--panel-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 1.5rem;
+      backdrop-filter: blur(16px);
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+    }
+
+    .card-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 1.2rem;
+      color: var(--text-main);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      padding-bottom: 0.5rem;
+    }
+
+    .input-group {
+      margin-bottom: 1.2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    label {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    input, select {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.7rem 1rem;
+      color: var(--text-main);
+      font-family: inherit;
+      font-size: 0.95rem;
+      transition: all 0.3s ease;
+      width: 100%;
+    }
+
+    input:focus, select:focus {
+      outline: none;
+      border-color: var(--glow-purple);
+      box-shadow: 0 0 8px rgba(157, 78, 221, 0.25);
+    }
+
+    .range-val {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.9rem;
+      color: var(--glow-purple);
+      float: right;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 0.8rem 1.5rem;
+      border-radius: 8px;
+      border: none;
+      font-family: inherit;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--glow-purple) 0%, #7b2cbf 100%);
+      color: white;
+      box-shadow: 0 4px 15px rgba(157, 78, 221, 0.3);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(157, 78, 221, 0.5);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .btn-success {
+      background: linear-gradient(135deg, var(--glow-cyan) 0%, #02a87e 100%);
+      color: #0f111a;
+      box-shadow: 0 4px 15px rgba(6, 214, 160, 0.3);
+    }
+
+    .btn-success:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(6, 214, 160, 0.5);
+    }
+
+    .btn-danger {
+      background: linear-gradient(135deg, var(--glow-red) 0%, #a0031d 100%);
+      color: white;
+      box-shadow: 0 4px 15px rgba(217, 4, 41, 0.3);
+    }
+
+    .btn-danger:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(217, 4, 41, 0.5);
+    }
+
+    /* Simulation Board Layout */
+    .dashboard-view {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .metrics-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+    }
+
+    .metric-card {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.2rem;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .metric-label {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 0.5rem;
+    }
+
+    .metric-value {
+      font-size: 1.8rem;
+      font-weight: 800;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .metric-card::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 3px;
+      background: var(--border-color);
+    }
+
+    .metric-card.success::before { background: var(--glow-cyan); }
+    .metric-card.failed::before { background: var(--glow-red); }
+    .metric-card.pending::before { background: var(--glow-orange); }
+    .metric-card.info::before { background: var(--glow-purple); }
+
+    .grid-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 380px;
+    }
+
+    .registers-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+      gap: 1rem;
+      max-height: 300px;
+      overflow-y: auto;
+      padding-right: 0.5rem;
+    }
+
+    .register-node {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 0.8rem;
+      text-align: center;
+      transition: all 0.3s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .register-id {
+      font-size: 0.8rem;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-muted);
+    }
+
+    .register-status {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      color: var(--text-muted);
+    }
+
+    .node-light {
+      width: 12px;
+      height: 12px;
+      background-color: rgba(255, 255, 255, 0.1);
+      border-radius: 50%;
+      transition: all 0.3s ease;
+    }
+
+    /* Node States */
+    .register-node.idle .node-light { background-color: #4a4e69; box-shadow: none; }
+    .register-node.selecting .node-light { background-color: #ffd166; box-shadow: 0 0 8px #ffd166; animation: blink 1s infinite; }
+    .register-node.adding .node-light { background-color: #118ab2; box-shadow: 0 0 8px #118ab2; }
+    .register-node.checkout .node-light { background-color: var(--glow-purple); box-shadow: 0 0 8px var(--glow-purple); }
+    .register-node.placing .node-light { background-color: var(--glow-orange); box-shadow: 0 0 8px var(--glow-orange); animation: blink 0.5s infinite; }
+    .register-node.success-pulse {
+      animation: successGlow 1s ease;
+    }
+    .register-node.failed-pulse {
+      animation: failedGlow 1s ease;
+    }
+
+    .register-node.success-pulse .node-light { background-color: var(--glow-cyan); box-shadow: 0 0 10px var(--glow-cyan); }
+    .register-node.failed-pulse .node-light { background-color: var(--glow-red); box-shadow: 0 0 10px var(--glow-red); }
+
+    /* Orders / Cashier control panel */
+    .orders-panel {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 1.5rem;
+    }
+
+    .order-feed {
+      max-height: 250px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+      padding-right: 0.5rem;
+    }
+
+    .order-item {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.6rem 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.85rem;
+    }
+
+    .order-no {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 600;
+      color: var(--glow-purple);
+    }
+
+    .order-info {
+      color: var(--text-muted);
+    }
+
+    .order-status-badge {
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      background: rgba(247, 127, 0, 0.1);
+      color: var(--glow-orange);
+    }
+
+    .order-status-badge.paid {
+      background: rgba(6, 214, 160, 0.1);
+      color: var(--glow-cyan);
+    }
+
+    .error-log {
+      max-height: 250px;
+      overflow-y: auto;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      color: var(--glow-red);
+      background: rgba(217, 4, 41, 0.03);
+      border: 1px solid rgba(217, 4, 41, 0.1);
+      border-radius: 8px;
+      padding: 0.8rem;
+    }
+
+    .error-item {
+      margin-bottom: 0.4rem;
+      border-bottom: 1px solid rgba(217, 4, 41, 0.05);
+      padding-bottom: 0.4rem;
+    }
+
+    .error-item:last-child {
+      border: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    /* Detailed Report Modal Styles */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(10, 12, 20, 0.85);
+      backdrop-filter: blur(8px);
+      z-index: 1000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.3s ease;
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-container {
+      background: #121524;
+      border: 1px solid rgba(157, 78, 221, 0.3);
+      box-shadow: 0 0 40px rgba(157, 78, 221, 0.15);
+      border-radius: 20px;
+      width: 90%;
+      max-width: 650px;
+      padding: 2.2rem;
+      transform: scale(0.9);
+      transition: all 0.3s ease;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .modal-overlay.active .modal-container {
+      transform: scale(1);
+    }
+
+    .modal-header {
+      font-size: 1.6rem;
+      font-weight: 800;
+      margin-bottom: 1.5rem;
+      text-align: center;
+      background: linear-gradient(90deg, #fff 0%, var(--glow-purple) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .report-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .report-item {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 1rem 0.5rem;
+      text-align: center;
+    }
+
+    .report-lbl {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      margin-bottom: 0.4rem;
+      letter-spacing: 0.5px;
+    }
+
+    .report-val {
+      font-size: 1.3rem;
+      font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .report-error-title {
+      font-size: 0.85rem;
+      color: var(--text-main);
+      font-weight: 600;
+      margin-bottom: 0.6rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      padding-bottom: 0.3rem;
+    }
+
+    .report-errors {
+      background: rgba(217, 4, 41, 0.03);
+      border: 1px solid rgba(217, 4, 41, 0.1);
+      border-radius: 10px;
+      padding: 1rem;
+      max-height: 140px;
+      overflow-y: auto;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      margin-bottom: 1.8rem;
+    }
+
+    /* Scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.02);
+      border-radius: 10px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(157, 78, 221, 0.4);
+    }
+
+    /* Keyframes */
+    @keyframes pulse {
+      0% { transform: scale(1); opacity: 0.8; }
+      50% { transform: scale(1.1); opacity: 1; box-shadow: 0 0 16px var(--glow-purple); }
+      100% { transform: scale(1); opacity: 0.8; }
+    }
+
+    @keyframes blink {
+      0% { opacity: 0.3; }
+      50% { opacity: 1; }
+      100% { opacity: 0.3; }
+    }
+
+    @keyframes successGlow {
+      0% { background: rgba(6, 214, 160, 0.1); border-color: var(--border-color); }
+      50% { background: rgba(6, 214, 160, 0.2); border-color: var(--glow-cyan); box-shadow: 0 0 10px rgba(6, 214, 160, 0.2); }
+      100% { background: rgba(255, 255, 255, 0.02); border-color: var(--border-color); }
+    }
+
+    @keyframes failedGlow {
+      0% { background: rgba(217, 4, 41, 0.1); border-color: var(--border-color); }
+      50% { background: rgba(217, 4, 41, 0.2); border-color: var(--glow-red); box-shadow: 0 0 10px rgba(217, 4, 41, 0.2); }
+      100% { background: rgba(255, 255, 255, 0.02); border-color: var(--border-color); }
+    }
+
+    .footer {
+      padding: 1.5rem;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      border-top: 1px solid var(--border-color);
+      margin-top: auto;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo-container">
+      <div class="logo-glow"></div>
+      <h1>SPACCA POS</h1>
+      <span style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600; padding: 0.2rem 0.5rem; background: rgba(157, 78, 221, 0.1); border-radius: 4px; border: 1px solid rgba(157, 78, 221, 0.2);">Load Simulator</span>
+    </div>
+    <div class="connection-badge">
+      <div class="status-dot" id="status-dot"></div>
+      <span id="status-text">DISCONNECTED</span>
+    </div>
+  </header>
+
+  <!-- Hidden Connection Form (for background auth) -->
+  <div id="auth-form" style="display: none;">
+    <input type="text" id="username" value="admin">
+    <input type="password" id="password" value="password123">
+  </div>
+
+  <main>
+    <!-- Left Panel: Configuration & Actions -->
+    <div class="control-panel">
+      <!-- Simulator Parameters Card -->
+      <div class="card">
+        <div class="card-title">Simulator Parameters</div>
+        <div class="input-group">
+          <label>Virtual Registers (VUs) <span class="range-val" id="vu-val">10</span></label>
+          <input type="range" id="param-vus" min="1" max="50" value="10" oninput="document.getElementById('vu-val').innerText = this.value">
+        </div>
+        <div class="input-group">
+          <label>Order Pacing / Delay <span class="range-val" id="delay-val">1500ms</span></label>
+          <input type="range" id="param-delay" min="100" max="5000" step="100" value="1500" oninput="document.getElementById('delay-val').innerText = this.value + 'ms'">
+        </div>
+        <div class="input-group">
+          <label>Total Orders Target</label>
+          <input type="number" id="param-target" min="1" max="10000" value="1000">
+        </div>
+        <div class="input-group">
+          <label>Stock Check Mode</label>
+          <select id="param-stock">
+            <option value="bypass" selected>Bypass Stock Check (Recommended)</option>
+            <option value="strict">Strict Stock Check</option>
+          </select>
+        </div>
+        <div style="display: flex; gap: 0.8rem; margin-top: 1.5rem;">
+          <button class="btn btn-success" id="btn-start" disabled onclick="startSimulation()">
+            Start Test
+          </button>
+          <button class="btn btn-danger" id="btn-stop" disabled onclick="stopSimulation(false)">
+            Stop
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Panel: Live Board & Metrics -->
+    <div class="dashboard-view">
+      <!-- Performance Metrics Panel -->
+      <div class="metrics-row">
+        <div class="metric-card success">
+          <div class="metric-label">Successful Orders</div>
+          <div class="metric-value" id="metric-success" style="color: var(--glow-cyan)">0</div>
+        </div>
+        <div class="metric-card failed">
+          <div class="metric-label">Failed Orders</div>
+          <div class="metric-value" id="metric-failed" style="color: var(--glow-red)">0</div>
+        </div>
+        <div class="metric-card pending">
+          <div class="metric-label">Throughput (RPS)</div>
+          <div class="metric-value" id="metric-rps">0.0</div>
+        </div>
+        <div class="metric-card info">
+          <div class="metric-label">Avg Latency</div>
+          <div class="metric-value" id="metric-latency">0 ms</div>
+        </div>
+      </div>
+
+      <!-- Simulation Node Grid -->
+      <div class="card grid-panel">
+        <div class="card-title">
+          Live POS Virtual Terminals
+          <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: normal;" id="active-terminals-count">0 Terminals Active</span>
+        </div>
+        <div class="registers-grid" id="registers-grid">
+          <!-- Dynamically populated register nodes -->
+        </div>
+      </div>
+
+      <!-- Placed Orders Feed & Error Log -->
+      <div class="orders-panel">
+        <div class="card">
+          <div class="card-title" style="margin-bottom: 0.8rem;">
+            Placed Pending Orders
+            <button class="btn btn-success" id="btn-accept-all" disabled style="width: auto; padding: 0.3rem 0.8rem; font-size: 0.8rem; border-radius: 4px;" onclick="acceptAllOrders()">
+              Accept All on Cashier
+            </button>
+          </div>
+          <div class="order-feed" id="order-feed">
+            <div style="color: var(--text-muted); text-align: center; padding: 2rem 0; font-size: 0.9rem;">No orders placed yet. Start the test.</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Error Log</div>
+          <div class="error-log" id="error-log">
+            <div style="color: var(--text-muted); font-size: 0.8rem; text-align: center; padding: 2rem 0;">Log is empty.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Detailed Performance Report Modal -->
+  <div class="modal-overlay" id="report-modal">
+    <div class="modal-container">
+      <div class="modal-header" id="report-title">Performance Test Report</div>
+      
+      <div class="report-grid">
+        <div class="report-item">
+          <div class="report-lbl">Test Duration</div>
+          <div class="report-val" id="report-duration">0.0s</div>
+        </div>
+        <div class="report-item">
+          <div class="report-lbl">Total Placed</div>
+          <div class="report-val" id="report-total">0</div>
+        </div>
+        <div class="report-item">
+          <div class="report-lbl">Success Rate</div>
+          <div class="report-val" id="report-rate" style="color: var(--glow-cyan)">0.0%</div>
+        </div>
+        <div class="report-item">
+          <div class="report-lbl">Success Count</div>
+          <div class="report-val" id="report-success" style="color: var(--glow-cyan)">0</div>
+        </div>
+        <div class="report-item">
+          <div class="report-lbl">Failed Count</div>
+          <div class="report-val" id="report-failed" style="color: var(--glow-red)">0</div>
+        </div>
+        <div class="report-item">
+          <div class="report-lbl">Avg Throughput</div>
+          <div class="report-val" id="report-rps">0.0 RPS</div>
+        </div>
+        <div class="report-item">
+          <div class="report-lbl">Avg Latency</div>
+          <div class="report-val" id="report-avg-lat">0 ms</div>
+        </div>
+        <div class="report-item">
+          <div class="report-lbl">Min Latency</div>
+          <div class="report-val" id="report-min-lat">0 ms</div>
+        </div>
+        <div class="report-item">
+          <div class="report-lbl">Max Latency</div>
+          <div class="report-val" id="report-max-lat">0 ms</div>
+        </div>
+      </div>
+
+      <div class="report-error-title">Error Distribution Summary</div>
+      <div class="report-errors" id="report-error-log">
+        <div style="color: var(--text-muted); font-size: 0.8rem; text-align: center;">No errors recorded during this run. The database processed all requests seamlessly.</div>
+      </div>
+
+      <div style="display: flex; gap: 0.8rem; margin-top: 0.5rem;">
+        <button class="btn btn-primary" onclick="closeReportModal()">Close Report</button>
+        <button class="btn btn-success" id="report-btn-accept" onclick="acceptAllOrdersFromReport()">
+          Accept Placed Orders
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="footer">
+    Spacca POS Load Simulation Dashboard • Pairs with Google DeepMind Antigravity Toolset
+  </footer>
+
+  <script>
+    let isConnected = false;
+    let isRunning = false;
+    let drinks = [];
+    let branchId = 1;
+    let activeWorkers = [];
+    let placedOrderIds = [];
+    let originalStockSettingValue = null;
+    let settingRowId = null;
+
+    // Statistics
+    let countSuccess = 0;
+    let countFailed = 0;
+    let totalLatencyMs = 0;
+    let latencyCounts = 0;
+    let latencyList = [];
+    let startTime = null;
+    let endTime = null;
+
+    // Log tracking
+    const uniqueErrors = {};
+
+    // Initial check - runs automatically on load to auth in background
+    window.addEventListener('load', () => {
+      connectToServer(true); // silent auto-auth on load
+    });
+
+    async function connectToServer(silent = false) {
+      const statusDot = document.getElementById('status-dot');
+      const statusText = document.getElementById('status-text');
+      const btnStart = document.getElementById('btn-start');
+
+      try {
+        // 1. Authenticate in the background using default admin credentials
+        const user = document.getElementById('username').value;
+        const pass = document.getElementById('password').value;
+        
+        const loginRes = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: user, password: pass })
+        });
+
+        if (!loginRes.ok) {
+          throw new Error(`Login failed: ${loginRes.statusText}`);
+        }
+
+        // 2. Fetch Catalog/Drinks to ensure connection works and we have drink IDs
+        const drinksRes = await fetch('/api/drinks');
+        if (!drinksRes.ok) {
+          throw new Error(`Catalog load failed: ${drinksRes.statusText}`);
+        }
+
+        const data = await drinksRes.json();
+        drinks = (data || []).filter(d => d.isActive);
+
+        if (drinks.length === 0) {
+          throw new Error("No active drinks found in catalog to order.");
+        }
+
+        // Parse branch ID if user returns a branch
+        const loginData = await loginRes.json();
+        if (loginData && loginData.user && loginData.user.branchId) {
+          branchId = loginData.user.branchId;
+        }
+
+        // Successful connection
+        isConnected = true;
+        statusDot.className = 'status-dot connected';
+        statusText.innerText = 'CONNECTED';
+        btnStart.disabled = false;
+      } catch (err) {
+        isConnected = false;
+        statusDot.className = 'status-dot';
+        statusText.innerText = 'DISCONNECTED';
+        btnStart.disabled = true;
+        if (!silent) {
+          alert(`Background connection failed: ${err.message}`);
+        }
+      }
+    }
+
+    async function toggleStockBypass(enable) {
+      if (document.getElementById('param-stock').value !== 'bypass') return;
+
+      try {
+        // Fetch current setting first to back it up
+        const settingsRes = await fetch('/api/settings?scope=global');
+        if (settingsRes.ok) {
+          const settings = await settingsRes.json();
+          const row = settings.find(s => s.key === 'allowNoStockSell');
+          if (row) {
+            settingRowId = row.id;
+            originalStockSettingValue = row.value;
+          }
+        }
+
+        // Update setting to true
+        await fetch('/api/settings', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            scope: 'global',
+            settings: [{ key: 'allowNoStockSell', value: enable ? 'true' : (originalStockSettingValue || 'false') }]
+          })
+        });
+        console.log(`[Dashboard] Toggled allowNoStockSell to ${enable}`);
+      } catch (e) {
+        console.warn(`[Dashboard] Failed to toggle stock check setting: ${e.message}`);
+      }
+    }
+
+    async function startSimulation() {
+      if (isRunning || !isConnected) return;
+      isRunning = true;
+
+      // Close modal if open
+      closeReportModal();
+
+      // Reset Stats
+      countSuccess = 0;
+      countFailed = 0;
+      totalLatencyMs = 0;
+      latencyCounts = 0;
+      latencyList = [];
+      placedOrderIds = [];
+      startTime = Date.now();
+      endTime = null;
+      document.getElementById('order-feed').innerHTML = '';
+      document.getElementById('error-log').innerHTML = '';
+      
+      for (const key in uniqueErrors) delete uniqueErrors[key];
+
+      updateMetricsUI();
+
+      // UI state
+      document.getElementById('btn-start').disabled = true;
+      document.getElementById('btn-stop').disabled = false;
+      document.getElementById('btn-accept-all').disabled = false;
+      document.getElementById('param-vus').disabled = true;
+      document.getElementById('param-delay').disabled = true;
+      document.getElementById('param-target').disabled = true;
+      document.getElementById('param-stock').disabled = true;
+
+      // Enable stock bypass if configured
+      await toggleStockBypass(true);
+
+      // Create register nodes
+      const vus = parseInt(document.getElementById('param-vus').value, 10);
+      const delay = parseInt(document.getElementById('param-delay').value, 10);
+      
+      const grid = document.getElementById('registers-grid');
+      grid.innerHTML = '';
+      document.getElementById('active-terminals-count').innerText = `${vus} Terminals Active`;
+
+      activeWorkers = [];
+
+      for (let i = 1; i <= vus; i++) {
+        // Create UI Node
+        const node = document.createElement('div');
+        node.className = 'register-node idle';
+        node.id = `reg-node-${i}`;
+        node.innerHTML = `
+          <div class="register-id">VU-${String(i).padStart(2, '0')}</div>
+          <div class="node-light"></div>
+          <div class="register-status" id="reg-status-${i}">Idle</div>
+        `;
+        grid.appendChild(node);
+
+        // Spawn async loop worker
+        const workerCtx = { active: true };
+        activeWorkers.push(workerCtx);
+        runRegisterWorker(i, delay, workerCtx);
+      }
+
+      // Start RPS calculations
+      startRpsTracker();
+    }
+
+    function stopSimulation(autoFinished = false) {
+      if (!isRunning) return;
+      isRunning = false;
+      endTime = Date.now();
+
+      // Deactivate all workers
+      activeWorkers.forEach(w => w.active = false);
+      activeWorkers = [];
+
+      // Restore settings
+      toggleStockBypass(false);
+
+      // UI state
+      document.getElementById('btn-start').disabled = false;
+      document.getElementById('btn-stop').disabled = true;
+      document.getElementById('param-vus').disabled = false;
+      document.getElementById('param-delay').disabled = false;
+      document.getElementById('param-target').disabled = false;
+      document.getElementById('param-stock').disabled = false;
+      document.getElementById('active-terminals-count').innerText = autoFinished ? `Simulation Finished` : `Simulation Stopped`;
+
+      // Set nodes to idle
+      const vus = parseInt(document.getElementById('param-vus').value, 10);
+      for (let i = 1; i <= vus; i++) {
+        const node = document.getElementById(`reg-node-${i}`);
+        if (node) {
+          node.className = 'register-node idle';
+          document.getElementById(`reg-status-${i}`).innerText = autoFinished ? 'Finished' : 'Stopped';
+        }
+      }
+
+      // Compile and display detailed report modal
+      generatePerformanceReport(autoFinished);
+    }
+
+    async function runRegisterWorker(regId, delay, ctx) {
+      const node = document.getElementById(`reg-node-${regId}`);
+      const statusLabel = document.getElementById(`reg-status-${regId}`);
+      const targetVal = parseInt(document.getElementById('param-target').value, 10);
+
+      const updateNodeState = (className, label) => {
+        if (!node) return;
+        node.className = `register-node ${className}`;
+        statusLabel.innerText = label;
+      };
+
+      let orderCounter = 0;
+
+      while (ctx.active && isRunning) {
+        // Pre-check target orders limit
+        if (countSuccess + countFailed >= targetVal) {
+          stopSimulation(true);
+          break;
+        }
+
+        // Step 1: Selecting Drink
+        updateNodeState('selecting', 'Browsing...');
+        await sleep(delay * 0.3);
+        if (!ctx.active || !isRunning) break;
+
+        // Step 2: Adding to Cart
+        updateNodeState('adding', 'Adding Cart');
+        const randomDrink = drinks[Math.floor(Math.random() * drinks.length)];
+        await sleep(delay * 0.2);
+        if (!ctx.active || !isRunning) break;
+
+        // Step 3: Checkout (Selecting Cash & Entering Tester Name)
+        updateNodeState('checkout', 'Cashout...');
+        orderCounter++;
+        const customerName = `Tester-${regId}-${orderCounter}`;
+        await sleep(delay * 0.2);
+        if (!ctx.active || !isRunning) break;
+
+        // Step 4: Placing Order
+        updateNodeState('placing', 'Placing Order');
+        const reqStart = Date.now();
+        
+        const payload = {
+          branchId: branchId,
+          paymentMethod: 'cash',
+          amountTendered: 200,
+          customerName: customerName,
+          items: [
+            {
+              drinkId: randomDrink.id,
+              quantity: 1,
+              selections: []
+            }
+          ]
+        };
+
+        try {
+          const res = await fetch('/api/orders', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+
+          const latency = Date.now() - reqStart;
+          recordLatency(latency);
+
+          if (res.ok) {
+            countSuccess++;
+            const data = await res.json();
+            if (data && data.id) {
+              placedOrderIds.push(data.id);
+              addOrderToFeed(data.orderNumber, randomDrink.name, customerName);
+            }
+            updateNodeState('success-pulse', 'Success');
+          } else {
+            countFailed++;
+            const errText = await res.text();
+            let errMsg = errText;
+            try {
+              const parsedErr = JSON.parse(errText);
+              if (parsedErr.error) errMsg = parsedErr.error;
+            } catch(e) {}
+            logError(`HTTP ${res.status}: ${errMsg}`);
+            updateNodeState('failed-pulse', 'Failed');
+          }
+        } catch (err) {
+          countFailed++;
+          logError(`Network: ${err.message}`);
+          updateNodeState('failed-pulse', 'Net Error');
+        }
+
+        updateMetricsUI();
+
+        // Check again after request completes
+        if (countSuccess + countFailed >= targetVal) {
+          stopSimulation(true);
+          break;
+        }
+
+        // Pacing delay between iteration loops
+        await sleep(delay * 0.3);
+      }
+    }
+
+    function recordLatency(ms) {
+      totalLatencyMs += ms;
+      latencyCounts++;
+      latencyList.push(ms);
+    }
+
+    function addOrderToFeed(orderNumber, drinkName, customerName) {
+      const feed = document.getElementById('order-feed');
+      const item = document.createElement('div');
+      item.className = 'order-item';
+      item.innerHTML = `
+        <div>
+          <span class="order-no">${orderNumber}</span>
+          <span class="order-info">(${drinkName} - ${customerName})</span>
+        </div>
+        <div class="order-status-badge" id="badge-${orderNumber}">Pending</div>
+      `;
+      feed.insertBefore(item, feed.firstChild);
+      
+      // Keep only last 20 orders in UI view list
+      if (feed.childNodes.length > 20) {
+        feed.removeChild(feed.lastChild);
+      }
+    }
+
+    function logError(msg) {
+      // Friendly translations for database lock/unique key collisions
+      let friendlyMsg = msg;
+      if (msg.includes("unique constraint") || msg.includes("duplicate key")) {
+        friendlyMsg = "Order Number Collision: Multiple registers generated the same order suffix. Retries exhausted.";
+      } else if (msg.includes("deadlock") || msg.includes("serialization") || msg.includes("lock")) {
+        friendlyMsg = "DB Row Lock Contention: Concurrent writes to identical inventory records collided.";
+      }
+      
+      uniqueErrors[friendlyMsg] = (uniqueErrors[friendlyMsg] || 0) + 1;
+      
+      const logEl = document.getElementById('error-log');
+      logEl.innerHTML = '';
+      
+      for (const [err, count] of Object.entries(uniqueErrors)) {
+        const item = document.createElement('div');
+        item.className = 'error-item';
+        item.innerText = `[${count}x] ${err}`;
+        logEl.appendChild(item);
+      }
+    }
+
+    function updateMetricsUI() {
+      document.getElementById('metric-success').innerText = countSuccess;
+      document.getElementById('metric-failed').innerText = countFailed;
+      
+      const avg = latencyCounts > 0 ? Math.round(totalLatencyMs / latencyCounts) : 0;
+      document.getElementById('metric-latency').innerText = `${avg} ms`;
+    }
+
+    let rpsInterval = null;
+    function startRpsTracker() {
+      if (rpsInterval) clearInterval(rpsInterval);
+      
+      rpsInterval = setInterval(() => {
+        if (!isRunning) {
+          clearInterval(rpsInterval);
+          return;
+        }
+
+        const elapsed = (Date.now() - startTime) / 1000;
+        const total = countSuccess + countFailed;
+        const rps = elapsed > 0 ? (total / elapsed).toFixed(1) : '0.0';
+        document.getElementById('metric-rps').innerText = rps;
+      }, 1000);
+    }
+
+    function generatePerformanceReport(autoFinished) {
+      const activeEndTime = endTime || Date.now();
+      const elapsedSec = ((activeEndTime - startTime) / 1000).toFixed(1);
+      const totalPlaced = countSuccess + countFailed;
+      
+      const successRate = totalPlaced > 0 ? ((countSuccess / totalPlaced) * 100).toFixed(1) : '0.0';
+      const avgLatency = latencyCounts > 0 ? Math.round(totalLatencyMs / latencyCounts) : 0;
+      const maxLatency = latencyList.length > 0 ? Math.max(...latencyList) : 0;
+      const minLatency = latencyList.length > 0 ? Math.min(...latencyList) : 0;
+      const rps = elapsedSec > 0 ? (totalPlaced / elapsedSec).toFixed(1) : '0.0';
+
+      // Update Report Title
+      document.getElementById('report-title').innerText = autoFinished 
+        ? "Performance Report: Target Reached ✓" 
+        : "Performance Report: Test Stopped ⚠";
+
+      // Populate Report Values
+      document.getElementById('report-duration').innerText = `${elapsedSec}s`;
+      document.getElementById('report-total').innerText = totalPlaced;
+      
+      const rateEl = document.getElementById('report-rate');
+      rateEl.innerText = `${successRate}%`;
+      const numRate = parseFloat(successRate);
+      if (numRate >= 95) {
+        rateEl.style.color = 'var(--glow-cyan)';
+      } else if (numRate >= 80) {
+        rateEl.style.color = 'var(--glow-orange)';
+      } else {
+        rateEl.style.color = 'var(--glow-red)';
+      }
+
+      document.getElementById('report-success').innerText = countSuccess;
+      document.getElementById('report-failed').innerText = countFailed;
+      document.getElementById('report-rps').innerText = `${rps} RPS`;
+      document.getElementById('report-avg-lat').innerText = `${avgLatency} ms`;
+      document.getElementById('report-min-lat').innerText = `${minLatency} ms`;
+      document.getElementById('report-max-lat').innerText = `${maxLatency} ms`;
+
+      // Update Accept Button label
+      document.getElementById('report-btn-accept').innerText = `Accept Placed Orders (${placedOrderIds.length})`;
+      document.getElementById('report-btn-accept').disabled = placedOrderIds.length === 0;
+
+      // Populate Error Log breakdown
+      const errLog = document.getElementById('report-error-log');
+      errLog.innerHTML = '';
+      if (Object.keys(uniqueErrors).length === 0) {
+        errLog.innerHTML = `<div style="color: var(--text-muted); font-size: 0.8rem; text-align: center; padding: 1.5rem 0;">No errors recorded during this run. The database processed all requests seamlessly.</div>`;
+      } else {
+        for (const [err, count] of Object.entries(uniqueErrors)) {
+          const item = document.createElement('div');
+          item.className = 'error-item';
+          item.style.borderBottom = '1px solid rgba(217, 4, 41, 0.05)';
+          item.style.paddingBottom = '0.4rem';
+          item.style.marginBottom = '0.4rem';
+          item.innerText = `[${count}x] ${err}`;
+          errLog.appendChild(item);
+        }
+      }
+
+      // Display Modal
+      document.getElementById('report-modal').classList.add('active');
+    }
+
+    function closeReportModal() {
+      document.getElementById('report-modal').classList.remove('active');
+    }
+
+    async function acceptAllOrdersFromReport() {
+      closeReportModal();
+      await acceptAllOrders();
+    }
+
+    async function acceptAllOrders() {
+      if (placedOrderIds.length === 0) {
+        alert("No pending orders to accept.");
+        return;
+      }
+
+      const btn = document.getElementById('btn-accept-all');
+      btn.innerText = "Approving...";
+      btn.disabled = true;
+
+      const ordersToProcess = [...placedOrderIds];
+      let processed = 0;
+
+      // Approve concurrent batches of 10 to avoid locking the UI/DB
+      const batchSize = 10;
+      for (let i = 0; i < ordersToProcess.length; i += batchSize) {
+        const batch = ordersToProcess.slice(i, i + batchSize);
+        await Promise.all(batch.map(async (orderId) => {
+          try {
+            const res = await fetch(`/api/orders/${orderId}/status`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ status: 'paid', paymentMethod: 'cash' })
+            });
+
+            if (res.ok) {
+              processed++;
+              // Update status badge if still in feed
+              const data = await res.json();
+              const badge = document.getElementById(`badge-${data.orderNumber}`);
+              if (badge) {
+                badge.className = 'order-status-badge paid';
+                badge.innerText = 'Paid';
+              }
+            }
+          } catch (e) {
+            console.error(`Failed to approve order ${orderId}: ${e.message}`);
+          }
+        }));
+      }
+
+      // Remove completed orders from our internal tracking list
+      placedOrderIds = placedOrderIds.filter(id => !ordersToProcess.includes(id));
+      
+      btn.innerText = "Accept All on Cashier";
+      btn.disabled = placedOrderIds.length === 0;
+      
+      alert(`Successfully approved and completed ${processed} orders on the Cashier database!`);
+    }
+
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+  </script>
+</body>
+</html>

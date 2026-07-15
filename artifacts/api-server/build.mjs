@@ -19,6 +19,10 @@ async function buildAll() {
   const migrationsSrc = path.resolve(artifactDir, "../../lib/db/migrations");
   await cp(migrationsSrc, path.join(distDir, "migrations"), { recursive: true });
 
+  // Copy perf-test.html to dist/perf-test.html
+  const perfTestSrc = path.resolve(artifactDir, "src/routes/perf-test.html");
+  await cp(perfTestSrc, path.join(distDir, "perf-test.html"));
+
 
   await esbuild({
     entryPoints: {

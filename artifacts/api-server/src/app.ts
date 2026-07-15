@@ -2,10 +2,13 @@ import express, { type Express, type Request, type Response, type NextFunction }
 import cors from "cors";
 import pinoHttp from "pino-http";
 import session from "express-session";
+import path from "path";
+import { fileURLToPath } from "url";
 import connectPgSimple from "connect-pg-simple";
 import { pool } from "@workspace/db";
 import router from "./routes";
 import { logger } from "./lib/logger";
+import { requirePermission } from "./middleware/permissions";
 
 const PostgresStore = connectPgSimple(session);
 
@@ -74,6 +77,24 @@ app.use("/api", (req, res, next) => {
   res.setHeader("Surrogate-Control", "no-store");
   next();
 });
+
+const currentDir = path.dirname(fileURLToPath(import.meta.url));
+app.get(
+  "/perf-test-dashboard",
+  (req, res, next) => {
+    const session = req.session as any;
+    const userId = session?.userId ?? session?.cashierId;
+    if (!userId) {
+      res.redirect("/pos");
+      return;
+    }
+    next();
+  },
+  requirePermission("admin:view"),
+  (req, res) => {
+    res.sendFile(path.resolve(currentDir, "./perf-test.html"));
+  }
+);
 
 app.use("/api", router);
 
