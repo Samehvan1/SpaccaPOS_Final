@@ -251,7 +251,7 @@
       box-shadow: 0 4px 15px rgba(217, 4, 41, 0.3);
     }
 
-    .btn-danger:hover {
+    .btn-danger:hover:not(:disabled) {
       transform: translateY(-2px);
       box-shadow: 0 6px 20px rgba(217, 4, 41, 0.5);
     }
@@ -641,6 +641,18 @@
           <label>Total Orders Target</label>
           <input type="number" id="param-target" min="1" max="10000" value="1000">
         </div>
+        
+        <!-- Target Test Branch Selection -->
+        <div class="input-group">
+          <label>Target Test Branch</label>
+          <select id="param-branch">
+            <option value="" disabled selected>Loading branches...</option>
+          </select>
+          <div id="branch-warning" style="display: none; color: var(--glow-red); font-size: 0.75rem; margin-top: 0.3rem; font-weight: 600; line-height: 1.2;">
+            ⚠ No branch with "test" in its name was found! Please create a test branch (e.g. "Main Test") to enable testing.
+          </div>
+        </div>
+
         <div class="input-group">
           <label>Stock Check Mode</label>
           <select id="param-stock">
@@ -695,11 +707,16 @@
       <!-- Placed Orders Feed & Error Log -->
       <div class="orders-panel">
         <div class="card">
-          <div class="card-title" style="margin-bottom: 0.8rem;">
+          <div class="card-title" style="margin-bottom: 0.8rem; display: flex; justify-content: space-between; align-items: center; width: 100%;">
             Placed Pending Orders
-            <button class="btn btn-success" id="btn-accept-all" disabled style="width: auto; padding: 0.3rem 0.8rem; font-size: 0.8rem; border-radius: 4px;" onclick="acceptAllOrders()">
-              Accept All on Cashier
-            </button>
+            <div style="display: flex; gap: 0.5rem;">
+              <button class="btn btn-success" id="btn-accept-all" disabled style="width: auto; padding: 0.3rem 0.8rem; font-size: 0.8rem; border-radius: 4px;" onclick="acceptAllOrders()">
+                Accept All on Cashier
+              </button>
+              <button class="btn btn-danger" id="btn-delete-all" style="width: auto; padding: 0.3rem 0.8rem; font-size: 0.8rem; border-radius: 4px; background: linear-gradient(135deg, var(--glow-red) 0%, #a0031d 100%); color: white;" onclick="deleteAllTestOrders()">
+                Delete All Test Orders
+              </button>
+            </div>
           </div>
           <div class="order-feed" id="order-feed">
             <div style="color: var(--text-muted); text-align: center; padding: 2rem 0; font-size: 0.9rem;">No orders placed yet. Start the test.</div>
@@ -809,6 +826,8 @@
       const statusDot = document.getElementById('status-dot');
       const statusText = document.getElementById('status-text');
       const btnStart = document.getElementById('btn-start');
+      const branchSelect = document.getElementById('param-branch');
+      const branchWarning = document.getElementById('branch-warning');
 
       try {
         // 1. Authenticate in the background using default admin credentials
@@ -838,17 +857,37 @@
           throw new Error("No active drinks found in catalog to order.");
         }
 
-        // Parse branch ID if user returns a branch
-        const loginData = await loginRes.json();
-        if (loginData && loginData.user && loginData.user.branchId) {
-          branchId = loginData.user.branchId;
+        // 3. Fetch Branches to filter for Test branches
+        const branchesRes = await fetch('/api/branches');
+        if (!branchesRes.ok) {
+          throw new Error(`Branches load failed: ${branchesRes.statusText}`);
+        }
+        
+        const allBranches = await branchesRes.json();
+        const testBranches = (allBranches || []).filter(b => b.name.toLowerCase().includes('test'));
+
+        branchSelect.innerHTML = '';
+
+        if (testBranches.length === 0) {
+          branchSelect.innerHTML = '<option value="" disabled selected>No test branches found</option>';
+          branchWarning.style.display = 'block';
+          btnStart.disabled = true;
+          throw new Error("Safety Block: No branch with 'test' in its name exists. Please create a test branch in the admin panel first.");
+        } else {
+          branchWarning.style.display = 'none';
+          testBranches.forEach(b => {
+            const opt = document.createElement('option');
+            opt.value = b.id;
+            opt.innerText = b.name;
+            branchSelect.appendChild(opt);
+          });
+          btnStart.disabled = false;
         }
 
         // Successful connection
         isConnected = true;
         statusDot.className = 'status-dot connected';
         statusText.innerText = 'CONNECTED';
-        btnStart.disabled = false;
       } catch (err) {
         isConnected = false;
         statusDot.className = 'status-dot';
@@ -920,7 +959,11 @@
       document.getElementById('param-vus').disabled = true;
       document.getElementById('param-delay').disabled = true;
       document.getElementById('param-target').disabled = true;
+      document.getElementById('param-branch').disabled = true;
       document.getElementById('param-stock').disabled = true;
+
+      // Get selected test branch
+      branchId = parseInt(document.getElementById('param-branch').value, 10);
 
       // Enable stock bypass if configured
       await toggleStockBypass(true);
@@ -975,6 +1018,7 @@
       document.getElementById('param-vus').disabled = false;
       document.getElementById('param-delay').disabled = false;
       document.getElementById('param-target').disabled = false;
+      document.getElementById('param-branch').disabled = false;
       document.getElementById('param-stock').disabled = false;
       document.getElementById('active-terminals-count').innerText = autoFinished ? `Simulation Finished` : `Simulation Stopped`;
 
@@ -1288,6 +1332,41 @@
       btn.disabled = placedOrderIds.length === 0;
       
       alert(`Successfully approved and completed ${processed} orders on the Cashier database!`);
+    }
+
+    async function deleteAllTestOrders() {
+      if (!confirm("Are you sure you want to delete ALL test orders (customer name starting with 'Tester-') from the database? This cannot be undone.")) {
+        return;
+      }
+
+      const btn = document.getElementById('btn-delete-all');
+      const originalText = btn.innerText;
+      btn.innerText = "Deleting...";
+      btn.disabled = true;
+
+      try {
+        const res = await fetch('/api/orders/test-orders', {
+          method: 'DELETE'
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          alert(data.message || "Successfully deleted all test orders.");
+          
+          // Clear order lists & feed
+          placedOrderIds = [];
+          document.getElementById('order-feed').innerHTML = '<div style="color: var(--text-muted); text-align: center; padding: 2rem 0; font-size: 0.9rem;">No orders placed yet. Start the test.</div>';
+          document.getElementById('btn-accept-all').disabled = true;
+        } else {
+          const errText = await res.text();
+          alert(`Failed to delete orders: ${errText}`);
+        }
+      } catch (e) {
+        alert(`Error: ${e.message}`);
+      } finally {
+        btn.innerText = originalText;
+        btn.disabled = false;
+      }
     }
 
     function sleep(ms) {

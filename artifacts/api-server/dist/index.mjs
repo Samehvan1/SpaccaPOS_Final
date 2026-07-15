@@ -84307,6 +84307,18 @@ router5.post("/orders/:id/signature", async (req, res) => {
     res.status(500).json({ error: "Failed to save signature" });
   }
 });
+router5.delete("/orders/test-orders", requirePermission("admin:view"), async (req, res) => {
+  try {
+    const deleted = await db.delete(ordersTable).where(ilike(ordersTable.customerName, "Tester-%")).returning({ id: ordersTable.id });
+    res.json({
+      message: `Successfully deleted ${deleted.length} test orders from the database.`,
+      count: deleted.length
+    });
+  } catch (err) {
+    console.error("[orders/cleanup] error:", err.message);
+    res.status(500).json({ error: "Failed to delete test orders: " + err.message });
+  }
+});
 var orders_default = router5;
 
 // src/routes/stock.ts

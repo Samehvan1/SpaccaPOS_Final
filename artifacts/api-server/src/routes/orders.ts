@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, and, inArray, gte, lte, sql, desc } from "drizzle-orm";
+import { eq, and, inArray, gte, lte, sql, desc, ilike } from "drizzle-orm";
 import { serializeDates } from "../lib/serialize";
 
 function parseLocalDate(dateStr: any): Date {
@@ -1256,6 +1256,23 @@ router.post("/orders/:id/signature", async (req, res): Promise<void> => {
   } catch (e: any) {
     console.error("[orders/signature] error:", e?.message);
     res.status(500).json({ error: "Failed to save signature" });
+  }
+});
+
+router.delete("/orders/test-orders", requirePermission("admin:view"), async (req, res): Promise<void> => {
+  try {
+    const deleted = await db
+      .delete(ordersTable)
+      .where(ilike(ordersTable.customerName, "Tester-%"))
+      .returning({ id: ordersTable.id });
+    
+    res.json({
+      message: `Successfully deleted ${deleted.length} test orders from the database.`,
+      count: deleted.length,
+    });
+  } catch (err: any) {
+    console.error("[orders/cleanup] error:", err.message);
+    res.status(500).json({ error: "Failed to delete test orders: " + err.message });
   }
 });
 
