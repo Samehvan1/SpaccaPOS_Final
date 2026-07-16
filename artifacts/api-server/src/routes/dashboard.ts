@@ -88,9 +88,11 @@ router.get("/dashboard/summary", async (req, res): Promise<void> => {
   const lowStockResult = await db
     .select({ count: sql<number>`count(*)` })
     .from(branchStockTable)
+    .innerJoin(ingredientsTable, eq(branchStockTable.ingredientId, ingredientsTable.id))
     .where(
       and(
         targetBranchId ? eq(branchStockTable.branchId, targetBranchId) : sql`1=1`,
+        eq(ingredientsTable.isActive, true),
         sql`${branchStockTable.stockQuantity} < ${branchStockTable.lowStockThreshold}`
       )
     );
