@@ -689,6 +689,7 @@ export type CalculateDrinkPriceParams = {
 export type ListIngredientsParams = {
     type?: string;
     active?: boolean;
+    branchId?: number | string;
 };
 export type GetIngredientParams = {
     branchId?: number;
@@ -738,6 +739,7 @@ export type ListStockMovementsParams = {
     offset?: number;
     startDate?: string;
     endDate?: string;
+    branchId?: number | string;
 };
 export type GetDashboardSummaryParams = {
     branchId?: number;
@@ -754,6 +756,9 @@ export declare const GetActiveOrdersStatus: {
     readonly paid: "paid";
     readonly in_progress: "in_progress";
     readonly ready: "ready";
+};
+export type GetLowStockIngredientsParams = {
+    branchId?: number | string;
 };
 export type UpdateUserParams = {
     branchId?: number;

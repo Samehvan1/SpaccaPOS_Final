@@ -47,14 +47,14 @@ export default function StockAdmin() {
   const { selectedBranchId } = useAuth();
   const { data: movements, isLoading, refetch: refetchMovements } = useListStockMovements({ 
     branchId: (selectedBranchId === null || selectedBranchId === undefined) ? 'all' : selectedBranchId 
-  } as any);
+  });
   const { data: lowStock, refetch: refetchLowStock } = useGetLowStockIngredients({ 
     branchId: (selectedBranchId === null || selectedBranchId === undefined) ? 'all' : selectedBranchId 
-  } as any);
+  });
   const { data: ingredientsData, refetch: refetchIngredients } = useListIngredients({ 
     active: true,
     branchId: (selectedBranchId === null || selectedBranchId === undefined) ? 'all' : selectedBranchId 
-  } as any);
+  });
   const ingredients = ingredientsData as unknown as Ingredient[];
 
   const { toast } = useToast();

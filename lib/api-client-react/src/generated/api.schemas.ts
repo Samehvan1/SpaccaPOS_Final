@@ -802,6 +802,7 @@ export type CalculateDrinkPriceParams = {
 export type ListIngredientsParams = {
   type?: string;
   active?: boolean;
+  branchId?: number | string;
 };
 
 export type GetIngredientParams = {
@@ -864,6 +865,7 @@ export type ListStockMovementsParams = {
   offset?: number;
   startDate?: string;
   endDate?: string;
+  branchId?: number | string;
 };
 
 export type GetDashboardSummaryParams = {
@@ -886,6 +888,10 @@ export const GetActiveOrdersStatus = {
   in_progress: "in_progress",
   ready: "ready",
 } as const;
+
+export type GetLowStockIngredientsParams = {
+  branchId?: number | string;
+};
 
 export type UpdateUserParams = {
   branchId?: number;

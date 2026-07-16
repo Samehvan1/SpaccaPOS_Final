@@ -294,6 +294,7 @@ export const CalculateDrinkPriceResponse = zod.object({
 export const ListIngredientsQueryParams = zod.object({
   type: zod.coerce.string().optional(),
   active: zod.coerce.boolean().optional(),
+  branchId: zod.union([zod.coerce.number(), zod.coerce.string()]).optional(),
 });
 
 export const ListIngredientsResponseItem = zod.object({
@@ -1014,6 +1015,7 @@ export const ListStockMovementsQueryParams = zod.object({
   offset: zod.coerce.number().optional(),
   startDate: zod.coerce.string().optional(),
   endDate: zod.coerce.string().optional(),
+  branchId: zod.union([zod.coerce.number(), zod.coerce.string()]).optional(),
 });
 
 export const ListStockMovementsResponseItem = zod.object({
@@ -1165,6 +1167,10 @@ export const GetActiveOrdersResponse = zod.array(GetActiveOrdersResponseItem);
 /**
  * @summary Get ingredients below low stock threshold
  */
+export const GetLowStockIngredientsQueryParams = zod.object({
+  branchId: zod.union([zod.coerce.number(), zod.coerce.string()]).optional(),
+});
+
 export const GetLowStockIngredientsResponseItem = zod.object({
   id: zod.number(),
   name: zod.string(),

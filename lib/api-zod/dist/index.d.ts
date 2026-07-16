@@ -737,11 +737,14 @@ export type CalculateDrinkPriceResponse = Infer<typeof api.CalculateDrinkPriceRe
 export declare const ListIngredientsQueryParams: z.ZodObject<{
     type: z.ZodOptional<z.ZodString>;
     active: z.ZodOptional<z.ZodBoolean>;
+    branchId: z.ZodOptional<z.ZodUnion<[z.ZodNumber, z.ZodString]>>;
 }, "strip", z.ZodTypeAny, {
     type?: string | undefined;
+    branchId?: string | number | undefined;
     active?: boolean | undefined;
 }, {
     type?: string | undefined;
+    branchId?: string | number | undefined;
     active?: boolean | undefined;
 }>;
 export type ListIngredientsQueryParams = Infer<typeof api.ListIngredientsQueryParams>;
@@ -1860,9 +1863,11 @@ export declare const ListStockMovementsQueryParams: z.ZodObject<{
     offset: z.ZodOptional<z.ZodNumber>;
     startDate: z.ZodOptional<z.ZodString>;
     endDate: z.ZodOptional<z.ZodString>;
+    branchId: z.ZodOptional<z.ZodUnion<[z.ZodNumber, z.ZodString]>>;
 } & {
     movementType: z.ZodOptional<z.ZodString>;
 }, "strip", z.ZodTypeAny, {
+    branchId?: string | number | undefined;
     ingredientId?: number | undefined;
     startDate?: string | undefined;
     endDate?: string | undefined;
@@ -1870,6 +1875,7 @@ export declare const ListStockMovementsQueryParams: z.ZodObject<{
     offset?: number | undefined;
     movementType?: string | undefined;
 }, {
+    branchId?: string | number | undefined;
     ingredientId?: number | undefined;
     startDate?: string | undefined;
     endDate?: string | undefined;

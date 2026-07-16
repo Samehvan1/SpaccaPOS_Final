@@ -248,6 +248,12 @@ paths:
           name: active
           schema:
             type: boolean
+        - in: query
+          name: branchId
+          schema:
+            oneOf:
+              - type: integer
+              - type: string
       responses:
         "200":
           description: List of ingredients
@@ -664,6 +670,12 @@ paths:
           name: endDate
           schema:
             type: string
+        - in: query
+          name: branchId
+          schema:
+            oneOf:
+              - type: integer
+              - type: string
       responses:
         "200":
           description: Stock movements
@@ -751,6 +763,13 @@ paths:
       operationId: getLowStockIngredients
       tags: [dashboard]
       summary: Get ingredients below low stock threshold
+      parameters:
+        - in: query
+          name: branchId
+          schema:
+            oneOf:
+              - type: integer
+              - type: string
       responses:
         "200":
           description: Low stock ingredients

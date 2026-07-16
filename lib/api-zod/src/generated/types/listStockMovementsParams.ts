@@ -12,4 +12,5 @@ export type ListStockMovementsParams = {
   offset?: number;
   startDate?: string;
   endDate?: string;
+  branchId?: number | string;
 };

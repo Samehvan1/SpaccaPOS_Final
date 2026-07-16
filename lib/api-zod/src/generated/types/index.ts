@@ -43,6 +43,7 @@ export * from "./getCustomerPoints200";
 export * from "./getDashboardSummaryParams";
 export * from "./getDrinkParams";
 export * from "./getIngredientParams";
+export * from "./getLowStockIngredientsParams";
 export * from "./getOrderParams";
 export * from "./getSalesByCategoryParams";
 export * from "./getSettingsParams";

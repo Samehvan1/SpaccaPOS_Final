@@ -1,5 +1,5 @@
 import type { QueryKey, UseMutationOptions, UseMutationResult, UseQueryOptions, UseQueryResult } from "@tanstack/react-query";
-import type { ActivityLog, Branch, CalculateDrinkPriceParams, CategorySales, CreateBranchBody, CreateDiscountBody, CreateDrinkBody, CreateIngredientBody, CreateIngredientOptionBody, CreateIngredientOptionParams, CreateOrderBody, CreateUserBody, DashboardSummary, DeleteDiscountParams, DeleteDrinkParams, DeleteIngredientOptionParams, DeleteIngredientParams, DeleteUserParams, Discount, Drink, DrinkDetail, GetActiveOrdersParams, GetCustomerPoints200, GetDashboardSummaryParams, GetDrinkParams, GetIngredientParams, GetOrderParams, GetSalesByCategoryParams, GetSettingsParams, GetTopDrinksParams, HealthStatus, Ingredient, IngredientDetail, IngredientOption, ListActivityLogsParams, ListDrinksParams, ListIngredientsParams, ListOrdersParams, ListStockMovementsParams, LoginBody, LoginResponse, MarkOrderItemReadyParams, Order, OrderDetail, Permission, PriceBreakdown, PriceCalculationBody, RestockBody, RestockIngredientParams, SaveOrderSignatureBody, Setting, StockAdjustmentBody, StockMovement, TopDrink, UpdateBranchBody, UpdateDiscountBody, UpdateDiscountParams, UpdateDrinkBody, UpdateDrinkParams, UpdateIngredientBody, UpdateIngredientOptionBody, UpdateIngredientOptionParams, UpdateIngredientParams, UpdateOrderStatusBody, UpdateOrderStatusParams, UpdateSettingsBody, UpdateUserBody, UpdateUserParams, User, UserDetail } from "./api.schemas";
+import type { ActivityLog, Branch, CalculateDrinkPriceParams, CategorySales, CreateBranchBody, CreateDiscountBody, CreateDrinkBody, CreateIngredientBody, CreateIngredientOptionBody, CreateIngredientOptionParams, CreateOrderBody, CreateUserBody, DashboardSummary, DeleteDiscountParams, DeleteDrinkParams, DeleteIngredientOptionParams, DeleteIngredientParams, DeleteUserParams, Discount, Drink, DrinkDetail, GetActiveOrdersParams, GetCustomerPoints200, GetDashboardSummaryParams, GetDrinkParams, GetIngredientParams, GetLowStockIngredientsParams, GetOrderParams, GetSalesByCategoryParams, GetSettingsParams, GetTopDrinksParams, HealthStatus, Ingredient, IngredientDetail, IngredientOption, ListActivityLogsParams, ListDrinksParams, ListIngredientsParams, ListOrdersParams, ListStockMovementsParams, LoginBody, LoginResponse, MarkOrderItemReadyParams, Order, OrderDetail, Permission, PriceBreakdown, PriceCalculationBody, RestockBody, RestockIngredientParams, SaveOrderSignatureBody, Setting, StockAdjustmentBody, StockMovement, TopDrink, UpdateBranchBody, UpdateDiscountBody, UpdateDiscountParams, UpdateDrinkBody, UpdateDrinkParams, UpdateIngredientBody, UpdateIngredientOptionBody, UpdateIngredientOptionParams, UpdateIngredientParams, UpdateOrderStatusBody, UpdateOrderStatusParams, UpdateSettingsBody, UpdateUserBody, UpdateUserParams, User, UserDetail } from "./api.schemas";
 import { customFetch } from "../custom-fetch";
 import type { ErrorType, BodyType } from "../custom-fetch";
 type AwaitedInput<T> = PromiseLike<T> | T;
@@ -836,10 +836,10 @@ export declare function useGetActiveOrders<TData = Awaited<ReturnType<typeof get
 /**
  * @summary Get ingredients below low stock threshold
  */
-export declare const getGetLowStockIngredientsUrl: () => string;
-export declare const getLowStockIngredients: (options?: RequestInit) => Promise<Ingredient[]>;
-export declare const getGetLowStockIngredientsQueryKey: () => readonly ["/api/dashboard/low-stock"];
-export declare const getGetLowStockIngredientsQueryOptions: <TData = Awaited<ReturnType<typeof getLowStockIngredients>>, TError = ErrorType<unknown>>(options?: {
+export declare const getGetLowStockIngredientsUrl: (params?: GetLowStockIngredientsParams) => string;
+export declare const getLowStockIngredients: (params?: GetLowStockIngredientsParams, options?: RequestInit) => Promise<Ingredient[]>;
+export declare const getGetLowStockIngredientsQueryKey: (params?: GetLowStockIngredientsParams) => readonly ["/api/dashboard/low-stock", ...GetLowStockIngredientsParams[]];
+export declare const getGetLowStockIngredientsQueryOptions: <TData = Awaited<ReturnType<typeof getLowStockIngredients>>, TError = ErrorType<unknown>>(params?: GetLowStockIngredientsParams, options?: {
     query?: UseQueryOptions<Awaited<ReturnType<typeof getLowStockIngredients>>, TError, TData>;
     request?: SecondParameter<typeof customFetch>;
 }) => UseQueryOptions<Awaited<ReturnType<typeof getLowStockIngredients>>, TError, TData> & {
@@ -850,7 +850,7 @@ export type GetLowStockIngredientsQueryError = ErrorType<unknown>;
 /**
  * @summary Get ingredients below low stock threshold
  */
-export declare function useGetLowStockIngredients<TData = Awaited<ReturnType<typeof getLowStockIngredients>>, TError = ErrorType<unknown>>(options?: {
+export declare function useGetLowStockIngredients<TData = Awaited<ReturnType<typeof getLowStockIngredients>>, TError = ErrorType<unknown>>(params?: GetLowStockIngredientsParams, options?: {
     query?: UseQueryOptions<Awaited<ReturnType<typeof getLowStockIngredients>>, TError, TData>;
     request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & {

@@ -43,6 +43,7 @@ import type {
   GetDashboardSummaryParams,
   GetDrinkParams,
   GetIngredientParams,
+  GetLowStockIngredientsParams,
   GetOrderParams,
   GetSalesByCategoryParams,
   GetSettingsParams,
@@ -3042,42 +3043,63 @@ export function useGetActiveOrders<
 /**
  * @summary Get ingredients below low stock threshold
  */
-export const getGetLowStockIngredientsUrl = () => {
-  return `/api/dashboard/low-stock`;
+export const getGetLowStockIngredientsUrl = (
+  params?: GetLowStockIngredientsParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/dashboard/low-stock?${stringifiedParams}`
+    : `/api/dashboard/low-stock`;
 };
 
 export const getLowStockIngredients = async (
+  params?: GetLowStockIngredientsParams,
   options?: RequestInit,
 ): Promise<Ingredient[]> => {
-  return customFetch<Ingredient[]>(getGetLowStockIngredientsUrl(), {
+  return customFetch<Ingredient[]>(getGetLowStockIngredientsUrl(params), {
     ...options,
     method: "GET",
   });
 };
 
-export const getGetLowStockIngredientsQueryKey = () => {
-  return [`/api/dashboard/low-stock`] as const;
+export const getGetLowStockIngredientsQueryKey = (
+  params?: GetLowStockIngredientsParams,
+) => {
+  return [`/api/dashboard/low-stock`, ...(params ? [params] : [])] as const;
 };
 
 export const getGetLowStockIngredientsQueryOptions = <
   TData = Awaited<ReturnType<typeof getLowStockIngredients>>,
   TError = ErrorType<unknown>,
->(options?: {
-  query?: UseQueryOptions<
-    Awaited<ReturnType<typeof getLowStockIngredients>>,
-    TError,
-    TData
-  >;
-  request?: SecondParameter<typeof customFetch>;
-}) => {
+>(
+  params?: GetLowStockIngredientsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getLowStockIngredients>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
   const queryKey =
-    queryOptions?.queryKey ?? getGetLowStockIngredientsQueryKey();
+    queryOptions?.queryKey ?? getGetLowStockIngredientsQueryKey(params);
 
   const queryFn: QueryFunction<
     Awaited<ReturnType<typeof getLowStockIngredients>>
-  > = ({ signal }) => getLowStockIngredients({ signal, ...requestOptions });
+  > = ({ signal }) =>
+    getLowStockIngredients(params, { signal, ...requestOptions });
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof getLowStockIngredients>>,
@@ -3098,15 +3120,18 @@ export type GetLowStockIngredientsQueryError = ErrorType<unknown>;
 export function useGetLowStockIngredients<
   TData = Awaited<ReturnType<typeof getLowStockIngredients>>,
   TError = ErrorType<unknown>,
->(options?: {
-  query?: UseQueryOptions<
-    Awaited<ReturnType<typeof getLowStockIngredients>>,
-    TError,
-    TData
-  >;
-  request?: SecondParameter<typeof customFetch>;
-}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-  const queryOptions = getGetLowStockIngredientsQueryOptions(options);
+>(
+  params?: GetLowStockIngredientsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getLowStockIngredients>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetLowStockIngredientsQueryOptions(params, options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

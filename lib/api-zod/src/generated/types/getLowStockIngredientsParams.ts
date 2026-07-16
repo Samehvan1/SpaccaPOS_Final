@@ -6,8 +6,6 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type ListIngredientsParams = {
-  type?: string;
-  active?: boolean;
+export type GetLowStockIngredientsParams = {
   branchId?: number | string;
 };

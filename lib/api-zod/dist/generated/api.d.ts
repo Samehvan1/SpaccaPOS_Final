@@ -765,11 +765,14 @@ export declare const CalculateDrinkPriceResponse: zod.ZodObject<{
 export declare const ListIngredientsQueryParams: zod.ZodObject<{
     type: zod.ZodOptional<zod.ZodString>;
     active: zod.ZodOptional<zod.ZodBoolean>;
+    branchId: zod.ZodOptional<zod.ZodUnion<[zod.ZodNumber, zod.ZodString]>>;
 }, "strip", zod.ZodTypeAny, {
     type?: string | undefined;
+    branchId?: string | number | undefined;
     active?: boolean | undefined;
 }, {
     type?: string | undefined;
+    branchId?: string | number | undefined;
     active?: boolean | undefined;
 }>;
 export declare const ListIngredientsResponseItem: zod.ZodObject<{
@@ -2584,13 +2587,16 @@ export declare const ListStockMovementsQueryParams: zod.ZodObject<{
     offset: zod.ZodOptional<zod.ZodNumber>;
     startDate: zod.ZodOptional<zod.ZodString>;
     endDate: zod.ZodOptional<zod.ZodString>;
+    branchId: zod.ZodOptional<zod.ZodUnion<[zod.ZodNumber, zod.ZodString]>>;
 }, "strip", zod.ZodTypeAny, {
+    branchId?: string | number | undefined;
     ingredientId?: number | undefined;
     startDate?: string | undefined;
     endDate?: string | undefined;
     limit?: number | undefined;
     offset?: number | undefined;
 }, {
+    branchId?: string | number | undefined;
     ingredientId?: number | undefined;
     startDate?: string | undefined;
     endDate?: string | undefined;
@@ -3199,6 +3205,13 @@ export declare const GetActiveOrdersResponse: zod.ZodArray<zod.ZodIntersection<z
 /**
  * @summary Get ingredients below low stock threshold
  */
+export declare const GetLowStockIngredientsQueryParams: zod.ZodObject<{
+    branchId: zod.ZodOptional<zod.ZodUnion<[zod.ZodNumber, zod.ZodString]>>;
+}, "strip", zod.ZodTypeAny, {
+    branchId?: string | number | undefined;
+}, {
+    branchId?: string | number | undefined;
+}>;
 export declare const GetLowStockIngredientsResponseItem: zod.ZodObject<{
     id: zod.ZodNumber;
     name: zod.ZodString;

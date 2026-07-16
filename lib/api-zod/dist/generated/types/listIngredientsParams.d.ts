@@ -8,5 +8,6 @@
 export type ListIngredientsParams = {
     type?: string;
     active?: boolean;
+    branchId?: number | string;
 };
 //# sourceMappingURL=listIngredientsParams.d.ts.map
