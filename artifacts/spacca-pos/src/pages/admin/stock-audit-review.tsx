@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Link } from "wouter";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useAuth } from "@/hooks/use-auth";
 
 type Audit = {
   id: number;
@@ -19,6 +20,7 @@ type Audit = {
   notes: string | null;
   createdAt: string;
   approvedAt: string | null;
+  approvedByName?: string | null;
 };
 
 type AuditItem = {
@@ -39,6 +41,8 @@ type AuditDetail = Audit & {
 
 export default function StockAuditReviewPage() {
   const { toast } = useToast();
+  const { hasPermission } = useAuth();
+  const canApprove = hasPermission("inventory:audit_approve");
   const [audits, setAudits] = useState<Audit[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedAuditId, setSelectedAuditId] = useState<number | null>(null);
@@ -169,13 +173,38 @@ export default function StockAuditReviewPage() {
             <div className="space-y-1">
               <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Stock Audit #{detail.id}</h1>
               <p className="text-muted-foreground text-sm">Submitted by <span className="font-semibold text-foreground">{detail.createdByName}</span> on {format(new Date(detail.createdAt), "MMM d, yyyy 'at' h:mm a")}</p>
+              {detail.status !== "pending" && detail.approvedAt && (
+                <p className="text-muted-foreground text-xs flex items-center gap-1.5 mt-1">
+                  {detail.status === "approved" ? (
+                    <CheckCircle2 className="h-3.5 w-3.5 text-green-500 shrink-0" />
+                  ) : (
+                    <XCircle className="h-3.5 w-3.5 text-red-500 shrink-0" />
+                  )}
+                  <span>
+                    {detail.status === "approved" ? "Approved" : "Rejected"} by <span className="font-semibold text-foreground">{detail.approvedByName || "Unknown"}</span> on {format(new Date(detail.approvedAt), "MMM d, yyyy 'at' h:mm a")}
+                  </span>
+                </p>
+              )}
             </div>
             {detail.status === "pending" && (
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" className="text-destructive border-destructive/20 hover:bg-destructive/10" onClick={handleReject} disabled={processing}>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="text-destructive border-destructive/20 hover:bg-destructive/10" 
+                  onClick={handleReject} 
+                  disabled={processing || !canApprove}
+                  title={!canApprove ? "You do not have permission to reject audits" : undefined}
+                >
                   Reject
                 </Button>
-                <Button size="sm" onClick={handleApprove} disabled={processing} className="bg-green-600 hover:bg-green-700 shadow-md">
+                <Button 
+                  size="sm" 
+                  onClick={handleApprove} 
+                  disabled={processing || !canApprove} 
+                  className="bg-green-600 hover:bg-green-700 shadow-md"
+                  title={!canApprove ? "You do not have permission to approve audits" : undefined}
+                >
                   Approve & Adjust
                 </Button>
               </div>
@@ -334,10 +363,19 @@ export default function StockAuditReviewPage() {
                           {audit.status}
                         </Badge>
                       </div>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
-                        <span className="truncate">By <span className="font-medium text-foreground">{audit.createdByName}</span></span>
-                        <span>•</span>
-                        <span className="whitespace-nowrap">{format(new Date(audit.createdAt), "MMM d, h:mm a")}</span>
+                      <div className="flex flex-col gap-0.5 mt-0.5">
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <span className="truncate">By <span className="font-medium text-foreground">{audit.createdByName}</span></span>
+                          <span>•</span>
+                          <span className="whitespace-nowrap">{format(new Date(audit.createdAt), "MMM d, h:mm a")}</span>
+                        </div>
+                        {audit.status !== "pending" && audit.approvedAt && (
+                          <div className="flex items-center gap-2 text-[11px] text-muted-foreground italic">
+                            <span>
+                              {audit.status === "approved" ? "Approved" : "Rejected"} by <span className="font-medium text-foreground">{audit.approvedByName || "Unknown"}</span> on {format(new Date(audit.approvedAt), "MMM d, h:mm a")}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
                     <ChevronRight className="h-5 w-5 text-muted-foreground" />

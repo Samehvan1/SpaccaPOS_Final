@@ -17414,10 +17414,10 @@ var require_get_intrinsic = __commonJS({
     };
     var getBaseIntrinsic = function getBaseIntrinsic2(name, allowMissing) {
       var intrinsicName = name;
-      var alias;
+      var alias2;
       if (hasOwn(LEGACY_ALIASES, intrinsicName)) {
-        alias = LEGACY_ALIASES[intrinsicName];
-        intrinsicName = "%" + alias[0] + "%";
+        alias2 = LEGACY_ALIASES[intrinsicName];
+        intrinsicName = "%" + alias2[0] + "%";
       }
       if (hasOwn(INTRINSICS, intrinsicName)) {
         var value = INTRINSICS[intrinsicName];
@@ -17428,7 +17428,7 @@ var require_get_intrinsic = __commonJS({
           throw new $TypeError("intrinsic " + name + " exists, but is not available. Please file an issue!");
         }
         return {
-          alias,
+          alias: alias2,
           name: intrinsicName,
           value
         };
@@ -17451,10 +17451,10 @@ var require_get_intrinsic = __commonJS({
       var intrinsicRealName = intrinsic.name;
       var value = intrinsic.value;
       var skipFurtherCaching = false;
-      var alias = intrinsic.alias;
-      if (alias) {
-        intrinsicBaseName = alias[0];
-        $spliceApply(parts, $concat([0, 1], alias));
+      var alias2 = intrinsic.alias;
+      if (alias2) {
+        intrinsicBaseName = alias2[0];
+        $spliceApply(parts, $concat([0, 1], alias2));
       }
       for (var i = 1, isOwn = true; i < parts.length; i += 1) {
         var part = parts[i];
@@ -36340,12 +36340,12 @@ var init_subquery = __esm({
     init_entity();
     Subquery = class {
       static [entityKind] = "Subquery";
-      constructor(sql3, fields, alias, isWith = false, usedTables = []) {
+      constructor(sql3, fields, alias2, isWith = false, usedTables = []) {
         this._ = {
           brand: "Subquery",
           sql: sql3,
           selectedFields: fields,
-          alias,
+          alias: alias2,
           isWith,
           usedTables
         };
@@ -36739,11 +36739,11 @@ var init_sql = __esm({
       getSQL() {
         return this;
       }
-      as(alias) {
-        if (alias === void 0) {
+      as(alias2) {
+        if (alias2 === void 0) {
           return this;
         }
-        return new _SQL.Aliased(this, alias);
+        return new _SQL.Aliased(this, alias2);
       }
       mapWith(decoder) {
         this.decoder = typeof decoder === "function" ? { mapFromDriverValue: decoder } : decoder;
@@ -36907,19 +36907,19 @@ function aliasedTableColumn(column, tableAlias) {
     new ColumnAliasProxyHandler(new Proxy(column.table, new TableAliasProxyHandler(tableAlias, false)))
   );
 }
-function mapColumnsInAliasedSQLToAlias(query, alias) {
-  return new SQL.Aliased(mapColumnsInSQLToAlias(query.sql, alias), query.fieldAlias);
+function mapColumnsInAliasedSQLToAlias(query, alias2) {
+  return new SQL.Aliased(mapColumnsInSQLToAlias(query.sql, alias2), query.fieldAlias);
 }
-function mapColumnsInSQLToAlias(query, alias) {
+function mapColumnsInSQLToAlias(query, alias2) {
   return sql.join(query.queryChunks.map((c) => {
     if (is(c, Column)) {
-      return aliasedTableColumn(c, alias);
+      return aliasedTableColumn(c, alias2);
     }
     if (is(c, SQL)) {
-      return mapColumnsInSQLToAlias(c, alias);
+      return mapColumnsInSQLToAlias(c, alias2);
     }
     if (is(c, SQL.Aliased)) {
-      return mapColumnsInAliasedSQLToAlias(c, alias);
+      return mapColumnsInAliasedSQLToAlias(c, alias2);
     }
     return c;
   }));
@@ -36945,8 +36945,8 @@ var init_alias = __esm({
       }
     };
     TableAliasProxyHandler = class {
-      constructor(alias, replaceOriginalName) {
-        this.alias = alias;
+      constructor(alias2, replaceOriginalName) {
+        this.alias = alias2;
         this.replaceOriginalName = replaceOriginalName;
       }
       static [entityKind] = "TableAliasProxyHandler";
@@ -36989,8 +36989,8 @@ var init_alias = __esm({
       }
     };
     RelationTableAliasProxyHandler = class {
-      constructor(alias) {
-        this.alias = alias;
+      constructor(alias2) {
+        this.alias = alias2;
       }
       static [entityKind] = "RelationTableAliasProxyHandler";
       get(target, prop) {
@@ -39918,8 +39918,8 @@ var init_dialect = __esm({
         const tableName = table[PgTable.Symbol.Name];
         const tableSchema = table[PgTable.Symbol.Schema];
         const origTableName = table[PgTable.Symbol.OriginalName];
-        const alias = tableName === origTableName ? void 0 : tableName;
-        const tableSql = sql`${tableSchema ? sql`${sql.identifier(tableSchema)}.` : void 0}${sql.identifier(origTableName)}${alias && sql` ${sql.identifier(alias)}`}`;
+        const alias2 = tableName === origTableName ? void 0 : tableName;
+        const tableSql = sql`${tableSchema ? sql`${sql.identifier(tableSchema)}.` : void 0}${sql.identifier(origTableName)}${alias2 && sql` ${sql.identifier(alias2)}`}`;
         const setSql = this.buildUpdateSet(table, set2);
         const fromSql = from && sql.join([sql.raw(" from "), this.buildFromTable(from)]);
         const joinsSql = this.buildJoins(joins);
@@ -40003,17 +40003,17 @@ var init_dialect = __esm({
             const tableName = table[PgTable.Symbol.Name];
             const tableSchema = table[PgTable.Symbol.Schema];
             const origTableName = table[PgTable.Symbol.OriginalName];
-            const alias = tableName === origTableName ? void 0 : joinMeta.alias;
+            const alias2 = tableName === origTableName ? void 0 : joinMeta.alias;
             joinsArray.push(
-              sql`${sql.raw(joinMeta.joinType)} join${lateralSql} ${tableSchema ? sql`${sql.identifier(tableSchema)}.` : void 0}${sql.identifier(origTableName)}${alias && sql` ${sql.identifier(alias)}`}${onSql}`
+              sql`${sql.raw(joinMeta.joinType)} join${lateralSql} ${tableSchema ? sql`${sql.identifier(tableSchema)}.` : void 0}${sql.identifier(origTableName)}${alias2 && sql` ${sql.identifier(alias2)}`}${onSql}`
             );
           } else if (is(table, View)) {
             const viewName = table[ViewBaseConfig].name;
             const viewSchema = table[ViewBaseConfig].schema;
             const origViewName = table[ViewBaseConfig].originalName;
-            const alias = viewName === origViewName ? void 0 : joinMeta.alias;
+            const alias2 = viewName === origViewName ? void 0 : joinMeta.alias;
             joinsArray.push(
-              sql`${sql.raw(joinMeta.joinType)} join${lateralSql} ${viewSchema ? sql`${sql.identifier(viewSchema)}.` : void 0}${sql.identifier(origViewName)}${alias && sql` ${sql.identifier(alias)}`}${onSql}`
+              sql`${sql.raw(joinMeta.joinType)} join${lateralSql} ${viewSchema ? sql`${sql.identifier(viewSchema)}.` : void 0}${sql.identifier(origViewName)}${alias2 && sql` ${sql.identifier(alias2)}`}${onSql}`
             );
           } else {
             joinsArray.push(
@@ -40055,7 +40055,7 @@ var init_dialect = __esm({
         const fieldsList = fieldsFlat ?? orderSelectedFields(fields);
         for (const f of fieldsList) {
           if (is(f.field, Column) && getTableName(f.field.table) !== (is(table, Subquery) ? table._.alias : is(table, PgViewBase) ? table[ViewBaseConfig].name : is(table, SQL) ? void 0 : getTableName(table)) && !((table2) => joins?.some(
-            ({ alias }) => alias === (table2[Table.Symbol.IsAlias] ? getTableName(table2) : table2[Table.Symbol.BaseName])
+            ({ alias: alias2 }) => alias2 === (table2[Table.Symbol.IsAlias] ? getTableName(table2) : table2[Table.Symbol.BaseName])
           ))(f.field.table)) {
             const tableName = getTableName(f.field.table);
             throw new Error(
@@ -41703,15 +41703,15 @@ var init_select2 = __esm({
         const { typings: _typings, ...rest } = this.dialect.sqlToQuery(this.getSQL());
         return rest;
       }
-      as(alias) {
+      as(alias2) {
         const usedTables = [];
         usedTables.push(...extractUsedTable(this.config.table));
         if (this.config.joins) {
           for (const it of this.config.joins) usedTables.push(...extractUsedTable(it.table));
         }
         return new Proxy(
-          new Subquery(this.getSQL(), this.config.fields, alias, false, [...new Set(usedTables)]),
-          new SelectionProxyHandler({ alias, sqlAliasedBehavior: "alias", sqlBehavior: "error" })
+          new Subquery(this.getSQL(), this.config.fields, alias2, false, [...new Set(usedTables)]),
+          new SelectionProxyHandler({ alias: alias2, sqlAliasedBehavior: "alias", sqlBehavior: "error" })
         );
       }
       /** @internal */
@@ -41805,7 +41805,7 @@ var init_query_builder2 = __esm({
         this.dialect = is(dialect, PgDialect) ? dialect : void 0;
         this.dialectConfig = is(dialect, PgDialect) ? void 0 : dialect;
       }
-      $with = (alias, selection) => {
+      $with = (alias2, selection) => {
         const queryBuilder = this;
         const as = (qb) => {
           if (typeof qb === "function") {
@@ -41815,10 +41815,10 @@ var init_query_builder2 = __esm({
             new WithSubquery(
               qb.getSQL(),
               selection ?? ("getSelectedFields" in qb ? qb.getSelectedFields() ?? {} : {}),
-              alias,
+              alias2,
               true
             ),
-            new SelectionProxyHandler({ alias, sqlAliasedBehavior: "alias", sqlBehavior: "error" })
+            new SelectionProxyHandler({ alias: alias2, sqlAliasedBehavior: "alias", sqlBehavior: "error" })
           );
         };
         return { as };
@@ -43075,7 +43075,7 @@ var init_db = __esm({
        * const result = await db.with(sq).select({ name: sq.name }).from(sq);
        * ```
        */
-      $with = (alias, selection) => {
+      $with = (alias2, selection) => {
         const self2 = this;
         const as = (qb) => {
           if (typeof qb === "function") {
@@ -43085,10 +43085,10 @@ var init_db = __esm({
             new WithSubquery(
               qb.getSQL(),
               selection ?? ("getSelectedFields" in qb ? qb.getSelectedFields() ?? {} : {}),
-              alias,
+              alias2,
               true
             ),
-            new SelectionProxyHandler({ alias, sqlAliasedBehavior: "alias", sqlBehavior: "error" })
+            new SelectionProxyHandler({ alias: alias2, sqlAliasedBehavior: "alias", sqlBehavior: "error" })
           );
         };
         return { as };
@@ -43330,8 +43330,12 @@ var init_core = __esm({
 });
 
 // ../../node_modules/.pnpm/drizzle-orm@0.45.1_@types+pg@8.18.0_pg@8.20.0/node_modules/drizzle-orm/pg-core/alias.js
+function alias(table, alias2) {
+  return new Proxy(table, new TableAliasProxyHandler(alias2, false));
+}
 var init_alias2 = __esm({
   "../../node_modules/.pnpm/drizzle-orm@0.45.1_@types+pg@8.18.0_pg@8.20.0/node_modules/drizzle-orm/pg-core/alias.js"() {
+    init_alias();
   }
 });
 
@@ -78151,7 +78155,8 @@ var CalculateDrinkPriceResponse = objectType({
 });
 var ListIngredientsQueryParams = objectType({
   type: coerce.string().optional(),
-  active: coerce.boolean().optional()
+  active: coerce.boolean().optional(),
+  branchId: unionType([coerce.number(), coerce.string()]).optional()
 });
 var ListIngredientsResponseItem = objectType({
   id: numberType(),
@@ -78759,7 +78764,8 @@ var ListStockMovementsQueryParams = objectType({
   limit: coerce.number().optional(),
   offset: coerce.number().optional(),
   startDate: coerce.string().optional(),
-  endDate: coerce.string().optional()
+  endDate: coerce.string().optional(),
+  branchId: unionType([coerce.number(), coerce.string()]).optional()
 });
 var ListStockMovementsResponseItem = objectType({
   id: numberType(),
@@ -78890,6 +78896,9 @@ var GetActiveOrdersResponseItem = objectType({
   })
 );
 var GetActiveOrdersResponse = arrayType(GetActiveOrdersResponseItem);
+var GetLowStockIngredientsQueryParams = objectType({
+  branchId: unionType([coerce.number(), coerce.string()]).optional()
+});
 var GetLowStockIngredientsResponseItem = objectType({
   id: numberType(),
   name: stringType(),
@@ -84856,9 +84865,10 @@ router7.get("/dashboard/summary", async (req, res) => {
   const pendingOrders = todayOrders.filter(
     (o) => o.status === "pending" || o.status === "in_progress"
   ).length;
-  const lowStockResult = await db.select({ count: sql`count(*)` }).from(branchStockTable).where(
+  const lowStockResult = await db.select({ count: sql`count(*)` }).from(branchStockTable).innerJoin(ingredientsTable, eq(branchStockTable.ingredientId, ingredientsTable.id)).where(
     and(
       targetBranchId ? eq(branchStockTable.branchId, targetBranchId) : sql`1=1`,
+      eq(ingredientsTable.isActive, true),
       sql`${branchStockTable.stockQuantity} < ${branchStockTable.lowStockThreshold}`
     )
   );
@@ -87277,8 +87287,10 @@ var import_express19 = __toESM(require_express2(), 1);
 init_drizzle_orm();
 init_src();
 init_cache2();
+init_pg_core();
+var approvedByUserTable = alias(usersTable, "approved_by_user");
 var router17 = (0, import_express19.Router)();
-router17.get("/stock-audits", async (req, res) => {
+router17.get("/stock-audits", requirePermission("inventory:manage"), async (req, res) => {
   const sessionUser = req.session;
   const sessionBranchId = sessionUser.branchId;
   const isAdmin = sessionUser.role === "admin";
@@ -87294,13 +87306,14 @@ router17.get("/stock-audits", async (req, res) => {
     createdBy: stockAuditsTable.createdBy,
     createdByName: usersTable.name,
     approvedBy: stockAuditsTable.approvedBy,
+    approvedByName: approvedByUserTable.name,
     notes: stockAuditsTable.notes,
     createdAt: stockAuditsTable.createdAt,
     approvedAt: stockAuditsTable.approvedAt
-  }).from(stockAuditsTable).leftJoin(usersTable, eq(stockAuditsTable.createdBy, usersTable.id)).where(conditions.length > 0 ? and(...conditions) : void 0).orderBy(desc(stockAuditsTable.createdAt));
+  }).from(stockAuditsTable).leftJoin(usersTable, eq(stockAuditsTable.createdBy, usersTable.id)).leftJoin(approvedByUserTable, eq(stockAuditsTable.approvedBy, approvedByUserTable.id)).where(conditions.length > 0 ? and(...conditions) : void 0).orderBy(desc(stockAuditsTable.createdAt));
   res.json(serializeDates(audits));
 });
-router17.get("/stock-audits/:id", async (req, res) => {
+router17.get("/stock-audits/:id", requirePermission("inventory:manage"), async (req, res) => {
   const auditId = parseInt(req.params.id);
   const [audit] = await db.select({
     id: stockAuditsTable.id,
@@ -87309,10 +87322,11 @@ router17.get("/stock-audits/:id", async (req, res) => {
     createdBy: stockAuditsTable.createdBy,
     createdByName: usersTable.name,
     approvedBy: stockAuditsTable.approvedBy,
+    approvedByName: approvedByUserTable.name,
     notes: stockAuditsTable.notes,
     createdAt: stockAuditsTable.createdAt,
     approvedAt: stockAuditsTable.approvedAt
-  }).from(stockAuditsTable).leftJoin(usersTable, eq(stockAuditsTable.createdBy, usersTable.id)).where(eq(stockAuditsTable.id, auditId));
+  }).from(stockAuditsTable).leftJoin(usersTable, eq(stockAuditsTable.createdBy, usersTable.id)).leftJoin(approvedByUserTable, eq(stockAuditsTable.approvedBy, approvedByUserTable.id)).where(eq(stockAuditsTable.id, auditId));
   if (!audit) {
     res.status(404).json({ error: "Audit not found" });
     return;
@@ -87338,7 +87352,7 @@ router17.get("/stock-audits/:id", async (req, res) => {
     }))
   }));
 });
-router17.post("/stock-audits", async (req, res) => {
+router17.post("/stock-audits", requirePermission("inventory:view"), async (req, res) => {
   const { notes, items } = req.body;
   const sessionUser = req.session;
   const userId = sessionUser?.userId || 1;
@@ -87382,7 +87396,7 @@ router17.post("/stock-audits", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-router17.patch("/stock-audits/:id", async (req, res) => {
+router17.patch("/stock-audits/:id", requirePermission("inventory:manage"), async (req, res) => {
   const auditId = parseInt(req.params.id);
   const { items, notes } = req.body;
   try {
@@ -87405,7 +87419,7 @@ router17.patch("/stock-audits/:id", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-router17.post("/stock-audits/:id/approve", async (req, res) => {
+router17.post("/stock-audits/:id/approve", requirePermission("inventory:audit_approve"), async (req, res) => {
   const auditId = parseInt(req.params.id);
   const userId = req.session.userId;
   try {
@@ -87464,7 +87478,7 @@ router17.post("/stock-audits/:id/approve", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-router17.post("/stock-audits/:id/reject", async (req, res) => {
+router17.post("/stock-audits/:id/reject", requirePermission("inventory:audit_approve"), async (req, res) => {
   const auditId = parseInt(req.params.id);
   const userId = req.session.userId;
   await db.update(stockAuditsTable).set({
@@ -89411,6 +89425,7 @@ var APP_PERMISSIONS = [
   { key: "inventory:view", name: "View Inventory", description: "Check stock levels and ingredients" },
   { key: "inventory:manage", name: "Manage Inventory", description: "Update stock levels, conversions and ingredient options" },
   { key: "inventory:adjust", name: "Adjust Stock", description: "Restock and adjust inventory quantities" },
+  { key: "inventory:audit_approve", name: "Approve Stock Audits", description: "Approve or reject stock audit reports and adjust stock levels" },
   { key: "purchases:view", name: "View Purchases", description: "View purchases department, orders and suppliers" },
   { key: "purchases:manage", name: "Manage Purchases", description: "Create purchase orders, receive orders, and record payments" },
   // Finance & Reports

@@ -37,6 +37,7 @@ export const APP_PERMISSIONS = [
   { key: "inventory:view", name: "View Inventory", description: "Check stock levels and ingredients" },
   { key: "inventory:manage", name: "Manage Inventory", description: "Update stock levels, conversions and ingredient options" },
   { key: "inventory:adjust", name: "Adjust Stock", description: "Restock and adjust inventory quantities" },
+  { key: "inventory:audit_approve", name: "Approve Stock Audits", description: "Approve or reject stock audit reports and adjust stock levels" },
   { key: "purchases:view", name: "View Purchases", description: "View purchases department, orders and suppliers" },
   { key: "purchases:manage", name: "Manage Purchases", description: "Create purchase orders, receive orders, and record payments" },
   

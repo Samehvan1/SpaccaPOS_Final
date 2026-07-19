@@ -4,11 +4,15 @@ import { db, stockAuditsTable, stockAuditItemsTable, ingredientsTable, stockMove
 import { serializeDates } from "../lib/serialize";
 import { logActivity } from "../lib/activity-logger";
 import { globalCache } from "../lib/cache";
+import { requirePermission } from "../middleware/permissions";
+import { alias } from "drizzle-orm/pg-core";
+
+const approvedByUserTable = alias(usersTable, "approved_by_user");
 
 const router: IRouter = Router();
 
 // List all audits
-router.get("/stock-audits", async (req, res) => {
+router.get("/stock-audits", requirePermission("inventory:manage"), async (req, res) => {
   const sessionUser = (req.session as any);
   const sessionBranchId = sessionUser.branchId;
   const isAdmin = sessionUser.role === "admin";
@@ -30,20 +34,22 @@ router.get("/stock-audits", async (req, res) => {
       createdBy: stockAuditsTable.createdBy,
       createdByName: usersTable.name,
       approvedBy: stockAuditsTable.approvedBy,
+      approvedByName: approvedByUserTable.name,
       notes: stockAuditsTable.notes,
       createdAt: stockAuditsTable.createdAt,
       approvedAt: stockAuditsTable.approvedAt,
     })
     .from(stockAuditsTable)
     .leftJoin(usersTable, eq(stockAuditsTable.createdBy, usersTable.id))
+    .leftJoin(approvedByUserTable, eq(stockAuditsTable.approvedBy, approvedByUserTable.id))
     .where(conditions.length > 0 ? and(...conditions) : undefined)
     .orderBy(desc(stockAuditsTable.createdAt));
   res.json(serializeDates(audits));
 });
 
 // Get audit detail
-router.get("/stock-audits/:id", async (req, res) => {
-  const auditId = parseInt(req.params.id);
+router.get("/stock-audits/:id", requirePermission("inventory:manage"), async (req, res) => {
+  const auditId = parseInt(req.params.id as string);
   const [audit] = await db
     .select({
       id: stockAuditsTable.id,
@@ -52,12 +58,14 @@ router.get("/stock-audits/:id", async (req, res) => {
       createdBy: stockAuditsTable.createdBy,
       createdByName: usersTable.name,
       approvedBy: stockAuditsTable.approvedBy,
+      approvedByName: approvedByUserTable.name,
       notes: stockAuditsTable.notes,
       createdAt: stockAuditsTable.createdAt,
       approvedAt: stockAuditsTable.approvedAt,
     })
     .from(stockAuditsTable)
     .leftJoin(usersTable, eq(stockAuditsTable.createdBy, usersTable.id))
+    .leftJoin(approvedByUserTable, eq(stockAuditsTable.approvedBy, approvedByUserTable.id))
     .where(eq(stockAuditsTable.id, auditId));
     
   if (!audit) {
@@ -93,7 +101,7 @@ router.get("/stock-audits/:id", async (req, res) => {
 });
 
 // Create audit report (Staff)
-router.post("/stock-audits", async (req, res) => {
+router.post("/stock-audits", requirePermission("inventory:view"), async (req, res) => {
   const { notes, items } = req.body; // items: Array<{ ingredientId, actualQuantity, notes }>
   const sessionUser = (req.session as any);
   const userId = sessionUser?.userId || 1;
@@ -154,8 +162,8 @@ router.post("/stock-audits", async (req, res) => {
 });
 
 // Update audit report (Admin edits quantities before approval)
-router.patch("/stock-audits/:id", async (req, res) => {
-  const auditId = parseInt(req.params.id);
+router.patch("/stock-audits/:id", requirePermission("inventory:manage"), async (req, res) => {
+  const auditId = parseInt(req.params.id as string);
   const { items, notes } = req.body; // items: Array<{ id (audit_item_id), finalQuantity, notes }>
 
   try {
@@ -185,8 +193,8 @@ router.patch("/stock-audits/:id", async (req, res) => {
 });
 
 // Approve audit (Admin)
-router.post("/stock-audits/:id/approve", async (req, res) => {
-  const auditId = parseInt(req.params.id);
+router.post("/stock-audits/:id/approve", requirePermission("inventory:audit_approve"), async (req, res) => {
+  const auditId = parseInt(req.params.id as string);
   const userId = (req.session as any).userId;
 
   try {
@@ -269,8 +277,8 @@ router.post("/stock-audits/:id/approve", async (req, res) => {
 });
 
 // Reject audit
-router.post("/stock-audits/:id/reject", async (req, res) => {
-  const auditId = parseInt(req.params.id);
+router.post("/stock-audits/:id/reject", requirePermission("inventory:audit_approve"), async (req, res) => {
+  const auditId = parseInt(req.params.id as string);
   const userId = (req.session as any).userId;
 
   await db
