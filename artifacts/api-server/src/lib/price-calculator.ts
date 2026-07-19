@@ -143,7 +143,7 @@ export async function calculateDrinkData(drinkId: number, selections: any[], bra
   const possibleIngredientIds = new Set<number>();
   if (drink.cupIngredientId) possibleIngredientIds.add(drink.cupIngredientId);
   slots.forEach(s => {
-    if (s.isDynamic && s.ingredientId) possibleIngredientIds.add(s.ingredientId);
+    if (s.ingredientId) possibleIngredientIds.add(s.ingredientId);
   });
   ingredientTypesAll.forEach(it => {
     if (it.inventoryIngredientId) possibleIngredientIds.add(it.inventoryIngredientId);
@@ -275,7 +275,31 @@ export async function calculateDrinkData(drinkId: number, selections: any[], bra
     }
 
     // 3. Perform calculation if we have a selection (provided or default)
-    if (!sel) continue;
+    if (!sel) {
+      if (slot.ingredientId) {
+        // Fallback for legacy slot with no options/selections
+        const ingredient = ingredientsMap.get(slot.ingredientId);
+        const shouldCount = slot.affectsCupSize ?? true;
+        if (shouldCount) {
+          usedVolumeMl += 1;
+        }
+        customizations.push({
+          ingredientId: slot.ingredientId,
+          optionId: null,
+          typeVolumeId: null,
+          ingredientTypeId: null,
+          consumedQty: 1,
+          producedQty: 1,
+          color: null,
+          addedCost: 0,
+          slotLabel: slot.slotLabel,
+          optionLabel: ingredient?.name ?? slot.slotLabel,
+          baristaSortOrder: slot.baristaSortOrder ?? 1,
+          customerSortOrder: slot.customerSortOrder ?? 1,
+        });
+      }
+      continue;
+    }
 
     // --- New-style slot: typed selection (typeVolumeId) ---
     if (sel.typeVolumeId) {
@@ -387,57 +411,79 @@ export async function calculateDrinkData(drinkId: number, selections: any[], bra
     }
 
     // --- Old-style legacy slot ---
-    if (!sel.optionId) continue;
-    const option = ingredientOptionsMap.get(sel.optionId);
-    if (!option) continue;
-
-    if (option.linkedIngredientId && sel.subOptionId) {
-      const subOption = ingredientOptionsMap.get(sel.subOptionId);
-      if (subOption) {
-        const extraCost = parseFloat(subOption.extraCost) || 0;
-        totalExtras += extraCost;
+    if (slot.ingredientId) {
+      const option = sel.optionId ? ingredientOptionsMap.get(sel.optionId) : null;
+      if (!option) {
+        const ingredient = ingredientsMap.get(slot.ingredientId);
         const shouldCount = slot.affectsCupSize ?? true;
         if (shouldCount) {
-          usedVolumeMl += parseFloat(subOption.producedQty) || 0;
+          usedVolumeMl += 1;
         }
         customizations.push({
-          ingredientId: option.linkedIngredientId,
-          optionId: sel.subOptionId,
+          ingredientId: slot.ingredientId,
+          optionId: null,
           typeVolumeId: null,
           ingredientTypeId: null,
-          consumedQty: parseFloat(subOption.processedQty) || 0,
-          producedQty: parseFloat(subOption.producedQty) || 0,
+          consumedQty: 1,
+          producedQty: 1,
           color: null,
-          addedCost: extraCost,
+          addedCost: 0,
           slotLabel: slot.slotLabel,
-          optionLabel: `${option.label} · ${subOption.label}`,
+          optionLabel: ingredient?.name ?? slot.slotLabel,
           baristaSortOrder: slot.baristaSortOrder ?? 1,
           customerSortOrder: slot.customerSortOrder ?? 1,
         });
+        continue;
       }
-      continue;
-    }
 
-    const extraCost = parseFloat(option.extraCost) || 0;
-    totalExtras += extraCost;
-    const shouldCount = slot.affectsCupSize ?? true;
-    if (shouldCount) {
-      usedVolumeMl += parseFloat(option.producedQty) || 0;
+      if (option.linkedIngredientId && sel.subOptionId) {
+        const subOption = ingredientOptionsMap.get(sel.subOptionId);
+        if (subOption) {
+          const extraCost = parseFloat(subOption.extraCost) || 0;
+          totalExtras += extraCost;
+          const shouldCount = slot.affectsCupSize ?? true;
+          if (shouldCount) {
+            usedVolumeMl += parseFloat(subOption.producedQty) || 0;
+          }
+          customizations.push({
+            ingredientId: option.linkedIngredientId,
+            optionId: sel.subOptionId,
+            typeVolumeId: null,
+            ingredientTypeId: null,
+            consumedQty: parseFloat(subOption.processedQty) || 0,
+            producedQty: parseFloat(subOption.producedQty) || 0,
+            color: null,
+            addedCost: extraCost,
+            slotLabel: slot.slotLabel,
+            optionLabel: `${option.label} · ${subOption.label}`,
+            baristaSortOrder: slot.baristaSortOrder ?? 1,
+            customerSortOrder: slot.customerSortOrder ?? 1,
+          });
+        }
+        continue;
+      }
+
+      const extraCost = parseFloat(option.extraCost) || 0;
+      totalExtras += extraCost;
+      const shouldCount = slot.affectsCupSize ?? true;
+      if (shouldCount) {
+        usedVolumeMl += parseFloat(option.producedQty) || 0;
+      }
+      customizations.push({
+        ingredientId: sel.ingredientId ?? slot.ingredientId ?? null,
+        optionId: sel.optionId,
+        typeVolumeId: null,
+        ingredientTypeId: null,
+        consumedQty: parseFloat(option.processedQty) || 0,
+        producedQty: parseFloat(option.producedQty) || 0,
+        color: null,
+        addedCost: extraCost,
+        slotLabel: slot.slotLabel,
+        optionLabel: option.label,
+        baristaSortOrder: slot.baristaSortOrder ?? 1,
+        customerSortOrder: slot.customerSortOrder ?? 1,
+      });
     }
-    customizations.push({
-      ingredientId: sel.ingredientId ?? slot.ingredientId ?? null,
-      optionId: sel.optionId,
-      typeVolumeId: null,
-      ingredientTypeId: null,
-      consumedQty: parseFloat(option.processedQty) || 0,
-      producedQty: parseFloat(option.producedQty) || 0,
-      color: null,
-      addedCost: extraCost,
-      slotLabel: slot.slotLabel,
-      optionLabel: option.label,
-      baristaSortOrder: slot.baristaSortOrder ?? 1,
-      customerSortOrder: slot.customerSortOrder ?? 1,
-    });
   }
 
   // --- Dynamic slot calculate ---

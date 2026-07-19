@@ -173,6 +173,14 @@ async function buildDrinkDetail(drinkId: number, branchId?: number) {
           effectiveTypeOptions.map(async (to) => {
             const [ingType] = await db.select().from(ingredientTypesTable)
               .where(eq(ingredientTypesTable.id, to.ingredientTypeId));
+            if (!ingType || ingType.isActive === false) return null;
+
+            if (ingType.inventoryIngredientId) {
+              const [ing] = await db.select().from(ingredientsTable)
+                .where(eq(ingredientsTable.id, ingType.inventoryIngredientId));
+              if (!ing || ing.isActive === false) return null;
+            }
+
             const [category] = ingType
               ? await db.select().from(ingredientCategoriesTable)
                   .where(eq(ingredientCategoriesTable.id, ingType.categoryId))
@@ -261,7 +269,7 @@ async function buildDrinkDetail(drinkId: number, branchId?: number) {
               volumes,
             };
           })
-        ).then(options => options.filter(o => o.typeName !== ""));
+        ).then(options => options.filter((o): o is NonNullable<typeof o> => o !== null && o.typeName !== ""));
 
         slotResult = {
           ...effectiveSlot,
@@ -275,6 +283,19 @@ async function buildDrinkDetail(drinkId: number, branchId?: number) {
       } else if (slot.ingredientId) {
         // ── Old-style slot: ingredientId set ─────────────────────────────────
         const [ingredient] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, slot.ingredientId));
+        if (!ingredient || ingredient.isActive === false) {
+          return {
+            ...effectiveSlot,
+            slotStyle: "legacy" as const,
+            typeOptions: null,
+            ingredient: null,
+            volumes: [],
+            ingredientType: null,
+            isAvailable: false,
+            unavailableReason: `Unavailable: ${effectiveSlot.slotLabel || "Ingredient is inactive"}`,
+          };
+        }
+
         const options = await db
           .select()
           .from(ingredientOptionsTable)
@@ -300,28 +321,28 @@ async function buildDrinkDetail(drinkId: number, branchId?: number) {
           }
         }
 
-        const enrichedOptions = await Promise.all(
+        const enrichedOptions = (await Promise.all(
           options.map(async (o) => {
             let linkedIngredient: { id: number; name: string; options: any[] } | null = null;
             if (o.linkedIngredientId) {
               const [linked] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, o.linkedIngredientId));
-              if (linked) {
-                const linkedOpts = await db
-                  .select()
-                  .from(ingredientOptionsTable)
-                  .where(eq(ingredientOptionsTable.ingredientId, o.linkedIngredientId))
-                  .orderBy(ingredientOptionsTable.sortOrder);
-                linkedIngredient = {
-                  id: linked.id,
-                  name: linked.name,
-                  options: linkedOpts.map((lo) => ({
-                    ...lo,
-                    processedQty: Number(lo.processedQty),
-                    producedQty: Number(lo.producedQty),
-                    extraCost: Number(lo.extraCost),
-                  })),
-                };
-              }
+              if (!linked || linked.isActive === false) return null;
+              
+              const linkedOpts = await db
+                .select()
+                .from(ingredientOptionsTable)
+                .where(eq(ingredientOptionsTable.ingredientId, o.linkedIngredientId))
+                .orderBy(ingredientOptionsTable.sortOrder);
+              linkedIngredient = {
+                id: linked.id,
+                name: linked.name,
+                options: linkedOpts.map((lo) => ({
+                  ...lo,
+                  processedQty: Number(lo.processedQty),
+                  producedQty: Number(lo.producedQty),
+                  extraCost: Number(lo.extraCost),
+                })),
+              };
             }
             const isAvailable = stockQuantity >= Number(o.processedQty);
             return {
@@ -334,7 +355,7 @@ async function buildDrinkDetail(drinkId: number, branchId?: number) {
               linkedIngredient,
             };
           })
-        );
+        )).filter((o): o is NonNullable<typeof o> => o !== null);
 
         slotResult = {
           ...effectiveSlot,

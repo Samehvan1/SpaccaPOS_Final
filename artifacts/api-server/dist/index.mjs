@@ -81487,7 +81487,7 @@ async function calculateDrinkData(drinkId, selections, branchId = null) {
   const possibleIngredientIds = /* @__PURE__ */ new Set();
   if (drink.cupIngredientId) possibleIngredientIds.add(drink.cupIngredientId);
   slots.forEach((s) => {
-    if (s.isDynamic && s.ingredientId) possibleIngredientIds.add(s.ingredientId);
+    if (s.ingredientId) possibleIngredientIds.add(s.ingredientId);
   });
   ingredientTypesAll.forEach((it) => {
     if (it.inventoryIngredientId) possibleIngredientIds.add(it.inventoryIngredientId);
@@ -81578,7 +81578,30 @@ async function calculateDrinkData(drinkId, selections, branchId = null) {
         };
       }
     }
-    if (!sel) continue;
+    if (!sel) {
+      if (slot.ingredientId) {
+        const ingredient = ingredientsMap.get(slot.ingredientId);
+        const shouldCount = slot.affectsCupSize ?? true;
+        if (shouldCount) {
+          usedVolumeMl += 1;
+        }
+        customizations.push({
+          ingredientId: slot.ingredientId,
+          optionId: null,
+          typeVolumeId: null,
+          ingredientTypeId: null,
+          consumedQty: 1,
+          producedQty: 1,
+          color: null,
+          addedCost: 0,
+          slotLabel: slot.slotLabel,
+          optionLabel: ingredient?.name ?? slot.slotLabel,
+          baristaSortOrder: slot.baristaSortOrder ?? 1,
+          customerSortOrder: slot.customerSortOrder ?? 1
+        });
+      }
+      continue;
+    }
     if (sel.typeVolumeId) {
       const typeVol = typeVolumeMap.get(sel.typeVolumeId);
       if (!typeVol) continue;
@@ -81598,12 +81621,12 @@ async function calculateDrinkData(drinkId, selections, branchId = null) {
       const volumeName = volDef?.name ?? "";
       const templateDef = slot.predefinedSlotId ? predefinedSlotVolumesMap.get(`${slot.predefinedSlotId}:${sel.typeVolumeId}`) : null;
       const volExtraCost = parseFloat(slotVol?.extraCost ?? templateDef?.extraCost ?? typeVol.extraCost) || 0;
-      const extraCost2 = typeExtraCost + volExtraCost;
-      totalExtras += extraCost2;
+      const extraCost = typeExtraCost + volExtraCost;
+      totalExtras += extraCost;
       const consumedQty = parseFloat(slotVol?.processedQty ?? templateDef?.processedQty ?? typeVol.processedQty ?? volDef?.processedQty ?? "0") || 0;
       const producedQty = parseFloat(slotVol?.producedQty ?? templateDef?.producedQty ?? typeVol.producedQty ?? volDef?.producedQty ?? "0") || 0;
-      const shouldCount2 = slot.affectsCupSize ?? typeDef?.affectsCupSize ?? true;
-      if (shouldCount2) {
+      const shouldCount = slot.affectsCupSize ?? typeDef?.affectsCupSize ?? true;
+      if (shouldCount) {
         usedVolumeMl += producedQty;
       }
       const optionLabel = typeName && volumeName ? `${typeName} \xB7 ${volumeName}` : typeName || volumeName || "Catalog Item";
@@ -81615,7 +81638,7 @@ async function calculateDrinkData(drinkId, selections, branchId = null) {
         consumedQty,
         producedQty,
         color: typeDef?.color ?? null,
-        addedCost: extraCost2,
+        addedCost: extraCost,
         slotLabel: slot.slotLabel,
         optionLabel,
         baristaSortOrder: slot.baristaSortOrder ?? 1,
@@ -81636,10 +81659,10 @@ async function calculateDrinkData(drinkId, selections, branchId = null) {
         const consumedQty = parseFloat(slotTypeOpt?.processedQty ?? templateTypeOpt?.processedQty ?? ingType.processedQty ?? "0") || 0;
         const producedQty = parseFloat(slotTypeOpt?.producedQty ?? templateTypeOpt?.producedQty ?? ingType.producedQty ?? "0") || 0;
         const pricingMode = slotTypeOpt?.pricingMode ?? templateTypeOpt?.pricingMode ?? ingType.pricingMode ?? "volume";
-        const extraCost2 = parseFloat(slotTypeOpt?.extraCost ?? templateTypeOpt?.extraCost ?? ingType.extraCost ?? "0") || 0;
-        totalExtras += extraCost2;
-        const shouldCount2 = slot.affectsCupSize ?? ingType.affectsCupSize ?? true;
-        if (shouldCount2) {
+        const extraCost = parseFloat(slotTypeOpt?.extraCost ?? templateTypeOpt?.extraCost ?? ingType.extraCost ?? "0") || 0;
+        totalExtras += extraCost;
+        const shouldCount = slot.affectsCupSize ?? ingType.affectsCupSize ?? true;
+        if (shouldCount) {
           usedVolumeMl += producedQty;
         }
         const unit = slotTypeOpt?.unit ?? templateTypeOpt?.unit ?? ingType.unit ?? "g";
@@ -81652,7 +81675,7 @@ async function calculateDrinkData(drinkId, selections, branchId = null) {
           consumedQty,
           producedQty,
           color: ingType.color ?? null,
-          addedCost: extraCost2,
+          addedCost: extraCost,
           slotLabel: slot.slotLabel,
           optionLabel,
           baristaSortOrder: slot.baristaSortOrder ?? 1,
@@ -81661,55 +81684,77 @@ async function calculateDrinkData(drinkId, selections, branchId = null) {
       }
       continue;
     }
-    if (!sel.optionId) continue;
-    const option = ingredientOptionsMap.get(sel.optionId);
-    if (!option) continue;
-    if (option.linkedIngredientId && sel.subOptionId) {
-      const subOption = ingredientOptionsMap.get(sel.subOptionId);
-      if (subOption) {
-        const extraCost2 = parseFloat(subOption.extraCost) || 0;
-        totalExtras += extraCost2;
+    if (slot.ingredientId) {
+      const option = sel.optionId ? ingredientOptionsMap.get(sel.optionId) : null;
+      if (!option) {
+        const ingredient = ingredientsMap.get(slot.ingredientId);
         const shouldCount2 = slot.affectsCupSize ?? true;
         if (shouldCount2) {
-          usedVolumeMl += parseFloat(subOption.producedQty) || 0;
+          usedVolumeMl += 1;
         }
         customizations.push({
-          ingredientId: option.linkedIngredientId,
-          optionId: sel.subOptionId,
+          ingredientId: slot.ingredientId,
+          optionId: null,
           typeVolumeId: null,
           ingredientTypeId: null,
-          consumedQty: parseFloat(subOption.processedQty) || 0,
-          producedQty: parseFloat(subOption.producedQty) || 0,
+          consumedQty: 1,
+          producedQty: 1,
           color: null,
-          addedCost: extraCost2,
+          addedCost: 0,
           slotLabel: slot.slotLabel,
-          optionLabel: `${option.label} \xB7 ${subOption.label}`,
+          optionLabel: ingredient?.name ?? slot.slotLabel,
           baristaSortOrder: slot.baristaSortOrder ?? 1,
           customerSortOrder: slot.customerSortOrder ?? 1
         });
+        continue;
       }
-      continue;
+      if (option.linkedIngredientId && sel.subOptionId) {
+        const subOption = ingredientOptionsMap.get(sel.subOptionId);
+        if (subOption) {
+          const extraCost2 = parseFloat(subOption.extraCost) || 0;
+          totalExtras += extraCost2;
+          const shouldCount2 = slot.affectsCupSize ?? true;
+          if (shouldCount2) {
+            usedVolumeMl += parseFloat(subOption.producedQty) || 0;
+          }
+          customizations.push({
+            ingredientId: option.linkedIngredientId,
+            optionId: sel.subOptionId,
+            typeVolumeId: null,
+            ingredientTypeId: null,
+            consumedQty: parseFloat(subOption.processedQty) || 0,
+            producedQty: parseFloat(subOption.producedQty) || 0,
+            color: null,
+            addedCost: extraCost2,
+            slotLabel: slot.slotLabel,
+            optionLabel: `${option.label} \xB7 ${subOption.label}`,
+            baristaSortOrder: slot.baristaSortOrder ?? 1,
+            customerSortOrder: slot.customerSortOrder ?? 1
+          });
+        }
+        continue;
+      }
+      const extraCost = parseFloat(option.extraCost) || 0;
+      totalExtras += extraCost;
+      const shouldCount = slot.affectsCupSize ?? true;
+      if (shouldCount) {
+        usedVolumeMl += parseFloat(option.producedQty) || 0;
+      }
+      customizations.push({
+        ingredientId: sel.ingredientId ?? slot.ingredientId ?? null,
+        optionId: sel.optionId,
+        typeVolumeId: null,
+        ingredientTypeId: null,
+        consumedQty: parseFloat(option.processedQty) || 0,
+        producedQty: parseFloat(option.producedQty) || 0,
+        color: null,
+        addedCost: extraCost,
+        slotLabel: slot.slotLabel,
+        optionLabel: option.label,
+        baristaSortOrder: slot.baristaSortOrder ?? 1,
+        customerSortOrder: slot.customerSortOrder ?? 1
+      });
     }
-    const extraCost = parseFloat(option.extraCost) || 0;
-    totalExtras += extraCost;
-    const shouldCount = slot.affectsCupSize ?? true;
-    if (shouldCount) {
-      usedVolumeMl += parseFloat(option.producedQty) || 0;
-    }
-    customizations.push({
-      ingredientId: sel.ingredientId ?? slot.ingredientId ?? null,
-      optionId: sel.optionId,
-      typeVolumeId: null,
-      ingredientTypeId: null,
-      consumedQty: parseFloat(option.processedQty) || 0,
-      producedQty: parseFloat(option.producedQty) || 0,
-      color: null,
-      addedCost: extraCost,
-      slotLabel: slot.slotLabel,
-      optionLabel: option.label,
-      baristaSortOrder: slot.baristaSortOrder ?? 1,
-      customerSortOrder: slot.customerSortOrder ?? 1
-    });
   }
   const dynamicSlot = slots.find((s) => s.isDynamic);
   if (dynamicSlot && drink.cupSizeMl) {
@@ -81971,6 +82016,11 @@ async function buildDrinkDetail(drinkId, branchId) {
         const typeOptionsWithVolumes = await Promise.all(
           effectiveTypeOptions.map(async (to) => {
             const [ingType] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, to.ingredientTypeId));
+            if (!ingType || ingType.isActive === false) return null;
+            if (ingType.inventoryIngredientId) {
+              const [ing] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, ingType.inventoryIngredientId));
+              if (!ing || ing.isActive === false) return null;
+            }
             const [category] = ingType ? await db.select().from(ingredientCategoriesTable).where(eq(ingredientCategoriesTable.id, ingType.categoryId)) : [null];
             let stockQuantity = 999999;
             if (ingType?.inventoryIngredientId) {
@@ -82035,7 +82085,7 @@ async function buildDrinkDetail(drinkId, branchId) {
               volumes
             };
           })
-        ).then((options) => options.filter((o) => o.typeName !== ""));
+        ).then((options) => options.filter((o) => o !== null && o.typeName !== ""));
         slotResult = {
           ...effectiveSlot,
           slotStyle: "typed",
@@ -82047,6 +82097,18 @@ async function buildDrinkDetail(drinkId, branchId) {
         };
       } else if (slot.ingredientId) {
         const [ingredient] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, slot.ingredientId));
+        if (!ingredient || ingredient.isActive === false) {
+          return {
+            ...effectiveSlot,
+            slotStyle: "legacy",
+            typeOptions: null,
+            ingredient: null,
+            volumes: [],
+            ingredientType: null,
+            isAvailable: false,
+            unavailableReason: `Unavailable: ${effectiveSlot.slotLabel || "Ingredient is inactive"}`
+          };
+        }
         const options = await db.select().from(ingredientOptionsTable).where(eq(ingredientOptionsTable.ingredientId, slot.ingredientId)).orderBy(ingredientOptionsTable.sortOrder);
         let stockQuantity = 0;
         if (ingredient) {
@@ -82061,24 +82123,23 @@ async function buildDrinkDetail(drinkId, branchId) {
             stockQuantity = result2?.totalStock ? Number(result2.totalStock) : 0;
           }
         }
-        const enrichedOptions = await Promise.all(
+        const enrichedOptions = (await Promise.all(
           options.map(async (o) => {
             let linkedIngredient = null;
             if (o.linkedIngredientId) {
               const [linked] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, o.linkedIngredientId));
-              if (linked) {
-                const linkedOpts = await db.select().from(ingredientOptionsTable).where(eq(ingredientOptionsTable.ingredientId, o.linkedIngredientId)).orderBy(ingredientOptionsTable.sortOrder);
-                linkedIngredient = {
-                  id: linked.id,
-                  name: linked.name,
-                  options: linkedOpts.map((lo) => ({
-                    ...lo,
-                    processedQty: Number(lo.processedQty),
-                    producedQty: Number(lo.producedQty),
-                    extraCost: Number(lo.extraCost)
-                  }))
-                };
-              }
+              if (!linked || linked.isActive === false) return null;
+              const linkedOpts = await db.select().from(ingredientOptionsTable).where(eq(ingredientOptionsTable.ingredientId, o.linkedIngredientId)).orderBy(ingredientOptionsTable.sortOrder);
+              linkedIngredient = {
+                id: linked.id,
+                name: linked.name,
+                options: linkedOpts.map((lo) => ({
+                  ...lo,
+                  processedQty: Number(lo.processedQty),
+                  producedQty: Number(lo.producedQty),
+                  extraCost: Number(lo.extraCost)
+                }))
+              };
             }
             const isAvailable2 = stockQuantity >= Number(o.processedQty);
             return {
@@ -82091,7 +82152,7 @@ async function buildDrinkDetail(drinkId, branchId) {
               linkedIngredient
             };
           })
-        );
+        )).filter((o) => o !== null);
         slotResult = {
           ...effectiveSlot,
           slotStyle: "legacy",
@@ -82911,15 +82972,36 @@ router4.get("/ingredients", requirePermission("inventory:view"), async (req, res
       conditions.push(eq(ingredientsTable.ingredientType, params.data.type));
     }
     const ingredientRows = conditions.length ? await query.where(and(...conditions)).orderBy(asc(ingredientsTable.ingredientType), asc(ingredientsTable.name)) : await query.orderBy(asc(ingredientsTable.ingredientType), asc(ingredientsTable.name));
-    const [typeLinks, optionLinks, drinkLinks, allConversions] = await Promise.all([
+    const [typeLinks, optionLinks, cupLinks, legacySlotLinks, allConversions] = await Promise.all([
       db.select({ id: ingredientTypesTable.inventoryIngredientId, count: sql`count(*)` }).from(ingredientTypesTable).groupBy(ingredientTypesTable.inventoryIngredientId),
       db.select({ id: ingredientOptionsTable.linkedIngredientId, count: sql`count(*)` }).from(ingredientOptionsTable).groupBy(ingredientOptionsTable.linkedIngredientId),
-      db.select({ id: drinksTable.cupIngredientId, count: sql`count(*)` }).from(drinksTable).groupBy(drinksTable.cupIngredientId),
+      db.select({ id: drinksTable.id, cupIngredientId: drinksTable.cupIngredientId }).from(drinksTable),
+      db.select({ drinkId: drinkIngredientSlotsTable.drinkId, ingredientId: drinkIngredientSlotsTable.ingredientId }).from(drinkIngredientSlotsTable),
       db.select().from(ingredientConversionsTable)
     ]);
     const typeCountMap = new Map(typeLinks.map((l) => [l.id, Number(l.count)]));
     const optionCountMap = new Map(optionLinks.map((l) => [l.id, Number(l.count)]));
-    const drinkCountMap = new Map(drinkLinks.map((l) => [l.id, Number(l.count)]));
+    const ingredientDrinksMap = /* @__PURE__ */ new Map();
+    cupLinks.forEach((d) => {
+      if (d.cupIngredientId) {
+        let set2 = ingredientDrinksMap.get(d.cupIngredientId);
+        if (!set2) {
+          set2 = /* @__PURE__ */ new Set();
+          ingredientDrinksMap.set(d.cupIngredientId, set2);
+        }
+        set2.add(d.id);
+      }
+    });
+    legacySlotLinks.forEach((slot) => {
+      if (slot.ingredientId) {
+        let set2 = ingredientDrinksMap.get(slot.ingredientId);
+        if (!set2) {
+          set2 = /* @__PURE__ */ new Set();
+          ingredientDrinksMap.set(slot.ingredientId, set2);
+        }
+        set2.add(slot.drinkId);
+      }
+    });
     const conversionMap = /* @__PURE__ */ new Map();
     allConversions.forEach((c) => {
       const existing = conversionMap.get(c.ingredientId) || [];
@@ -82933,7 +83015,7 @@ router4.get("/ingredients", requirePermission("inventory:view"), async (req, res
         startupQuantity: parseFloat(String(i.startupQuantity || "0")) || 0,
         lowStockThreshold: parseFloat(String(i.lowStockThreshold || "0")) || 0,
         linkedTypeCount: (typeCountMap.get(i.id) || 0) + (optionCountMap.get(i.id) || 0),
-        linkedProductCount: drinkCountMap.get(i.id) || 0,
+        linkedProductCount: ingredientDrinksMap.get(i.id)?.size ?? 0,
         conversions: conversionMap.get(i.id) || [],
         createdAt: i.createdAt || /* @__PURE__ */ new Date(),
         updatedAt: i.updatedAt || i.createdAt || /* @__PURE__ */ new Date()

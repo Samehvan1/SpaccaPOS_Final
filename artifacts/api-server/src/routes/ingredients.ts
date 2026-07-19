@@ -269,16 +269,39 @@ router.get("/ingredients", requirePermission("inventory:view"), async (req, res)
       : await query.orderBy(asc(ingredientsTable.ingredientType), asc(ingredientsTable.name));
 
     // Get counts of links and conversions
-    const [typeLinks, optionLinks, drinkLinks, allConversions] = await Promise.all([
+    const [typeLinks, optionLinks, cupLinks, legacySlotLinks, allConversions] = await Promise.all([
       db.select({ id: ingredientTypesTable.inventoryIngredientId, count: sql<number>`count(*)` }).from(ingredientTypesTable).groupBy(ingredientTypesTable.inventoryIngredientId),
       db.select({ id: ingredientOptionsTable.linkedIngredientId, count: sql<number>`count(*)` }).from(ingredientOptionsTable).groupBy(ingredientOptionsTable.linkedIngredientId),
-      db.select({ id: drinksTable.cupIngredientId, count: sql<number>`count(*)` }).from(drinksTable).groupBy(drinksTable.cupIngredientId),
+      db.select({ id: drinksTable.id, cupIngredientId: drinksTable.cupIngredientId }).from(drinksTable),
+      db.select({ drinkId: drinkIngredientSlotsTable.drinkId, ingredientId: drinkIngredientSlotsTable.ingredientId }).from(drinkIngredientSlotsTable),
       db.select().from(ingredientConversionsTable)
     ]);
 
     const typeCountMap = new Map(typeLinks.map(l => [l.id, Number(l.count)]));
     const optionCountMap = new Map(optionLinks.map(l => [l.id, Number(l.count)]));
-    const drinkCountMap = new Map(drinkLinks.map(l => [l.id, Number(l.count)]));
+    
+    // Build set of unique drinks per ingredient (including cup package and legacy slot links)
+    const ingredientDrinksMap = new Map<number, Set<number>>();
+    cupLinks.forEach(d => {
+      if (d.cupIngredientId) {
+        let set = ingredientDrinksMap.get(d.cupIngredientId);
+        if (!set) {
+          set = new Set();
+          ingredientDrinksMap.set(d.cupIngredientId, set);
+        }
+        set.add(d.id);
+      }
+    });
+    legacySlotLinks.forEach(slot => {
+      if (slot.ingredientId) {
+        let set = ingredientDrinksMap.get(slot.ingredientId);
+        if (!set) {
+          set = new Set();
+          ingredientDrinksMap.set(slot.ingredientId, set);
+        }
+        set.add(slot.drinkId);
+      }
+    });
     
     const conversionMap = new Map();
     allConversions.forEach(c => {
@@ -294,7 +317,7 @@ router.get("/ingredients", requirePermission("inventory:view"), async (req, res)
         startupQuantity: parseFloat(String((i as any).startupQuantity || "0")) || 0,
         lowStockThreshold: parseFloat(String(i.lowStockThreshold || "0")) || 0,
         linkedTypeCount: (typeCountMap.get(i.id) || 0) + (optionCountMap.get(i.id) || 0),
-        linkedProductCount: drinkCountMap.get(i.id) || 0,
+        linkedProductCount: ingredientDrinksMap.get(i.id)?.size ?? 0,
         conversions: conversionMap.get(i.id) || [],
         createdAt: (i as any).createdAt || new Date(),
         updatedAt: i.updatedAt || (i as any).createdAt || new Date(),
