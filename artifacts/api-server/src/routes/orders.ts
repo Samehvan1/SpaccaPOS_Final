@@ -662,18 +662,9 @@ router.post("/orders", async (req, res): Promise<void> => {
           notes: parsed.data.notes ?? null,
         }).returning();
 
-        // Pre-fetch ingredient stock levels for all ingredients in one query for this branch
         const allIngredientIds = [
           ...new Set(itemDetails.flatMap((d) => d.customizations.map((c) => c.ingredientId).filter((id): id is number => id !== null))),
         ];
-        const stockRows = allIngredientIds.length > 0
-          ? await tx.select({ ingredientId: branchStockTable.ingredientId, stockQuantity: branchStockTable.stockQuantity })
-              .from(branchStockTable)
-              .where(and(eq(branchStockTable.branchId, targetBranchId), inArray(branchStockTable.ingredientId, allIngredientIds)))
-          : [];
-        const stockMap = new Map(stockRows.map((r) => [r.ingredientId, parseFloat(r.stockQuantity)]));
-        console.log(`[stock] Pre-fetched stock for ${allIngredientIds.length} ingredients in branch ${targetBranchId}:`, Array.from(stockMap.entries()));
-
         const ingredientCosts = allIngredientIds.length > 0
           ? await tx.select({ id: ingredientsTable.id, costPerUnit: ingredientsTable.costPerUnit })
               .from(ingredientsTable)
@@ -710,54 +701,6 @@ router.post("/orders", async (req, res): Promise<void> => {
                 baristaSortOrder: c.baristaSortOrder,
                 customerSortOrder: c.customerSortOrder,
                 costPerUnit: c.ingredientId ? (ingredientCostMap.get(c.ingredientId) || "0") : "0",
-              }))
-            );
-          }
-
-          // Batch stock deductions: compute new quantities, then do 1 update + 1 insert per ingredient
-          const stockUpdates: Array<{ id: number; newQty: number; delta: number }> = [];
-          const { deductStockFromBatches } = await import("../lib/stock-utils");
-          for (const c of item.customizations) {
-            if (!c.ingredientId || c.consumedQty === 0) {
-              if (c.ingredientId && c.consumedQty === 0) console.log(`[stock] Skipping deduction for ${c.slotLabel} because consumedQty is 0`);
-              continue;
-            }
-            const current = stockMap.get(c.ingredientId) ?? 0;
-            const newQty = Math.max(0, current - c.consumedQty);
-            console.log(`[stock] Deducting ${c.consumedQty} from ${c.ingredientId} in branch ${targetBranchId}. ${current} -> ${newQty}`);
-            stockMap.set(c.ingredientId, newQty);
-            stockUpdates.push({ id: c.ingredientId, newQty, delta: c.consumedQty });
-
-            // Deduct from batches using FEFO
-            await deductStockFromBatches(tx, targetBranchId, c.ingredientId, c.consumedQty);
-          }
-
-          // Batch-update branch stock and insert movements in parallel
-          await Promise.all(
-            stockUpdates.map((u) =>
-              tx.insert(branchStockTable)
-                .values({
-                  branchId: targetBranchId,
-                  ingredientId: u.id,
-                  stockQuantity: String(u.newQty),
-                })
-                .onConflictDoUpdate({
-                  target: [branchStockTable.branchId, branchStockTable.ingredientId],
-                  set: { stockQuantity: String(u.newQty) }
-                })
-            )
-          );
-          if (stockUpdates.length > 0) {
-            await tx.insert(stockMovementsTable).values(
-              stockUpdates.map((u) => ({
-                branchId: targetBranchId,
-                ingredientId: u.id,
-                orderId: newOrder.id,
-                movementType: "sale" as const,
-                quantity: String(-u.delta),
-                quantityAfter: String(u.newQty),
-                note: `Order ${newOrder.orderNumber}`,
-                createdBy: sessionUserId,
               }))
             );
           }
@@ -966,9 +909,10 @@ router.patch("/orders/:id/status", async (req, res, next): Promise<void> => {
     updateData.cancelledAt = now;
   }
   
-  // ── Update/Save Payments ──────────────────────────────────────────────
-  if (parsed.data.payments && parsed.data.payments.length > 0) {
-    await db.transaction(async (tx) => {
+  // ── Update/Save Payments & Stock Deductions inside a single Transaction ──
+  let order: any;
+  await db.transaction(async (tx) => {
+    if (parsed.data.payments && parsed.data.payments.length > 0) {
       // Delete existing payments for this order and replace with new ones
       await tx.delete(orderPaymentsTable).where(eq(orderPaymentsTable.orderId, params.data.id));
       await tx.insert(orderPaymentsTable).values(
@@ -979,11 +923,8 @@ router.patch("/orders/:id/status", async (req, res, next): Promise<void> => {
           transactionId: p.transactionId ?? null,
         }))
       );
-    });
-  } else if (parsed.data.paymentMethod || parsed.data.status === "paid") {
-    // If single payment method updated or order approved/paid, update/sync the payment record
-    await db.transaction(async (tx) => {
-      // Delete existing payments
+    } else if (parsed.data.paymentMethod || parsed.data.status === "paid") {
+      // If single payment method updated or order approved/paid, update/sync the payment record
       await tx.delete(orderPaymentsTable).where(eq(orderPaymentsTable.orderId, params.data.id));
       
       const finalMethod = (parsed.data.paymentMethod ?? existingOrder.paymentMethod ?? "cash") as any;
@@ -996,14 +937,91 @@ router.patch("/orders/:id/status", async (req, res, next): Promise<void> => {
         paymentMethod: finalMethod,
         amount: String(amountVal),
       });
-    });
-  }
+    }
 
-  const [order] = await db
-    .update(ordersTable)
-    .set(updateData)
-    .where(eq(ordersTable.id, params.data.id))
-    .returning();
+    // Perform stock deduction if the order transitions from pending to a paid/confirmed status
+    const isConfirming = existingOrder.status === "pending" && ["paid", "in_progress", "ready", "completed"].includes(parsed.data.status);
+    if (isConfirming) {
+      const customizations = await tx
+        .select({
+          ingredientId: orderItemCustomizationsTable.ingredientId,
+          consumedQty: orderItemCustomizationsTable.consumedQty,
+          slotLabel: orderItemCustomizationsTable.slotLabel,
+        })
+        .from(orderItemCustomizationsTable)
+        .innerJoin(orderItemsTable, eq(orderItemsTable.id, orderItemCustomizationsTable.orderItemId))
+        .where(eq(orderItemsTable.orderId, existingOrder.id));
+
+      const totalsToDeduct = new Map<number, number>();
+      customizations.forEach(c => {
+        if (c.ingredientId && parseFloat(c.consumedQty) > 0) {
+          const qty = parseFloat(c.consumedQty);
+          totalsToDeduct.set(c.ingredientId, (totalsToDeduct.get(c.ingredientId) ?? 0) + qty);
+        }
+      });
+
+      if (totalsToDeduct.size > 0) {
+        const ingredientIds = Array.from(totalsToDeduct.keys());
+        const stockRows = await tx
+          .select({ ingredientId: branchStockTable.ingredientId, stockQuantity: branchStockTable.stockQuantity })
+          .from(branchStockTable)
+          .where(and(eq(branchStockTable.branchId, existingOrder.branchId), inArray(branchStockTable.ingredientId, ingredientIds)));
+        const stockMap = new Map(stockRows.map((r) => [r.ingredientId, parseFloat(r.stockQuantity)]));
+
+        const stockUpdates: Array<{ id: number; newQty: number; delta: number }> = [];
+        const { deductStockFromBatches } = await import("../lib/stock-utils");
+
+        for (const [ingredientId, delta] of totalsToDeduct.entries()) {
+          const current = stockMap.get(ingredientId) ?? 0;
+          const newQty = Math.max(0, current - delta);
+          console.log(`[stock] Confirming order: Deducting ${delta} from ${ingredientId} in branch ${existingOrder.branchId}. ${current} -> ${newQty}`);
+          stockMap.set(ingredientId, newQty);
+          stockUpdates.push({ id: ingredientId, newQty, delta });
+
+          // Deduct from batches using FEFO
+          await deductStockFromBatches(tx, existingOrder.branchId, ingredientId, delta);
+        }
+
+        // Batch-update branch stock
+        await Promise.all(
+          stockUpdates.map((u) =>
+            tx.insert(branchStockTable)
+              .values({
+                branchId: existingOrder.branchId,
+                ingredientId: u.id,
+                stockQuantity: String(u.newQty),
+              })
+              .onConflictDoUpdate({
+                target: [branchStockTable.branchId, branchStockTable.ingredientId],
+                set: { stockQuantity: String(u.newQty) }
+              })
+          )
+        );
+
+        // Insert stock movements
+        const sessionUserId = (req.session as any).userId;
+        await tx.insert(stockMovementsTable).values(
+          stockUpdates.map((u) => ({
+            branchId: existingOrder.branchId,
+            ingredientId: u.id,
+            orderId: existingOrder.id,
+            movementType: "sale" as const,
+            quantity: String(-u.delta),
+            quantityAfter: String(u.newQty),
+            note: `Order ${existingOrder.orderNumber} Confirmation`,
+            createdBy: sessionUserId,
+          }))
+        );
+      }
+    }
+
+    const [updatedOrder] = await tx
+      .update(ordersTable)
+      .set(updateData)
+      .where(eq(ordersTable.id, params.data.id))
+      .returning();
+    order = updatedOrder;
+  });
 
   if (!order) {
     res.status(404).json({ error: "Order not found" });

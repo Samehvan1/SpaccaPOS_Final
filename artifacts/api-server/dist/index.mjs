@@ -83951,9 +83951,6 @@ router5.post("/orders", async (req, res) => {
         const allIngredientIds = [
           ...new Set(itemDetails.flatMap((d) => d.customizations.map((c) => c.ingredientId).filter((id) => id !== null)))
         ];
-        const stockRows = allIngredientIds.length > 0 ? await tx.select({ ingredientId: branchStockTable.ingredientId, stockQuantity: branchStockTable.stockQuantity }).from(branchStockTable).where(and(eq(branchStockTable.branchId, targetBranchId), inArray(branchStockTable.ingredientId, allIngredientIds))) : [];
-        const stockMap = new Map(stockRows.map((r) => [r.ingredientId, parseFloat(r.stockQuantity)]));
-        console.log(`[stock] Pre-fetched stock for ${allIngredientIds.length} ingredients in branch ${targetBranchId}:`, Array.from(stockMap.entries()));
         const ingredientCosts = allIngredientIds.length > 0 ? await tx.select({ id: ingredientsTable.id, costPerUnit: ingredientsTable.costPerUnit }).from(ingredientsTable).where(inArray(ingredientsTable.id, allIngredientIds)) : [];
         const ingredientCostMap = new Map(ingredientCosts.map((r) => [r.id, r.costPerUnit]));
         const currentSavedItems = [];
@@ -83984,46 +83981,6 @@ router5.post("/orders", async (req, res) => {
                 baristaSortOrder: c.baristaSortOrder,
                 customerSortOrder: c.customerSortOrder,
                 costPerUnit: c.ingredientId ? ingredientCostMap.get(c.ingredientId) || "0" : "0"
-              }))
-            );
-          }
-          const stockUpdates = [];
-          const { deductStockFromBatches: deductStockFromBatches2 } = await Promise.resolve().then(() => (init_stock_utils(), stock_utils_exports));
-          for (const c of item.customizations) {
-            if (!c.ingredientId || c.consumedQty === 0) {
-              if (c.ingredientId && c.consumedQty === 0) console.log(`[stock] Skipping deduction for ${c.slotLabel} because consumedQty is 0`);
-              continue;
-            }
-            const current = stockMap.get(c.ingredientId) ?? 0;
-            const newQty = Math.max(0, current - c.consumedQty);
-            console.log(`[stock] Deducting ${c.consumedQty} from ${c.ingredientId} in branch ${targetBranchId}. ${current} -> ${newQty}`);
-            stockMap.set(c.ingredientId, newQty);
-            stockUpdates.push({ id: c.ingredientId, newQty, delta: c.consumedQty });
-            await deductStockFromBatches2(tx, targetBranchId, c.ingredientId, c.consumedQty);
-          }
-          await Promise.all(
-            stockUpdates.map(
-              (u) => tx.insert(branchStockTable).values({
-                branchId: targetBranchId,
-                ingredientId: u.id,
-                stockQuantity: String(u.newQty)
-              }).onConflictDoUpdate({
-                target: [branchStockTable.branchId, branchStockTable.ingredientId],
-                set: { stockQuantity: String(u.newQty) }
-              })
-            )
-          );
-          if (stockUpdates.length > 0) {
-            await tx.insert(stockMovementsTable).values(
-              stockUpdates.map((u) => ({
-                branchId: targetBranchId,
-                ingredientId: u.id,
-                orderId: newOrder.id,
-                movementType: "sale",
-                quantity: String(-u.delta),
-                quantityAfter: String(u.newQty),
-                note: `Order ${newOrder.orderNumber}`,
-                createdBy: sessionUserId
               }))
             );
           }
@@ -84195,8 +84152,9 @@ router5.patch("/orders/:id/status", async (req, res, next) => {
   } else if (parsed.data.status === "cancelled" || parsed.data.status === "refunded") {
     updateData.cancelledAt = now;
   }
-  if (parsed.data.payments && parsed.data.payments.length > 0) {
-    await db.transaction(async (tx) => {
+  let order;
+  await db.transaction(async (tx) => {
+    if (parsed.data.payments && parsed.data.payments.length > 0) {
       await tx.delete(orderPaymentsTable).where(eq(orderPaymentsTable.orderId, params.data.id));
       await tx.insert(orderPaymentsTable).values(
         parsed.data.payments.map((p) => ({
@@ -84206,9 +84164,7 @@ router5.patch("/orders/:id/status", async (req, res, next) => {
           transactionId: p.transactionId ?? null
         }))
       );
-    });
-  } else if (parsed.data.paymentMethod || parsed.data.status === "paid") {
-    await db.transaction(async (tx) => {
+    } else if (parsed.data.paymentMethod || parsed.data.status === "paid") {
       await tx.delete(orderPaymentsTable).where(eq(orderPaymentsTable.orderId, params.data.id));
       const finalMethod = parsed.data.paymentMethod ?? existingOrder.paymentMethod ?? "cash";
       const subtotalVal = parseFloat(existingOrder.subtotal);
@@ -84219,9 +84175,65 @@ router5.patch("/orders/:id/status", async (req, res, next) => {
         paymentMethod: finalMethod,
         amount: String(amountVal)
       });
-    });
-  }
-  const [order] = await db.update(ordersTable).set(updateData).where(eq(ordersTable.id, params.data.id)).returning();
+    }
+    const isConfirming = existingOrder.status === "pending" && ["paid", "in_progress", "ready", "completed"].includes(parsed.data.status);
+    if (isConfirming) {
+      const customizations = await tx.select({
+        ingredientId: orderItemCustomizationsTable.ingredientId,
+        consumedQty: orderItemCustomizationsTable.consumedQty,
+        slotLabel: orderItemCustomizationsTable.slotLabel
+      }).from(orderItemCustomizationsTable).innerJoin(orderItemsTable, eq(orderItemsTable.id, orderItemCustomizationsTable.orderItemId)).where(eq(orderItemsTable.orderId, existingOrder.id));
+      const totalsToDeduct = /* @__PURE__ */ new Map();
+      customizations.forEach((c) => {
+        if (c.ingredientId && parseFloat(c.consumedQty) > 0) {
+          const qty = parseFloat(c.consumedQty);
+          totalsToDeduct.set(c.ingredientId, (totalsToDeduct.get(c.ingredientId) ?? 0) + qty);
+        }
+      });
+      if (totalsToDeduct.size > 0) {
+        const ingredientIds = Array.from(totalsToDeduct.keys());
+        const stockRows = await tx.select({ ingredientId: branchStockTable.ingredientId, stockQuantity: branchStockTable.stockQuantity }).from(branchStockTable).where(and(eq(branchStockTable.branchId, existingOrder.branchId), inArray(branchStockTable.ingredientId, ingredientIds)));
+        const stockMap = new Map(stockRows.map((r) => [r.ingredientId, parseFloat(r.stockQuantity)]));
+        const stockUpdates = [];
+        const { deductStockFromBatches: deductStockFromBatches2 } = await Promise.resolve().then(() => (init_stock_utils(), stock_utils_exports));
+        for (const [ingredientId, delta] of totalsToDeduct.entries()) {
+          const current = stockMap.get(ingredientId) ?? 0;
+          const newQty = Math.max(0, current - delta);
+          console.log(`[stock] Confirming order: Deducting ${delta} from ${ingredientId} in branch ${existingOrder.branchId}. ${current} -> ${newQty}`);
+          stockMap.set(ingredientId, newQty);
+          stockUpdates.push({ id: ingredientId, newQty, delta });
+          await deductStockFromBatches2(tx, existingOrder.branchId, ingredientId, delta);
+        }
+        await Promise.all(
+          stockUpdates.map(
+            (u) => tx.insert(branchStockTable).values({
+              branchId: existingOrder.branchId,
+              ingredientId: u.id,
+              stockQuantity: String(u.newQty)
+            }).onConflictDoUpdate({
+              target: [branchStockTable.branchId, branchStockTable.ingredientId],
+              set: { stockQuantity: String(u.newQty) }
+            })
+          )
+        );
+        const sessionUserId = req.session.userId;
+        await tx.insert(stockMovementsTable).values(
+          stockUpdates.map((u) => ({
+            branchId: existingOrder.branchId,
+            ingredientId: u.id,
+            orderId: existingOrder.id,
+            movementType: "sale",
+            quantity: String(-u.delta),
+            quantityAfter: String(u.newQty),
+            note: `Order ${existingOrder.orderNumber} Confirmation`,
+            createdBy: sessionUserId
+          }))
+        );
+      }
+    }
+    const [updatedOrder] = await tx.update(ordersTable).set(updateData).where(eq(ordersTable.id, params.data.id)).returning();
+    order = updatedOrder;
+  });
   if (!order) {
     res.status(404).json({ error: "Order not found" });
     return;
