@@ -95,7 +95,7 @@ export default function CalibrationPage() {
       const initialQuantities: Record<number, string> = {};
       drinkUsage.forEach((item: any) => {
         initialChecked[item.ingredientId] = !!item.isDefault;
-        initialQuantities[item.ingredientId] = String(item.qty || 1);
+        initialQuantities[item.ingredientId] = String(item.qty ?? 0);
       });
       setCheckedIngredients(initialChecked);
       setCustomQuantities(initialQuantities);
