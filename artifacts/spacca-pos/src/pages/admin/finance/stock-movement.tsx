@@ -124,25 +124,16 @@ export default function StockMovementPage() {
       } else if (m.movementType === "adjustment") {
         item.adjNet += qty;
       } else {
-        // Any unrecognized movement type
-        if (qty < 0) {
-          item.adjNet += qty;
-        } else if (qty > 0) {
-          item.adjNet += qty;
-        }
+        item.adjNet += qty;
       }
-    });
 
-    // Calculate totalIn, totalOut, and finalTotal strictly matching the visible columns
-    map.forEach(item => {
-      const restockIn = item.restockNet > 0 ? item.restockNet : 0;
-      const restockOut = item.restockNet < 0 ? Math.abs(item.restockNet) : 0;
-      const adjIn = item.adjNet > 0 ? item.adjNet : 0;
-      const adjOut = item.adjNet < 0 ? Math.abs(item.adjNet) : 0;
+      if (qty > 0) {
+        item.totalIn += absQty;
+      } else if (qty < 0) {
+        item.totalOut += absQty;
+      }
 
-      item.totalIn = restockIn + adjIn;
-      item.totalOut = item.saleQty + item.calibrationQty + item.testQty + item.wasteQty + restockOut + adjOut;
-      item.finalTotal = item.totalIn - item.totalOut;
+      item.finalTotal += qty;
     });
 
     return Array.from(map.values()).sort((a, b) => a.ingredientName.localeCompare(b.ingredientName));
@@ -396,9 +387,9 @@ export default function StockMovementPage() {
                 <TableHead className="text-right">Waste</TableHead>
                 <TableHead className="text-right">Adjustment</TableHead>
                 <TableHead className="text-right">Restock</TableHead>
-                <TableHead className="text-right">Total Out Movement</TableHead>
-                <TableHead className="text-right">Total In</TableHead>
-                <TableHead className="text-right">Final Total</TableHead>
+                <TableHead className="text-right bg-rose-100/70 text-rose-900 font-semibold dark:bg-rose-950/40 dark:text-rose-200">Total Out Movement</TableHead>
+                <TableHead className="text-right bg-emerald-100/70 text-emerald-900 font-semibold dark:bg-emerald-950/40 dark:text-emerald-200">Total In</TableHead>
+                <TableHead className="text-right bg-sky-100/70 text-sky-900 font-bold dark:bg-sky-950/40 dark:text-sky-200">Final Total</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -443,13 +434,13 @@ export default function StockMovementPage() {
                       <TableCell className={`text-right font-mono ${g.restockNet > 0 ? "text-green-600" : g.restockNet < 0 ? "text-red-600" : ""}`}>
                         {g.restockNet > 0 ? `+${g.restockNet}` : g.restockNet < 0 ? g.restockNet : "—"}
                       </TableCell>
-                      <TableCell className="text-right font-mono font-medium text-red-600">
+                      <TableCell className="text-right font-mono font-medium text-red-700 dark:text-red-400 bg-rose-50/70 dark:bg-rose-950/20">
                         {g.totalOut > 0 ? `-${g.totalOut}` : "0"}
                       </TableCell>
-                      <TableCell className="text-right font-mono font-medium text-green-600">
+                      <TableCell className="text-right font-mono font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-50/70 dark:bg-emerald-950/20">
                         {g.totalIn > 0 ? `+${g.totalIn}` : "0"}
                       </TableCell>
-                      <TableCell className={`text-right font-mono font-bold ${g.finalTotal > 0 ? "text-green-600" : g.finalTotal < 0 ? "text-red-600" : ""}`}>
+                      <TableCell className={`text-right font-mono font-bold bg-sky-50/70 dark:bg-sky-950/20 ${g.finalTotal > 0 ? "text-emerald-700 dark:text-emerald-400" : g.finalTotal < 0 ? "text-rose-700 dark:text-rose-400" : ""}`}>
                         {g.finalTotal > 0 ? `+${g.finalTotal}` : g.finalTotal}
                       </TableCell>
                     </TableRow>
@@ -480,13 +471,13 @@ export default function StockMovementPage() {
                         return totalRestock > 0 ? `+${totalRestock}` : totalRestock < 0 ? totalRestock : "0";
                       })()}
                     </TableCell>
-                    <TableCell className="text-right font-mono text-red-600">
+                    <TableCell className="text-right font-mono font-bold text-red-700 dark:text-red-400 bg-rose-100/80 dark:bg-rose-900/40">
                       -{groupedData.reduce((acc, g) => acc + g.totalOut, 0)}
                     </TableCell>
-                    <TableCell className="text-right font-mono text-green-600">
+                    <TableCell className="text-right font-mono font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-100/80 dark:bg-emerald-900/40">
                       +{groupedData.reduce((acc, g) => acc + g.totalIn, 0)}
                     </TableCell>
-                    <TableCell className="text-right font-mono">
+                    <TableCell className="text-right font-mono font-bold bg-sky-100/80 dark:bg-sky-900/40">
                       {(() => {
                         const net = groupedData.reduce((acc, g) => acc + g.finalTotal, 0);
                         return net > 0 ? `+${net}` : net;
