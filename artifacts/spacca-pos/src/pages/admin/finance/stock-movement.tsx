@@ -81,6 +81,9 @@ export default function StockMovementPage() {
       calibrationQty: number;
       testQty: number;
       wasteQty: number;
+      adjIn: number;
+      adjOut: number;
+      adjNet: number;
       restockQty: number;
       totalOut: number;
       totalIn: number;
@@ -98,6 +101,9 @@ export default function StockMovementPage() {
           calibrationQty: 0,
           testQty: 0,
           wasteQty: 0,
+          adjIn: 0,
+          adjOut: 0,
+          adjNet: 0,
           restockQty: 0,
           totalOut: 0,
           totalIn: 0,
@@ -111,20 +117,38 @@ export default function StockMovementPage() {
 
       if (m.movementType === "sale") {
         item.saleQty += absQty;
+        item.totalOut += absQty;
       } else if (m.movementType === "calibration") {
         item.calibrationQty += absQty;
+        item.totalOut += absQty;
       } else if (m.movementType === "testing") {
         item.testQty += absQty;
+        item.totalOut += absQty;
       } else if (m.movementType === "waste") {
         item.wasteQty += absQty;
-      } else if (m.movementType === "restock") {
-        item.restockQty += absQty;
-      }
-
-      if (qty < 0 || m.movementType === "sale" || m.movementType === "waste" || m.movementType === "calibration" || m.movementType === "testing") {
         item.totalOut += absQty;
-      } else if (qty > 0 || m.movementType === "restock") {
-        item.totalIn += absQty;
+      } else if (m.movementType === "restock") {
+        if (qty >= 0) {
+          item.restockQty += absQty;
+          item.totalIn += absQty;
+        } else {
+          item.totalOut += absQty;
+        }
+      } else if (m.movementType === "adjustment") {
+        item.adjNet += qty;
+        if (qty > 0) {
+          item.adjIn += qty;
+          item.totalIn += qty;
+        } else if (qty < 0) {
+          item.adjOut += absQty;
+          item.totalOut += absQty;
+        }
+      } else {
+        if (qty < 0) {
+          item.totalOut += absQty;
+        } else if (qty > 0) {
+          item.totalIn += absQty;
+        }
       }
 
       item.finalTotal += qty;
@@ -135,13 +159,14 @@ export default function StockMovementPage() {
 
   const exportCsv = () => {
     if (viewMode === "grouped") {
-      const headers = ["Item Name", "Sale Total Qty", "Calibration", "Test", "Waste", "Restock", "Total Out Movement", "Total In", "Final Total"];
+      const headers = ["Item Name", "Sale Total Qty", "Calibration", "Test", "Waste", "Adjustment", "Restock", "Total Out Movement", "Total In", "Final Total"];
       const rows = groupedData.map(g => [
         `"${g.ingredientName.replace(/"/g, '""')}"`,
         g.saleQty,
         g.calibrationQty,
         g.testQty,
         g.wasteQty,
+        g.adjNet,
         g.restockQty,
         g.totalOut,
         g.totalIn,
@@ -378,6 +403,7 @@ export default function StockMovementPage() {
                 <TableHead className="text-right">Calibration</TableHead>
                 <TableHead className="text-right">Test</TableHead>
                 <TableHead className="text-right">Waste</TableHead>
+                <TableHead className="text-right">Adjustment</TableHead>
                 <TableHead className="text-right">Restock</TableHead>
                 <TableHead className="text-right">Total Out Movement</TableHead>
                 <TableHead className="text-right">Total In</TableHead>
@@ -387,7 +413,7 @@ export default function StockMovementPage() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center py-10">
+                  <TableCell colSpan={10} className="text-center py-10">
                     <div className="flex flex-col items-center gap-2">
                       <History className="h-8 w-8 text-muted-foreground animate-spin" />
                       <p className="text-muted-foreground">Loading summary...</p>
@@ -396,7 +422,7 @@ export default function StockMovementPage() {
                 </TableRow>
               ) : groupedData.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center py-10">
+                  <TableCell colSpan={10} className="text-center py-10">
                     <div className="flex flex-col items-center gap-2">
                       <Package className="h-8 w-8 text-muted-foreground opacity-20" />
                       <p className="text-muted-foreground">No items found for the selected period.</p>
@@ -419,6 +445,9 @@ export default function StockMovementPage() {
                       </TableCell>
                       <TableCell className="text-right font-mono text-red-600">
                         {g.wasteQty > 0 ? g.wasteQty : "—"}
+                      </TableCell>
+                      <TableCell className={`text-right font-mono ${g.adjNet > 0 ? "text-green-600" : g.adjNet < 0 ? "text-red-600" : ""}`}>
+                        {g.adjNet > 0 ? `+${g.adjNet}` : g.adjNet < 0 ? g.adjNet : "—"}
                       </TableCell>
                       <TableCell className="text-right font-mono text-green-600">
                         {g.restockQty > 0 ? g.restockQty : "—"}
@@ -447,6 +476,12 @@ export default function StockMovementPage() {
                     </TableCell>
                     <TableCell className="text-right font-mono text-red-600">
                       {groupedData.reduce((acc, g) => acc + g.wasteQty, 0)}
+                    </TableCell>
+                    <TableCell className="text-right font-mono">
+                      {(() => {
+                        const totalAdj = groupedData.reduce((acc, g) => acc + g.adjNet, 0);
+                        return totalAdj > 0 ? `+${totalAdj}` : totalAdj < 0 ? totalAdj : "0";
+                      })()}
                     </TableCell>
                     <TableCell className="text-right font-mono text-green-600">
                       {groupedData.reduce((acc, g) => acc + g.restockQty, 0)}
