@@ -81,7 +81,11 @@ export default function StockMovementPage() {
       calibrationQty: number;
       testQty: number;
       wasteQty: number;
+      adjPos: number;
+      adjNeg: number;
       adjNet: number;
+      restockPos: number;
+      restockNeg: number;
       restockNet: number;
       totalOut: number;
       totalIn: number;
@@ -99,7 +103,11 @@ export default function StockMovementPage() {
           calibrationQty: 0,
           testQty: 0,
           wasteQty: 0,
+          adjPos: 0,
+          adjNeg: 0,
           adjNet: 0,
+          restockPos: 0,
+          restockNeg: 0,
           restockNet: 0,
           totalOut: 0,
           totalIn: 0,
@@ -121,10 +129,16 @@ export default function StockMovementPage() {
         item.wasteQty += absQty;
       } else if (m.movementType === "restock") {
         item.restockNet += qty;
+        if (qty > 0) item.restockPos += qty;
+        else if (qty < 0) item.restockNeg += absQty;
       } else if (m.movementType === "adjustment") {
         item.adjNet += qty;
+        if (qty > 0) item.adjPos += qty;
+        else if (qty < 0) item.adjNeg += absQty;
       } else {
         item.adjNet += qty;
+        if (qty > 0) item.adjPos += qty;
+        else if (qty < 0) item.adjNeg += absQty;
       }
 
       if (qty > 0) {
@@ -141,15 +155,15 @@ export default function StockMovementPage() {
 
   const exportCsv = () => {
     if (viewMode === "grouped") {
-      const headers = ["Item Name", "Sale Total Qty", "Calibration", "Test", "Waste", "Adjustment", "Restock", "Total Out Movement", "Total In", "Final Total"];
+      const headers = ["Item Name", "Sale Total Qty", "Calibration", "Test", "Waste", "Stock-Audit", "Received", "Total Out Movement", "Total In", "Final Total"];
       const rows = groupedData.map(g => [
         `"${g.ingredientName.replace(/"/g, '""')}"`,
         g.saleQty,
         g.calibrationQty,
         g.testQty,
         g.wasteQty,
-        g.adjNet,
-        g.restockNet,
+        g.adjPos > 0 && g.adjNeg > 0 ? `"+${g.adjPos} / -${g.adjNeg}"` : g.adjNet,
+        g.restockPos > 0 && g.restockNeg > 0 ? `"+${g.restockPos} / -${g.restockNeg}"` : g.restockNet,
         g.totalOut,
         g.totalIn,
         g.finalTotal
@@ -255,12 +269,12 @@ export default function StockMovementPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Types</SelectItem>
-                  <SelectItem value="restock">Restock</SelectItem>
+                  <SelectItem value="restock">Received</SelectItem>
                   <SelectItem value="sale">Sale</SelectItem>
                   <SelectItem value="waste">Waste</SelectItem>
                   <SelectItem value="calibration">Calibration</SelectItem>
                   <SelectItem value="testing">Testing</SelectItem>
-                  <SelectItem value="adjustment">Manual Adjustment</SelectItem>
+                  <SelectItem value="adjustment">Stock-Audit</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -358,7 +372,7 @@ export default function StockMovementPage() {
                         {m.movementType === "restock" && <ArrowDownLeft className="mr-1 h-3 w-3" />}
                         {m.movementType === "sale" && <ArrowUpRight className="mr-1 h-3 w-3" />}
                         {(m.movementType === "calibration" || m.movementType === "testing") && <Beaker className="mr-1 h-3 w-3" />}
-                        {m.movementType}
+                        {m.movementType === "restock" ? "received" : m.movementType === "adjustment" ? "stock-audit" : m.movementType}
                       </Badge>
                     </TableCell>
                     <TableCell className={`text-right font-mono ${m.quantity > 0 ? "text-green-600" : "text-red-600"}`}>
@@ -385,8 +399,8 @@ export default function StockMovementPage() {
                 <TableHead className="text-right">Calibration</TableHead>
                 <TableHead className="text-right">Test</TableHead>
                 <TableHead className="text-right">Waste</TableHead>
-                <TableHead className="text-right">Adjustment</TableHead>
-                <TableHead className="text-right">Restock</TableHead>
+                <TableHead className="text-right">Stock-Audit</TableHead>
+                <TableHead className="text-right">Received</TableHead>
                 <TableHead className="text-right bg-rose-100/70 text-rose-900 font-semibold dark:bg-rose-950/40 dark:text-rose-200">Total Out Movement</TableHead>
                 <TableHead className="text-right bg-emerald-100/70 text-emerald-900 font-semibold dark:bg-emerald-950/40 dark:text-emerald-200">Total In</TableHead>
                 <TableHead className="text-right bg-sky-100/70 text-sky-900 font-bold dark:bg-sky-950/40 dark:text-sky-200">Final Total</TableHead>
@@ -429,10 +443,22 @@ export default function StockMovementPage() {
                         {g.wasteQty > 0 ? g.wasteQty : "—"}
                       </TableCell>
                       <TableCell className={`text-right font-mono ${g.adjNet > 0 ? "text-green-600" : g.adjNet < 0 ? "text-red-600" : ""}`}>
-                        {g.adjNet > 0 ? `+${g.adjNet}` : g.adjNet < 0 ? g.adjNet : "—"}
+                        {g.adjPos > 0 && g.adjNeg > 0
+                          ? `+${g.adjPos} / -${g.adjNeg}`
+                          : g.adjNet > 0
+                          ? `+${g.adjNet}`
+                          : g.adjNet < 0
+                          ? `${g.adjNet}`
+                          : "—"}
                       </TableCell>
                       <TableCell className={`text-right font-mono ${g.restockNet > 0 ? "text-green-600" : g.restockNet < 0 ? "text-red-600" : ""}`}>
-                        {g.restockNet > 0 ? `+${g.restockNet}` : g.restockNet < 0 ? g.restockNet : "—"}
+                        {g.restockPos > 0 && g.restockNeg > 0
+                          ? `+${g.restockPos} / -${g.restockNeg}`
+                          : g.restockNet > 0
+                          ? `+${g.restockNet}`
+                          : g.restockNet < 0
+                          ? `${g.restockNet}`
+                          : "—"}
                       </TableCell>
                       <TableCell className="text-right font-mono font-medium text-red-700 dark:text-red-400 bg-rose-50/70 dark:bg-rose-950/20">
                         {g.totalOut > 0 ? `-${g.totalOut}` : "0"}
