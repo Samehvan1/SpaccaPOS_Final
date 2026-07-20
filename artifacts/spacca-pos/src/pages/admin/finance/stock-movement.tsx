@@ -79,6 +79,7 @@ export default function StockMovementPage() {
       ingredientName: string;
       saleQty: number;
       calibrationQty: number;
+      testQty: number;
       wasteQty: number;
       restockQty: number;
       totalOut: number;
@@ -95,6 +96,7 @@ export default function StockMovementPage() {
           ingredientName: key,
           saleQty: 0,
           calibrationQty: 0,
+          testQty: 0,
           wasteQty: 0,
           restockQty: 0,
           totalOut: 0,
@@ -111,6 +113,8 @@ export default function StockMovementPage() {
         item.saleQty += absQty;
       } else if (m.movementType === "calibration") {
         item.calibrationQty += absQty;
+      } else if (m.movementType === "testing") {
+        item.testQty += absQty;
       } else if (m.movementType === "waste") {
         item.wasteQty += absQty;
       } else if (m.movementType === "restock") {
@@ -131,11 +135,12 @@ export default function StockMovementPage() {
 
   const exportCsv = () => {
     if (viewMode === "grouped") {
-      const headers = ["Item Name", "Sale Total Qty", "Calibration", "Waste", "Restock", "Total Out Movement", "Total In", "Final Total"];
+      const headers = ["Item Name", "Sale Total Qty", "Calibration", "Test", "Waste", "Restock", "Total Out Movement", "Total In", "Final Total"];
       const rows = groupedData.map(g => [
         `"${g.ingredientName.replace(/"/g, '""')}"`,
         g.saleQty,
         g.calibrationQty,
+        g.testQty,
         g.wasteQty,
         g.restockQty,
         g.totalOut,
@@ -371,6 +376,7 @@ export default function StockMovementPage() {
                 <TableHead>Item Name</TableHead>
                 <TableHead className="text-right">Sale Total Qty</TableHead>
                 <TableHead className="text-right">Calibration</TableHead>
+                <TableHead className="text-right">Test</TableHead>
                 <TableHead className="text-right">Waste</TableHead>
                 <TableHead className="text-right">Restock</TableHead>
                 <TableHead className="text-right">Total Out Movement</TableHead>
@@ -381,7 +387,7 @@ export default function StockMovementPage() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-10">
+                  <TableCell colSpan={9} className="text-center py-10">
                     <div className="flex flex-col items-center gap-2">
                       <History className="h-8 w-8 text-muted-foreground animate-spin" />
                       <p className="text-muted-foreground">Loading summary...</p>
@@ -390,7 +396,7 @@ export default function StockMovementPage() {
                 </TableRow>
               ) : groupedData.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-10">
+                  <TableCell colSpan={9} className="text-center py-10">
                     <div className="flex flex-col items-center gap-2">
                       <Package className="h-8 w-8 text-muted-foreground opacity-20" />
                       <p className="text-muted-foreground">No items found for the selected period.</p>
@@ -407,6 +413,9 @@ export default function StockMovementPage() {
                       </TableCell>
                       <TableCell className="text-right font-mono text-orange-600">
                         {g.calibrationQty > 0 ? g.calibrationQty : "—"}
+                      </TableCell>
+                      <TableCell className="text-right font-mono text-cyan-600">
+                        {g.testQty > 0 ? g.testQty : "—"}
                       </TableCell>
                       <TableCell className="text-right font-mono text-red-600">
                         {g.wasteQty > 0 ? g.wasteQty : "—"}
@@ -432,6 +441,9 @@ export default function StockMovementPage() {
                     </TableCell>
                     <TableCell className="text-right font-mono text-orange-600">
                       {groupedData.reduce((acc, g) => acc + g.calibrationQty, 0)}
+                    </TableCell>
+                    <TableCell className="text-right font-mono text-cyan-600">
+                      {groupedData.reduce((acc, g) => acc + g.testQty, 0)}
                     </TableCell>
                     <TableCell className="text-right font-mono text-red-600">
                       {groupedData.reduce((acc, g) => acc + g.wasteQty, 0)}
