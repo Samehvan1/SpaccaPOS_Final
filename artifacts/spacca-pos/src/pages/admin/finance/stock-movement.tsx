@@ -123,15 +123,26 @@ export default function StockMovementPage() {
         item.restockNet += qty;
       } else if (m.movementType === "adjustment") {
         item.adjNet += qty;
+      } else {
+        // Any unrecognized movement type
+        if (qty < 0) {
+          item.adjNet += qty;
+        } else if (qty > 0) {
+          item.adjNet += qty;
+        }
       }
+    });
 
-      if (qty < 0) {
-        item.totalOut += absQty;
-      } else if (qty > 0) {
-        item.totalIn += absQty;
-      }
+    // Calculate totalIn, totalOut, and finalTotal strictly matching the visible columns
+    map.forEach(item => {
+      const restockIn = item.restockNet > 0 ? item.restockNet : 0;
+      const restockOut = item.restockNet < 0 ? Math.abs(item.restockNet) : 0;
+      const adjIn = item.adjNet > 0 ? item.adjNet : 0;
+      const adjOut = item.adjNet < 0 ? Math.abs(item.adjNet) : 0;
 
-      item.finalTotal += qty;
+      item.totalIn = restockIn + adjIn;
+      item.totalOut = item.saleQty + item.calibrationQty + item.testQty + item.wasteQty + restockOut + adjOut;
+      item.finalTotal = item.totalIn - item.totalOut;
     });
 
     return Array.from(map.values()).sort((a, b) => a.ingredientName.localeCompare(b.ingredientName));
