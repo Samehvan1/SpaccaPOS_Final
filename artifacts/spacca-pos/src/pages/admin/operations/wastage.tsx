@@ -7,12 +7,15 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, Plus, Trash2, CheckCircle2, Lock, Loader2, Trash, AlertTriangle, Info } from "lucide-react";
+import { Search, Plus, Trash2, CheckCircle2, Lock, Loader2, Trash, AlertTriangle, Info, ChevronsUpDown, Check } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { cn } from "@/lib/utils";
 
 interface WastageItem {
   ingredientId: number;
@@ -73,6 +76,7 @@ export default function WastagePage() {
 
   // By Drink Recipe States
   const [selectedDrinkId, setSelectedDrinkId] = useState<string>("none");
+  const [openDrinkPopover, setOpenDrinkPopover] = useState(false);
   const [checkedIngredients, setCheckedIngredients] = useState<Record<number, boolean>>({});
   const [customQuantities, setCustomQuantities] = useState<Record<number, string>>({});
   const [drinkReasonInput, setDrinkReasonInput] = useState("Expired");
@@ -105,7 +109,7 @@ export default function WastagePage() {
       const initialChecked: Record<number, boolean> = {};
       const initialQuantities: Record<number, string> = {};
       drinkUsage.forEach((item: any) => {
-        initialChecked[item.ingredientId] = !!item.isDefault;
+        initialChecked[item.ingredientId] = !!item.isDefault || item.type === "cup" || item.slotLabel?.toLowerCase() === "cup";
         initialQuantities[item.ingredientId] = String(item.qty ?? 0);
       });
       setCheckedIngredients(initialChecked);
@@ -462,27 +466,55 @@ export default function WastagePage() {
                 <TabsContent value="recipe" className="space-y-6">
                   <div className="space-y-3">
                     <Label className="text-[10px] font-black uppercase tracking-widest text-destructive ml-1">Select Drink Recipe</Label>
-                    <Select value={selectedDrinkId} onValueChange={setSelectedDrinkId}>
-                      <SelectTrigger className="h-12 font-bold bg-muted/20 border-transparent focus:bg-background transition-all">
-                        <SelectValue placeholder="Search or select a drink (e.g. Caffè Latte)" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none" className="font-bold text-muted-foreground">Select a drink...</SelectItem>
-                        {isDrinksLoading ? (
-                          <div className="p-4 text-center text-xs text-muted-foreground flex items-center justify-center gap-2">
-                            <Loader2 className="h-4 w-4 animate-spin text-destructive" /> Loading drinks...
-                          </div>
-                        ) : drinks.filter((d: any) => d.isActive !== false).length === 0 ? (
-                          <div className="p-4 text-center text-xs text-muted-foreground">No active drinks found</div>
-                        ) : (
-                          drinks.filter((drink: any) => drink.isActive !== false).map((drink: any) => (
-                            <SelectItem key={drink.id} value={String(drink.id)} className="font-bold">
-                              {drink.name.trim()} <span className="text-muted-foreground text-xs font-normal">({drink.category})</span>
-                            </SelectItem>
-                          ))
-                        )}
-                      </SelectContent>
-                    </Select>
+                    <Popover open={openDrinkPopover} onOpenChange={setOpenDrinkPopover}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={openDrinkPopover}
+                          className="w-full justify-between h-12 font-bold bg-muted/20 border-transparent focus:bg-background transition-all"
+                        >
+                          {selectedDrinkId && selectedDrinkId !== "none"
+                            ? drinks.find((d: any) => String(d.id) === selectedDrinkId)?.name.trim() ?? "Select a drink..."
+                            : "Search or select a drink (e.g. Caffè Latte)"}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[350px] p-0" align="start">
+                        <Command>
+                          <CommandInput placeholder="Search drink recipe..." />
+                          <CommandList className="max-h-[300px] overflow-y-auto">
+                            <CommandEmpty>No active drinks found.</CommandEmpty>
+                            <CommandGroup>
+                              {drinks
+                                .filter((d: any) => d.isActive !== false)
+                                .map((drink: any) => (
+                                  <CommandItem
+                                    key={drink.id}
+                                    value={`${drink.name} ${drink.category}`}
+                                    onSelect={() => {
+                                      setSelectedDrinkId(String(drink.id));
+                                      setOpenDrinkPopover(false);
+                                    }}
+                                    className="cursor-pointer"
+                                  >
+                                    <Check
+                                      className={cn(
+                                        "mr-2 h-4 w-4 text-destructive",
+                                        selectedDrinkId === String(drink.id) ? "opacity-100" : "opacity-0"
+                                      )}
+                                    />
+                                    <div className="flex flex-col">
+                                      <span className="font-bold">{drink.name.trim()}</span>
+                                      <span className="text-[10px] text-muted-foreground">{drink.category}</span>
+                                    </div>
+                                  </CommandItem>
+                                ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
                   </div>
 
                   {selectedDrinkId && selectedDrinkId !== "none" && (
