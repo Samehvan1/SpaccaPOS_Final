@@ -81,17 +81,15 @@ export default function StockMovementPage() {
       calibrationQty: number;
       testQty: number;
       wasteQty: number;
-      adjIn: number;
-      adjOut: number;
       adjNet: number;
-      restockQty: number;
+      restockNet: number;
       totalOut: number;
       totalIn: number;
       finalTotal: number;
     }>();
 
     filteredMovements.forEach(m => {
-      const key = m.ingredientName || `Ingredient #${m.ingredientId}`;
+      const key = (m.ingredientName || `Ingredient #${m.ingredientId}`).trim();
       let item = map.get(key);
       if (!item) {
         item = {
@@ -101,10 +99,8 @@ export default function StockMovementPage() {
           calibrationQty: 0,
           testQty: 0,
           wasteQty: 0,
-          adjIn: 0,
-          adjOut: 0,
           adjNet: 0,
-          restockQty: 0,
+          restockNet: 0,
           totalOut: 0,
           totalIn: 0,
           finalTotal: 0,
@@ -117,38 +113,22 @@ export default function StockMovementPage() {
 
       if (m.movementType === "sale") {
         item.saleQty += absQty;
-        item.totalOut += absQty;
       } else if (m.movementType === "calibration") {
         item.calibrationQty += absQty;
-        item.totalOut += absQty;
       } else if (m.movementType === "testing") {
         item.testQty += absQty;
-        item.totalOut += absQty;
       } else if (m.movementType === "waste") {
         item.wasteQty += absQty;
-        item.totalOut += absQty;
       } else if (m.movementType === "restock") {
-        if (qty >= 0) {
-          item.restockQty += absQty;
-          item.totalIn += absQty;
-        } else {
-          item.totalOut += absQty;
-        }
+        item.restockNet += qty;
       } else if (m.movementType === "adjustment") {
         item.adjNet += qty;
-        if (qty > 0) {
-          item.adjIn += qty;
-          item.totalIn += qty;
-        } else if (qty < 0) {
-          item.adjOut += absQty;
-          item.totalOut += absQty;
-        }
-      } else {
-        if (qty < 0) {
-          item.totalOut += absQty;
-        } else if (qty > 0) {
-          item.totalIn += absQty;
-        }
+      }
+
+      if (qty < 0) {
+        item.totalOut += absQty;
+      } else if (qty > 0) {
+        item.totalIn += absQty;
       }
 
       item.finalTotal += qty;
@@ -167,7 +147,7 @@ export default function StockMovementPage() {
         g.testQty,
         g.wasteQty,
         g.adjNet,
-        g.restockQty,
+        g.restockNet,
         g.totalOut,
         g.totalIn,
         g.finalTotal
@@ -449,8 +429,8 @@ export default function StockMovementPage() {
                       <TableCell className={`text-right font-mono ${g.adjNet > 0 ? "text-green-600" : g.adjNet < 0 ? "text-red-600" : ""}`}>
                         {g.adjNet > 0 ? `+${g.adjNet}` : g.adjNet < 0 ? g.adjNet : "—"}
                       </TableCell>
-                      <TableCell className="text-right font-mono text-green-600">
-                        {g.restockQty > 0 ? g.restockQty : "—"}
+                      <TableCell className={`text-right font-mono ${g.restockNet > 0 ? "text-green-600" : g.restockNet < 0 ? "text-red-600" : ""}`}>
+                        {g.restockNet > 0 ? `+${g.restockNet}` : g.restockNet < 0 ? g.restockNet : "—"}
                       </TableCell>
                       <TableCell className="text-right font-mono font-medium text-red-600">
                         {g.totalOut > 0 ? `-${g.totalOut}` : "0"}
@@ -483,8 +463,11 @@ export default function StockMovementPage() {
                         return totalAdj > 0 ? `+${totalAdj}` : totalAdj < 0 ? totalAdj : "0";
                       })()}
                     </TableCell>
-                    <TableCell className="text-right font-mono text-green-600">
-                      {groupedData.reduce((acc, g) => acc + g.restockQty, 0)}
+                    <TableCell className="text-right font-mono">
+                      {(() => {
+                        const totalRestock = groupedData.reduce((acc, g) => acc + g.restockNet, 0);
+                        return totalRestock > 0 ? `+${totalRestock}` : totalRestock < 0 ? totalRestock : "0";
+                      })()}
                     </TableCell>
                     <TableCell className="text-right font-mono text-red-600">
                       -{groupedData.reduce((acc, g) => acc + g.totalOut, 0)}
