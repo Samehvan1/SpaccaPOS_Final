@@ -447,12 +447,12 @@ export default function CalibrationPage() {
                           <div className="p-4 text-center text-xs text-muted-foreground flex items-center justify-center gap-2">
                             <Loader2 className="h-4 w-4 animate-spin text-primary" /> Loading drinks...
                           </div>
-                        ) : drinks.length === 0 ? (
-                          <div className="p-4 text-center text-xs text-muted-foreground">No drinks found</div>
+                        ) : drinks.filter((d: any) => d.isActive !== false).length === 0 ? (
+                          <div className="p-4 text-center text-xs text-muted-foreground">No active drinks found</div>
                         ) : (
-                          drinks.map((drink: any) => (
+                          drinks.filter((drink: any) => drink.isActive !== false).map((drink: any) => (
                             <SelectItem key={drink.id} value={String(drink.id)} className="font-bold">
-                              {drink.name} <span className="text-muted-foreground text-xs font-normal">({drink.category})</span>
+                              {drink.name.trim()} <span className="text-muted-foreground text-xs font-normal">({drink.category})</span>
                             </SelectItem>
                           ))
                         )}

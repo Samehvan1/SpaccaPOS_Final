@@ -1030,20 +1030,89 @@ router.get("/drinks/:id/stock-usage", requirePermission("catalog:view"), async (
     console.log(`[DEBUG-TRACE]   - predefinedSlotId: ${slot.predefinedSlotId}`);
     console.log(`[DEBUG-TRACE]   - defaultOptionId: ${(slot as any).defaultOptionId}`);
     
-    // Track unique ingredient IDs for this slot to avoid duplicates
-    const seenIngredients = new Set<number>();
+    // Helpers to resolve fallbacks: 1) item processedQty -> 2) default option processedQty -> 3) default volume processedQty
+    const getDefaultOptionQty = async (slotId: number, predefinedSlotId?: number | null, defaultOptionId?: number | null): Promise<number> => {
+      const defaultTypeOpts = await db.select().from(drinkSlotTypeOptionsTable).where(and(eq(drinkSlotTypeOptionsTable.slotId, slotId), eq(drinkSlotTypeOptionsTable.isDefault, true)));
+      for (const opt of defaultTypeOpts) {
+        if (Number(opt.processedQty) > 0) return Number(opt.processedQty);
+        const [ingType] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, opt.ingredientTypeId));
+        if (ingType && Number(ingType.processedQty) > 0) return Number(ingType.processedQty);
+      }
 
-    const addUsage = (ing: any, type: string, label: string, qty: number, isDefault = false) => {
-      console.log(`[DEBUG-TRACE]   !!! MATCH FOUND !!! -> ${ing.name} via ${type} (qty: ${qty})`);
-      if (seenIngredients.has(ing.id)) return;
-      seenIngredients.add(ing.id);
+      if (predefinedSlotId) {
+        const defaultTtoOpts = await db.select().from(predefinedSlotTypeOptionsTable).where(and(eq(predefinedSlotTypeOptionsTable.predefinedSlotId, predefinedSlotId), eq(predefinedSlotTypeOptionsTable.isDefault, true)));
+        for (const opt of defaultTtoOpts) {
+          if (Number(opt.processedQty) > 0) return Number(opt.processedQty);
+          const [ingType] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, opt.ingredientTypeId));
+          if (ingType && Number(ingType.processedQty) > 0) return Number(ingType.processedQty);
+        }
+      }
+
+      if (defaultOptionId) {
+        const [opt] = await db.select().from(ingredientOptionsTable).where(eq(ingredientOptionsTable.id, defaultOptionId));
+        if (opt && Number(opt.processedQty) > 0) return Number(opt.processedQty);
+      }
+
+      return 0;
+    };
+
+    const getDefaultVolumeQty = async (slotId: number, predefinedSlotId?: number | null, ingredientTypeId?: number | null): Promise<number> => {
+      const defaultSlotVols = await db.select().from(drinkSlotVolumesTable).where(and(eq(drinkSlotVolumesTable.slotId, slotId), eq(drinkSlotVolumesTable.isDefault, true)));
+      for (const sv of defaultSlotVols) {
+        if (Number(sv.processedQty) > 0) return Number(sv.processedQty);
+        const [typeVol] = await db.select().from(ingredientTypeVolumesTable).where(eq(ingredientTypeVolumesTable.id, sv.typeVolumeId));
+        if (typeVol && Number(typeVol.processedQty) > 0) return Number(typeVol.processedQty);
+      }
+
+      if (predefinedSlotId) {
+        const defaultTvVols = await db.select().from(predefinedSlotVolumesTable).where(and(eq(predefinedSlotVolumesTable.predefinedSlotId, predefinedSlotId), eq(predefinedSlotVolumesTable.isDefault, true)));
+        for (const tv of defaultTvVols) {
+          if (Number(tv.processedQty) > 0) return Number(tv.processedQty);
+          const [typeVol] = await db.select().from(ingredientTypeVolumesTable).where(eq(ingredientTypeVolumesTable.id, tv.typeVolumeId));
+          if (typeVol && Number(typeVol.processedQty) > 0) return Number(typeVol.processedQty);
+        }
+      }
+
+      if (ingredientTypeId) {
+        const typeVols = await db.select().from(ingredientTypeVolumesTable).where(and(eq(ingredientTypeVolumesTable.ingredientTypeId, ingredientTypeId), eq(ingredientTypeVolumesTable.isDefault, true)));
+        for (const tv of typeVols) {
+          if (Number(tv.processedQty) > 0) return Number(tv.processedQty);
+        }
+      }
+
+      return 0;
+    };
+
+    const resolveQty = async (rawQty: number, slotId: number, predefinedSlotId?: number | null, defaultOptionId?: number | null, ingTypeId?: number | null): Promise<number> => {
+      if (rawQty > 0) return rawQty;
+      const defOptQty = await getDefaultOptionQty(slotId, predefinedSlotId, defaultOptionId);
+      if (defOptQty > 0) return defOptQty;
+      const defVolQty = await getDefaultVolumeQty(slotId, predefinedSlotId, ingTypeId);
+      if (defVolQty > 0) return defVolQty;
+      return 0;
+    };
+
+    const addUsage = async (ing: any, type: string, label: string, rawQty: number, isDefault = false, ingTypeId?: number | null) => {
+      const finalQty = await resolveQty(rawQty, slot.id, slot.predefinedSlotId, (slot as any).defaultOptionId, ingTypeId || slot.ingredientTypeId);
+      console.log(`[DEBUG-TRACE] !!! MATCH FOUND !!! -> ${ing.name} via ${type} (rawQty: ${rawQty}, finalQty: ${finalQty})`);
+      
+      const existingIdx = usage.findIndex(u => u.ingredientId === ing.id && u.slotLabel === label);
+      if (existingIdx !== -1) {
+        if (usage[existingIdx].qty === 0 && finalQty > 0) {
+          usage[existingIdx].qty = finalQty;
+        }
+        if (!usage[existingIdx].isDefault && isDefault) {
+          usage[existingIdx].isDefault = true;
+        }
+        return;
+      }
       usage.push({
         type,
         slotLabel: label,
         ingredientId: ing.id,
         ingredientName: ing.name,
         unit: ing.unit,
-        qty: qty,
+        qty: finalQty,
         isDefault
       });
     };
@@ -1051,7 +1120,7 @@ router.get("/drinks/:id/stock-usage", requirePermission("catalog:view"), async (
     // A. Direct Ingredient (Legacy)
     if (slot.ingredientId) {
       const [ing] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, slot.ingredientId));
-      if (ing) addUsage(ing, "legacy", slot.slotLabel, 0, true);
+      if (ing) await addUsage(ing, "legacy", slot.slotLabel, 0, true);
     }
 
     // A2. Default Option (Legacy)
@@ -1059,7 +1128,7 @@ router.get("/drinks/:id/stock-usage", requirePermission("catalog:view"), async (
       const [opt] = await db.select().from(ingredientOptionsTable).where(eq(ingredientOptionsTable.id, (slot as any).defaultOptionId));
       if (opt) {
         const [ing] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, opt.ingredientId));
-        if (ing) addUsage(ing, "legacy-option", slot.slotLabel, Number(opt.processedQty || 0), true);
+        if (ing) await addUsage(ing, "legacy-option", slot.slotLabel, Number(opt.processedQty || 0), true);
       }
     }
 
@@ -1068,7 +1137,7 @@ router.get("/drinks/:id/stock-usage", requirePermission("catalog:view"), async (
       const [ingType] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, slot.ingredientTypeId));
       if (ingType?.inventoryIngredientId) {
         const [ing] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, ingType.inventoryIngredientId));
-        if (ing) addUsage(ing, "typed-catalog", slot.slotLabel, Number(ingType.processedQty || 0), true);
+        if (ing) await addUsage(ing, "typed-catalog", slot.slotLabel, Number(ingType.processedQty || 0), true, slot.ingredientTypeId);
       }
     }
 
@@ -1078,7 +1147,7 @@ router.get("/drinks/:id/stock-usage", requirePermission("catalog:view"), async (
       const [ingType] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, to.ingredientTypeId));
       if (ingType?.inventoryIngredientId) {
         const [ing] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, ingType.inventoryIngredientId));
-        if (ing) addUsage(ing, "typed-option", slot.slotLabel, Number(to.processedQty || ingType.processedQty || 0), !!to.isDefault);
+        if (ing) await addUsage(ing, "typed-option", slot.slotLabel, Number(to.processedQty || ingType.processedQty || 0), !!to.isDefault, to.ingredientTypeId);
       }
     }
 
@@ -1090,7 +1159,7 @@ router.get("/drinks/:id/stock-usage", requirePermission("catalog:view"), async (
         const [ingType] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, typeVol.ingredientTypeId));
         if (ingType?.inventoryIngredientId) {
           const [ing] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, ingType.inventoryIngredientId));
-          if (ing) addUsage(ing, "typed-volume", slot.slotLabel, Number(sv.processedQty || typeVol.processedQty || 0), !!sv.isDefault);
+          if (ing) await addUsage(ing, "typed-volume", slot.slotLabel, Number(sv.processedQty || typeVol.processedQty || 0), !!sv.isDefault, typeVol.ingredientTypeId);
         }
       }
     }
@@ -1102,7 +1171,7 @@ router.get("/drinks/:id/stock-usage", requirePermission("catalog:view"), async (
         const [ingType] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, tto.ingredientTypeId));
         if (ingType?.inventoryIngredientId) {
           const [ing] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, ingType.inventoryIngredientId));
-          if (ing) addUsage(ing, "typed-template", slot.slotLabel + " (Template)", Number(tto.processedQty || ingType.processedQty || 0), !!tto.isDefault);
+          if (ing) await addUsage(ing, "typed-template", slot.slotLabel + " (Template)", Number(tto.processedQty || ingType.processedQty || 0), !!tto.isDefault, tto.ingredientTypeId);
         }
       }
 
@@ -1114,7 +1183,7 @@ router.get("/drinks/:id/stock-usage", requirePermission("catalog:view"), async (
           const [ingType] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, typeVol.ingredientTypeId));
           if (ingType?.inventoryIngredientId) {
             const [ing] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, ingType.inventoryIngredientId));
-            if (ing) addUsage(ing, "typed-template-vol", slot.slotLabel + " (Template)", Number(tv.processedQty || typeVol.processedQty || 0), !!tv.isDefault);
+            if (ing) await addUsage(ing, "typed-template-vol", slot.slotLabel + " (Template)", Number(tv.processedQty || typeVol.processedQty || 0), !!tv.isDefault, typeVol.ingredientTypeId);
           }
         }
       }
