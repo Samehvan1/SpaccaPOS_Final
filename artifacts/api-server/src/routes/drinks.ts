@@ -1025,14 +1025,51 @@ router.get("/drinks/:id/stock-usage", requirePermission("catalog:view"), async (
     .where(eq(drinkIngredientSlotsTable.drinkId, drinkId))
     .orderBy(asc(drinkIngredientSlotsTable.sortOrder), asc(drinkIngredientSlotsTable.id));
 
+  // Pre-calculate volume consumed by non-dynamic slots to compute dynamic fill volume (if cupSizeMl is set)
+  let nonDynamicVolumeMl = 0;
   for (const slot of slots) {
-    let options: Array<{
+    if (slot.isDynamic) continue;
+
+    const slotTypeOpts = await db.select().from(drinkSlotTypeOptionsTable).where(and(eq(drinkSlotTypeOptionsTable.slotId, slot.id), eq(drinkSlotTypeOptionsTable.isDefault, true)));
+    let defOptTypeId = slotTypeOpts[0]?.ingredientTypeId ?? slot.ingredientTypeId;
+
+    if (!defOptTypeId && slot.predefinedSlotId) {
+      const templateOpts = await db.select().from(predefinedSlotTypeOptionsTable).where(and(eq(predefinedSlotTypeOptionsTable.predefinedSlotId, slot.predefinedSlotId), eq(predefinedSlotTypeOptionsTable.isDefault, true)));
+      defOptTypeId = templateOpts[0]?.ingredientTypeId ?? null;
+    }
+
+    if (defOptTypeId) {
+      const slotVols = await db.select().from(drinkSlotVolumesTable).where(and(eq(drinkSlotVolumesTable.slotId, slot.id), eq(drinkSlotVolumesTable.isDefault, true)));
+      let volProduced = 0;
+      let volProcessed = 0;
+      if (slotVols.length > 0) {
+        const [typeVol] = await db.select().from(ingredientTypeVolumesTable).where(eq(ingredientTypeVolumesTable.id, slotVols[0].typeVolumeId));
+        volProduced = Number(slotVols[0].producedQty || typeVol?.producedQty || 0);
+        volProcessed = Number(slotVols[0].processedQty || typeVol?.processedQty || 0);
+      } else {
+        const typeVols = await db.select().from(ingredientTypeVolumesTable).where(and(eq(ingredientTypeVolumesTable.ingredientTypeId, defOptTypeId), eq(ingredientTypeVolumesTable.isActive, true))).orderBy(asc(ingredientTypeVolumesTable.sortOrder));
+        const defVol = typeVols.find(v => v.isDefault) ?? typeVols[0];
+        if (defVol) {
+          volProduced = Number(defVol.producedQty || 0);
+          volProcessed = Number(defVol.processedQty || 0);
+        }
+      }
+      nonDynamicVolumeMl += volProduced > 0 ? volProduced : volProcessed;
+    }
+  }
+
+  const dynamicFillMl = (drink.cupSizeMl && drink.cupSizeMl > 0) ? Math.max(0, drink.cupSizeMl - nonDynamicVolumeMl) : 0;
+
+  for (const slot of slots) {
+    // Collect ALL options for this slot including 'None' (where inventoryIngredientId is null)
+    let rawOptions: Array<{
       ingredientTypeId: number | null;
       inventoryIngredientId: number | null;
       processedQty: number;
       isDefault: boolean;
+      isNone: boolean;
+      typeName: string;
       source: string;
-      label: string;
     }> = [];
 
     // A. Slot type options
@@ -1044,20 +1081,21 @@ router.get("/drinks/:id/stock-usage", requirePermission("catalog:view"), async (
       
     for (const to of slotTypeOpts) {
       const [ingType] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, to.ingredientTypeId));
-      if (ingType?.inventoryIngredientId) {
-        options.push({
-          ingredientTypeId: to.ingredientTypeId,
-          inventoryIngredientId: ingType.inventoryIngredientId,
-          processedQty: Number(to.processedQty || ingType.processedQty || 0),
-          isDefault: !!to.isDefault,
-          source: "typed-option",
-          label: slot.slotLabel
-        });
-      }
+      const typeName = ingType?.name ?? "";
+      const isNone = typeName.toLowerCase() === "none" || typeName.toLowerCase() === "no " + slot.slotLabel.toLowerCase() || !ingType?.inventoryIngredientId;
+      rawOptions.push({
+        ingredientTypeId: to.ingredientTypeId,
+        inventoryIngredientId: ingType?.inventoryIngredientId ?? null,
+        processedQty: Number(to.processedQty || ingType?.processedQty || 0),
+        isDefault: !!to.isDefault,
+        isNone,
+        typeName,
+        source: "typed-option"
+      });
     }
 
     // B. Predefined template options
-    if (options.length === 0 && slot.predefinedSlotId) {
+    if (rawOptions.length === 0 && slot.predefinedSlotId) {
       const templateOpts = await db
         .select()
         .from(predefinedSlotTypeOptionsTable)
@@ -1066,65 +1104,75 @@ router.get("/drinks/:id/stock-usage", requirePermission("catalog:view"), async (
         
       for (const tto of templateOpts) {
         const [ingType] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, tto.ingredientTypeId));
-        if (ingType?.inventoryIngredientId) {
-          options.push({
-            ingredientTypeId: tto.ingredientTypeId,
-            inventoryIngredientId: ingType.inventoryIngredientId,
-            processedQty: Number(tto.processedQty || ingType.processedQty || 0),
-            isDefault: !!tto.isDefault,
-            source: "typed-template",
-            label: slot.slotLabel
-          });
-        }
+        const typeName = ingType?.name ?? "";
+        const isNone = typeName.toLowerCase() === "none" || typeName.toLowerCase() === "no " + slot.slotLabel.toLowerCase() || !ingType?.inventoryIngredientId;
+        rawOptions.push({
+          ingredientTypeId: tto.ingredientTypeId,
+          inventoryIngredientId: ingType?.inventoryIngredientId ?? null,
+          processedQty: Number(tto.processedQty || ingType?.processedQty || 0),
+          isDefault: !!tto.isDefault,
+          isNone,
+          typeName,
+          source: "typed-template"
+        });
       }
     }
 
     // C. Direct type
-    if (options.length === 0 && slot.ingredientTypeId) {
+    if (rawOptions.length === 0 && slot.ingredientTypeId) {
       const [ingType] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, slot.ingredientTypeId));
-      if (ingType?.inventoryIngredientId) {
-        options.push({
-          ingredientTypeId: slot.ingredientTypeId,
-          inventoryIngredientId: ingType.inventoryIngredientId,
-          processedQty: Number(ingType.processedQty || 0),
-          isDefault: true,
-          source: "typed-catalog",
-          label: slot.slotLabel
-        });
-      }
+      const typeName = ingType?.name ?? "";
+      const isNone = typeName.toLowerCase() === "none" || !ingType?.inventoryIngredientId;
+      rawOptions.push({
+        ingredientTypeId: slot.ingredientTypeId,
+        inventoryIngredientId: ingType?.inventoryIngredientId ?? null,
+        processedQty: Number(ingType?.processedQty || 0),
+        isDefault: true,
+        isNone,
+        typeName,
+        source: "typed-catalog"
+      });
     }
 
     // D. Legacy ingredient
-    if (options.length === 0 && (slot as any).defaultOptionId) {
+    if (rawOptions.length === 0 && (slot as any).defaultOptionId) {
       const [opt] = await db.select().from(ingredientOptionsTable).where(eq(ingredientOptionsTable.id, (slot as any).defaultOptionId));
       if (opt) {
-        options.push({
+        rawOptions.push({
           ingredientTypeId: null,
           inventoryIngredientId: opt.ingredientId,
           processedQty: Number(opt.processedQty || 0),
           isDefault: true,
-          source: "legacy-option",
-          label: slot.slotLabel
+          isNone: false,
+          typeName: opt.label,
+          source: "legacy-option"
         });
       }
-    } else if (options.length === 0 && slot.ingredientId) {
-      options.push({
+    } else if (rawOptions.length === 0 && slot.ingredientId) {
+      rawOptions.push({
         ingredientTypeId: null,
         inventoryIngredientId: slot.ingredientId,
         processedQty: 0,
         isDefault: true,
-        source: "legacy",
-        label: slot.slotLabel
+        isNone: false,
+        typeName: slot.slotLabel,
+        source: "legacy"
       });
     }
 
-    if (options.length === 0) continue;
+    if (rawOptions.length === 0) continue;
 
-    // Default Option Fallback Rule: If no option has isDefault === true, consider the FIRST option as default
-    const hasExplicitDefaultOpt = options.some(o => o.isDefault);
-    if (!hasExplicitDefaultOpt && options.length > 0) {
-      options[0].isDefault = true;
+    // Default Option Fallback Rule: If no option has isDefault === true, consider the FIRST option as default across ALL options (including None)
+    const hasExplicitDefaultOpt = rawOptions.some(o => o.isDefault);
+    if (!hasExplicitDefaultOpt && rawOptions.length > 0) {
+      rawOptions[0].isDefault = true;
     }
+
+    const defaultOptionObj = rawOptions.find(o => o.isDefault) || rawOptions[0];
+    const isDefaultNone = defaultOptionObj.isNone;
+
+    const validInventoryOptions = rawOptions.filter(o => o.inventoryIngredientId !== null);
+    if (validInventoryOptions.length === 0) continue;
 
     // Default Volume Fallback Rule: Find default volume processedQty for an ingredientType
     const getDefaultVolumeQtyForType = async (typeId: number | null): Promise<number> => {
@@ -1168,14 +1216,13 @@ router.get("/drinks/:id/stock-usage", requirePermission("catalog:view"), async (
     };
 
     // Calculate default option quantity for the slot
-    const defaultOptionObj = options.find(o => o.isDefault) || options[0];
-    let defaultOptionQty = defaultOptionObj ? defaultOptionObj.processedQty : 0;
-    if (defaultOptionQty === 0 && defaultOptionObj?.ingredientTypeId) {
+    let defaultOptionQty = defaultOptionObj && !defaultOptionObj.isNone ? defaultOptionObj.processedQty : 0;
+    if (defaultOptionQty === 0 && defaultOptionObj?.ingredientTypeId && !defaultOptionObj.isNone) {
       defaultOptionQty = await getDefaultVolumeQtyForType(defaultOptionObj.ingredientTypeId);
     }
 
     // Resolve final quantities for each option
-    for (const opt of options) {
+    for (const opt of validInventoryOptions) {
       let finalQty = opt.processedQty;
 
       if (finalQty <= 0) {
@@ -1183,19 +1230,26 @@ router.get("/drinks/:id/stock-usage", requirePermission("catalog:view"), async (
           finalQty = defaultOptionQty;
         } else {
           const defVolQty = await getDefaultVolumeQtyForType(opt.ingredientTypeId);
-          if (defVolQty > 0) finalQty = defVolQty;
+          if (defVolQty > 0) {
+            finalQty = defVolQty;
+          } else if (slot.isDynamic && dynamicFillMl > 0) {
+            finalQty = dynamicFillMl;
+          }
         }
       }
 
       const [ing] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, opt.inventoryIngredientId!));
       if (!ing) continue;
 
+      // If the slot's default option is 'None', this inventory item is NOT default!
+      const effectiveIsDefault = isDefaultNone ? false : opt.isDefault;
+
       const existingIdx = usage.findIndex(u => u.ingredientId === ing.id && u.slotLabel === slot.slotLabel);
       if (existingIdx !== -1) {
         if (usage[existingIdx].qty === 0 && finalQty > 0) {
           usage[existingIdx].qty = finalQty;
         }
-        if (!usage[existingIdx].isDefault && opt.isDefault) {
+        if (!usage[existingIdx].isDefault && effectiveIsDefault) {
           usage[existingIdx].isDefault = true;
         }
       } else {
@@ -1206,7 +1260,7 @@ router.get("/drinks/:id/stock-usage", requirePermission("catalog:view"), async (
           ingredientName: ing.name,
           unit: ing.unit,
           qty: finalQty,
-          isDefault: opt.isDefault
+          isDefault: effectiveIsDefault
         });
       }
     }

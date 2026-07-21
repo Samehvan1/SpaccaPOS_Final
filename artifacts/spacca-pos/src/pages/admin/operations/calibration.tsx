@@ -519,8 +519,12 @@ export default function CalibrationPage() {
                                 {(() => {
                                   const renderItemRow = (item: any) => {
                                     const isChecked = !!checkedIngredients[item.ingredientId];
+                                    const currentVal = customQuantities[item.ingredientId] ?? "";
+                                    const numericVal = parseFloat(currentVal);
+                                    const isZeroQty = isNaN(numericVal) || numericVal === 0;
+
                                     return (
-                                      <TableRow key={item.ingredientId} className={isChecked ? "" : "opacity-50"}>
+                                      <TableRow key={item.ingredientId} className={isChecked ? (isZeroQty ? "bg-red-500/10 dark:bg-red-950/20" : "") : "opacity-50"}>
                                         <TableCell className="text-center">
                                           <Checkbox 
                                             checked={isChecked} 
@@ -533,13 +537,20 @@ export default function CalibrationPage() {
                                           />
                                         </TableCell>
                                         <TableCell className="font-bold">
-                                          {item.ingredientName}
+                                          <div className="flex items-center gap-2">
+                                            <span>{item.ingredientName}</span>
+                                            {isZeroQty && isChecked && (
+                                              <Badge variant="destructive" className="text-[9px] px-1.5 py-0 uppercase font-black tracking-tight animate-pulse bg-red-600">
+                                                Set Qty (0)
+                                              </Badge>
+                                            )}
+                                          </div>
                                           <div className="text-[9px] text-muted-foreground uppercase font-semibold">Role: {item.slotLabel}</div>
                                         </TableCell>
                                         <TableCell className="text-right">
                                           <Input 
                                             type="number" 
-                                            value={customQuantities[item.ingredientId] ?? ""} 
+                                            value={currentVal} 
                                             onChange={(e) => {
                                               setCustomQuantities(prev => ({
                                                 ...prev,
@@ -547,7 +558,10 @@ export default function CalibrationPage() {
                                               }));
                                             }}
                                             disabled={!isChecked}
-                                            className="h-10 text-right font-black w-24 ml-auto"
+                                            className={cn(
+                                              "h-10 text-right font-black w-24 ml-auto transition-all",
+                                              isZeroQty && isChecked ? "border-red-500 text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/50 ring-2 ring-red-500/40" : ""
+                                            )}
                                           />
                                         </TableCell>
                                         <TableCell className="text-left font-bold text-muted-foreground uppercase text-xs">

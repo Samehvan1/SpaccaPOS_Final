@@ -82697,86 +82697,188 @@ router3.get("/drinks/:id/stock-usage", requirePermission("catalog:view"), async 
       });
     }
   }
-  const slots = await db.select().from(drinkIngredientSlotsTable).where(eq(drinkIngredientSlotsTable.drinkId, drinkId));
-  console.log(`[StockUsage-Debug] Found ${slots.length} slots for drinkId ${drinkId}`);
+  const slots = await db.select().from(drinkIngredientSlotsTable).where(eq(drinkIngredientSlotsTable.drinkId, drinkId)).orderBy(asc(drinkIngredientSlotsTable.sortOrder), asc(drinkIngredientSlotsTable.id));
+  let nonDynamicVolumeMl = 0;
   for (const slot of slots) {
-    console.log(`***************************************************`);
-    console.log(`[DEBUG-TRACE] SLOT: "${slot.slotLabel}" (ID: ${slot.id})`);
-    console.log(`[DEBUG-TRACE]   - ingredientId: ${slot.ingredientId}`);
-    console.log(`[DEBUG-TRACE]   - ingredientTypeId: ${slot.ingredientTypeId}`);
-    console.log(`[DEBUG-TRACE]   - predefinedSlotId: ${slot.predefinedSlotId}`);
-    console.log(`[DEBUG-TRACE]   - defaultOptionId: ${slot.defaultOptionId}`);
-    const seenIngredients = /* @__PURE__ */ new Set();
-    const addUsage = (ing, type, label, qty, isDefault = false) => {
-      console.log(`[DEBUG-TRACE]   !!! MATCH FOUND !!! -> ${ing.name} via ${type} (qty: ${qty})`);
-      if (seenIngredients.has(ing.id)) return;
-      seenIngredients.add(ing.id);
-      usage.push({
-        type,
-        slotLabel: label,
-        ingredientId: ing.id,
-        ingredientName: ing.name,
-        unit: ing.unit,
-        qty,
-        isDefault
-      });
-    };
-    if (slot.ingredientId) {
-      const [ing] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, slot.ingredientId));
-      if (ing) addUsage(ing, "legacy", slot.slotLabel, 0, true);
+    if (slot.isDynamic) continue;
+    const slotTypeOpts = await db.select().from(drinkSlotTypeOptionsTable).where(and(eq(drinkSlotTypeOptionsTable.slotId, slot.id), eq(drinkSlotTypeOptionsTable.isDefault, true)));
+    let defOptTypeId = slotTypeOpts[0]?.ingredientTypeId ?? slot.ingredientTypeId;
+    if (!defOptTypeId && slot.predefinedSlotId) {
+      const templateOpts = await db.select().from(predefinedSlotTypeOptionsTable).where(and(eq(predefinedSlotTypeOptionsTable.predefinedSlotId, slot.predefinedSlotId), eq(predefinedSlotTypeOptionsTable.isDefault, true)));
+      defOptTypeId = templateOpts[0]?.ingredientTypeId ?? null;
     }
-    if (slot.defaultOptionId) {
+    if (defOptTypeId) {
+      const slotVols = await db.select().from(drinkSlotVolumesTable).where(and(eq(drinkSlotVolumesTable.slotId, slot.id), eq(drinkSlotVolumesTable.isDefault, true)));
+      let volProduced = 0;
+      let volProcessed = 0;
+      if (slotVols.length > 0) {
+        const [typeVol] = await db.select().from(ingredientTypeVolumesTable).where(eq(ingredientTypeVolumesTable.id, slotVols[0].typeVolumeId));
+        volProduced = Number(slotVols[0].producedQty || typeVol?.producedQty || 0);
+        volProcessed = Number(slotVols[0].processedQty || typeVol?.processedQty || 0);
+      } else {
+        const typeVols = await db.select().from(ingredientTypeVolumesTable).where(and(eq(ingredientTypeVolumesTable.ingredientTypeId, defOptTypeId), eq(ingredientTypeVolumesTable.isActive, true))).orderBy(asc(ingredientTypeVolumesTable.sortOrder));
+        const defVol = typeVols.find((v) => v.isDefault) ?? typeVols[0];
+        if (defVol) {
+          volProduced = Number(defVol.producedQty || 0);
+          volProcessed = Number(defVol.processedQty || 0);
+        }
+      }
+      nonDynamicVolumeMl += volProduced > 0 ? volProduced : volProcessed;
+    }
+  }
+  const dynamicFillMl = drink.cupSizeMl && drink.cupSizeMl > 0 ? Math.max(0, drink.cupSizeMl - nonDynamicVolumeMl) : 0;
+  for (const slot of slots) {
+    let rawOptions = [];
+    const slotTypeOpts = await db.select().from(drinkSlotTypeOptionsTable).where(eq(drinkSlotTypeOptionsTable.slotId, slot.id)).orderBy(asc(drinkSlotTypeOptionsTable.sortOrder), asc(drinkSlotTypeOptionsTable.id));
+    for (const to of slotTypeOpts) {
+      const [ingType] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, to.ingredientTypeId));
+      const typeName = ingType?.name ?? "";
+      const isNone = typeName.toLowerCase() === "none" || typeName.toLowerCase() === "no " + slot.slotLabel.toLowerCase() || !ingType?.inventoryIngredientId;
+      rawOptions.push({
+        ingredientTypeId: to.ingredientTypeId,
+        inventoryIngredientId: ingType?.inventoryIngredientId ?? null,
+        processedQty: Number(to.processedQty || ingType?.processedQty || 0),
+        isDefault: !!to.isDefault,
+        isNone,
+        typeName,
+        source: "typed-option"
+      });
+    }
+    if (rawOptions.length === 0 && slot.predefinedSlotId) {
+      const templateOpts = await db.select().from(predefinedSlotTypeOptionsTable).where(eq(predefinedSlotTypeOptionsTable.predefinedSlotId, slot.predefinedSlotId)).orderBy(asc(predefinedSlotTypeOptionsTable.sortOrder), asc(predefinedSlotTypeOptionsTable.id));
+      for (const tto of templateOpts) {
+        const [ingType] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, tto.ingredientTypeId));
+        const typeName = ingType?.name ?? "";
+        const isNone = typeName.toLowerCase() === "none" || typeName.toLowerCase() === "no " + slot.slotLabel.toLowerCase() || !ingType?.inventoryIngredientId;
+        rawOptions.push({
+          ingredientTypeId: tto.ingredientTypeId,
+          inventoryIngredientId: ingType?.inventoryIngredientId ?? null,
+          processedQty: Number(tto.processedQty || ingType?.processedQty || 0),
+          isDefault: !!tto.isDefault,
+          isNone,
+          typeName,
+          source: "typed-template"
+        });
+      }
+    }
+    if (rawOptions.length === 0 && slot.ingredientTypeId) {
+      const [ingType] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, slot.ingredientTypeId));
+      const typeName = ingType?.name ?? "";
+      const isNone = typeName.toLowerCase() === "none" || !ingType?.inventoryIngredientId;
+      rawOptions.push({
+        ingredientTypeId: slot.ingredientTypeId,
+        inventoryIngredientId: ingType?.inventoryIngredientId ?? null,
+        processedQty: Number(ingType?.processedQty || 0),
+        isDefault: true,
+        isNone,
+        typeName,
+        source: "typed-catalog"
+      });
+    }
+    if (rawOptions.length === 0 && slot.defaultOptionId) {
       const [opt] = await db.select().from(ingredientOptionsTable).where(eq(ingredientOptionsTable.id, slot.defaultOptionId));
       if (opt) {
-        const [ing] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, opt.ingredientId));
-        if (ing) addUsage(ing, "legacy-option", slot.slotLabel, Number(opt.processedQty || 0), true);
+        rawOptions.push({
+          ingredientTypeId: null,
+          inventoryIngredientId: opt.ingredientId,
+          processedQty: Number(opt.processedQty || 0),
+          isDefault: true,
+          isNone: false,
+          typeName: opt.label,
+          source: "legacy-option"
+        });
       }
+    } else if (rawOptions.length === 0 && slot.ingredientId) {
+      rawOptions.push({
+        ingredientTypeId: null,
+        inventoryIngredientId: slot.ingredientId,
+        processedQty: 0,
+        isDefault: true,
+        isNone: false,
+        typeName: slot.slotLabel,
+        source: "legacy"
+      });
     }
-    if (slot.ingredientTypeId) {
-      const [ingType] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, slot.ingredientTypeId));
-      if (ingType?.inventoryIngredientId) {
-        const [ing] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, ingType.inventoryIngredientId));
-        if (ing) addUsage(ing, "typed-catalog", slot.slotLabel, Number(ingType.processedQty || 0), true);
-      }
+    if (rawOptions.length === 0) continue;
+    const hasExplicitDefaultOpt = rawOptions.some((o) => o.isDefault);
+    if (!hasExplicitDefaultOpt && rawOptions.length > 0) {
+      rawOptions[0].isDefault = true;
     }
-    const typeOptions = await db.select().from(drinkSlotTypeOptionsTable).where(eq(drinkSlotTypeOptionsTable.slotId, slot.id));
-    for (const to of typeOptions) {
-      const [ingType] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, to.ingredientTypeId));
-      if (ingType?.inventoryIngredientId) {
-        const [ing] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, ingType.inventoryIngredientId));
-        if (ing) addUsage(ing, "typed-option", slot.slotLabel, Number(to.processedQty || ingType.processedQty || 0), !!to.isDefault);
-      }
-    }
-    const slotVolumes = await db.select().from(drinkSlotVolumesTable).where(eq(drinkSlotVolumesTable.slotId, slot.id));
-    for (const sv of slotVolumes) {
-      const [typeVol] = await db.select().from(ingredientTypeVolumesTable).where(eq(ingredientTypeVolumesTable.id, sv.typeVolumeId));
-      if (typeVol) {
-        const [ingType] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, typeVol.ingredientTypeId));
-        if (ingType?.inventoryIngredientId) {
-          const [ing] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, ingType.inventoryIngredientId));
-          if (ing) addUsage(ing, "typed-volume", slot.slotLabel, Number(sv.processedQty || typeVol.processedQty || 0), !!sv.isDefault);
+    const defaultOptionObj = rawOptions.find((o) => o.isDefault) || rawOptions[0];
+    const isDefaultNone = defaultOptionObj.isNone;
+    const validInventoryOptions = rawOptions.filter((o) => o.inventoryIngredientId !== null);
+    if (validInventoryOptions.length === 0) continue;
+    const getDefaultVolumeQtyForType = async (typeId) => {
+      if (!typeId) return 0;
+      const slotVols = await db.select().from(drinkSlotVolumesTable).where(eq(drinkSlotVolumesTable.slotId, slot.id)).orderBy(asc(drinkSlotVolumesTable.sortOrder), asc(drinkSlotVolumesTable.id));
+      const volsForType = [];
+      for (const sv of slotVols) {
+        const [typeVol] = await db.select().from(ingredientTypeVolumesTable).where(eq(ingredientTypeVolumesTable.id, sv.typeVolumeId));
+        if (typeVol && typeVol.ingredientTypeId === typeId) {
+          const qty = Number(sv.processedQty || typeVol.processedQty || 0);
+          if (sv.isDefault && qty > 0) return qty;
+          if (qty > 0) volsForType.push(qty);
         }
       }
-    }
-    if (slot.predefinedSlotId) {
-      const templateOptions = await db.select().from(predefinedSlotTypeOptionsTable).where(eq(predefinedSlotTypeOptionsTable.predefinedSlotId, slot.predefinedSlotId));
-      for (const tto of templateOptions) {
-        const [ingType] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, tto.ingredientTypeId));
-        if (ingType?.inventoryIngredientId) {
-          const [ing] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, ingType.inventoryIngredientId));
-          if (ing) addUsage(ing, "typed-template", slot.slotLabel + " (Template)", Number(tto.processedQty || ingType.processedQty || 0), !!tto.isDefault);
-        }
-      }
-      const templateVolumes = await db.select().from(predefinedSlotVolumesTable).where(eq(predefinedSlotVolumesTable.predefinedSlotId, slot.predefinedSlotId));
-      for (const tv of templateVolumes) {
-        const [typeVol] = await db.select().from(ingredientTypeVolumesTable).where(eq(ingredientTypeVolumesTable.id, tv.typeVolumeId));
-        if (typeVol) {
-          const [ingType] = await db.select().from(ingredientTypesTable).where(eq(ingredientTypesTable.id, typeVol.ingredientTypeId));
-          if (ingType?.inventoryIngredientId) {
-            const [ing] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, ingType.inventoryIngredientId));
-            if (ing) addUsage(ing, "typed-template-vol", slot.slotLabel + " (Template)", Number(tv.processedQty || typeVol.processedQty || 0), !!tv.isDefault);
+      if (slot.predefinedSlotId) {
+        const templateVols = await db.select().from(predefinedSlotVolumesTable).where(eq(predefinedSlotVolumesTable.predefinedSlotId, slot.predefinedSlotId)).orderBy(asc(predefinedSlotVolumesTable.sortOrder), asc(predefinedSlotVolumesTable.id));
+        for (const tv of templateVols) {
+          const [typeVol] = await db.select().from(ingredientTypeVolumesTable).where(eq(ingredientTypeVolumesTable.id, tv.typeVolumeId));
+          if (typeVol && typeVol.ingredientTypeId === typeId) {
+            const qty = Number(tv.processedQty || typeVol.processedQty || 0);
+            if (tv.isDefault && qty > 0) return qty;
+            if (qty > 0) volsForType.push(qty);
           }
         }
+      }
+      const typeVols = await db.select().from(ingredientTypeVolumesTable).where(and(eq(ingredientTypeVolumesTable.ingredientTypeId, typeId), eq(ingredientTypeVolumesTable.isActive, true))).orderBy(asc(ingredientTypeVolumesTable.sortOrder), asc(ingredientTypeVolumesTable.id));
+      for (const tv of typeVols) {
+        const qty = Number(tv.processedQty || 0);
+        if (tv.isDefault && qty > 0) return qty;
+        if (qty > 0) volsForType.push(qty);
+      }
+      if (volsForType.length > 0) return volsForType[0];
+      return 0;
+    };
+    let defaultOptionQty = defaultOptionObj && !defaultOptionObj.isNone ? defaultOptionObj.processedQty : 0;
+    if (defaultOptionQty === 0 && defaultOptionObj?.ingredientTypeId && !defaultOptionObj.isNone) {
+      defaultOptionQty = await getDefaultVolumeQtyForType(defaultOptionObj.ingredientTypeId);
+    }
+    for (const opt of validInventoryOptions) {
+      let finalQty = opt.processedQty;
+      if (finalQty <= 0) {
+        if (defaultOptionQty > 0) {
+          finalQty = defaultOptionQty;
+        } else {
+          const defVolQty = await getDefaultVolumeQtyForType(opt.ingredientTypeId);
+          if (defVolQty > 0) {
+            finalQty = defVolQty;
+          } else if (slot.isDynamic && dynamicFillMl > 0) {
+            finalQty = dynamicFillMl;
+          }
+        }
+      }
+      const [ing] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, opt.inventoryIngredientId));
+      if (!ing) continue;
+      const effectiveIsDefault = isDefaultNone ? false : opt.isDefault;
+      const existingIdx = usage.findIndex((u) => u.ingredientId === ing.id && u.slotLabel === slot.slotLabel);
+      if (existingIdx !== -1) {
+        if (usage[existingIdx].qty === 0 && finalQty > 0) {
+          usage[existingIdx].qty = finalQty;
+        }
+        if (!usage[existingIdx].isDefault && effectiveIsDefault) {
+          usage[existingIdx].isDefault = true;
+        }
+      } else {
+        usage.push({
+          type: opt.source,
+          slotLabel: slot.slotLabel,
+          ingredientId: ing.id,
+          ingredientName: ing.name,
+          unit: ing.unit,
+          qty: finalQty,
+          isDefault: effectiveIsDefault
+        });
       }
     }
   }
