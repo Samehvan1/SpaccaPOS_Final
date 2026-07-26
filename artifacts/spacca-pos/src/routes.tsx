@@ -18,7 +18,9 @@ import KitchenStationsAdmin from "@/pages/admin/kitchen-stations";
 import AdminUsers from "@/pages/admin/users";
 import BranchesAdmin from "@/pages/admin/branches";
 import DiscountsAdmin from "@/pages/admin/discounts";
+import OffersAdmin from "@/pages/admin/offers";
 import CustomersAdmin from "@/pages/admin/customers";
+
 import TagsAdmin from "@/pages/admin/tags";
 import ActivityLogs from "@/pages/admin/activity-logs";
 import PermissionsAdmin from "@/pages/admin/permissions";
@@ -107,7 +109,9 @@ export const appRoutes: RouteConfig[] = [
   // Settings & Users
   { path: "/admin/kitchen-stations", component: KitchenStationsAdmin, permission: "admin:view" },
   { path: "/admin/discounts", component: DiscountsAdmin, permission: "discounts:view" },
+  { path: "/admin/offers", component: OffersAdmin, permission: "discounts:view" },
   { path: "/admin/customers", component: CustomersAdmin, permission: "admin:view" },
+
   { path: "/admin/tags", component: TagsAdmin, permission: "admin:view" },
   { path: "/admin/users", component: AdminUsers, permission: "users:view" },
 

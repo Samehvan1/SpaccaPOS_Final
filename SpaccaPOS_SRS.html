@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>SpaccaPOS Documentation</title>
+<style>
+    @page {
+        size: A4;
+        margin: 20mm 15mm 20mm 15mm;
+        @bottom-right {
+            content: counter(page);
+        }
+    }
+    body {
+        font-family: 'Segoe UI', Arial, sans-serif;
+        color: #2D3748;
+        line-height: 1.6;
+        font-size: 11pt;
+        background-color: #FFFFFF;
+    }
+    h1 {
+        color: #1B365D;
+        font-size: 22pt;
+        border-bottom: 2px solid #1B365D;
+        padding-bottom: 6px;
+        margin-top: 24pt;
+        margin-bottom: 12pt;
+        page-break-before: always;
+    }
+    h1:first-of-type {
+        page-break-before: avoid;
+    }
+    h2 {
+        color: #0056B3;
+        font-size: 16pt;
+        border-bottom: 1px solid #E2E8F0;
+        padding-bottom: 4px;
+        margin-top: 18pt;
+        margin-bottom: 8pt;
+    }
+    h3 {
+        color: #2B2D42;
+        font-size: 13pt;
+        margin-top: 14pt;
+        margin-bottom: 6pt;
+    }
+    h4 {
+        color: #4A5568;
+        font-size: 11pt;
+        margin-top: 10pt;
+        margin-bottom: 4pt;
+    }
+    p {
+        margin-top: 0;
+        margin-bottom: 8pt;
+    }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 12pt;
+        margin-bottom: 16pt;
+        font-size: 10pt;
+        page-break-inside: avoid;
+    }
+    th {
+        background-color: #1B365D;
+        color: #FFFFFF;
+        font-weight: bold;
+        text-align: left;
+        padding: 8px 10px;
+        border: 1px solid #1B365D;
+    }
+    td {
+        padding: 8px 10px;
+        border: 1px solid #CBD5E0;
+    }
+    tr:nth-child(even) td {
+        background-color: #F7FAFC;
+    }
+    blockquote {
+        border-left: 4px solid #3182CE;
+        background-color: #EBF8FF;
+        margin: 12pt 0;
+        padding: 10pt 14pt;
+        border-radius: 4px;
+    }
+    pre, code {
+        font-family: 'Consolas', 'Courier New', monospace;
+    }
+    code {
+        background-color: #EDF2F7;
+        color: #C7254E;
+        padding: 2px 5px;
+        border-radius: 3px;
+        font-size: 9.5pt;
+    }
+    pre {
+        background-color: #2D3748;
+        color: #F7FAFC;
+        padding: 12px;
+        border-radius: 6px;
+        overflow-x: auto;
+        font-size: 9pt;
+        line-height: 1.4;
+    }
+    pre code {
+        background-color: transparent;
+        color: inherit;
+        padding: 0;
+    }
+    .mermaid-diagram {
+        background-color: #F7FAFC;
+        color: #1A202C;
+        border: 1px solid #E2E8F0;
+        border-left: 4px solid #0056B3;
+        font-family: 'Consolas', monospace;
+        white-space: pre-wrap;
+    }
+    ul, ol {
+        margin-top: 0;
+        margin-bottom: 8pt;
+        padding-left: 20pt;
+    }
+    li {
+        margin-bottom: 4pt;
+    }
+    hr {
+        border: 0;
+        height: 1px;
+        background: #E2E8F0;
+        margin: 18pt 0;
+    }
+</style>
+</head>
+<body>
+<h1 id="software-requirements-specification-srs">📄 Software Requirements Specification (SRS)</h1>
+<h2 id="spaccapos-advanced-coffee-shop-point-of-sale-inventory-ecosystem">SpaccaPOS — Advanced Coffee Shop Point-of-Sale &amp; Inventory Ecosystem</h2>
+<p><strong>Version:</strong> 2.0.0<br />
+<strong>Status:</strong> Approved / Production Baseline<br />
+<strong>Date:</strong> July 2026<br />
+<strong>Author:</strong> Antigravity Senior Systems Architect &amp; Engineering Team  </p>
+<hr />
+<h2 id="table-of-contents">📋 Table of Contents</h2>
+<ol>
+<li><a href="#1-document-control--overview">Document Control &amp; Overview</a></li>
+<li><a href="#2-introduction">Introduction</a></li>
+<li>2.1 <a href="#21-purpose">Purpose</a></li>
+<li>2.2 <a href="#22-scope">Scope</a></li>
+<li>2.3 <a href="#23-definitions--acronyms">Definitions &amp; Acronyms</a></li>
+<li><a href="#3-overall-description">Overall Description</a></li>
+<li>3.1 <a href="#31-product-perspective">Product Perspective</a></li>
+<li>3.2 <a href="#32-user-classes--persona-hierarchy">User Classes &amp; Persona Hierarchy</a></li>
+<li>3.3 <a href="#33-role-based-access-control-rbac--permission-matrix">Role-Based Access Control (RBAC) &amp; Permission Matrix</a></li>
+<li>3.4 <a href="#34-operating-environment--technology-stack">Operating Environment &amp; Technology Stack</a></li>
+<li>3.5 <a href="#35-design--implementation-constraints">Design &amp; Implementation Constraints</a></li>
+<li><a href="#4-system-architecture--data-model">System Architecture &amp; Data Model</a></li>
+<li>4.1 <a href="#41-monorepo-architecture-overview">Monorepo Architecture Overview</a></li>
+<li>4.2 <a href="#42-entity-relationship-diagram-erd">Entity-Relationship Diagram (ERD)</a></li>
+<li>4.3 <a href="#43-database-schema-specifications">Database Schema Specifications</a></li>
+<li><a href="#5-detailed-functional-requirements">Detailed Functional Requirements</a></li>
+<li>5.1 <a href="#51-module-1-authentication--shift-session-management">Module 1: Authentication &amp; Shift Session Management</a></li>
+<li>5.2 <a href="#52-module-2-dynamic-catalog--multi-tier-recipe-engine">Module 2: Dynamic Catalog &amp; Multi-Tier Recipe Engine</a></li>
+<li>5.3 <a href="#53-module-3-point-of-sale-pos--multi-payment-processing">Module 3: Point-of-Sale (POS) &amp; Multi-Payment Processing</a></li>
+<li>5.4 <a href="#54-module-4-kitchen-display-system-kds--multi-station-routing">Module 4: Kitchen Display System (KDS) &amp; Multi-Station Routing</a></li>
+<li>5.5 <a href="#55-module-5-customer-self-service-kiosk--mobile-integration-bridge">Module 5: Customer Self-Service Kiosk &amp; Mobile Integration Bridge</a></li>
+<li>5.6 <a href="#56-module-6-inventory-control-fefo-batches--stock-audit-system">Module 6: Inventory Control, FEFO Batches &amp; Stock Audit System</a></li>
+<li>5.7 <a href="#57-module-7-supplier-management--purchase-order-po-lifecycle">Module 7: Supplier Management &amp; Purchase Order (PO) Lifecycle</a></li>
+<li>5.8 <a href="#58-module-8-customer-crm--loyalty-engine">Module 8: Customer CRM &amp; Loyalty Engine</a></li>
+<li>5.9 <a href="#59-module-9-financial-reporting-shift-reconciliation--analytics">Module 9: Financial Reporting, Shift Reconciliation &amp; Analytics</a></li>
+<li>5.10 <a href="#510-module-10-system-settings-audit-logging--security-administration">Module 10: System Settings, Audit Logging &amp; Security Administration</a></li>
+<li><a href="#6-external-interface-requirements">External Interface Requirements</a></li>
+<li>6.1 <a href="#61-user-interfaces">User Interfaces</a></li>
+<li>6.2 <a href="#62-hardware-interfaces">Hardware Interfaces</a></li>
+<li>6.3 <a href="#63-api-protocols--real-time-event-streaming-sse">API Protocols &amp; Real-Time Event Streaming (SSE)</a></li>
+<li><a href="#7-non-functional-requirements-nfrs">Non-Functional Requirements (NFRs)</a></li>
+<li>7.1 <a href="#71-performance--latency">Performance &amp; Latency</a></li>
+<li>7.2 <a href="#72-security--rate-limiting">Security &amp; Rate-Limiting</a></li>
+<li>7.3 <a href="#73-data-integrity--transactional-isolation">Data Integrity &amp; Transactional Isolation</a></li>
+<li>7.4 <a href="#74-usability--ergonomics">Usability &amp; Ergonomics</a></li>
+<li><a href="#8-requirements-traceability-matrix">Requirements Traceability Matrix</a></li>
+</ol>
+<hr />
+<h2 id="1-document-control-overview">1. Document Control &amp; Overview</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Revision</th>
+<th style="text-align: left;">Date</th>
+<th style="text-align: left;">Description of Changes</th>
+<th style="text-align: left;">Approved By</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>1.0.0</strong></td>
+<td style="text-align: left;">2026-04-16</td>
+<td style="text-align: left;">Initial baseline functional requirements draft.</td>
+<td style="text-align: left;">Product Owner</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>1.5.0</strong></td>
+<td style="text-align: left;">2026-06-01</td>
+<td style="text-align: left;">Added FEFO Stock Batches, Predefined Slot Templates, and Split Payments.</td>
+<td style="text-align: left;">Lead Architect</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>2.0.0</strong></td>
+<td style="text-align: left;">2026-07-22</td>
+<td style="text-align: left;">Comprehensive system-wide review, full ERD mapping, KDS routing, and Mobile Bridge specification.</td>
+<td style="text-align: left;">Technical Director</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="2-introduction">2. Introduction</h2>
+<h3 id="21-purpose">2.1 Purpose</h3>
+<p>This Software Requirements Specification (SRS) details the complete functional, non-functional, data model, architectural, and procedural requirements for the <strong>SpaccaPOS Coffee Shop Point-of-Sale &amp; Inventory Management System</strong>. It serves as the definitive reference manual for developers, system administrators, quality assurance engineers, and operational management staff.</p>
+<h3 id="22-scope">2.2 Scope</h3>
+<p>SpaccaPOS is an enterprise-grade multi-branch hospitality platform designed specifically for high-throughput coffee shop operations. The platform encompasses:
+- <strong>Desktop Point-of-Sale (POS)</strong> for cashiers and baristas.
+- <strong>Kitchen Display System (KDS)</strong> for real-time station-based drink preparation.
+- <strong>Self-Service Customer Kiosk</strong> for contactless order placement.
+- <strong>Inventory &amp; FEFO Batch Engine</strong> with dynamic raw material deduction.
+- <strong>Stock Audit &amp; Reconciliation Engine</strong> with multi-level approval workflows.
+- <strong>Procurement &amp; Supplier Management (PO System)</strong>.
+- <strong>CRM &amp; Customer Loyalty System</strong>.
+- <strong>Financial Analytics, Cashier Shift Reconciliation &amp; Reports</strong>.
+- <strong>Mobile Application Integration Bridge</strong> for customer mobile ordering.</p>
+<h3 id="23-definitions-acronyms">2.3 Definitions &amp; Acronyms</h3>
+<ul>
+<li><strong>POS</strong>: Point of Sale.</li>
+<li><strong>KDS</strong>: Kitchen Display System.</li>
+<li><strong>FEFO</strong>: First-Expired, First-Out (Inventory valuation &amp; batch usage strategy).</li>
+<li><strong>RBAC</strong>: Role-Based Access Control.</li>
+<li><strong>SSE</strong>: Server-Sent Events (Real-time one-way HTTP streaming protocol).</li>
+<li><strong>PIN</strong>: Personal Identification Number (6-digit authorization code for sensitive actions).</li>
+<li><strong>PO</strong>: Purchase Order.</li>
+<li><strong>Slot</strong>: A configurable recipe category for a drink (e.g., "Milk Choice", "Syrup Flavour", "Coffee Beans").</li>
+<li><strong>Type-Volume</strong>: A composite entity binding a specific ingredient type (e.g., Oat Milk) to a portion volume (e.g., Medium 150ml) with price and inventory conversion overrides.</li>
+</ul>
+<hr />
+<h2 id="3-overall-description">3. Overall Description</h2>
+<h3 id="31-product-perspective">3.1 Product Perspective</h3>
+<p>SpaccaPOS operates as a centralized web application architecture backed by a Node.js/Express API server, an SQLite/PostgreSQL relational database managed via Drizzle ORM, and a Vite-powered React front-end client.</p>
+<pre class="mermaid-diagram">graph TD
+    Client_POS[POS Cashier Interface] -->|HTTP REST / SSE| API_Server[SpaccaPOS Express API Server]
+    Client_KDS[Kitchen Display Screens] -->|SSE Stream| API_Server
+    Client_Kiosk[Self-Service Kiosk] -->|HTTP REST| API_Server
+    Client_Mobile[Mobile Customer App] -->|Mobile Bridge API| API_Server
+
+    API_Server -->|Drizzle ORM| DB[(SQLite / PostgreSQL DB)]
+    API_Server -->|File Storage| Uploads[Local Uploads / Media Storage]
+</pre>
+
+<h3 id="32-user-classes-persona-hierarchy">3.2 User Classes &amp; Persona Hierarchy</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">User Persona</th>
+<th style="text-align: left;">Scope of Work</th>
+<th style="text-align: left;">Primary Interfaces Used</th>
+<th style="text-align: left;">Key Tasks &amp; Objectives</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>System Administrator</strong></td>
+<td style="text-align: left;">Global / Multi-Branch</td>
+<td style="text-align: left;">Admin Dashboard, Settings, Users</td>
+<td style="text-align: left;">System config, user permissions, drink catalog engineering, overall financial audits.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Store Supervisor</strong></td>
+<td style="text-align: left;">Single Branch</td>
+<td style="text-align: left;">Admin Panel, POS Cashier</td>
+<td style="text-align: left;">High-privilege actions, approving stock audits, authorizing hospitality orders &amp; refunds, PIN approvals.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Cashier</strong></td>
+<td style="text-align: left;">Single Branch</td>
+<td style="text-align: left;">POS Interface, Shift Terminal</td>
+<td style="text-align: left;">Open/close shifts, process customer orders, collect cash/card/wallet payments, issue receipts.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Barista / Kitchen Staff</strong></td>
+<td style="text-align: left;">Station Specific</td>
+<td style="text-align: left;">Kitchen KDS Screen, Barista POS</td>
+<td style="text-align: left;">Prepare drinks per station tickets, mark items/orders ready, request ingredient restocks.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Inventory Manager</strong></td>
+<td style="text-align: left;">Branch / Warehouse</td>
+<td style="text-align: left;">Stock Control, Purchases</td>
+<td style="text-align: left;">Record stock movements, log incoming PO receipts, manage suppliers, conduct physical stock audits.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Customer</strong></td>
+<td style="text-align: left;">Mobile / In-Store</td>
+<td style="text-align: left;">Kiosk, Mobile Web Client</td>
+<td style="text-align: left;">Browse catalog, customize drink recipes, place self-service orders, earn &amp; redeem loyalty points.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="33-role-based-access-control-rbac-permission-matrix">3.3 Role-Based Access Control (RBAC) &amp; Permission Matrix</h3>
+<p>SpaccaPOS enforces high-granularity permission checks. Permissions can be assigned directly to roles or granted as individual user overrides.</p>
+<pre><code>Key System Permissions:
+├─ pos:view                    (Access main POS interface)
+├─ cashier:view               (Access cashier list &amp; status)
+├─ cashier:approve_order       (Confirm order payment &amp; submit to kitchen)
+├─ cashier:cancel_order        (Cancel active pending order)
+├─ cashier:refund_order        (Process full/partial order refund)
+├─ cashier:close_session       (End cashier shift session)
+├─ cashier:view_reports        (View shift performance reports)
+├─ kitchen:view                (Access Kitchen Display System)
+├─ kitchen:mark_ready          (Bump order/item to Ready state)
+├─ inventory:view              (View raw ingredient stock levels)
+├─ inventory:adjust            (Perform manual stock adjustments/waste logs)
+├─ inventory:audit             (Create and submit stock audit count sheets)
+├─ inventory:approve_audit     (Approve stock audit variance adjustments)
+├─ catalog:manage              (Create/Edit/Delete drinks, categories, recipes, slots)
+├─ purchases:manage            (Create and process Purchase Orders &amp; Suppliers)
+├─ admin:view                  (Access System Settings, Users, Roles, Activity Logs)
+</code></pre>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Permission Key</th>
+<th style="text-align: center;">Admin</th>
+<th style="text-align: center;">Supervisor</th>
+<th style="text-align: center;">Cashier</th>
+<th style="text-align: center;">Barista</th>
+<th style="text-align: center;">Kitchen</th>
+<th style="text-align: center;">Kiosk</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><code>pos:view</code></td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>cashier:approve_order</code></td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>cashier:cancel_order</code></td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">❌ (Req PIN)</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>cashier:refund_order</code></td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">❌ (Req PIN)</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>cashier:close_session</code></td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>cashier:view_reports</code></td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">❌ (Own only)</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>kitchen:view</code></td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">❌</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>kitchen:mark_ready</code></td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">❌</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>inventory:view</code></td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>inventory:adjust</code></td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>inventory:audit</code></td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>inventory:approve_audit</code></td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>catalog:manage</code></td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>purchases:manage</code></td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>admin:view</code></td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+</tr>
+</tbody>
+</table>
+<h3 id="34-operating-environment-technology-stack">3.4 Operating Environment &amp; Technology Stack</h3>
+<ul>
+<li><strong>Frontend Stack</strong>: React 19, TypeScript, Tailwind CSS v4, Lucide Icons, Framer Motion, TanStack Query v5.</li>
+<li><strong>Backend Stack</strong>: Node.js v20+, Express.js, Drizzle ORM, Zod v3.25 validation, Bcrypt password hashing.</li>
+<li><strong>Database Engine</strong>: SQLite (Production/Development embedded) or PostgreSQL.</li>
+<li><strong>Real-Time Layer</strong>: Server-Sent Events (SSE) broadcasting over persistent HTTP connections.</li>
+<li><strong>Supported OS/Browsers</strong>: Windows 10/11, macOS, Linux, Chrome 110+, Edge 110+, Safari 16+, Android Tablet Chrome.</li>
+</ul>
+<hr />
+<h2 id="4-system-architecture-data-model">4. System Architecture &amp; Data Model</h2>
+<h3 id="41-monorepo-architecture-overview">4.1 Monorepo Architecture Overview</h3>
+<p>The codebase is structured as a pnpm workspace:
+- <code>artifacts/spacca-pos</code>: Web Frontend Application.
+- <code>artifacts/api-server</code>: Express Backend API Server.
+- <code>lib/db</code>: Database schemas, migrations, seeders, and Drizzle config.
+- <code>lib/api-spec</code> &amp; <code>lib/api-zod</code>: OpenAPI spec definitions and Zod schemas.
+- <code>lib/api-client-react</code>: Auto-generated React Query API client.</p>
+<h3 id="42-entity-relationship-diagram-erd">4.2 Entity-Relationship Diagram (ERD)</h3>
+<pre class="mermaid-diagram">erDiagram
+    BRANCHES ||--o{ USERS : "employs"
+    BRANCHES ||--o{ BRANCH_STOCK : "holds"
+    BRANCHES ||--o{ ORDERS : "fulfills"
+    BRANCHES ||--o{ PURCHASES : "orders"
+    BRANCHES ||--o{ STOCK_AUDITS : "audits"
+
+    USERS ||--o{ CASHIER_SESSIONS : "opens"
+    USERS ||--o{ ORDERS : "creates (barista)"
+    USERS ||--o{ ORDERS : "collects (cashier)"
+    USERS ||--o{ ACTIVITY_LOGS : "generates"
+
+    INGREDIENT_CATEGORIES ||--o{ INGREDIENT_TYPES : "classifies"
+    INGREDIENTS ||--o{ INGREDIENT_TYPES : "links inventory"
+    INGREDIENTS ||--o{ BRANCH_STOCK : "tracked in"
+    INGREDIENTS ||--o{ BRANCH_INVENTORY_BATCHES : "batched in"
+    INGREDIENT_TYPES ||--o{ INGREDIENT_TYPE_VOLUMES : "defines options"
+    INGREDIENT_VOLUMES ||--o{ INGREDIENT_TYPE_VOLUMES : "supplies portion"
+
+    DRINK_CATEGORIES ||--o{ DRINKS : "categorizes"
+    KITCHEN_STATIONS ||--o{ DRINKS : "routes"
+    DRINKS ||--o{ DRINK_INGREDIENT_SLOTS : "contains slots"
+    DRINK_INGREDIENT_SLOTS ||--o{ DRINK_SLOT_TYPE_OPTIONS : "offers choices"
+    DRINK_SLOT_TYPE_OPTIONS ||--o{ DRINK_SLOT_VOLUMES : "overrides volumes"
+
+    PREDEFINED_SLOTS ||--o{ DRINK_INGREDIENT_SLOTS : "templates"
+
+    CUSTOMERS ||--o{ ORDERS : "places"
+    DISCOUNTS ||--o{ ORDERS : "applies to"
+
+    ORDERS ||--o{ ORDER_ITEMS : "contains"
+    ORDERS ||--o{ ORDER_PAYMENTS : "paid via"
+    ORDER_ITEMS ||--o{ ORDER_ITEM_CUSTOMIZATIONS : "customized by"
+
+    SUPPLIERS ||--o{ PURCHASES : "supplies"
+    PURCHASES ||--o{ PURCHASE_ITEMS : "contains"
+
+    STOCK_AUDITS ||--o{ STOCK_AUDIT_ITEMS : "details"
+</pre>
+
+<h3 id="43-database-schema-specifications">4.3 Database Schema Specifications</h3>
+<p>The database consists of <strong>35 database tables</strong>. Key core schemas are detailed below:</p>
+<h4 id="1-users-table">1. <code>users</code> Table</h4>
+<p>Stores system staff, admins, cashiers, baristas, and supervisors.
+- <code>id</code> (Serial, Primary Key)
+- <code>branch_id</code> (Integer, Nullable FK to <code>branches.id</code>)
+- <code>name</code> (Text, Required)
+- <code>username</code> (Varchar(50), Unique)
+- <code>password_hash</code> (Text, Bcrypt encrypted)
+- <code>role</code> (Text, Default "barista", Enum: <code>admin</code>, <code>supervisor</code>, <code>cashier</code>, <code>barista</code>, <code>kitchen</code>)
+- <code>pin</code> (Varchar(6), Optional 6-digit numeric override code)
+- <code>is_active</code> (Boolean, Default <code>true</code>)
+- <code>created_at</code>, <code>updated_at</code> (Timestamps with Timezone)</p>
+<h4 id="2-drinks-table">2. <code>drinks</code> Table</h4>
+<p>Master catalog of sellable beverages and products.
+- <code>id</code> (Serial, Primary Key)
+- <code>name</code> (Text, Required)
+- <code>description</code> (Text, Optional)
+- <code>category</code> (Text, Required string)
+- <code>category_id</code> (Integer, FK to <code>drink_categories.id</code>)
+- <code>basePrice</code> (Numeric(8,2), Base retail price)
+- <code>imageUrl</code> (Text, Relative path to uploaded image)
+- <code>sortOrder</code> (Integer, Default 0)
+- <code>isActive</code> (Boolean, Default <code>true</code>)
+- <code>prepTimeSeconds</code> (Integer, Default 180)
+- <code>cupSizeMl</code> (Integer, Required cup volume in ml)
+- <code>cupIngredientId</code> (Integer, FK to <code>ingredients.id</code> for automated cup inventory deduction)
+- <code>isCustomizable</code> (Boolean, Default <code>true</code>)
+- <code>kitchenStation</code> (Text, Default "main")
+- <code>kitchenStationId</code> (Integer, FK to <code>kitchen_stations.id</code>)</p>
+<h4 id="3-drink_ingredient_slots-table">3. <code>drink_ingredient_slots</code> Table</h4>
+<p>Defines recipe slots per drink (e.g. Milk, Bean Origin, Syrup).
+- <code>id</code> (Serial, Primary Key)
+- <code>drink_id</code> (Integer, FK to <code>drinks.id</code> ON DELETE CASCADE)
+- <code>ingredient_type_id</code> (Integer, FK to <code>ingredient_types.id</code>)
+- <code>slot_label</code> (Text, Display name on POS/Kiosk)
+- <code>is_required</code> (Boolean, Default <code>true</code>)
+- <code>is_dynamic</code> (Boolean, Default <code>false</code>)
+- <code>sort_order</code> (Integer, Default 0)
+- <code>barista_sort_order</code>, <code>customer_sort_order</code> (Integer, Default 1)
+- <code>affects_cup_size</code> (Boolean, Optional override)
+- <code>predefined_slot_id</code> (Integer, Optional FK to <code>predefined_slots.id</code> template)</p>
+<h4 id="4-orders-table">4. <code>orders</code> Table</h4>
+<p>Master transactional order record.
+- <code>id</code> (Serial, Primary Key)
+- <code>branch_id</code> (Integer, FK to <code>branches.id</code>)
+- <code>order_number</code> (Text, Unique format: <code>{branchId}-{dayOfYear}{serial3Digits}</code>)
+- <code>barista_id</code> (Integer, FK to <code>users.id</code> - creator)
+- <code>cashier_id</code> (Integer, FK to <code>users.id</code> - payment collector)
+- <code>status</code> (Text, Enum: <code>pending</code>, <code>paid</code>, <code>in_progress</code>, <code>ready</code>, <code>completed</code>, <code>cancelled</code>, <code>refunded</code>)
+- <code>customer_name</code> (Text, Optional)
+- <code>customer_phone</code> (Text, Optional)
+- <code>subtotal</code> (Numeric(8,2), Total before discounts)
+- <code>discount</code> (Numeric(8,2), Total discount applied)
+- <code>discount_id</code> (Integer, FK to <code>discounts.id</code>)
+- <code>discount_code</code> (Text, Optional)
+- <code>discount_value</code> (Numeric(8,2))
+- <code>discount_type</code> (Text, Enum: <code>percentage</code>, <code>fixed</code>, <code>fixed_per_item</code>)
+- <code>total</code> (Numeric(8,2), Final payable amount)
+- <code>payment_method</code> (Text, Enum: <code>cash</code>, <code>card</code>, <code>wallet</code>, <code>hospitality</code>, <code>split</code>, <code>refund</code>)
+- <code>source</code> (Text, Enum: <code>pos</code>, <code>kiosk</code>, <code>web</code>, <code>mobile</code>)
+- <code>amount_tendered</code> (Numeric(8,2))
+- <code>change_due</code> (Numeric(8,2))
+- <code>notes</code> (Text, Special order instructions)
+- <code>paid_at</code>, <code>ready_at</code>, <code>completed_at</code>, <code>cancelled_at</code> (Timestamps)</p>
+<h4 id="5-branch_stock-table">5. <code>branch_stock</code> Table</h4>
+<p>Branch-specific raw material inventory levels.
+- <code>branch_id</code> (Integer, Primary Key Component 1)
+- <code>ingredient_id</code> (Integer, Primary Key Component 2)
+- <code>stock_quantity</code> (Numeric(12,4), Current available balance)
+- <code>startup_quantity</code> (Numeric(12,4), Opening balance)
+- <code>low_stock_threshold</code> (Numeric(12,4), Warning threshold, Default 500)</p>
+<h4 id="6-branch_inventory_batches-table">6. <code>branch_inventory_batches</code> Table</h4>
+<p>FEFO inventory batch tracking.
+- <code>id</code> (Serial, Primary Key)
+- <code>branch_id</code> (Integer, FK to <code>branches.id</code>)
+- <code>ingredient_id</code> (Integer, FK to <code>ingredients.id</code>)
+- <code>batch_number</code> (Text)
+- <code>sealed_expiry_date</code> (Timestamp, Expiration date while sealed)
+- <code>expiry_date</code> (Timestamp, Effective expiration date)
+- <code>is_opened</code> (Boolean, Default <code>false</code>)
+- <code>opened_at</code> (Timestamp, Time when container was opened)
+- <code>quantity</code> (Numeric(12,4), Remaining batch stock)
+- <code>initial_quantity</code> (Numeric(12,4), Starting batch volume)</p>
+<hr />
+<h2 id="5-detailed-functional-requirements">5. Detailed Functional Requirements</h2>
+<h3 id="51-module-1-authentication-shift-session-management">5.1 Module 1: Authentication &amp; Shift Session Management</h3>
+<h4 id="req-auth-01-user-authentication">REQ-AUTH-01: User Authentication</h4>
+<ul>
+<li>The system <strong>shall</strong> authenticate staff via username and password or 6-digit numeric PIN.</li>
+<li>Failed login attempts <strong>shall</strong> be rate-limited to 10 attempts per 15 minutes per IP address.</li>
+<li>Successfully authenticated user details, assigned branch ID, and resolved permission keys <strong>shall</strong> be stored in an encrypted HTTP-only session cookie.</li>
+</ul>
+<h4 id="req-auth-02-cashier-shift-sessions">REQ-AUTH-02: Cashier Shift Sessions</h4>
+<ul>
+<li>A Cashier <strong>must</strong> explicitly initiate a Shift Session (<code>POST /cashier/login</code>) before processing transactions on the POS.</li>
+<li>The system <strong>shall</strong> prevent closing a session (<code>POST /cashier/end-session</code>) unless the user possesses the <code>cashier:close_session</code> permission.</li>
+<li>Upon shift closure, the system <strong>shall</strong> generate a Shift Performance Summary breaking down total orders, total revenue, cash revenue, card revenue, digital wallet revenue, hospitality order value, and category sales breakdown.</li>
+</ul>
+<h4 id="req-auth-03-sensitive-action-pin-authorization">REQ-AUTH-03: Sensitive Action PIN Authorization</h4>
+<ul>
+<li>High-risk operations (processing order refunds, applying hospitality 100% discounts, overriding out-of-stock limits, approving stock audits) <strong>shall</strong> trigger an inline PIN modal.</li>
+<li>The system <strong>shall</strong> verify the submitted PIN (<code>POST /auth/verify-pin</code>) against active users with <code>admin</code>, <code>supervisor</code>, or <code>cashier</code> roles.</li>
+</ul>
+<hr />
+<h3 id="52-module-2-dynamic-catalog-multi-tier-recipe-engine">5.2 Module 2: Dynamic Catalog &amp; Multi-Tier Recipe Engine</h3>
+<pre><code>Recipe Hierarchy Architecture:
+DRINK (e.g. Iced Cafe Latte)
+  ├── CUP INGREDIENT (e.g. 16oz Clear Plastic Cup -&gt; -1 pcs)
+  ├── SLOT 1: Coffee Beans (Required)
+  │     ├── Type Option A: Brazilian Roast (Extra EGP 0) -&gt; Volume: Double Shot (18g coffee)
+  │     └── Type Option B: Ethiopian Single Origin (Extra EGP 15) -&gt; Volume: Double Shot (18g coffee)
+  └── SLOT 2: Milk Choice (Required)
+        ├── Type Option A: Whole Fresh Milk (Extra EGP 0) -&gt; Volume: 200ml
+        ├── Type Option B: Oat Milk (Extra EGP 20) -&gt; Volume: 200ml
+        └── Type Option C: Almond Milk (Extra EGP 25) -&gt; Volume: 200ml
+</code></pre>
+<h4 id="req-cat-01-drink-recipe-slot-architecture">REQ-CAT-01: Drink Recipe &amp; Slot Architecture</h4>
+<ul>
+<li>The system <strong>shall</strong> support multi-tier recipe configurations. Each drink consists of base price, cup volume, cup ingredient ID, prep time, assigned kitchen station, and one or more Recipe Slots.</li>
+<li>Recipe slots <strong>shall</strong> support soft-inheritance from <strong>Predefined Slot Templates</strong> (e.g. "Standard Milk Choice", "Sugar Levels") to allow administrative bulk updating of options across multiple drinks.</li>
+</ul>
+<h4 id="req-cat-02-dynamic-price-calculation">REQ-CAT-02: Dynamic Price Calculation</h4>
+<ul>
+<li>The system <strong>shall</strong> compute total drink prices dynamically:
+  $$\text{Total Drink Price} = \text{Base Price} + \sum (\text{Type Extra Cost}) + \sum (\text{Volume Extra Cost})$$</li>
+<li>The calculation engine <strong>shall</strong> validate that all required slots have valid selections and evaluate real-time raw material inventory availability for the active branch.</li>
+</ul>
+<h4 id="req-cat-03-out-of-stock-auto-badging">REQ-CAT-03: Out-of-Stock Auto-Badging</h4>
+<ul>
+<li>If any required slot option or required cup ingredient has zero stock balance in <code>branch_stock</code> for the current branch, the system <strong>shall</strong> automatically flag the drink as <code>Out of Stock</code> with detailed unavailable reasons (e.g. <code>"Out of stock: Oat Milk"</code>).</li>
+</ul>
+<hr />
+<h3 id="53-module-3-point-of-sale-pos-multi-payment-processing">5.3 Module 3: Point-of-Sale (POS) &amp; Multi-Payment Processing</h3>
+<h4 id="req-pos-01-order-number-generation">REQ-POS-01: Order Number Generation</h4>
+<ul>
+<li>The system <strong>shall</strong> generate deterministic, collision-free order numbers using explicit row-level locking (<code>SELECT ... FOR UPDATE</code>) on the branch record:
+  $$\text{Order Number} = \text{BranchID} - \text{DayOfYear} + \text{Serial3Digits} \quad (\text{e.g., } 1-203004)$$</li>
+</ul>
+<h4 id="req-pos-02-multi-payment-split-payment-handling">REQ-POS-02: Multi-Payment &amp; Split Payment Handling</h4>
+<ul>
+<li>The POS <strong>shall</strong> accept multiple payment methods for a single order transaction:</li>
+<li><strong>Cash</strong>: Tracks <code>amountTendered</code> and calculates <code>changeDue</code>.</li>
+<li><strong>Card</strong>: Logs electronic POS terminal transaction ID.</li>
+<li><strong>Wallet</strong>: Supports Vodafone Cash, InstaPay, and digital wallets.</li>
+<li><strong>Hospitality</strong>: 100% discount for guests/management; <strong>requires</strong> Admin PIN authorization.</li>
+<li><strong>Split Payment</strong>: Allows dividing an order total across multiple payment methods (e.g., EGP 50 Cash + EGP 100 Card).</li>
+</ul>
+<h4 id="req-pos-03-promotional-discount-engine">REQ-POS-03: Promotional Discount Engine</h4>
+<ul>
+<li>The system <strong>shall</strong> evaluate promotional discount codes matching three types:</li>
+<li><code>percentage</code>: Applies percentage off subtotal (calculated before 14% tax).</li>
+<li><code>fixed</code>: Applies fixed currency deduction.</li>
+<li><code>fixed_per_item</code>: Multiplies fixed deduction by total item count.</li>
+<li>Discounts <strong>shall</strong> never reduce order total below EGP 0.00.</li>
+</ul>
+<h4 id="req-pos-04-atomic-stock-deduction-order-confirmation">REQ-POS-04: Atomic Stock Deduction &amp; Order Confirmation</h4>
+<ul>
+<li>When an order transitions from <code>pending</code> to a confirmed status (<code>paid</code>, <code>in_progress</code>, <code>ready</code>, <code>completed</code>), the system <strong>shall</strong> inside a single database transaction:</li>
+<li>Calculate exact consumed ingredient quantities for all items and customizations.</li>
+<li>Deduct quantities from <code>branch_stock</code>.</li>
+<li>Deduct quantities from <code>branch_inventory_batches</code> using First-Expired, First-Out (FEFO) logic.</li>
+<li>Write <code>stock_movements</code> records with movement type <code>"sale"</code>.</li>
+<li>Broadcast an <code>order_created</code> event via Server-Sent Events (SSE).</li>
+</ul>
+<hr />
+<h3 id="54-module-4-kitchen-display-system-kds-multi-station-routing">5.4 Module 4: Kitchen Display System (KDS) &amp; Multi-Station Routing</h3>
+<h4 id="req-kds-01-kitchen-station-routing">REQ-KDS-01: Kitchen Station Routing</h4>
+<ul>
+<li>Each drink item <strong>shall</strong> be assigned to a Kitchen Station (e.g. <code>espresso-bar</code>, <code>cold-drinks</code>, <code>bakery</code>, <code>kitchen</code>).</li>
+<li>KDS screens <strong>shall</strong> filter incoming orders based on the active station selected by kitchen staff.</li>
+</ul>
+<h4 id="req-kds-02-item-level-order-level-bumping">REQ-KDS-02: Item-Level &amp; Order-Level Bumping</h4>
+<ul>
+<li>Kitchen staff <strong>shall</strong> be able to mark individual order items as <code>Ready</code> (<code>PATCH /order-items/:id/ready</code>).</li>
+<li>When all items within an order are marked <code>Ready</code>, the system <strong>shall</strong> automatically transition the master order status to <code>ready</code> and broadcast an SSE update to the POS Pickup Screen.</li>
+</ul>
+<hr />
+<h3 id="55-module-5-customer-self-service-kiosk-mobile-integration-bridge">5.5 Module 5: Customer Self-Service Kiosk &amp; Mobile Integration Bridge</h3>
+<h4 id="req-ksk-01-kiosk-mode">REQ-KSK-01: Kiosk Mode</h4>
+<ul>
+<li>The system <strong>shall</strong> provide an unauthenticated, touch-optimized Self-Service Kiosk interface (<code>/kiosk</code>).</li>
+<li>Kiosk orders <strong>shall</strong> default to <code>source = "kiosk"</code> and automatically route to the kitchen upon payment.</li>
+</ul>
+<h4 id="req-ksk-02-mobile-bridge-api-architecture">REQ-KSK-02: Mobile Bridge API Architecture</h4>
+<ul>
+<li>The system <strong>shall</strong> expose a Magento/Bagisto compatible Mobile Bridge API (<code>/api/mobile/*</code>) to support native mobile application clients without altering mobile UI contracts:</li>
+<li><code>GET /getAllCategories</code>: Returns category tree.</li>
+<li><code>GET /products/getProductsByCategory</code>: Returns paginated product cards.</li>
+<li><code>POST /products/getProductIdByOptions</code>: Resolves custom slot combinations into encoded variant keys.</li>
+<li><code>POST /checkout/onepage/orders</code>: Converts mobile cart sessions into transactional SpaccaPOS orders.</li>
+</ul>
+<hr />
+<h3 id="56-module-6-inventory-control-fefo-batches-stock-audit-system">5.6 Module 6: Inventory Control, FEFO Batches &amp; Stock Audit System</h3>
+<h4 id="req-inv-01-inventory-tracking-unit-conversions">REQ-INV-01: Inventory Tracking &amp; Unit Conversions</h4>
+<ul>
+<li>Raw inventory items <strong>shall</strong> support base units (e.g. <code>Grams</code>, <code>ML</code>, <code>PCS</code>) and purchase unit conversions (e.g., 1 KG Bag = 1,000 Grams; 1 Box = 12 Packets).</li>
+</ul>
+<h4 id="req-inv-02-fefo-first-expired-first-out-batch-deductions">REQ-INV-02: FEFO (First-Expired, First-Out) Batch Deductions</h4>
+<ul>
+<li>Stock deductions <strong>shall</strong> consume inventory from <code>branch_inventory_batches</code> ordered by <code>expiry_date ASC</code>.</li>
+<li>When an unopened package batch is first accessed for deduction, the system <strong>shall</strong> mark <code>is_opened = true</code>, set <code>opened_at = now()</code>, and recalculate <code>expiry_date</code> using the ingredient's <code>opened_shelf_life_days</code>.</li>
+</ul>
+<h4 id="req-inv-03-stock-audit-reconciliation-workflow">REQ-INV-03: Stock Audit &amp; Reconciliation Workflow</h4>
+<pre class="mermaid-diagram">stateDiagram-v2
+    [*] --> Pending: Audit Created (Physical Count Submitted)
+    Pending --> Approved: Admin Reviews & Approves
+    Pending --> Rejected: Admin Rejects Audit Sheet
+    Approved --> [*]: Branch Stock & Movements Automatically Adjusted
+    Rejected --> [*]: No Inventory Changes Applied
+</pre>
+<ul>
+<li>Store staff <strong>shall</strong> submit physical stock count audits (<code>POST /stock-audits</code>).</li>
+<li>Upon Admin approval (<code>POST /stock-audits/:id/approve</code>), the system <strong>shall</strong> automatically calculate variance ($\text{Variance} = \text{Actual} - \text{Expected}$), adjust <code>branch_stock</code>, write <code>"adjustment"</code> stock movement records, and record the approving Admin's user ID.</li>
+</ul>
+<hr />
+<h3 id="57-module-7-supplier-management-purchase-order-po-lifecycle">5.7 Module 7: Supplier Management &amp; Purchase Order (PO) Lifecycle</h3>
+<h4 id="req-pur-01-purchase-order-lifecycle">REQ-PUR-01: Purchase Order Lifecycle</h4>
+<ul>
+<li>The system <strong>shall</strong> manage Purchase Orders across 4 strict statuses: <code>draft</code> $\rightarrow$ <code>ordered</code> $\rightarrow$ <code>received</code> $\rightarrow$ <code>cancelled</code>.</li>
+<li>When a PO is marked as <code>received</code> (<code>PATCH /purchases/:id/status</code>), the system <strong>shall</strong>:</li>
+<li>Increment <code>branch_stock</code> by the converted unit quantities.</li>
+<li>Create new inventory batches in <code>branch_inventory_batches</code> with batch numbers and expiry dates.</li>
+<li>Log <code>"restock"</code> movements in <code>stock_movements</code>.</li>
+<li>Update PO <code>payment_status</code> (<code>unpaid</code>, <code>partially_paid</code>, <code>paid</code>).</li>
+</ul>
+<hr />
+<h3 id="58-module-8-customer-crm-loyalty-engine">5.8 Module 8: Customer CRM &amp; Loyalty Engine</h3>
+<h4 id="req-crm-01-customer-profile-phone-lookup">REQ-CRM-01: Customer Profile &amp; Phone Lookup</h4>
+<ul>
+<li>The POS <strong>shall</strong> allow searching customers by phone number or name.</li>
+<li>Non-registered phone numbers entered at checkout <strong>shall</strong> attach to the order without blocking transaction flow.</li>
+</ul>
+<h4 id="req-crm-02-loyalty-points-accumulation">REQ-CRM-02: Loyalty Points Accumulation</h4>
+<ul>
+<li>For registered active customers, order confirmation <strong>shall</strong> automatically award loyalty points:
+  $$\text{Points Earned} = \left\lfloor \frac{\text{Order Total (Excl. Tax)}}{10} \right\rfloor$$</li>
+<li>Customer <code>totalSpent</code> and <code>visitCount</code> <strong>shall</strong> atomically increment inside the order creation transaction.</li>
+</ul>
+<hr />
+<h3 id="59-module-9-financial-reporting-shift-reconciliation-analytics">5.9 Module 9: Financial Reporting, Shift Reconciliation &amp; Analytics</h3>
+<h4 id="req-rep-01-financial-analytics-dashboard">REQ-REP-01: Financial Analytics Dashboard</h4>
+<ul>
+<li>The system <strong>shall</strong> provide analytical reporting over custom date ranges and branch filters:</li>
+<li><strong>Gross &amp; Net Revenue</strong> (before and after tax/discounts).</li>
+<li><strong>Cost of Goods Sold (COGS)</strong> calculated from precise ingredient cost totals.</li>
+<li><strong>Net Gross Profit Margin Percentage</strong>.</li>
+<li><strong>Payment Method Revenue Distribution</strong> (Cash vs Card vs Wallet vs Hospitality).</li>
+<li><strong>Hourly Rush Analysis</strong> (Order density per hour of the day).</li>
+<li><strong>Category &amp; Item Popularity Matrix</strong> (Top 5 selling drinks by volume and revenue).</li>
+</ul>
+<hr />
+<h3 id="510-module-10-system-settings-audit-logging-security-administration">5.10 Module 10: System Settings, Audit Logging &amp; Security Administration</h3>
+<h4 id="req-adm-01-system-configuration">REQ-ADM-01: System Configuration</h4>
+<ul>
+<li>Admins <strong>shall</strong> manage global settings stored as JSON values in <code>settingsTable</code>:</li>
+<li><code>allowNoStockSell</code> (<code>"true"</code> / <code>"false"</code>): Toggles whether POS allows selling drinks when ingredient stock is zero.</li>
+<li><code>autoPrintReceipt</code> (<code>"true"</code> / <code>"false"</code>).</li>
+<li><code>vatPercentage</code> (Default <code>14.0</code>).</li>
+</ul>
+<h4 id="req-adm-02-immutable-activity-logs">REQ-ADM-02: Immutable Activity Logs</h4>
+<ul>
+<li>All administrative, financial, stock adjustment, and authentication events <strong>shall</strong> write an entry to <code>activity_logsTable</code> containing <code>userId</code>, <code>action</code>, <code>entityType</code>, <code>entityId</code>, <code>ipAddress</code>, and structured JSON <code>details</code>.</li>
+</ul>
+<hr />
+<h2 id="6-external-interface-requirements">6. External Interface Requirements</h2>
+<h3 id="61-user-interfaces">6.1 User Interfaces</h3>
+<ul>
+<li><strong>POS Screen</strong>: Touch-optimized 1080p layout with category sidebar, product grid, customization modal, customer lookup banner, and split-payment checkout drawer.</li>
+<li><strong>KDS Screen</strong>: Dark-mode high-contrast grid displaying live order cards timer-colored (Green $&lt; 3$ mins, Yellow $3-5$ mins, Red $&gt; 5$ mins).</li>
+</ul>
+<h3 id="62-hardware-interfaces">6.2 Hardware Interfaces</h3>
+<ul>
+<li><strong>Thermal Receipt Printers</strong>: Support ESC/POS standard USB/Network thermal printers (80mm width) for automated customer receipts and kitchen order slips.</li>
+<li><strong>Cash Drawer</strong>: Trigger 24V pulse via RJ11 receipt printer port on cash transaction approval.</li>
+</ul>
+<h3 id="63-api-protocols-real-time-event-streaming-sse">6.3 API Protocols &amp; Real-Time Event Streaming (SSE)</h3>
+<ul>
+<li><strong>REST Endpoints</strong>: JSON payloads over HTTPS with HTTP status codes (<code>200 OK</code>, <code>201 Created</code>, <code>400 Bad Request</code>, <code>401 Unauthorized</code>, <code>403 Forbidden</code>, <code>409 Conflict</code>, <code>429 Too Many Requests</code>).</li>
+<li><strong>Real-Time Streaming</strong>: <code>/api/events</code> endpoint utilizing Server-Sent Events (SSE) emitting <code>order_created</code>, <code>order_updated</code>, <code>inventory_updated</code>, and <code>shift_closed</code> event channels.</li>
+</ul>
+<hr />
+<h2 id="7-non-functional-requirements-nfrs">7. Non-Functional Requirements (NFRs)</h2>
+<h3 id="71-performance-latency">7.1 Performance &amp; Latency</h3>
+<ul>
+<li><strong>NFR-PERF-01</strong>: POS Order Submission endpoint (<code>POST /orders</code>) <strong>shall</strong> process complete transactions (including stock validation and DB writes) within <strong>$&lt; 150\text{ ms}$</strong> under normal load.</li>
+<li><strong>NFR-PERF-02</strong>: Real-time SSE order broadcast to KDS screens <strong>shall</strong> deliver events within <strong>$&lt; 50\text{ ms}$</strong> of transaction commit.</li>
+</ul>
+<h3 id="72-security-rate-limiting">7.2 Security &amp; Rate-Limiting</h3>
+<ul>
+<li><strong>NFR-SEC-01</strong>: All user passwords <strong>shall</strong> be hashed using Bcrypt with a minimum work factor of 10.</li>
+<li><strong>NFR-SEC-02</strong>: API login endpoints <strong>shall</strong> enforce rate limiting (10 attempts / 15 mins).</li>
+<li><strong>NFR-SEC-03</strong>: All SQL queries <strong>shall</strong> utilize parameter binding via Drizzle ORM to prevent SQL Injection vulnerabilities.</li>
+</ul>
+<h3 id="73-data-integrity-transactional-isolation">7.3 Data Integrity &amp; Transactional Isolation</h3>
+<ul>
+<li><strong>NFR-DAT-01</strong>: Multi-table state changes (Order creation + Stock deduction + Batch update + Loyalty points) <strong>must</strong> execute within an explicit ACID database transaction (<code>db.transaction()</code>).</li>
+</ul>
+<hr />
+<h2 id="8-requirements-traceability-matrix">8. Requirements Traceability Matrix</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Requirement ID</th>
+<th style="text-align: left;">Module</th>
+<th style="text-align: left;">Implementation File / Endpoint</th>
+<th style="text-align: left;">Verification Method</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>REQ-AUTH-01</strong></td>
+<td style="text-align: left;">Authentication</td>
+<td style="text-align: left;"><code>artifacts/api-server/src/routes/auth.ts</code></td>
+<td style="text-align: left;">Automated Integration Test</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>REQ-AUTH-02</strong></td>
+<td style="text-align: left;">Cashier Shift</td>
+<td style="text-align: left;"><code>artifacts/api-server/src/routes/cashier-sessions.ts</code></td>
+<td style="text-align: left;">Manual / Automated Test</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>REQ-CAT-02</strong></td>
+<td style="text-align: left;">Price Engine</td>
+<td style="text-align: left;"><code>artifacts/api-server/src/lib/price-calculator.ts</code></td>
+<td style="text-align: left;">Unit Tests</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>REQ-POS-01</strong></td>
+<td style="text-align: left;">Order Numbers</td>
+<td style="text-align: left;"><code>artifacts/api-server/src/routes/orders.ts#generateOrderNumber</code></td>
+<td style="text-align: left;">Load Test (Concurrency)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>REQ-POS-04</strong></td>
+<td style="text-align: left;">Stock Deduction</td>
+<td style="text-align: left;"><code>artifacts/api-server/src/routes/orders.ts</code> &amp; <code>stock-utils.ts</code></td>
+<td style="text-align: left;">Database Inspection</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>REQ-INV-02</strong></td>
+<td style="text-align: left;">FEFO Batches</td>
+<td style="text-align: left;"><code>artifacts/api-server/src/lib/stock-utils.ts</code></td>
+<td style="text-align: left;">Unit Tests</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>REQ-KDS-02</strong></td>
+<td style="text-align: left;">Order Bump</td>
+<td style="text-align: left;"><code>artifacts/api-server/src/routes/orders.ts#ready</code></td>
+<td style="text-align: left;">Browser E2E Test</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>REQ-KSK-02</strong></td>
+<td style="text-align: left;">Mobile Bridge</td>
+<td style="text-align: left;"><code>artifacts/api-server/src/routes/mobile-bridge.ts</code></td>
+<td style="text-align: left;">Postman API Test</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>REQ-REP-01</strong></td>
+<td style="text-align: left;">Analytics</td>
+<td style="text-align: left;"><code>artifacts/api-server/src/routes/finance.ts</code></td>
+<td style="text-align: left;">Report Audit</td>
+</tr>
+</tbody>
+</table>
+</body>
+</html>

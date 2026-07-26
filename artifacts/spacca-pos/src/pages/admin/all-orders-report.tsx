@@ -110,7 +110,7 @@ export default function AllOrdersReport() {
   const exportCsv = () => {
     const headers = [
       "Order ID", "Order Number", "Date", "Branch", "Barista", "Status", 
-      "Payment Method", "Subtotal (Gross)", "Discount", "Total (Net)", "Notes"
+      "Payment Method", "Subtotal (Gross)", "Discount", "Offer Discount", "Total (Net)", "Notes"
     ];
     const rows = filteredOrders.map(o => [
       o.id,
@@ -122,9 +122,11 @@ export default function AllOrdersReport() {
       o.paymentMethod,
       o.subtotal,
       o.discount,
+      o.offerDiscount || 0,
       o.total,
       (o.notes || "").replace(/"/g, '""')
     ]);
+
 
     const csvContent = "data:text/csv;charset=utf-8,\uFEFF" 
       + headers.join(",") + "\n" 
@@ -410,10 +412,17 @@ export default function AllOrdersReport() {
                     <TableCell colSpan={2} className="text-right font-semibold text-xs uppercase tracking-wider text-muted-foreground">Subtotal</TableCell>
                     <TableCell className="text-right font-bold text-sm">{pure(selectedOrderDetails?.subtotal)}</TableCell>
                   </TableRow>
+                  {selectedOrderDetails?.offerDiscount > 0 && (
+                    <TableRow className="bg-muted/20 border-t-0 text-destructive">
+                      <TableCell colSpan={2} className="text-right font-semibold text-xs uppercase tracking-wider text-destructive">Offer Discount</TableCell>
+                      <TableCell className="text-right font-bold text-sm text-destructive">-{pure(selectedOrderDetails.offerDiscount)}</TableCell>
+                    </TableRow>
+                  )}
                   <TableRow className="bg-muted/20 border-t-0">
                     <TableCell colSpan={2} className="text-right font-semibold text-xs uppercase tracking-wider text-destructive">Discount</TableCell>
                     <TableCell className="text-right font-bold text-sm text-destructive">-{pure(selectedOrderDetails?.discount)}</TableCell>
                   </TableRow>
+
                   <TableRow className="bg-primary/5 border-t-2 border-primary/20">
                     <TableCell colSpan={2} className="text-right font-black text-xs uppercase tracking-wider text-primary">Total Paid</TableCell>
                     <TableCell className="text-right font-black text-primary text-base">{fmt(selectedOrderDetails?.total)}</TableCell>

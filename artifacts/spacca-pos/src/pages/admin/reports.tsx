@@ -324,7 +324,7 @@ export default function ReportsPage() {
 
       const headers = [
         "OrderID", "Date", "Time", "Order Number", "Customer Name", "Items Count", "Drinks", "Total Price (Gross)", "Before Tax (Net)", 
-        "Tax Amount", "Discount Name", "Discount Value", "Discount Amount", "Final Price", "Status", "Payment Method"
+        "Tax Amount", "Discount Name", "Discount Value", "Discount Amount", "Offer Discount", "Final Price", "Status", "Payment Method"
       ];
 
       const rows = allOrders.map(order => {
@@ -332,13 +332,17 @@ export default function ReportsPage() {
         const beforeTax = totalPrice / 1.14;
         const taxAmount = totalPrice - beforeTax;
         const discountAmt = order.discount;
-        const discountPercent = beforeTax > 0 ? (discountAmt / beforeTax) * 100 : 0;
-        const subtotalPrice = beforeTax - discountAmt;
+        const offerDiscountAmt = (order as any).offerDiscount ? Number((order as any).offerDiscount) : 0;
+        const totalDiscountAmt = discountAmt + offerDiscountAmt;
+        const discountPercent = beforeTax > 0 ? (totalDiscountAmt / beforeTax) * 100 : 0;
+        const subtotalPrice = beforeTax - totalDiscountAmt;
         const finalPrice = subtotalPrice + taxAmount;
 
         const drinksList = (order.items || [])
           .map((item: any) => `${item.drinkName} (x${item.quantity})`)
           .join("; ");
+
+        const discountName = order.paymentMethod === "hospitality" ? "HOSPITALITY" : [((order as any).discountCode || ""), offerDiscountAmt > 0 ? "PROMO OFFER" : ""].filter(Boolean).join(" + ") || "None";
 
         return [
           order.id,
@@ -351,9 +355,10 @@ export default function ReportsPage() {
           totalPrice.toFixed(2),
           beforeTax.toFixed(2),
           taxAmount.toFixed(2),
-          order.paymentMethod === "hospitality" ? "HOSPITALITY" : ((order as any).discountCode || "None"),
+          discountName,
           (order as any).discountValue ? ((order as any).discountType === "percentage" ? `${(order as any).discountValue}%` : `EGP ${(order as any).discountValue}`) : "0",
           discountAmt.toFixed(2),
+          offerDiscountAmt.toFixed(2),
           finalPrice.toFixed(2),
           order.status,
           order.paymentMethod
@@ -366,23 +371,27 @@ export default function ReportsPage() {
         const beforeTax = totalPrice / 1.14;
         const taxAmount = totalPrice - beforeTax;
         const discountAmt = order.discount;
-        const subtotalPrice = beforeTax - discountAmt;
+        const offerDiscountAmt = (order as any).offerDiscount ? Number((order as any).offerDiscount) : 0;
+        const totalDiscountAmt = discountAmt + offerDiscountAmt;
+        const subtotalPrice = beforeTax - totalDiscountAmt;
         const finalPrice = subtotalPrice + taxAmount;
         
         acc.totalPrice += totalPrice;
         acc.beforeTax += beforeTax;
         acc.taxAmount += taxAmount;
         acc.discountAmt += discountAmt;
+        acc.offerDiscountAmt += offerDiscountAmt;
         acc.subtotalPrice += subtotalPrice;
         acc.finalPrice += finalPrice;
         acc.itemsCount += (order.items || []).length;
         return acc;
-      }, { totalPrice: 0, beforeTax: 0, taxAmount: 0, discountAmt: 0, subtotalPrice: 0, finalPrice: 0, itemsCount: 0 });
+      }, { totalPrice: 0, beforeTax: 0, taxAmount: 0, discountAmt: 0, offerDiscountAmt: 0, subtotalPrice: 0, finalPrice: 0, itemsCount: 0 });
 
       const totalRow = [
         "TOTALS", "", "", "", "", totals.itemsCount, "", totals.totalPrice.toFixed(2), totals.beforeTax.toFixed(2),
-        totals.taxAmount.toFixed(2), "", "", totals.discountAmt.toFixed(2), totals.finalPrice.toFixed(2), "", ""
+        totals.taxAmount.toFixed(2), "", "", totals.discountAmt.toFixed(2), totals.offerDiscountAmt.toFixed(2), totals.finalPrice.toFixed(2), "", ""
       ].map(v => `"${v}"`).join(",");
+
 
       const csvContent = [headers.join(","), ...rows, totalRow].join("\n");
       const blob = new Blob(["\ufeff", csvContent], { type: "text/csv;charset=utf-8;" });
@@ -1214,10 +1223,12 @@ export default function ReportsPage() {
                           const beforeTax = totalPrice / 1.14;
                           const taxAmount = totalPrice - beforeTax;
                           const discountAmt = order.discount; // Our DB discount is the amount
+                          const offerDiscountAmt = (order as any).offerDiscount ? Number((order as any).offerDiscount) : 0;
+                          const totalDiscountAmt = discountAmt + offerDiscountAmt;
                           
                           // Percentage calculation (relative to Net/Before Tax as per their formula)
-                          const discountPercent = beforeTax > 0 ? (discountAmt / beforeTax) * 100 : 0;
-                          const subtotalPrice = beforeTax - discountAmt;
+                          const discountPercent = beforeTax > 0 ? (totalDiscountAmt / beforeTax) * 100 : 0;
+                          const subtotalPrice = beforeTax - totalDiscountAmt;
                           const finalPrice = subtotalPrice + taxAmount; // effectively order.total
 
                           return (
@@ -1232,24 +1243,35 @@ export default function ReportsPage() {
                               <TableCell>{order.createdAt ? format(new Date(order.createdAt), "HH:mm") : "—"}</TableCell>
                                <TableCell className="font-mono font-bold">#{order.orderNumber}</TableCell>
                                <TableCell className="text-center">{(order.items || []).length}</TableCell>
-                               <TableCell>
+                               <TableCell className="flex flex-col gap-1 items-start">
                                  {(order as any).discountId || (order as any).discountCode || order.paymentMethod === "hospitality" ? (
                                     <Badge variant="outline" className="font-mono text-[10px] bg-primary/5">
                                       {order.paymentMethod === "hospitality" ? "HOSPITALITY" : ((order as any).discountCode || `ID:${(order as any).discountId}`)}
                                     </Badge>
-                                  ) : <span className="text-muted-foreground text-xs">—</span>}
+                                  ) : null}
+                                 {offerDiscountAmt > 0 && (
+                                   <Badge variant="outline" className="font-mono text-[10px] bg-emerald-500/10 text-emerald-600 border-emerald-200">
+                                     PROMO OFFER
+                                   </Badge>
+                                 )}
+                                 {!((order as any).discountId || (order as any).discountCode || order.paymentMethod === "hospitality" || offerDiscountAmt > 0) && (
+                                   <span className="text-muted-foreground text-xs">—</span>
+                                 )}
                                </TableCell>
                               <TableCell className="text-right">{pure(totalPrice)}</TableCell>
                               <TableCell className="text-right">{pure(beforeTax)}</TableCell>
                               <TableCell className="text-right text-muted-foreground">{pure(taxAmount)}</TableCell>
-                              <TableCell className="text-right">
-                                {(order as any).discountType === 'percentage' 
-                                  ? `${(order as any).discountValue}%` 
-                                  : `${discountPercent.toFixed(1)}%`}
+                              <TableCell className="text-right font-medium">
+                                {discountPercent > 0 ? `${discountPercent.toFixed(1)}%` : "0.0%"}
                               </TableCell>
-                              <TableCell className="text-right font-medium text-destructive">-{pure(discountAmt)}</TableCell>
+                              <TableCell className="text-right font-medium text-destructive">
+                                {discountAmt > 0 && <div>Coupon: -{pure(discountAmt)}</div>}
+                                {offerDiscountAmt > 0 && <div>Offer: -{pure(offerDiscountAmt)}</div>}
+                                {discountAmt === 0 && offerDiscountAmt === 0 && "0.00"}
+                              </TableCell>
                               <TableCell className="text-right">{pure(subtotalPrice)}</TableCell>
                               <TableCell className="text-right font-black text-primary">{pure(finalPrice)}</TableCell>
+
                               <TableCell>
                                 <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase whitespace-nowrap ${STATUS_COLORS[order.status] ?? "bg-muted text-muted-foreground"}`}>
                                   {order.status}
@@ -2175,10 +2197,17 @@ export default function ReportsPage() {
                     <TableCell colSpan={2} className="text-right font-medium">Subtotal</TableCell>
                     <TableCell className="text-right font-bold">{pure(selectedOrderDetails?.subtotal)}</TableCell>
                   </TableRow>
+                  {selectedOrderDetails?.offerDiscount > 0 && (
+                    <TableRow className="bg-muted/20 border-t-0 text-destructive">
+                      <TableCell colSpan={2} className="text-right font-medium text-destructive">Offer Discount</TableCell>
+                      <TableCell className="text-right font-bold text-destructive">-{pure(selectedOrderDetails.offerDiscount)}</TableCell>
+                    </TableRow>
+                  )}
                   <TableRow className="bg-muted/20 border-t-0">
                     <TableCell colSpan={2} className="text-right font-medium text-destructive">Discount</TableCell>
                     <TableCell className="text-right font-bold text-destructive">-{pure(selectedOrderDetails?.discount)}</TableCell>
                   </TableRow>
+
                   <TableRow className="bg-primary/5 border-t-2 border-primary/20">
                     <TableCell colSpan={2} className="text-right font-black text-primary">Total Paid</TableCell>
                     <TableCell className="text-right font-black text-primary text-lg">{fmt(selectedOrderDetails?.total)}</TableCell>

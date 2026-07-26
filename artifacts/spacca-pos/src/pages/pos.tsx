@@ -6,8 +6,10 @@ import {
   useCalculateDrinkPrice,
   useCreateOrder,
   useListBranches,
+  useGetActiveOffer,
   Drink,
 } from "@workspace/api-client-react";
+
 import { useSettings } from "@/hooks/use-settings";
 import { DrinkCard } from "@/components/drink-card";
 import { useQuery } from "@tanstack/react-query";
@@ -136,6 +138,8 @@ export default function PosTerminal() {
   const { data: branches = [], isLoading: isLoadingBranches } = useListBranches();
   const { data: drinks, isLoading: isLoadingDrinks } = useListDrinks({ active: true, branchId: selectedBranchId || undefined });
   const { data: allCategories = [] } = useDrinkCategories();
+  const { data: activeOffer } = useGetActiveOffer();
+
 
   const { data: ingredients = [] } = useQuery<any[]>({
     queryKey: ["pos-ingredients", selectedBranchId],
@@ -634,7 +638,54 @@ export default function PosTerminal() {
   const [customerInfo, setCustomerInfo] = useState<{ name: string; points: number } | null>(null);
 
   const cartSubtotal = cart.reduce((sum, item) => sum + item.totalPrice * item.quantity, 0);
+
+  const offerCalculation = useMemo(() => {
+    if (!activeOffer || cart.length === 0) {
+      return { discount: 0, extraFreeCount: 0, isOfferApplied: false };
+    }
+    const N = activeOffer.buyAmount;
+    const X = activeOffer.freeAmount;
+
+    // Flatten all items in cart to their prices
+    const flatItems = cart.flatMap(item => 
+      Array.from({ length: item.quantity }).map(() => item.totalPrice)
+    ).sort((a, b) => a - b);
+
+    const M = flatItems.length;
+    const F = Math.floor(M / (N + X)) * X + Math.min(X, Math.max(0, (M % (N + X)) - N));
+    const P = M - F;
+    const E = Math.floor(P / N) * X;
+    const extraFreeCount = E - F;
+
+    let discount = 0;
+    for (let i = 0; i < F; i++) {
+      discount += flatItems[i];
+    }
+
+    return {
+      discount,
+      extraFreeCount,
+      isOfferApplied: F > 0,
+    };
+  }, [cart, activeOffer]);
+
+  const offerDiscount = offerCalculation.discount;
+  const isOfferApplied = offerCalculation.isOfferApplied;
+
+  // Rule #5: when the order has an offer applied, discounts can not be accepted
+  useEffect(() => {
+    if (isOfferApplied && appliedDiscount) {
+      setAppliedDiscount(null);
+      setDiscountCode("");
+      toast({
+        title: "Coupon Cleared",
+        description: "Coupons cannot be applied when a promotional offer is active.",
+      });
+    }
+  }, [isOfferApplied, appliedDiscount, toast]);
+
   const discountAmount = useMemo(() => {
+    if (isOfferApplied) return 0;
     if (!appliedDiscount) return 0;
     if (appliedDiscount.type === "percentage") {
       const beforeTax = cartSubtotal / 1.14;
@@ -645,10 +696,11 @@ export default function PosTerminal() {
       return totalItems * Number(appliedDiscount.value);
     }
     return appliedDiscount.value;
-  }, [appliedDiscount, cartSubtotal, cart]);
+  }, [appliedDiscount, cartSubtotal, cart, isOfferApplied]);
 
-  const cartTotal = cartSubtotal - discountAmount;
+  const cartTotal = isOfferApplied ? (cartSubtotal - offerDiscount) : (cartSubtotal - discountAmount);
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+
 
   const discountPercentage = appliedDiscount?.type === "percentage" ? appliedDiscount.value : (cartSubtotal > 0 ? (discountAmount / cartSubtotal) * 100 : 0);
   const isNameRequired = paymentMethod === "hospitality" || discountPercentage > 50;
@@ -1036,6 +1088,9 @@ export default function PosTerminal() {
           setIsCheckoutOpen(true);
         }}
         availableDiscounts={loggedCustomerDiscounts}
+        extraFreeCount={offerCalculation.extraFreeCount}
+        offerDiscount={offerDiscount}
+        offerName={activeOffer?.name}
       />
 
 
@@ -1086,10 +1141,14 @@ export default function PosTerminal() {
         isNameRequired={isNameRequired}
         cartSubtotal={cartSubtotal}
         discountAmount={discountAmount}
+        offerDiscount={offerDiscount}
+        offerName={activeOffer?.name}
+        isOfferApplied={isOfferApplied}
         cartTotal={cartTotal}
         isCreatingOrder={isCreatingOrder}
         onSubmitCheckout={handleCheckout}
       />
+
 
       {/* Anonymous Branch Picker Overlay */}
       {!user && !selectedBranchId && (

@@ -638,6 +638,7 @@ router.get("/finance/sales-summary", requirePermission("reports:view"), async (r
     .select({
       revenue: sum(ordersTable.subtotal),
       discounts: sum(ordersTable.discount),
+      offerDiscounts: sum(ordersTable.offerDiscount),
       netRevenue: sum(ordersTable.total),
       count: count(ordersTable.id),
       hospitalityRevenue: sql<string>`coalesce(sum(case when ${ordersTable.paymentMethod} = 'hospitality' then cast(${ordersTable.subtotal} as numeric) else 0 end), 0)`,
@@ -661,6 +662,7 @@ router.get("/finance/sales-summary", requirePermission("reports:view"), async (r
   res.json({
     revenue: parseFloat(summary.revenue || "0"),
     discounts: parseFloat(summary.discounts || "0"),
+    offerDiscounts: parseFloat(summary.offerDiscounts || "0"),
     netRevenue: parseFloat(summary.netRevenue || "0"),
     count: Number(summary.count || 0),
     drinks: Number(itemsResult[0]?.totalDrinks || 0),
@@ -673,6 +675,7 @@ router.get("/finance/sales-summary", requirePermission("reports:view"), async (r
     zeroRevenueCount: Number(summary.zeroRevenueCount || 0),
     zeroRevenueRevenue: parseFloat(summary.zeroRevenueRevenue || "0"),
   });
+
 });
 
 // ── Customizations Detailed Report ─────────────────────────────────────────

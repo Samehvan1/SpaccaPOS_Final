@@ -26,6 +26,10 @@ export interface Order {
     discountValue?: number | null;
     /** @nullable */
     discountType?: OrderDiscountType;
+    /** @nullable */
+    offerId?: number | null;
+    /** @nullable */
+    offerDiscount?: number | null;
     total: number;
     paymentMethod: OrderPaymentMethod;
     /** @nullable */

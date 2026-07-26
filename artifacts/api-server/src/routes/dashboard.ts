@@ -195,7 +195,10 @@ router.get("/dashboard/active-orders", async (req, res): Promise<void> => {
     discount: parseFloat(order.discount),
     discountValue: order.discountValue ? parseFloat(order.discountValue) : null,
     discountType: order.discountType as "percentage" | "fixed" | "fixed_per_item" | null,
+    offerId: order.offerId,
+    offerDiscount: order.offerDiscount ? parseFloat(order.offerDiscount) : 0,
     total: parseFloat(order.total),
+
     amountTendered: order.amountTendered ? parseFloat(order.amountTendered) : null,
     changeDue: order.changeDue ? parseFloat(order.changeDue) : null,
     items: itemsByOrderId[order.id] ?? [],

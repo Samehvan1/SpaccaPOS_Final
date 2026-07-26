@@ -484,6 +484,10 @@ export interface Order {
   discountValue?: number | null;
   /** @nullable */
   discountType?: OrderDiscountType;
+  /** @nullable */
+  offerId?: number | null;
+  /** @nullable */
+  offerDiscount?: number | null;
   total: number;
   paymentMethod: OrderPaymentMethod;
   /** @nullable */
@@ -773,6 +777,30 @@ export interface UpdateDiscountBody {
   code?: string;
   type?: UpdateDiscountBodyType;
   value?: number;
+  isActive?: boolean;
+}
+
+export interface Offer {
+  id: number;
+  name: string;
+  buyAmount: number;
+  freeAmount: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateOfferBody {
+  name: string;
+  buyAmount: number;
+  freeAmount: number;
+  isActive?: boolean;
+}
+
+export interface UpdateOfferBody {
+  name?: string;
+  buyAmount?: number;
+  freeAmount?: number;
   isActive?: boolean;
 }
 

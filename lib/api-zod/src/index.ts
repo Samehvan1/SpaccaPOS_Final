@@ -404,3 +404,15 @@ export const Permission = api.ListPermissionsResponseItem;
 export type Permission = Infer<typeof api.ListPermissionsResponseItem>;
 
 export { ALL_PERMISSIONS, type PermissionKey } from "./permissions";
+
+// Offers
+export const Offer = api.ListOffersResponseItem;
+export type Offer = Infer<typeof api.ListOffersResponseItem>;
+
+export const CreateOfferBody = api.CreateOfferBody;
+export type CreateOfferBody = Infer<typeof api.CreateOfferBody>;
+
+export const UpdateOfferBody = api.UpdateOfferBody;
+export type UpdateOfferBody = Infer<typeof api.UpdateOfferBody>;
+
+

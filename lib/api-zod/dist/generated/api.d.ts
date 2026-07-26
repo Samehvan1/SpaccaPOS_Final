@@ -1581,6 +1581,8 @@ export declare const ListOrdersResponseItem: zod.ZodIntersection<zod.ZodObject<{
     discountId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
     discountValue: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
     discountType: zod.ZodOptional<zod.ZodNullable<zod.ZodEnum<["percentage", "fixed", "fixed_per_item"]>>>;
+    offerId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
+    offerDiscount: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
     total: zod.ZodNumber;
     paymentMethod: zod.ZodEnum<["cash", "card", "wallet", "hospitality", "split", "refund"]>;
     amountTendered: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
@@ -1609,6 +1611,8 @@ export declare const ListOrdersResponseItem: zod.ZodIntersection<zod.ZodObject<{
     discountId?: number | null | undefined;
     discountValue?: number | null | undefined;
     discountType?: "percentage" | "fixed" | "fixed_per_item" | null | undefined;
+    offerId?: number | null | undefined;
+    offerDiscount?: number | null | undefined;
     amountTendered?: number | null | undefined;
     changeDue?: number | null | undefined;
     notes?: string | null | undefined;
@@ -1633,6 +1637,8 @@ export declare const ListOrdersResponseItem: zod.ZodIntersection<zod.ZodObject<{
     discountId?: number | null | undefined;
     discountValue?: number | null | undefined;
     discountType?: "percentage" | "fixed" | "fixed_per_item" | null | undefined;
+    offerId?: number | null | undefined;
+    offerDiscount?: number | null | undefined;
     amountTendered?: number | null | undefined;
     changeDue?: number | null | undefined;
     notes?: string | null | undefined;
@@ -1804,6 +1810,8 @@ export declare const ListOrdersResponse: zod.ZodArray<zod.ZodIntersection<zod.Zo
     discountId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
     discountValue: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
     discountType: zod.ZodOptional<zod.ZodNullable<zod.ZodEnum<["percentage", "fixed", "fixed_per_item"]>>>;
+    offerId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
+    offerDiscount: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
     total: zod.ZodNumber;
     paymentMethod: zod.ZodEnum<["cash", "card", "wallet", "hospitality", "split", "refund"]>;
     amountTendered: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
@@ -1832,6 +1840,8 @@ export declare const ListOrdersResponse: zod.ZodArray<zod.ZodIntersection<zod.Zo
     discountId?: number | null | undefined;
     discountValue?: number | null | undefined;
     discountType?: "percentage" | "fixed" | "fixed_per_item" | null | undefined;
+    offerId?: number | null | undefined;
+    offerDiscount?: number | null | undefined;
     amountTendered?: number | null | undefined;
     changeDue?: number | null | undefined;
     notes?: string | null | undefined;
@@ -1856,6 +1866,8 @@ export declare const ListOrdersResponse: zod.ZodArray<zod.ZodIntersection<zod.Zo
     discountId?: number | null | undefined;
     discountValue?: number | null | undefined;
     discountType?: "percentage" | "fixed" | "fixed_per_item" | null | undefined;
+    offerId?: number | null | undefined;
+    offerDiscount?: number | null | undefined;
     amountTendered?: number | null | undefined;
     changeDue?: number | null | undefined;
     notes?: string | null | undefined;
@@ -2155,6 +2167,8 @@ export declare const GetOrderResponse: zod.ZodIntersection<zod.ZodObject<{
     discountId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
     discountValue: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
     discountType: zod.ZodOptional<zod.ZodNullable<zod.ZodEnum<["percentage", "fixed", "fixed_per_item"]>>>;
+    offerId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
+    offerDiscount: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
     total: zod.ZodNumber;
     paymentMethod: zod.ZodEnum<["cash", "card", "wallet", "hospitality", "split", "refund"]>;
     amountTendered: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
@@ -2183,6 +2197,8 @@ export declare const GetOrderResponse: zod.ZodIntersection<zod.ZodObject<{
     discountId?: number | null | undefined;
     discountValue?: number | null | undefined;
     discountType?: "percentage" | "fixed" | "fixed_per_item" | null | undefined;
+    offerId?: number | null | undefined;
+    offerDiscount?: number | null | undefined;
     amountTendered?: number | null | undefined;
     changeDue?: number | null | undefined;
     notes?: string | null | undefined;
@@ -2207,6 +2223,8 @@ export declare const GetOrderResponse: zod.ZodIntersection<zod.ZodObject<{
     discountId?: number | null | undefined;
     discountValue?: number | null | undefined;
     discountType?: "percentage" | "fixed" | "fixed_per_item" | null | undefined;
+    offerId?: number | null | undefined;
+    offerDiscount?: number | null | undefined;
     amountTendered?: number | null | undefined;
     changeDue?: number | null | undefined;
     notes?: string | null | undefined;
@@ -2411,6 +2429,8 @@ export declare const UpdateOrderStatusResponse: zod.ZodObject<{
     discountId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
     discountValue: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
     discountType: zod.ZodOptional<zod.ZodNullable<zod.ZodEnum<["percentage", "fixed", "fixed_per_item"]>>>;
+    offerId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
+    offerDiscount: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
     total: zod.ZodNumber;
     paymentMethod: zod.ZodEnum<["cash", "card", "wallet", "hospitality", "split", "refund"]>;
     amountTendered: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
@@ -2439,6 +2459,8 @@ export declare const UpdateOrderStatusResponse: zod.ZodObject<{
     discountId?: number | null | undefined;
     discountValue?: number | null | undefined;
     discountType?: "percentage" | "fixed" | "fixed_per_item" | null | undefined;
+    offerId?: number | null | undefined;
+    offerDiscount?: number | null | undefined;
     amountTendered?: number | null | undefined;
     changeDue?: number | null | undefined;
     notes?: string | null | undefined;
@@ -2463,6 +2485,8 @@ export declare const UpdateOrderStatusResponse: zod.ZodObject<{
     discountId?: number | null | undefined;
     discountValue?: number | null | undefined;
     discountType?: "percentage" | "fixed" | "fixed_per_item" | null | undefined;
+    offerId?: number | null | undefined;
+    offerDiscount?: number | null | undefined;
     amountTendered?: number | null | undefined;
     changeDue?: number | null | undefined;
     notes?: string | null | undefined;
@@ -2518,6 +2542,8 @@ export declare const MarkOrderItemReadyResponse: zod.ZodObject<{
     discountId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
     discountValue: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
     discountType: zod.ZodOptional<zod.ZodNullable<zod.ZodEnum<["percentage", "fixed", "fixed_per_item"]>>>;
+    offerId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
+    offerDiscount: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
     total: zod.ZodNumber;
     paymentMethod: zod.ZodEnum<["cash", "card", "wallet", "hospitality", "split", "refund"]>;
     amountTendered: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
@@ -2546,6 +2572,8 @@ export declare const MarkOrderItemReadyResponse: zod.ZodObject<{
     discountId?: number | null | undefined;
     discountValue?: number | null | undefined;
     discountType?: "percentage" | "fixed" | "fixed_per_item" | null | undefined;
+    offerId?: number | null | undefined;
+    offerDiscount?: number | null | undefined;
     amountTendered?: number | null | undefined;
     changeDue?: number | null | undefined;
     notes?: string | null | undefined;
@@ -2570,6 +2598,8 @@ export declare const MarkOrderItemReadyResponse: zod.ZodObject<{
     discountId?: number | null | undefined;
     discountValue?: number | null | undefined;
     discountType?: "percentage" | "fixed" | "fixed_per_item" | null | undefined;
+    offerId?: number | null | undefined;
+    offerDiscount?: number | null | undefined;
     amountTendered?: number | null | undefined;
     changeDue?: number | null | undefined;
     notes?: string | null | undefined;
@@ -2769,6 +2799,8 @@ export declare const GetActiveOrdersResponseItem: zod.ZodIntersection<zod.ZodObj
     discountId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
     discountValue: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
     discountType: zod.ZodOptional<zod.ZodNullable<zod.ZodEnum<["percentage", "fixed", "fixed_per_item"]>>>;
+    offerId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
+    offerDiscount: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
     total: zod.ZodNumber;
     paymentMethod: zod.ZodEnum<["cash", "card", "wallet", "hospitality", "split", "refund"]>;
     amountTendered: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
@@ -2797,6 +2829,8 @@ export declare const GetActiveOrdersResponseItem: zod.ZodIntersection<zod.ZodObj
     discountId?: number | null | undefined;
     discountValue?: number | null | undefined;
     discountType?: "percentage" | "fixed" | "fixed_per_item" | null | undefined;
+    offerId?: number | null | undefined;
+    offerDiscount?: number | null | undefined;
     amountTendered?: number | null | undefined;
     changeDue?: number | null | undefined;
     notes?: string | null | undefined;
@@ -2821,6 +2855,8 @@ export declare const GetActiveOrdersResponseItem: zod.ZodIntersection<zod.ZodObj
     discountId?: number | null | undefined;
     discountValue?: number | null | undefined;
     discountType?: "percentage" | "fixed" | "fixed_per_item" | null | undefined;
+    offerId?: number | null | undefined;
+    offerDiscount?: number | null | undefined;
     amountTendered?: number | null | undefined;
     changeDue?: number | null | undefined;
     notes?: string | null | undefined;
@@ -2992,6 +3028,8 @@ export declare const GetActiveOrdersResponse: zod.ZodArray<zod.ZodIntersection<z
     discountId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
     discountValue: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
     discountType: zod.ZodOptional<zod.ZodNullable<zod.ZodEnum<["percentage", "fixed", "fixed_per_item"]>>>;
+    offerId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
+    offerDiscount: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
     total: zod.ZodNumber;
     paymentMethod: zod.ZodEnum<["cash", "card", "wallet", "hospitality", "split", "refund"]>;
     amountTendered: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
@@ -3020,6 +3058,8 @@ export declare const GetActiveOrdersResponse: zod.ZodArray<zod.ZodIntersection<z
     discountId?: number | null | undefined;
     discountValue?: number | null | undefined;
     discountType?: "percentage" | "fixed" | "fixed_per_item" | null | undefined;
+    offerId?: number | null | undefined;
+    offerDiscount?: number | null | undefined;
     amountTendered?: number | null | undefined;
     changeDue?: number | null | undefined;
     notes?: string | null | undefined;
@@ -3044,6 +3084,8 @@ export declare const GetActiveOrdersResponse: zod.ZodArray<zod.ZodIntersection<z
     discountId?: number | null | undefined;
     discountValue?: number | null | undefined;
     discountType?: "percentage" | "fixed" | "fixed_per_item" | null | undefined;
+    offerId?: number | null | undefined;
+    offerDiscount?: number | null | undefined;
     amountTendered?: number | null | undefined;
     changeDue?: number | null | undefined;
     notes?: string | null | undefined;
@@ -4013,6 +4055,167 @@ export declare const DeleteDiscountQueryParams: zod.ZodObject<{
     branchId?: number | undefined;
 }, {
     branchId?: number | undefined;
+}>;
+/**
+ * @summary List all offers
+ */
+export declare const ListOffersResponseItem: zod.ZodObject<{
+    id: zod.ZodNumber;
+    name: zod.ZodString;
+    buyAmount: zod.ZodNumber;
+    freeAmount: zod.ZodNumber;
+    isActive: zod.ZodBoolean;
+    createdAt: zod.ZodString;
+    updatedAt: zod.ZodString;
+}, "strip", zod.ZodTypeAny, {
+    id: number;
+    name: string;
+    isActive: boolean;
+    createdAt: string;
+    updatedAt: string;
+    buyAmount: number;
+    freeAmount: number;
+}, {
+    id: number;
+    name: string;
+    isActive: boolean;
+    createdAt: string;
+    updatedAt: string;
+    buyAmount: number;
+    freeAmount: number;
+}>;
+export declare const ListOffersResponse: zod.ZodArray<zod.ZodObject<{
+    id: zod.ZodNumber;
+    name: zod.ZodString;
+    buyAmount: zod.ZodNumber;
+    freeAmount: zod.ZodNumber;
+    isActive: zod.ZodBoolean;
+    createdAt: zod.ZodString;
+    updatedAt: zod.ZodString;
+}, "strip", zod.ZodTypeAny, {
+    id: number;
+    name: string;
+    isActive: boolean;
+    createdAt: string;
+    updatedAt: string;
+    buyAmount: number;
+    freeAmount: number;
+}, {
+    id: number;
+    name: string;
+    isActive: boolean;
+    createdAt: string;
+    updatedAt: string;
+    buyAmount: number;
+    freeAmount: number;
+}>, "many">;
+/**
+ * @summary Create a new offer
+ */
+export declare const CreateOfferBody: zod.ZodObject<{
+    name: zod.ZodString;
+    buyAmount: zod.ZodNumber;
+    freeAmount: zod.ZodNumber;
+    isActive: zod.ZodOptional<zod.ZodBoolean>;
+}, "strip", zod.ZodTypeAny, {
+    name: string;
+    buyAmount: number;
+    freeAmount: number;
+    isActive?: boolean | undefined;
+}, {
+    name: string;
+    buyAmount: number;
+    freeAmount: number;
+    isActive?: boolean | undefined;
+}>;
+/**
+ * @summary Get the currently active offer
+ */
+export declare const GetActiveOfferResponse: zod.ZodNullable<zod.ZodObject<{
+    id: zod.ZodNumber;
+    name: zod.ZodString;
+    buyAmount: zod.ZodNumber;
+    freeAmount: zod.ZodNumber;
+    isActive: zod.ZodBoolean;
+    createdAt: zod.ZodString;
+    updatedAt: zod.ZodString;
+}, "strip", zod.ZodTypeAny, {
+    id: number;
+    name: string;
+    isActive: boolean;
+    createdAt: string;
+    updatedAt: string;
+    buyAmount: number;
+    freeAmount: number;
+}, {
+    id: number;
+    name: string;
+    isActive: boolean;
+    createdAt: string;
+    updatedAt: string;
+    buyAmount: number;
+    freeAmount: number;
+}>>;
+/**
+ * @summary Update an offer
+ */
+export declare const UpdateOfferParams: zod.ZodObject<{
+    id: zod.ZodNumber;
+}, "strip", zod.ZodTypeAny, {
+    id: number;
+}, {
+    id: number;
+}>;
+export declare const UpdateOfferBody: zod.ZodObject<{
+    name: zod.ZodOptional<zod.ZodString>;
+    buyAmount: zod.ZodOptional<zod.ZodNumber>;
+    freeAmount: zod.ZodOptional<zod.ZodNumber>;
+    isActive: zod.ZodOptional<zod.ZodBoolean>;
+}, "strip", zod.ZodTypeAny, {
+    name?: string | undefined;
+    isActive?: boolean | undefined;
+    buyAmount?: number | undefined;
+    freeAmount?: number | undefined;
+}, {
+    name?: string | undefined;
+    isActive?: boolean | undefined;
+    buyAmount?: number | undefined;
+    freeAmount?: number | undefined;
+}>;
+export declare const UpdateOfferResponse: zod.ZodObject<{
+    id: zod.ZodNumber;
+    name: zod.ZodString;
+    buyAmount: zod.ZodNumber;
+    freeAmount: zod.ZodNumber;
+    isActive: zod.ZodBoolean;
+    createdAt: zod.ZodString;
+    updatedAt: zod.ZodString;
+}, "strip", zod.ZodTypeAny, {
+    id: number;
+    name: string;
+    isActive: boolean;
+    createdAt: string;
+    updatedAt: string;
+    buyAmount: number;
+    freeAmount: number;
+}, {
+    id: number;
+    name: string;
+    isActive: boolean;
+    createdAt: string;
+    updatedAt: string;
+    buyAmount: number;
+    freeAmount: number;
+}>;
+/**
+ * @summary Delete an offer
+ */
+export declare const DeleteOfferParams: zod.ZodObject<{
+    id: zod.ZodNumber;
+}, "strip", zod.ZodTypeAny, {
+    id: number;
+}, {
+    id: number;
 }>;
 /**
  * @summary List all branches

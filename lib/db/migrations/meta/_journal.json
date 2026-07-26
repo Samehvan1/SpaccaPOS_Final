@@ -106,6 +106,13 @@
       "when": 1782919215746,
       "tag": "0014_add_stock_batches",
       "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1784828747937,
+      "tag": "0015_perfect_nuke",
+      "breakpoints": true
     }
   ]
 }

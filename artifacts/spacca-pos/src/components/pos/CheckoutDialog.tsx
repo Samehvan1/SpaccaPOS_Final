@@ -32,6 +32,9 @@ interface CheckoutDialogProps {
   isNameRequired: boolean;
   cartSubtotal: number;
   discountAmount: number;
+  offerDiscount?: number;
+  offerName?: string;
+  isOfferApplied?: boolean;
   cartTotal: number;
   isCreatingOrder: boolean;
   onSubmitCheckout: () => void;
@@ -62,6 +65,9 @@ export const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
   isNameRequired,
   cartSubtotal,
   discountAmount,
+  offerDiscount = 0,
+  offerName = "Promo Offer",
+  isOfferApplied = false,
   cartTotal,
   isCreatingOrder,
   onSubmitCheckout,
@@ -184,9 +190,9 @@ export const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
                   id="coupon"
                   value={discountCode}
                   onChange={(e) => setDiscountCode(e.target.value)}
-                  placeholder="Enter code"
+                  placeholder={isOfferApplied ? "Offers Applied - Coupons Disabled" : "Enter code"}
                   className="pl-9 font-mono font-bold uppercase"
-                  disabled={!!appliedDiscount || isValidatingDiscount}
+                  disabled={isOfferApplied || !!appliedDiscount || isValidatingDiscount}
                   autoComplete="off"
                 />
               </div>
@@ -196,6 +202,7 @@ export const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
                   size="icon"
                   className="text-destructive border-destructive/20 hover:bg-destructive/5"
                   onClick={() => { setAppliedDiscount(null); setDiscountCode(""); }}
+                  disabled={isOfferApplied}
                 >
                   <X className="h-4 w-4" />
                 </Button>
@@ -203,13 +210,18 @@ export const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
                 <Button
                   variant="secondary"
                   onClick={onValidateDiscount}
-                  disabled={!discountCode.trim() || isValidatingDiscount}
+                  disabled={isOfferApplied || !discountCode.trim() || isValidatingDiscount}
                 >
                   {isValidatingDiscount ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
                 </Button>
               )}
             </div>
-            {appliedDiscount && (
+            {isOfferApplied && (
+              <p className="text-[10px] text-destructive font-bold uppercase tracking-wider flex items-center gap-1 mt-0.5">
+                <X className="h-3 w-3" /> Offer Applied: Coupons Disabled
+              </p>
+            )}
+            {appliedDiscount && !isOfferApplied && (
               <p className="text-[10px] text-green-600 font-bold uppercase tracking-wider flex items-center gap-1 mt-0.5">
                 <Check className="h-3 w-3" />
                 Applied: {appliedDiscount.type === 'percentage' ? `${appliedDiscount.value}%` : `${fmt(appliedDiscount.value)}${appliedDiscount.type === 'fixed_per_item' ? '/item' : ''}`} Off
@@ -224,7 +236,15 @@ export const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
               <span className="text-muted-foreground">Subtotal</span>
               <span className="font-medium">{fmt(cartSubtotal)}</span>
             </div>
-            {discountAmount > 0 && (
+            {offerDiscount > 0 && (
+              <div className="flex justify-between items-center text-sm text-destructive font-semibold bg-destructive/5 px-2.5 py-1 rounded-lg border border-destructive/15">
+                <span className="flex items-center gap-1 capitalize">
+                  <Tag className="h-3.5 w-3.5 text-destructive" /> Offer: {offerName}
+                </span>
+                <span>-{fmt(offerDiscount)}</span>
+              </div>
+            )}
+            {discountAmount > 0 && offerDiscount === 0 && (
               <div className="flex justify-between items-center text-sm text-green-600 font-medium">
                 <span className="flex items-center gap-1">
                   <Tag className="h-3.5 w-3.5" /> Discount
@@ -237,6 +257,7 @@ export const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
               <span className="font-bold text-2xl text-primary">{fmt(cartTotal)}</span>
             </div>
           </div>
+
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose} disabled={isCreatingOrder}>

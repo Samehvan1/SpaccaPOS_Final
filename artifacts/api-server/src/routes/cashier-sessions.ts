@@ -1,8 +1,9 @@
 import { Router, type IRouter } from "express";
-import { eq, and, gte, lte, isNull, desc, sql, inArray } from "drizzle-orm";
-import { db, cashierSessionsTable, usersTable, ordersTable, orderItemsTable, drinksTable, drinkCategoriesTable, orderPaymentsTable } from "@workspace/db";
+import { eq, and, gte, lte, isNull, desc, sql, inArray, or } from "drizzle-orm";
+import { db, cashierSessionsTable, usersTable, ordersTable, orderItemsTable, drinksTable, drinkCategoriesTable, orderPaymentsTable, branchesTable, orderItemCustomizationsTable } from "@workspace/db";
 import { z } from "zod";
 import { startOfDay, endOfDay } from "date-fns";
+import { serializeDates } from "../lib/serialize";
 
 const router: IRouter = Router();
 
@@ -689,6 +690,172 @@ router.get("/cashier/sessions/:id/report", requirePermission("cashier:view_repor
       total: parseFloat(o.total as any)
     }))
   });
+});
+
+// GET /cashier/sessions/orders — list all orders of the filtered sessions
+router.get("/cashier/sessions/orders", requirePermission("cashier:view_reports"), async (req, res): Promise<void> => {
+  const { cashierId, startDate, endDate, status, limit: limitStr, offset: offsetStr } = req.query as {
+    cashierId?: string;
+    startDate?: string;
+    endDate?: string;
+    status?: string;
+    limit?: string;
+    offset?: string;
+  };
+
+  const limit = limitStr ? parseInt(limitStr, 10) : 50;
+  const offset = offsetStr ? parseInt(offsetStr, 10) : 0;
+
+  const conditions: any[] = [];
+  if (cashierId && cashierId !== "all") {
+    conditions.push(eq(cashierSessionsTable.cashierId, parseInt(cashierId)));
+  }
+  if (startDate) {
+    conditions.push(gte(cashierSessionsTable.startedAt, startOfDay(new Date(startDate))));
+  }
+  if (endDate) {
+    conditions.push(lte(cashierSessionsTable.startedAt, endOfDay(new Date(endDate))));
+  }
+
+  const sessions = await db
+    .select({
+      id: cashierSessionsTable.id,
+      cashierId: cashierSessionsTable.cashierId,
+      startedAt: cashierSessionsTable.startedAt,
+      endedAt: cashierSessionsTable.endedAt,
+      cashierName: usersTable.name
+    })
+    .from(cashierSessionsTable)
+    .innerJoin(usersTable, eq(cashierSessionsTable.cashierId, usersTable.id))
+    .where(conditions.length > 0 ? and(...conditions) : undefined)
+    .orderBy(desc(cashierSessionsTable.startedAt));
+
+  if (sessions.length === 0) {
+    res.setHeader("X-Total-Count", "0");
+    res.setHeader("Access-Control-Expose-Headers", "X-Total-Count");
+    res.json([]);
+    return;
+  }
+
+  const orConditions = [];
+  for (const session of sessions) {
+    const end = session.endedAt || new Date();
+    orConditions.push(
+      and(
+        eq(ordersTable.cashierId, session.cashierId),
+        gte(sql`COALESCE(${ordersTable.paidAt}, ${ordersTable.createdAt})`, session.startedAt),
+        lte(sql`COALESCE(${ordersTable.paidAt}, ${ordersTable.createdAt})`, end)
+      )
+    );
+  }
+
+  const orderQueryConditions = [or(...orConditions)];
+
+  if (status && status !== 'all' && status !== '') {
+    const statuses = status.split(",") as any[];
+    orderQueryConditions.push(inArray(ordersTable.status, statuses));
+  }
+
+  const [countResult] = await db
+    .select({ count: sql<number>`cast(count(*) as int)` })
+    .from(ordersTable)
+    .where(and(...orderQueryConditions));
+
+  const totalCount = countResult?.count ?? 0;
+  res.setHeader("X-Total-Count", String(totalCount));
+  res.setHeader("Access-Control-Expose-Headers", "X-Total-Count");
+
+  const orders = await db
+    .select()
+    .from(ordersTable)
+    .where(and(...orderQueryConditions))
+    .orderBy(desc(ordersTable.createdAt))
+    .limit(limit)
+    .offset(offset);
+
+  const orderIds = orders.map((o) => o.id);
+
+  const [items, baristas, payments, branches] = await Promise.all([
+    orderIds.length > 0
+      ? db.select().from(orderItemsTable).where(inArray(orderItemsTable.orderId, orderIds))
+      : Promise.resolve([]),
+    db.select().from(usersTable), // Fetch all baristas for mapping
+    orderIds.length > 0
+      ? db.select().from(orderPaymentsTable).where(inArray(orderPaymentsTable.orderId, orderIds))
+      : Promise.resolve([]),
+    db.select().from(branchesTable), // Fetch all branches for mapping
+  ]);
+
+  const itemIds = items.map((i) => i.id);
+  const customizations = itemIds.length > 0
+    ? await db.select().from(orderItemCustomizationsTable).where(inArray(orderItemCustomizationsTable.orderItemId, itemIds))
+    : [];
+
+  const baristaMap = Object.fromEntries(baristas.map((b) => [b.id, b.name]));
+  const branchMap = Object.fromEntries(branches.map((b) => [b.id, b.name]));
+  const custByItem = new Map<number, any[]>();
+  for (const c of customizations) {
+    const list = custByItem.get(c.orderItemId) ?? [];
+    list.push({ ...c, consumedQty: parseFloat(c.consumedQty), producedQty: parseFloat((c as any).producedQty), addedCost: parseFloat(c.addedCost) });
+    custByItem.set(c.orderItemId, list);
+  }
+
+  const paymentsByOrder = new Map<number, any[]>();
+  for (const p of payments) {
+    const list = paymentsByOrder.get(p.orderId) ?? [];
+    list.push({ ...p, amount: parseFloat(p.amount) });
+    paymentsByOrder.set(p.orderId, list);
+  }
+
+  const itemsByOrder = new Map<number, any[]>();
+  for (const i of items) {
+    const list = itemsByOrder.get(i.orderId) ?? [];
+    list.push({
+      ...i,
+      unitPrice: parseFloat(i.unitPrice),
+      lineTotal: parseFloat(i.lineTotal),
+      customizations: custByItem.get(i.id) ?? [],
+    });
+    itemsByOrder.set(i.orderId, list);
+  }
+
+  const serializedOrders = orders.map((o) => {
+    // Find matching session
+    const oTime = new Date(o.paidAt || o.createdAt).getTime();
+    const matchingSession = sessions.find(s => {
+      if (s.cashierId !== o.cashierId) return false;
+      const start = new Date(s.startedAt).getTime();
+      const end = s.endedAt ? new Date(s.endedAt).getTime() : Date.now();
+      return oTime >= start && oTime <= end;
+    });
+
+    const sessionLabel = matchingSession
+      ? `${matchingSession.cashierName} (S#${matchingSession.id} - ${new Date(matchingSession.startedAt).toLocaleDateString("en-EG", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })})`
+      : "Unknown Session";
+
+    return {
+      ...o,
+      sessionId: matchingSession?.id ?? null,
+      sessionLabel,
+      baristaName: baristaMap[o.baristaId] ?? "Unknown",
+      branchName: branchMap[o.branchId] ?? "Unknown",
+      subtotal: parseFloat(o.subtotal),
+      discount: parseFloat(o.discount),
+      discountId: o.discountId,
+      discountCode: o.discountCode,
+      discountValue: o.discountValue ? parseFloat(o.discountValue) : null,
+      discountType: o.discountType as "percentage" | "fixed" | "fixed_per_item" | null,
+      offerId: o.offerId,
+      offerDiscount: o.offerDiscount ? parseFloat(o.offerDiscount) : 0,
+      total: parseFloat(o.total),
+      amountTendered: o.amountTendered ? parseFloat(o.amountTendered) : null,
+      changeDue: o.changeDue ? parseFloat(o.changeDue) : null,
+      payments: paymentsByOrder.get(o.id) ?? [],
+      items: itemsByOrder.get(o.id) ?? [],
+    };
+  });
+
+  res.json(serializeDates(serializedOrders));
 });
 
 export default router;

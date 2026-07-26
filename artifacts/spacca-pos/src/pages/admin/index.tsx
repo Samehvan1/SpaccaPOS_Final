@@ -1,7 +1,8 @@
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Coffee, Droplet, LayoutDashboard, LineChart, PackageSearch, BarChart2, Tag, ChefHat, Users, Ticket, UserCheck, History, Shield, Settings, Building2, Clock } from "lucide-react";
+import { Coffee, Droplet, LayoutDashboard, LineChart, PackageSearch, BarChart2, Tag, ChefHat, Users, Ticket, UserCheck, History, Shield, Settings, Building2, Clock, Gift } from "lucide-react";
+
 
 export default function AdminHub() {
   const { user, hasPermission } = useAuth();
@@ -97,6 +98,16 @@ export default function AdminHub() {
       color: "text-pink-500",
       bg: "bg-pink-500/10"
     },
+    {
+      title: "Offers & Promos",
+      description: "Manage Buy N Get X Free promotional rules",
+      icon: Gift,
+      href: "/admin/offers",
+      color: "text-emerald-500",
+      bg: "bg-emerald-500/10",
+      permission: "discounts:view"
+    },
+
     {
       title: "Customer Rewards",
       description: "Manage customer profiles, loyalty points, and discounts",

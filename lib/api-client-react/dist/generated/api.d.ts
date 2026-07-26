@@ -1,5 +1,5 @@
 import type { QueryKey, UseMutationOptions, UseMutationResult, UseQueryOptions, UseQueryResult } from "@tanstack/react-query";
-import type { ActivityLog, Branch, CalculateDrinkPriceParams, CategorySales, CreateBranchBody, CreateDiscountBody, CreateDrinkBody, CreateIngredientBody, CreateIngredientOptionBody, CreateIngredientOptionParams, CreateOrderBody, CreateUserBody, DashboardSummary, DeleteDiscountParams, DeleteDrinkParams, DeleteIngredientOptionParams, DeleteIngredientParams, DeleteUserParams, Discount, Drink, DrinkDetail, GetActiveOrdersParams, GetCustomerPoints200, GetDashboardSummaryParams, GetDrinkParams, GetIngredientParams, GetLowStockIngredientsParams, GetOrderParams, GetSalesByCategoryParams, GetSettingsParams, GetTopDrinksParams, HealthStatus, Ingredient, IngredientDetail, IngredientOption, ListActivityLogsParams, ListDrinksParams, ListIngredientsParams, ListOrdersParams, ListStockMovementsParams, LoginBody, LoginResponse, MarkOrderItemReadyParams, Order, OrderDetail, Permission, PriceBreakdown, PriceCalculationBody, RestockBody, RestockIngredientParams, SaveOrderSignatureBody, Setting, StockAdjustmentBody, StockMovement, TopDrink, UpdateBranchBody, UpdateDiscountBody, UpdateDiscountParams, UpdateDrinkBody, UpdateDrinkParams, UpdateIngredientBody, UpdateIngredientOptionBody, UpdateIngredientOptionParams, UpdateIngredientParams, UpdateOrderStatusBody, UpdateOrderStatusParams, UpdateSettingsBody, UpdateUserBody, UpdateUserParams, User, UserDetail } from "./api.schemas";
+import type { ActivityLog, Branch, CalculateDrinkPriceParams, CategorySales, CreateBranchBody, CreateDiscountBody, CreateDrinkBody, CreateIngredientBody, CreateIngredientOptionBody, CreateIngredientOptionParams, CreateOfferBody, CreateOrderBody, CreateUserBody, DashboardSummary, DeleteDiscountParams, DeleteDrinkParams, DeleteIngredientOptionParams, DeleteIngredientParams, DeleteUserParams, Discount, Drink, DrinkDetail, GetActiveOrdersParams, GetCustomerPoints200, GetDashboardSummaryParams, GetDrinkParams, GetIngredientParams, GetLowStockIngredientsParams, GetOrderParams, GetSalesByCategoryParams, GetSettingsParams, GetTopDrinksParams, HealthStatus, Ingredient, IngredientDetail, IngredientOption, ListActivityLogsParams, ListDrinksParams, ListIngredientsParams, ListOrdersParams, ListStockMovementsParams, LoginBody, LoginResponse, MarkOrderItemReadyParams, Offer, Order, OrderDetail, Permission, PriceBreakdown, PriceCalculationBody, RestockBody, RestockIngredientParams, SaveOrderSignatureBody, Setting, StockAdjustmentBody, StockMovement, TopDrink, UpdateBranchBody, UpdateDiscountBody, UpdateDiscountParams, UpdateDrinkBody, UpdateDrinkParams, UpdateIngredientBody, UpdateIngredientOptionBody, UpdateIngredientOptionParams, UpdateIngredientParams, UpdateOfferBody, UpdateOrderStatusBody, UpdateOrderStatusParams, UpdateSettingsBody, UpdateUserBody, UpdateUserParams, User, UserDetail } from "./api.schemas";
 import { customFetch } from "../custom-fetch";
 import type { ErrorType, BodyType } from "../custom-fetch";
 type AwaitedInput<T> = PromiseLike<T> | T;
@@ -1250,6 +1250,136 @@ export declare const useDeleteDiscount: <TError = ErrorType<unknown>, TContext =
 }) => UseMutationResult<Awaited<ReturnType<typeof deleteDiscount>>, TError, {
     id: number;
     params?: DeleteDiscountParams;
+}, TContext>;
+/**
+ * @summary List all offers
+ */
+export declare const getListOffersUrl: () => string;
+export declare const listOffers: (options?: RequestInit) => Promise<Offer[]>;
+export declare const getListOffersQueryKey: () => readonly ["/api/offers"];
+export declare const getListOffersQueryOptions: <TData = Awaited<ReturnType<typeof listOffers>>, TError = ErrorType<unknown>>(options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof listOffers>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseQueryOptions<Awaited<ReturnType<typeof listOffers>>, TError, TData> & {
+    queryKey: QueryKey;
+};
+export type ListOffersQueryResult = NonNullable<Awaited<ReturnType<typeof listOffers>>>;
+export type ListOffersQueryError = ErrorType<unknown>;
+/**
+ * @summary List all offers
+ */
+export declare function useListOffers<TData = Awaited<ReturnType<typeof listOffers>>, TError = ErrorType<unknown>>(options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof listOffers>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+};
+/**
+ * @summary Create a new offer
+ */
+export declare const getCreateOfferUrl: () => string;
+export declare const createOffer: (createOfferBody: CreateOfferBody, options?: RequestInit) => Promise<Offer>;
+export declare const getCreateOfferMutationOptions: <TError = ErrorType<unknown>, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof createOffer>>, TError, {
+        data: BodyType<CreateOfferBody>;
+    }, TContext>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseMutationOptions<Awaited<ReturnType<typeof createOffer>>, TError, {
+    data: BodyType<CreateOfferBody>;
+}, TContext>;
+export type CreateOfferMutationResult = NonNullable<Awaited<ReturnType<typeof createOffer>>>;
+export type CreateOfferMutationBody = BodyType<CreateOfferBody>;
+export type CreateOfferMutationError = ErrorType<unknown>;
+/**
+ * @summary Create a new offer
+ */
+export declare const useCreateOffer: <TError = ErrorType<unknown>, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof createOffer>>, TError, {
+        data: BodyType<CreateOfferBody>;
+    }, TContext>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseMutationResult<Awaited<ReturnType<typeof createOffer>>, TError, {
+    data: BodyType<CreateOfferBody>;
+}, TContext>;
+/**
+ * @summary Get the currently active offer
+ */
+export declare const getGetActiveOfferUrl: () => string;
+export declare const getActiveOffer: (options?: RequestInit) => Promise<Offer | null>;
+export declare const getGetActiveOfferQueryKey: () => readonly ["/api/offers/active"];
+export declare const getGetActiveOfferQueryOptions: <TData = Awaited<ReturnType<typeof getActiveOffer>>, TError = ErrorType<unknown>>(options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof getActiveOffer>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseQueryOptions<Awaited<ReturnType<typeof getActiveOffer>>, TError, TData> & {
+    queryKey: QueryKey;
+};
+export type GetActiveOfferQueryResult = NonNullable<Awaited<ReturnType<typeof getActiveOffer>>>;
+export type GetActiveOfferQueryError = ErrorType<unknown>;
+/**
+ * @summary Get the currently active offer
+ */
+export declare function useGetActiveOffer<TData = Awaited<ReturnType<typeof getActiveOffer>>, TError = ErrorType<unknown>>(options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof getActiveOffer>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+};
+/**
+ * @summary Update an offer
+ */
+export declare const getUpdateOfferUrl: (id: number) => string;
+export declare const updateOffer: (id: number, updateOfferBody: UpdateOfferBody, options?: RequestInit) => Promise<Offer>;
+export declare const getUpdateOfferMutationOptions: <TError = ErrorType<unknown>, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof updateOffer>>, TError, {
+        id: number;
+        data: BodyType<UpdateOfferBody>;
+    }, TContext>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseMutationOptions<Awaited<ReturnType<typeof updateOffer>>, TError, {
+    id: number;
+    data: BodyType<UpdateOfferBody>;
+}, TContext>;
+export type UpdateOfferMutationResult = NonNullable<Awaited<ReturnType<typeof updateOffer>>>;
+export type UpdateOfferMutationBody = BodyType<UpdateOfferBody>;
+export type UpdateOfferMutationError = ErrorType<unknown>;
+/**
+ * @summary Update an offer
+ */
+export declare const useUpdateOffer: <TError = ErrorType<unknown>, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof updateOffer>>, TError, {
+        id: number;
+        data: BodyType<UpdateOfferBody>;
+    }, TContext>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseMutationResult<Awaited<ReturnType<typeof updateOffer>>, TError, {
+    id: number;
+    data: BodyType<UpdateOfferBody>;
+}, TContext>;
+/**
+ * @summary Delete an offer
+ */
+export declare const getDeleteOfferUrl: (id: number) => string;
+export declare const deleteOffer: (id: number, options?: RequestInit) => Promise<void>;
+export declare const getDeleteOfferMutationOptions: <TError = ErrorType<unknown>, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof deleteOffer>>, TError, {
+        id: number;
+    }, TContext>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseMutationOptions<Awaited<ReturnType<typeof deleteOffer>>, TError, {
+    id: number;
+}, TContext>;
+export type DeleteOfferMutationResult = NonNullable<Awaited<ReturnType<typeof deleteOffer>>>;
+export type DeleteOfferMutationError = ErrorType<unknown>;
+/**
+ * @summary Delete an offer
+ */
+export declare const useDeleteOffer: <TError = ErrorType<unknown>, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof deleteOffer>>, TError, {
+        id: number;
+    }, TContext>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseMutationResult<Awaited<ReturnType<typeof deleteOffer>>, TError, {
+    id: number;
 }, TContext>;
 /**
  * @summary List all branches

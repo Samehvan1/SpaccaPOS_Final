@@ -41,6 +41,9 @@ interface CartSidebarProps {
   onRemoveItem: (id: string) => void;
   onCheckout: () => void;
   availableDiscounts?: any[];
+  extraFreeCount?: number;
+  offerDiscount?: number;
+  offerName?: string;
 }
 
 export const CartSidebar: React.FC<CartSidebarProps> = ({
@@ -54,6 +57,9 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({
   onRemoveItem,
   onCheckout,
   availableDiscounts = [],
+  extraFreeCount = 0,
+  offerDiscount = 0,
+  offerName = "Promo Offer",
 }) => {
 
   return (
@@ -167,7 +173,25 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({
         </ScrollArea>
 
         <div className="p-4 border-t bg-muted/30 shrink-0 space-y-3">
-          {availableDiscounts.length > 0 && (
+          {extraFreeCount > 0 && (
+            <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200/50 p-2.5 rounded-lg text-xs text-emerald-800 dark:text-emerald-200 font-semibold space-y-1 animate-pulse">
+              <div className="font-bold flex items-center gap-1">
+                <Tag className="h-3.5 w-3.5 text-emerald-500 animate-bounce" /> Extra Free Drink Available!
+              </div>
+              <div className="text-[10px] text-emerald-700/80 dark:text-emerald-300/80">
+                You qualify for <span className="font-bold text-sm">{extraFreeCount}</span> more free drink(s). Add them to your cart!
+              </div>
+            </div>
+          )}
+          {offerDiscount > 0 && (
+            <div className="flex justify-between items-center text-xs text-destructive font-bold bg-destructive/5 p-2 rounded-lg border border-destructive/15">
+              <span className="flex items-center gap-1 capitalize">
+                <Tag className="h-3.5 w-3.5 text-destructive" /> Offer: {offerName}
+              </span>
+              <span>-{fmt(offerDiscount)}</span>
+            </div>
+          )}
+          {availableDiscounts.length > 0 && offerDiscount === 0 && (
             <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200/50 p-2.5 rounded-lg text-xs text-amber-800 dark:text-amber-200 font-semibold space-y-1">
               <div className="font-bold flex items-center gap-1">
                 <Tag className="h-3.5 w-3.5 text-amber-500" /> Customer Discount Available!
@@ -190,6 +214,7 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({
             Checkout <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
+
       </div>
     </>
   );

@@ -20807,27 +20807,27 @@ var require_router = __commonJS({
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var methods = METHODS.map((method) => method.toLowerCase());
-    module.exports = Router26;
+    module.exports = Router27;
     module.exports.Route = Route;
-    function Router26(options) {
-      if (!(this instanceof Router26)) {
-        return new Router26(options);
+    function Router27(options) {
+      if (!(this instanceof Router27)) {
+        return new Router27(options);
       }
       const opts = options || {};
-      function router21(req, res, next) {
-        router21.handle(req, res, next);
+      function router22(req, res, next) {
+        router22.handle(req, res, next);
       }
-      Object.setPrototypeOf(router21, this);
-      router21.caseSensitive = opts.caseSensitive;
-      router21.mergeParams = opts.mergeParams;
-      router21.params = {};
-      router21.strict = opts.strict;
-      router21.stack = [];
-      return router21;
+      Object.setPrototypeOf(router22, this);
+      router22.caseSensitive = opts.caseSensitive;
+      router22.mergeParams = opts.mergeParams;
+      router22.params = {};
+      router22.strict = opts.strict;
+      router22.stack = [];
+      return router22;
     }
-    Router26.prototype = function() {
+    Router27.prototype = function() {
     };
-    Router26.prototype.param = function param(name, fn) {
+    Router27.prototype.param = function param(name, fn) {
       if (!name) {
         throw new TypeError("argument name is required");
       }
@@ -20847,7 +20847,7 @@ var require_router = __commonJS({
       params.push(fn);
       return this;
     };
-    Router26.prototype.handle = function handle(req, res, callback) {
+    Router27.prototype.handle = function handle(req, res, callback) {
       if (!callback) {
         throw new TypeError("argument callback is required");
       }
@@ -20974,7 +20974,7 @@ var require_router = __commonJS({
         }
       }
     };
-    Router26.prototype.use = function use(handler) {
+    Router27.prototype.use = function use(handler) {
       let offset = 0;
       let path7 = "/";
       if (typeof handler !== "function") {
@@ -21007,7 +21007,7 @@ var require_router = __commonJS({
       }
       return this;
     };
-    Router26.prototype.route = function route(path7) {
+    Router27.prototype.route = function route(path7) {
       const route2 = new Route(path7);
       const layer = new Layer(path7, {
         sensitive: this.caseSensitive,
@@ -21022,7 +21022,7 @@ var require_router = __commonJS({
       return route2;
     };
     methods.concat("all").forEach(function(method) {
-      Router26.prototype[method] = function(path7) {
+      Router27.prototype[method] = function(path7) {
         const route = this.route(path7);
         route[method].apply(route, slice.call(arguments, 1));
         return this;
@@ -21205,13 +21205,13 @@ var require_application = __commonJS({
     var compileTrust = require_utils3().compileTrust;
     var resolve2 = __require("node:path").resolve;
     var once = require_once();
-    var Router26 = require_router();
+    var Router27 = require_router();
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var app2 = exports = module.exports = {};
     var trustProxyDefaultSymbol = "@@symbol:trust_proxy_default";
     app2.init = function init() {
-      var router21 = null;
+      var router22 = null;
       this.cache = /* @__PURE__ */ Object.create(null);
       this.engines = /* @__PURE__ */ Object.create(null);
       this.settings = /* @__PURE__ */ Object.create(null);
@@ -21220,13 +21220,13 @@ var require_application = __commonJS({
         configurable: true,
         enumerable: true,
         get: function getrouter() {
-          if (router21 === null) {
-            router21 = new Router26({
+          if (router22 === null) {
+            router22 = new Router27({
               caseSensitive: this.enabled("case sensitive routing"),
               strict: this.enabled("strict routing")
             });
           }
-          return router21;
+          return router22;
         }
       });
     };
@@ -21297,15 +21297,15 @@ var require_application = __commonJS({
       if (fns.length === 0) {
         throw new TypeError("app.use() requires a middleware function");
       }
-      var router21 = this.router;
+      var router22 = this.router;
       fns.forEach(function(fn2) {
         if (!fn2 || !fn2.handle || !fn2.set) {
-          return router21.use(path7, fn2);
+          return router22.use(path7, fn2);
         }
         debug(".use app under %s", path7);
         fn2.mountpath = path7;
         fn2.parent = this;
-        router21.use(path7, function mounted_app(req, res, next) {
+        router22.use(path7, function mounted_app(req, res, next) {
           var orig = req.app;
           fn2.handle(req, res, function(err) {
             Object.setPrototypeOf(req, orig.request);
@@ -23832,7 +23832,7 @@ var require_express = __commonJS({
     var EventEmitter = __require("node:events").EventEmitter;
     var mixin = require_merge_descriptors();
     var proto = require_application();
-    var Router26 = require_router();
+    var Router27 = require_router();
     var req = require_request();
     var res = require_response();
     exports = module.exports = createApplication;
@@ -23854,8 +23854,8 @@ var require_express = __commonJS({
     exports.application = proto;
     exports.request = req;
     exports.response = res;
-    exports.Route = Router26.Route;
-    exports.Router = Router26;
+    exports.Route = Router27.Route;
+    exports.Router = Router27;
     exports.json = bodyParser.json;
     exports.raw = bodyParser.raw;
     exports.static = require_serve_static();
@@ -56186,6 +56186,28 @@ var init_discounts = __esm({
   }
 });
 
+// ../../lib/db/src/schema/offers.ts
+var offersTable, insertOfferSchema;
+var init_offers = __esm({
+  "../../lib/db/src/schema/offers.ts"() {
+    "use strict";
+    init_pg_core();
+    init_drizzle_zod();
+    offersTable = pgTable("offers", {
+      id: serial("id").primaryKey(),
+      name: text("name").notNull(),
+      buyAmount: integer("buy_amount").notNull(),
+      // N
+      freeAmount: integer("free_amount").notNull(),
+      // X
+      isActive: boolean("is_active").notNull().default(true),
+      createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+      updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => /* @__PURE__ */ new Date())
+    });
+    insertOfferSchema = createInsertSchema(offersTable).omit({ id: true, createdAt: true, updatedAt: true });
+  }
+});
+
 // ../../lib/db/src/schema/orders.ts
 var ordersTable, orderItemsTable, orderItemCustomizationsTable, orderPaymentsTable, insertOrderSchema;
 var init_orders = __esm({
@@ -56198,6 +56220,7 @@ var init_orders = __esm({
     init_ingredients();
     init_discounts();
     init_branches();
+    init_offers();
     ordersTable = pgTable("orders", {
       id: serial("id").primaryKey(),
       branchId: integer("branch_id").notNull().references(() => branchesTable.id),
@@ -56214,6 +56237,8 @@ var init_orders = __esm({
       discountCode: text("discount_code"),
       discountValue: numeric("discount_value", { precision: 8, scale: 2 }),
       discountType: text("discount_type", { enum: ["percentage", "fixed", "fixed_per_item"] }),
+      offerId: integer("offer_id").references(() => offersTable.id),
+      offerDiscount: numeric("offer_discount", { precision: 8, scale: 2 }).notNull().default("0"),
       total: numeric("total", { precision: 8, scale: 2 }).notNull(),
       paymentMethod: text("payment_method", { enum: ["cash", "card", "wallet", "hospitality", "split", "refund"] }).notNull().default("cash"),
       source: text("source", { enum: ["pos", "kiosk", "web", "mobile"] }).notNull().default("pos"),
@@ -56714,6 +56739,7 @@ __export(schema_exports, {
   insertIngredientTypeVolumeSchema: () => insertIngredientTypeVolumeSchema,
   insertIngredientVolumeSchema: () => insertIngredientVolumeSchema,
   insertKitchenStationSchema: () => insertKitchenStationSchema,
+  insertOfferSchema: () => insertOfferSchema,
   insertOrderSchema: () => insertOrderSchema,
   insertPermissionSchema: () => insertPermissionSchema,
   insertPredefinedSlotSchema: () => insertPredefinedSlotSchema,
@@ -56729,6 +56755,7 @@ __export(schema_exports, {
   insertUserPermissionSchema: () => insertUserPermissionSchema,
   insertUserSchema: () => insertUserSchema,
   kitchenStationsTable: () => kitchenStationsTable,
+  offersTable: () => offersTable,
   orderItemCustomizationsTable: () => orderItemCustomizationsTable,
   orderItemsTable: () => orderItemsTable,
   orderPaymentsTable: () => orderPaymentsTable,
@@ -56776,6 +56803,7 @@ var init_schema2 = __esm({
     init_purchases();
     init_tags();
     init_stock_batches();
+    init_offers();
   }
 });
 
@@ -56869,6 +56897,7 @@ __export(src_exports, {
   insertIngredientTypeVolumeSchema: () => insertIngredientTypeVolumeSchema,
   insertIngredientVolumeSchema: () => insertIngredientVolumeSchema,
   insertKitchenStationSchema: () => insertKitchenStationSchema,
+  insertOfferSchema: () => insertOfferSchema,
   insertOrderSchema: () => insertOrderSchema,
   insertPermissionSchema: () => insertPermissionSchema,
   insertPredefinedSlotSchema: () => insertPredefinedSlotSchema,
@@ -56884,6 +56913,7 @@ __export(src_exports, {
   insertUserPermissionSchema: () => insertUserPermissionSchema,
   insertUserSchema: () => insertUserSchema,
   kitchenStationsTable: () => kitchenStationsTable,
+  offersTable: () => offersTable,
   orderItemCustomizationsTable: () => orderItemCustomizationsTable,
   orderItemsTable: () => orderItemsTable,
   orderPaymentsTable: () => orderPaymentsTable,
@@ -73872,7 +73902,7 @@ import fs6 from "fs";
 import { exec as exec2 } from "child_process";
 
 // src/app.ts
-var import_express26 = __toESM(require_express2(), 1);
+var import_express27 = __toESM(require_express2(), 1);
 var import_cors = __toESM(require_lib3(), 1);
 var import_pino_http = __toESM(require_logger(), 1);
 var import_express_session = __toESM(require_express_session(), 1);
@@ -73882,7 +73912,7 @@ import path5 from "path";
 import { fileURLToPath as fileURLToPath3 } from "url";
 
 // src/routes/index.ts
-var import_express25 = __toESM(require_express2(), 1);
+var import_express26 = __toESM(require_express2(), 1);
 
 // src/routes/health.ts
 var import_express = __toESM(require_express2(), 1);
@@ -78482,6 +78512,8 @@ var ListOrdersResponseItem = objectType({
   discountId: numberType().nullish(),
   discountValue: numberType().nullish(),
   discountType: enumType(["percentage", "fixed", "fixed_per_item"]).nullish(),
+  offerId: numberType().nullish(),
+  offerDiscount: numberType().nullish(),
   total: numberType(),
   paymentMethod: enumType([
     "cash",
@@ -78596,6 +78628,8 @@ var GetOrderResponse = objectType({
   discountId: numberType().nullish(),
   discountValue: numberType().nullish(),
   discountType: enumType(["percentage", "fixed", "fixed_per_item"]).nullish(),
+  offerId: numberType().nullish(),
+  offerDiscount: numberType().nullish(),
   total: numberType(),
   paymentMethod: enumType([
     "cash",
@@ -78688,6 +78722,8 @@ var UpdateOrderStatusResponse = objectType({
   discountId: numberType().nullish(),
   discountValue: numberType().nullish(),
   discountType: enumType(["percentage", "fixed", "fixed_per_item"]).nullish(),
+  offerId: numberType().nullish(),
+  offerDiscount: numberType().nullish(),
   total: numberType(),
   paymentMethod: enumType([
     "cash",
@@ -78740,6 +78776,8 @@ var MarkOrderItemReadyResponse = objectType({
   discountId: numberType().nullish(),
   discountValue: numberType().nullish(),
   discountType: enumType(["percentage", "fixed", "fixed_per_item"]).nullish(),
+  offerId: numberType().nullish(),
+  offerDiscount: numberType().nullish(),
   total: numberType(),
   paymentMethod: enumType([
     "cash",
@@ -78844,6 +78882,8 @@ var GetActiveOrdersResponseItem = objectType({
   discountId: numberType().nullish(),
   discountValue: numberType().nullish(),
   discountType: enumType(["percentage", "fixed", "fixed_per_item"]).nullish(),
+  offerId: numberType().nullish(),
+  offerDiscount: numberType().nullish(),
   total: numberType(),
   paymentMethod: enumType([
     "cash",
@@ -79121,6 +79161,52 @@ var DeleteDiscountParams = objectType({
 var DeleteDiscountQueryParams = objectType({
   branchId: coerce.number().optional()
 });
+var ListOffersResponseItem = objectType({
+  id: numberType(),
+  name: stringType(),
+  buyAmount: numberType(),
+  freeAmount: numberType(),
+  isActive: booleanType(),
+  createdAt: stringType(),
+  updatedAt: stringType()
+});
+var ListOffersResponse = arrayType(ListOffersResponseItem);
+var CreateOfferBody = objectType({
+  name: stringType(),
+  buyAmount: numberType(),
+  freeAmount: numberType(),
+  isActive: booleanType().optional()
+});
+var GetActiveOfferResponse = objectType({
+  id: numberType(),
+  name: stringType(),
+  buyAmount: numberType(),
+  freeAmount: numberType(),
+  isActive: booleanType(),
+  createdAt: stringType(),
+  updatedAt: stringType()
+}).nullable();
+var UpdateOfferParams = objectType({
+  id: coerce.number()
+});
+var UpdateOfferBody = objectType({
+  name: stringType().optional(),
+  buyAmount: numberType().optional(),
+  freeAmount: numberType().optional(),
+  isActive: booleanType().optional()
+});
+var UpdateOfferResponse = objectType({
+  id: numberType(),
+  name: stringType(),
+  buyAmount: numberType(),
+  freeAmount: numberType(),
+  isActive: booleanType(),
+  createdAt: stringType(),
+  updatedAt: stringType()
+});
+var DeleteOfferParams = objectType({
+  id: coerce.number()
+});
 var ListBranchesResponseItem = objectType({
   id: numberType(),
   name: stringType(),
@@ -79370,6 +79456,8 @@ var ListActivityLogsResponse2 = external_exports2.object({
   limit: external_exports2.number(),
   offset: external_exports2.number()
 });
+var CreateOfferBody2 = CreateOfferBody;
+var UpdateOfferBody2 = UpdateOfferBody;
 
 // src/routes/health.ts
 var router = (0, import_express.Router)();
@@ -83726,6 +83814,8 @@ async function buildOrderDetail(orderId) {
     discountCode: order.discountCode,
     discountValue: order.discountValue ? parseFloat(order.discountValue) : null,
     discountType: order.discountType,
+    offerId: order.offerId,
+    offerDiscount: order.offerDiscount ? parseFloat(order.offerDiscount) : 0,
     total: parseFloat(order.total),
     amountTendered: order.amountTendered ? parseFloat(order.amountTendered) : null,
     changeDue: order.changeDue ? parseFloat(order.changeDue) : null,
@@ -83833,6 +83923,8 @@ router5.get("/orders", requirePermission("cashier:view"), async (req, res) => {
         discountCode: o.discountCode,
         discountValue: o.discountValue ? parseFloat(o.discountValue) : null,
         discountType: o.discountType,
+        offerId: o.offerId,
+        offerDiscount: o.offerDiscount ? parseFloat(o.offerDiscount) : 0,
         total: parseFloat(o.total),
         amountTendered: o.amountTendered ? parseFloat(o.amountTendered) : null,
         changeDue: o.changeDue ? parseFloat(o.changeDue) : null,
@@ -83966,12 +84058,32 @@ router5.post("/orders", async (req, res) => {
       }
     }
   }
+  const [activeOffer] = await db.select().from(offersTable).where(eq(offersTable.isActive, true)).limit(1);
+  let offerDiscountAmount = 0;
+  let offerIdToSave = null;
+  if (activeOffer) {
+    const N = activeOffer.buyAmount;
+    const X = activeOffer.freeAmount;
+    const flatItems = itemDetails.flatMap(
+      (item) => Array.from({ length: item.quantity }).map(() => item.unitPrice)
+    ).sort((a, b) => a - b);
+    const M = flatItems.length;
+    const F = Math.floor(M / (N + X)) * X + Math.min(X, Math.max(0, M % (N + X) - N));
+    if (F > 0) {
+      offerIdToSave = activeOffer.id;
+      for (let i = 0; i < F; i++) {
+        offerDiscountAmount += flatItems[i];
+      }
+    }
+  }
   let discountAmount = parsed.data.discount ?? 0;
   let discountId = null;
   let discountCode = null;
   let discountValue = null;
   let discountType = null;
-  if (parsed.data.discountCode) {
+  if (offerDiscountAmount > 0) {
+    discountAmount = 0;
+  } else if (parsed.data.discountCode) {
     const [discountRow] = await db.select().from(discountsTable).where(eq(discountsTable.code, parsed.data.discountCode));
     if (discountRow && discountRow.isActive) {
       discountId = discountRow.id;
@@ -83990,11 +84102,13 @@ router5.post("/orders", async (req, res) => {
       discountAmount = Math.min(discountAmount, subtotal);
     }
   }
-  let total = subtotal - discountAmount;
+  let total = subtotal - (offerDiscountAmount > 0 ? offerDiscountAmount : discountAmount);
   let discountIdToSave = discountId;
   let discountCodeToSave = discountCode;
   if (parsed.data.paymentMethod === "hospitality") {
     discountAmount = subtotal;
+    offerDiscountAmount = 0;
+    offerIdToSave = null;
     total = 0;
     discountIdToSave = null;
     discountCodeToSave = "HOSPITALITY";
@@ -84043,6 +84157,8 @@ router5.post("/orders", async (req, res) => {
           discountCode: discountCodeToSave,
           discountValue: discountValue != null ? String(discountValue) : null,
           discountType,
+          offerId: offerIdToSave,
+          offerDiscount: String(offerDiscountAmount),
           total: String(total),
           paymentMethod: parsed.data.paymentMethod,
           source: parsed.data.source || "pos",
@@ -84143,6 +84259,8 @@ router5.post("/orders", async (req, res) => {
         discountCode: order.discountCode,
         discountValue: order.discountValue ? parseFloat(order.discountValue) : null,
         discountType: order.discountType,
+        offerId: order.offerId,
+        offerDiscount: order.offerDiscount ? parseFloat(order.offerDiscount) : 0,
         total: parseFloat(order.total),
         amountTendered: order.amountTendered ? parseFloat(order.amountTendered) : null,
         changeDue: order.changeDue ? parseFloat(order.changeDue) : null,
@@ -85134,6 +85252,8 @@ router7.get("/dashboard/active-orders", async (req, res) => {
     discount: parseFloat(order.discount),
     discountValue: order.discountValue ? parseFloat(order.discountValue) : null,
     discountType: order.discountType,
+    offerId: order.offerId,
+    offerDiscount: order.offerDiscount ? parseFloat(order.offerDiscount) : 0,
     total: parseFloat(order.total),
     amountTendered: order.amountTendered ? parseFloat(order.amountTendered) : null,
     changeDue: order.changeDue ? parseFloat(order.changeDue) : null,
@@ -86285,11 +86405,114 @@ router13.get("/discounts/validate/:code", async (req, res) => {
 });
 var discounts_default = router13;
 
-// src/routes/customers.ts
+// src/routes/offers.ts
 var import_express15 = __toESM(require_express2(), 1);
+init_drizzle_orm();
+init_src();
+var router14 = (0, import_express15.Router)();
+router14.get("/offers", requirePermission("discounts:view"), async (req, res) => {
+  try {
+    const offers = await db.select().from(offersTable);
+    res.json(offers.map((o) => serializeDates(o)));
+  } catch (error40) {
+    console.error("[GET /offers] error:", error40?.message);
+    res.status(500).json({ error: "Failed to list offers" });
+  }
+});
+router14.get("/offers/active", async (req, res) => {
+  try {
+    const [activeOffer] = await db.select().from(offersTable).where(eq(offersTable.isActive, true)).limit(1);
+    if (!activeOffer) {
+      res.json(null);
+      return;
+    }
+    res.json(serializeDates(activeOffer));
+  } catch (error40) {
+    console.error("[GET /offers/active] error:", error40?.message);
+    res.status(500).json({ error: "Failed to fetch active offer" });
+  }
+});
+router14.post("/offers", requirePermission("discounts:manage"), async (req, res) => {
+  const parsed = CreateOfferBody2.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+  try {
+    const offer = await db.transaction(async (tx) => {
+      const isAct = parsed.data.isActive ?? true;
+      if (isAct) {
+        await tx.update(offersTable).set({ isActive: false, updatedAt: /* @__PURE__ */ new Date() });
+      }
+      const [newOffer] = await tx.insert(offersTable).values({
+        name: parsed.data.name,
+        buyAmount: parsed.data.buyAmount,
+        freeAmount: parsed.data.freeAmount,
+        isActive: isAct
+      }).returning();
+      return newOffer;
+    });
+    res.status(201).json(serializeDates(offer));
+  } catch (error40) {
+    console.error("[POST /offers] error:", error40?.message);
+    res.status(500).json({ error: "Failed to create offer: " + error40.message });
+  }
+});
+router14.patch("/offers/:id", requirePermission("discounts:manage"), async (req, res) => {
+  const id = parseInt(req.params.id);
+  const parsed = UpdateOfferBody2.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+  try {
+    const offer = await db.transaction(async (tx) => {
+      if (parsed.data.isActive === true) {
+        await tx.update(offersTable).set({ isActive: false, updatedAt: /* @__PURE__ */ new Date() }).where(ne(offersTable.id, id));
+      }
+      const updateData = {};
+      if (parsed.data.name !== void 0) updateData.name = parsed.data.name;
+      if (parsed.data.buyAmount !== void 0) updateData.buyAmount = parsed.data.buyAmount;
+      if (parsed.data.freeAmount !== void 0) updateData.freeAmount = parsed.data.freeAmount;
+      if (parsed.data.isActive !== void 0) updateData.isActive = parsed.data.isActive;
+      updateData.updatedAt = /* @__PURE__ */ new Date();
+      const [updatedOffer] = await tx.update(offersTable).set(updateData).where(eq(offersTable.id, id)).returning();
+      if (!updatedOffer) {
+        throw new Error("Offer not found");
+      }
+      return updatedOffer;
+    });
+    res.json(serializeDates(offer));
+  } catch (error40) {
+    console.error("[PATCH /offers/:id] error:", error40?.message);
+    if (error40.message === "Offer not found") {
+      res.status(404).json({ error: "Offer not found" });
+      return;
+    }
+    res.status(500).json({ error: "Failed to update offer: " + error40.message });
+  }
+});
+router14.delete("/offers/:id", requirePermission("discounts:manage"), async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const [deleted] = await db.delete(offersTable).where(eq(offersTable.id, id)).returning();
+    if (!deleted) {
+      res.status(404).json({ error: "Offer not found" });
+      return;
+    }
+    res.sendStatus(204);
+  } catch (error40) {
+    console.error("[DELETE /offers/:id] error:", error40?.message);
+    res.status(500).json({ error: "Failed to delete offer: " + error40.message });
+  }
+});
+var offers_default = router14;
+
+// src/routes/customers.ts
+var import_express16 = __toESM(require_express2(), 1);
 init_src();
 init_drizzle_orm();
-var router14 = (0, import_express15.Router)();
+var router15 = (0, import_express16.Router)();
 var customerRegisterLimiter = new RateLimiter(60 * 60 * 1e3, 5);
 var customerLoginLimiter = new RateLimiter(15 * 60 * 1e3, 10);
 async function ensureCustomersTable() {
@@ -86331,7 +86554,7 @@ async function verifyPassword(password, hash2) {
 function getCustomerId(req) {
   return req.session?.customerId ?? null;
 }
-router14.post("/customers/register", async (req, res) => {
+router15.post("/customers/register", async (req, res) => {
   const ip = req.ip || "unknown-ip";
   if (customerRegisterLimiter.isLimitExceeded(`register:${ip}`)) {
     res.status(429).json({ error: "Too many registration attempts. Please try again later." });
@@ -86375,7 +86598,7 @@ router14.post("/customers/register", async (req, res) => {
     res.status(500).json({ error: "Registration failed: " + (e?.message ?? "unknown") });
   }
 });
-router14.post("/customers/login", async (req, res) => {
+router15.post("/customers/login", async (req, res) => {
   const ip = req.ip || "unknown-ip";
   if (customerLoginLimiter.isLimitExceeded(`customer-login:${ip}`)) {
     res.status(429).json({ error: "Too many login attempts. Please try again in 15 minutes." });
@@ -86411,11 +86634,11 @@ router14.post("/customers/login", async (req, res) => {
     res.status(500).json({ error: "Login failed" });
   }
 });
-router14.post("/customers/logout", async (req, res) => {
+router15.post("/customers/logout", async (req, res) => {
   delete req.session.customerId;
   req.session.save(() => res.sendStatus(204));
 });
-router14.get("/customers/me", async (req, res) => {
+router15.get("/customers/me", async (req, res) => {
   const customerId = getCustomerId(req);
   if (!customerId) {
     res.status(401).json({ error: "Not logged in" });
@@ -86437,7 +86660,7 @@ router14.get("/customers/me", async (req, res) => {
     res.status(500).json({ error: "Failed to get profile" });
   }
 });
-router14.patch("/customers/me", async (req, res) => {
+router15.patch("/customers/me", async (req, res) => {
   const customerId = getCustomerId(req);
   if (!customerId) {
     res.status(401).json({ error: "Not logged in" });
@@ -86463,7 +86686,7 @@ router14.patch("/customers/me", async (req, res) => {
     res.status(500).json({ error: "Failed to update profile" });
   }
 });
-router14.get("/customers/me/orders", async (req, res) => {
+router15.get("/customers/me/orders", async (req, res) => {
   const customerId = getCustomerId(req);
   if (!customerId) {
     res.status(401).json({ error: "Not logged in" });
@@ -86494,7 +86717,7 @@ router14.get("/customers/me/orders", async (req, res) => {
     res.status(500).json({ error: "Failed to get order history" });
   }
 });
-router14.get("/admin/customers", requirePermission("admin:view"), async (req, res) => {
+router15.get("/admin/customers", requirePermission("admin:view"), async (req, res) => {
   try {
     const customersRes = await db.execute(sql`
       SELECT c.id, c.name, c.phone, c.email, c.points, c.total_spent, c.visit_count, c.is_active, c.created_at, c.discount_id, c.notes,
@@ -86530,7 +86753,7 @@ router14.get("/admin/customers", requirePermission("admin:view"), async (req, re
     res.status(500).json({ error: "Failed to list customers" });
   }
 });
-router14.post("/admin/customers", requirePermission("admin:view"), async (req, res) => {
+router15.post("/admin/customers", requirePermission("admin:view"), async (req, res) => {
   const { name, phone, email: email3, points, notes, isActive, discountId, tagIds } = req.body ?? {};
   if (!name || typeof name !== "string" || name.trim().length < 2) {
     res.status(400).json({ error: "Name is required (at least 2 characters)" });
@@ -86579,7 +86802,7 @@ router14.post("/admin/customers", requirePermission("admin:view"), async (req, r
     res.status(500).json({ error: "Failed to create customer: " + e.message });
   }
 });
-router14.patch("/admin/customers/:id", requirePermission("admin:view"), async (req, res) => {
+router15.patch("/admin/customers/:id", requirePermission("admin:view"), async (req, res) => {
   const id = parseInt(req.params.id);
   const { name, phone, email: email3, points, notes, isActive, discountId, tagIds } = req.body ?? {};
   try {
@@ -86620,7 +86843,7 @@ router14.patch("/admin/customers/:id", requirePermission("admin:view"), async (r
     res.status(500).json({ error: "Failed to update customer: " + e.message });
   }
 });
-router14.get("/admin/customers/:id/history", requirePermission("admin:view"), async (req, res) => {
+router15.get("/admin/customers/:id/history", requirePermission("admin:view"), async (req, res) => {
   const id = parseInt(req.params.id);
   try {
     const [cust] = await db.select().from(customersTable).where(eq(customersTable.id, id)).limit(1);
@@ -86643,7 +86866,7 @@ router14.get("/admin/customers/:id/history", requirePermission("admin:view"), as
     res.status(500).json({ error: "Failed to get customer history" });
   }
 });
-router14.get("/admin/customer-reports", requirePermission("reports:view"), async (req, res) => {
+router15.get("/admin/customer-reports", requirePermission("reports:view"), async (req, res) => {
   try {
     const generalRes = await db.execute(sql`
       SELECT 
@@ -86700,7 +86923,7 @@ router14.get("/admin/customer-reports", requirePermission("reports:view"), async
     res.status(500).json({ error: "Failed to generate customer reports" });
   }
 });
-router14.get("/customers/available-discounts", async (req, res) => {
+router15.get("/customers/available-discounts", async (req, res) => {
   const phone = req.query.phone;
   const customerId = getCustomerId(req);
   try {
@@ -86765,7 +86988,7 @@ router14.get("/customers/available-discounts", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch available discounts" });
   }
 });
-router14.get("/customers/points/:phone", async (req, res) => {
+router15.get("/customers/points/:phone", async (req, res) => {
   const { phone } = req.params;
   try {
     const result = await db.execute(sql`
@@ -86782,14 +87005,14 @@ router14.get("/customers/points/:phone", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch loyalty points" });
   }
 });
-var customers_default = router14;
+var customers_default = router15;
 
 // src/routes/tags.ts
-var import_express16 = __toESM(require_express2(), 1);
+var import_express17 = __toESM(require_express2(), 1);
 init_drizzle_orm();
 init_src();
-var router15 = (0, import_express16.Router)();
-router15.get("/admin/tags", requirePermission("admin:view"), async (req, res) => {
+var router16 = (0, import_express17.Router)();
+router16.get("/admin/tags", requirePermission("admin:view"), async (req, res) => {
   try {
     const tags = await db.select().from(tagsTable).orderBy(tagsTable.name);
     res.json({ tags });
@@ -86798,7 +87021,7 @@ router15.get("/admin/tags", requirePermission("admin:view"), async (req, res) =>
     res.status(500).json({ error: "Failed to list tags" });
   }
 });
-router15.post("/admin/tags", requirePermission("admin:view"), async (req, res) => {
+router16.post("/admin/tags", requirePermission("admin:view"), async (req, res) => {
   const { name, description } = req.body ?? {};
   if (!name || typeof name !== "string" || name.trim().length < 2) {
     res.status(400).json({ error: "Tag name must be at least 2 characters" });
@@ -86822,7 +87045,7 @@ router15.post("/admin/tags", requirePermission("admin:view"), async (req, res) =
     res.status(500).json({ error: "Failed to create tag: " + error40?.message });
   }
 });
-router15.patch("/admin/tags/:id", requirePermission("admin:view"), async (req, res) => {
+router16.patch("/admin/tags/:id", requirePermission("admin:view"), async (req, res) => {
   const id = parseInt(req.params.id);
   const { name, description } = req.body ?? {};
   if (name !== void 0 && (typeof name !== "string" || name.trim().length < 2)) {
@@ -86850,9 +87073,9 @@ router15.patch("/admin/tags/:id", requirePermission("admin:view"), async (req, r
     res.status(500).json({ error: "Failed to update tag: " + error40?.message });
   }
 });
-router15.get("/admin/tags/:id", requirePermission("admin:view"), async (req, res) => {
+router16.get("/admin/tags/:id", requirePermission("admin:view"), async (req, res) => {
 });
-router15.delete("/admin/tags/:id", requirePermission("admin:view"), async (req, res) => {
+router16.delete("/admin/tags/:id", requirePermission("admin:view"), async (req, res) => {
   const id = parseInt(req.params.id);
   try {
     const [deletedTag] = await db.delete(tagsTable).where(eq(tagsTable.id, id)).returning();
@@ -86867,19 +87090,19 @@ router15.delete("/admin/tags/:id", requirePermission("admin:view"), async (req, 
     res.status(500).json({ error: "Failed to delete tag: " + error40?.message });
   }
 });
-var tags_default = router15;
+var tags_default = router16;
 
 // src/routes/cashier-sessions.ts
-var import_express17 = __toESM(require_express2(), 1);
+var import_express18 = __toESM(require_express2(), 1);
 init_drizzle_orm();
 init_src();
-var router16 = (0, import_express17.Router)();
+var router17 = (0, import_express18.Router)();
 var cashierLoginLimiter = new RateLimiter(15 * 60 * 1e3, 10);
 var CashierLoginBody = external_exports2.object({
   username: external_exports2.string().min(1),
   password: external_exports2.string().min(1)
 });
-router16.post("/cashier/login", async (req, res) => {
+router17.post("/cashier/login", async (req, res) => {
   const ip = req.ip || "unknown-ip";
   const rateLimitKey = `cashier-login:${ip}`;
   if (cashierLoginLimiter.isLimitExceeded(rateLimitKey)) {
@@ -86940,7 +87163,7 @@ router16.post("/cashier/login", async (req, res) => {
     });
   });
 });
-router16.post("/cashier/end-session", requirePermission("cashier:close_session"), async (req, res) => {
+router17.post("/cashier/end-session", requirePermission("cashier:close_session"), async (req, res) => {
   const sessionId = req.session.cashierSessionId;
   if (!sessionId) {
     res.status(400).json({ error: "No active cashier session" });
@@ -86953,7 +87176,7 @@ router16.post("/cashier/end-session", requirePermission("cashier:close_session")
     res.json({ ok: true });
   });
 });
-router16.get("/cashier/active", async (req, res) => {
+router17.get("/cashier/active", async (req, res) => {
   let sessionId = req.session.cashierSessionId;
   let userRole = req.session.role;
   const userId = req.session.userId;
@@ -86984,7 +87207,7 @@ router16.get("/cashier/active", async (req, res) => {
     startedAt: session2.startedAt
   });
 });
-router16.get("/cashier/performance/:cashierId", requirePermission("cashier:view_reports"), async (req, res) => {
+router17.get("/cashier/performance/:cashierId", requirePermission("cashier:view_reports"), async (req, res) => {
   const cashierId = parseInt(req.params.cashierId);
   if (isNaN(cashierId)) {
     res.status(400).json({ error: "Invalid cashierId" });
@@ -87057,7 +87280,7 @@ router16.get("/cashier/performance/:cashierId", requirePermission("cashier:view_
     avgOrderValue: completedOrders.length > 0 ? totalRevenue / completedOrders.length : 0
   });
 });
-router16.get("/cashier/sessions", requirePermission("cashier:view_reports"), async (req, res) => {
+router17.get("/cashier/sessions", requirePermission("cashier:view_reports"), async (req, res) => {
   const { cashierId, startDate, endDate } = req.query;
   const conditions = [];
   if (cashierId) conditions.push(eq(cashierSessionsTable.cashierId, parseInt(cashierId)));
@@ -87132,11 +87355,11 @@ router16.get("/cashier/sessions", requirePermission("cashier:view_reports"), asy
   });
   res.json(responseSessions);
 });
-router16.get("/cashier/list", requirePermission("cashier:view"), async (_req, res) => {
+router17.get("/cashier/list", requirePermission("cashier:view"), async (_req, res) => {
   const cashiers = await db.select({ id: usersTable.id, name: usersTable.name, role: usersTable.role }).from(usersTable).where(inArray(usersTable.role, ["cashier", "admin"]));
   res.json(cashiers);
 });
-router16.get("/cashier/sessions/:id/performance", requirePermission("cashier:view_reports"), async (req, res) => {
+router17.get("/cashier/sessions/:id/performance", requirePermission("cashier:view_reports"), async (req, res) => {
   const sessionId = parseInt(req.params.id);
   if (isNaN(sessionId)) {
     res.status(400).json({ error: "Invalid sessionId" });
@@ -87207,7 +87430,7 @@ router16.get("/cashier/sessions/:id/performance", requirePermission("cashier:vie
     hospitalityOrders
   });
 });
-router16.get("/cashier/sessions/:id/report", requirePermission("cashier:view_reports"), async (req, res) => {
+router17.get("/cashier/sessions/:id/report", requirePermission("cashier:view_reports"), async (req, res) => {
   const sessionId = parseInt(req.params.id);
   if (isNaN(sessionId)) {
     res.status(400).json({ error: "Invalid sessionId" });
@@ -87342,16 +87565,132 @@ router16.get("/cashier/sessions/:id/report", requirePermission("cashier:view_rep
     }))
   });
 });
-var cashier_sessions_default = router16;
+router17.get("/cashier/sessions/orders", requirePermission("cashier:view_reports"), async (req, res) => {
+  const { cashierId, startDate, endDate, status, limit: limitStr, offset: offsetStr } = req.query;
+  const limit = limitStr ? parseInt(limitStr, 10) : 50;
+  const offset = offsetStr ? parseInt(offsetStr, 10) : 0;
+  const conditions = [];
+  if (cashierId && cashierId !== "all") {
+    conditions.push(eq(cashierSessionsTable.cashierId, parseInt(cashierId)));
+  }
+  if (startDate) {
+    conditions.push(gte(cashierSessionsTable.startedAt, startOfDay2(new Date(startDate))));
+  }
+  if (endDate) {
+    conditions.push(lte(cashierSessionsTable.startedAt, endOfDay2(new Date(endDate))));
+  }
+  const sessions = await db.select({
+    id: cashierSessionsTable.id,
+    cashierId: cashierSessionsTable.cashierId,
+    startedAt: cashierSessionsTable.startedAt,
+    endedAt: cashierSessionsTable.endedAt,
+    cashierName: usersTable.name
+  }).from(cashierSessionsTable).innerJoin(usersTable, eq(cashierSessionsTable.cashierId, usersTable.id)).where(conditions.length > 0 ? and(...conditions) : void 0).orderBy(desc(cashierSessionsTable.startedAt));
+  if (sessions.length === 0) {
+    res.setHeader("X-Total-Count", "0");
+    res.setHeader("Access-Control-Expose-Headers", "X-Total-Count");
+    res.json([]);
+    return;
+  }
+  const orConditions = [];
+  for (const session2 of sessions) {
+    const end = session2.endedAt || /* @__PURE__ */ new Date();
+    orConditions.push(
+      and(
+        eq(ordersTable.cashierId, session2.cashierId),
+        gte(sql`COALESCE(${ordersTable.paidAt}, ${ordersTable.createdAt})`, session2.startedAt),
+        lte(sql`COALESCE(${ordersTable.paidAt}, ${ordersTable.createdAt})`, end)
+      )
+    );
+  }
+  const orderQueryConditions = [or(...orConditions)];
+  if (status && status !== "all" && status !== "") {
+    const statuses = status.split(",");
+    orderQueryConditions.push(inArray(ordersTable.status, statuses));
+  }
+  const [countResult] = await db.select({ count: sql`cast(count(*) as int)` }).from(ordersTable).where(and(...orderQueryConditions));
+  const totalCount = countResult?.count ?? 0;
+  res.setHeader("X-Total-Count", String(totalCount));
+  res.setHeader("Access-Control-Expose-Headers", "X-Total-Count");
+  const orders = await db.select().from(ordersTable).where(and(...orderQueryConditions)).orderBy(desc(ordersTable.createdAt)).limit(limit).offset(offset);
+  const orderIds = orders.map((o) => o.id);
+  const [items, baristas, payments, branches] = await Promise.all([
+    orderIds.length > 0 ? db.select().from(orderItemsTable).where(inArray(orderItemsTable.orderId, orderIds)) : Promise.resolve([]),
+    db.select().from(usersTable),
+    // Fetch all baristas for mapping
+    orderIds.length > 0 ? db.select().from(orderPaymentsTable).where(inArray(orderPaymentsTable.orderId, orderIds)) : Promise.resolve([]),
+    db.select().from(branchesTable)
+    // Fetch all branches for mapping
+  ]);
+  const itemIds = items.map((i) => i.id);
+  const customizations = itemIds.length > 0 ? await db.select().from(orderItemCustomizationsTable).where(inArray(orderItemCustomizationsTable.orderItemId, itemIds)) : [];
+  const baristaMap = Object.fromEntries(baristas.map((b) => [b.id, b.name]));
+  const branchMap = Object.fromEntries(branches.map((b) => [b.id, b.name]));
+  const custByItem = /* @__PURE__ */ new Map();
+  for (const c of customizations) {
+    const list = custByItem.get(c.orderItemId) ?? [];
+    list.push({ ...c, consumedQty: parseFloat(c.consumedQty), producedQty: parseFloat(c.producedQty), addedCost: parseFloat(c.addedCost) });
+    custByItem.set(c.orderItemId, list);
+  }
+  const paymentsByOrder = /* @__PURE__ */ new Map();
+  for (const p of payments) {
+    const list = paymentsByOrder.get(p.orderId) ?? [];
+    list.push({ ...p, amount: parseFloat(p.amount) });
+    paymentsByOrder.set(p.orderId, list);
+  }
+  const itemsByOrder = /* @__PURE__ */ new Map();
+  for (const i of items) {
+    const list = itemsByOrder.get(i.orderId) ?? [];
+    list.push({
+      ...i,
+      unitPrice: parseFloat(i.unitPrice),
+      lineTotal: parseFloat(i.lineTotal),
+      customizations: custByItem.get(i.id) ?? []
+    });
+    itemsByOrder.set(i.orderId, list);
+  }
+  const serializedOrders = orders.map((o) => {
+    const oTime = new Date(o.paidAt || o.createdAt).getTime();
+    const matchingSession = sessions.find((s) => {
+      if (s.cashierId !== o.cashierId) return false;
+      const start = new Date(s.startedAt).getTime();
+      const end = s.endedAt ? new Date(s.endedAt).getTime() : Date.now();
+      return oTime >= start && oTime <= end;
+    });
+    const sessionLabel = matchingSession ? `${matchingSession.cashierName} (S#${matchingSession.id} - ${new Date(matchingSession.startedAt).toLocaleDateString("en-EG", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })})` : "Unknown Session";
+    return {
+      ...o,
+      sessionId: matchingSession?.id ?? null,
+      sessionLabel,
+      baristaName: baristaMap[o.baristaId] ?? "Unknown",
+      branchName: branchMap[o.branchId] ?? "Unknown",
+      subtotal: parseFloat(o.subtotal),
+      discount: parseFloat(o.discount),
+      discountId: o.discountId,
+      discountCode: o.discountCode,
+      discountValue: o.discountValue ? parseFloat(o.discountValue) : null,
+      discountType: o.discountType,
+      offerId: o.offerId,
+      offerDiscount: o.offerDiscount ? parseFloat(o.offerDiscount) : 0,
+      total: parseFloat(o.total),
+      amountTendered: o.amountTendered ? parseFloat(o.amountTendered) : null,
+      changeDue: o.changeDue ? parseFloat(o.changeDue) : null,
+      payments: paymentsByOrder.get(o.id) ?? [],
+      items: itemsByOrder.get(o.id) ?? []
+    };
+  });
+  res.json(serializeDates(serializedOrders));
+});
+var cashier_sessions_default = router17;
 
 // src/routes/admin.ts
-var import_express18 = __toESM(require_express2(), 1);
+var import_express19 = __toESM(require_express2(), 1);
 init_src();
 init_drizzle_orm();
 import { exec } from "child_process";
 import path4 from "path";
 import fs5 from "fs";
-var adminRouter = (0, import_express18.Router)();
+var adminRouter = (0, import_express19.Router)();
 adminRouter.get("/admin/activity-logs", requirePermission("admin:view"), async (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 50;
@@ -87479,14 +87818,14 @@ adminRouter.post("/admin/backup", requirePermission("settings:manage"), async (r
 var admin_default = adminRouter;
 
 // src/routes/stock-audits.ts
-var import_express19 = __toESM(require_express2(), 1);
+var import_express20 = __toESM(require_express2(), 1);
 init_drizzle_orm();
 init_src();
 init_cache2();
 init_pg_core();
 var approvedByUserTable = alias(usersTable, "approved_by_user");
-var router17 = (0, import_express19.Router)();
-router17.get("/stock-audits", requirePermission("inventory:manage"), async (req, res) => {
+var router18 = (0, import_express20.Router)();
+router18.get("/stock-audits", requirePermission("inventory:manage"), async (req, res) => {
   const sessionUser = req.session;
   const sessionBranchId = sessionUser.branchId;
   const isAdmin = sessionUser.role === "admin";
@@ -87509,7 +87848,7 @@ router17.get("/stock-audits", requirePermission("inventory:manage"), async (req,
   }).from(stockAuditsTable).leftJoin(usersTable, eq(stockAuditsTable.createdBy, usersTable.id)).leftJoin(approvedByUserTable, eq(stockAuditsTable.approvedBy, approvedByUserTable.id)).where(conditions.length > 0 ? and(...conditions) : void 0).orderBy(desc(stockAuditsTable.createdAt));
   res.json(serializeDates(audits));
 });
-router17.get("/stock-audits/:id", requirePermission("inventory:manage"), async (req, res) => {
+router18.get("/stock-audits/:id", requirePermission("inventory:manage"), async (req, res) => {
   const auditId = parseInt(req.params.id);
   const [audit] = await db.select({
     id: stockAuditsTable.id,
@@ -87548,7 +87887,7 @@ router17.get("/stock-audits/:id", requirePermission("inventory:manage"), async (
     }))
   }));
 });
-router17.post("/stock-audits", requirePermission("inventory:view"), async (req, res) => {
+router18.post("/stock-audits", requirePermission("inventory:view"), async (req, res) => {
   const { notes, items } = req.body;
   const sessionUser = req.session;
   const userId = sessionUser?.userId || 1;
@@ -87592,7 +87931,7 @@ router17.post("/stock-audits", requirePermission("inventory:view"), async (req, 
     res.status(500).json({ error: err.message });
   }
 });
-router17.patch("/stock-audits/:id", requirePermission("inventory:manage"), async (req, res) => {
+router18.patch("/stock-audits/:id", requirePermission("inventory:manage"), async (req, res) => {
   const auditId = parseInt(req.params.id);
   const { items, notes } = req.body;
   try {
@@ -87615,7 +87954,7 @@ router17.patch("/stock-audits/:id", requirePermission("inventory:manage"), async
     res.status(500).json({ error: err.message });
   }
 });
-router17.post("/stock-audits/:id/approve", requirePermission("inventory:audit_approve"), async (req, res) => {
+router18.post("/stock-audits/:id/approve", requirePermission("inventory:audit_approve"), async (req, res) => {
   const auditId = parseInt(req.params.id);
   const userId = req.session.userId;
   try {
@@ -87674,7 +88013,7 @@ router17.post("/stock-audits/:id/approve", requirePermission("inventory:audit_ap
     res.status(500).json({ error: err.message });
   }
 });
-router17.post("/stock-audits/:id/reject", requirePermission("inventory:audit_approve"), async (req, res) => {
+router18.post("/stock-audits/:id/reject", requirePermission("inventory:audit_approve"), async (req, res) => {
   const auditId = parseInt(req.params.id);
   const userId = req.session.userId;
   await db.update(stockAuditsTable).set({
@@ -87688,13 +88027,13 @@ router17.post("/stock-audits/:id/reject", requirePermission("inventory:audit_app
   await logActivity(req, "REJECT_STOCK_AUDIT", "stock_audit", auditId);
   res.json({ success: true });
 });
-var stock_audits_default = router17;
+var stock_audits_default = router18;
 
 // src/routes/roles.ts
-var import_express20 = __toESM(require_express2(), 1);
+var import_express21 = __toESM(require_express2(), 1);
 init_src();
 init_drizzle_orm();
-var rolesRouter = (0, import_express20.Router)();
+var rolesRouter = (0, import_express21.Router)();
 rolesRouter.get("/", requirePermission("roles:view"), async (req, res) => {
   try {
     const allRoles = await db.select().from(rolesTable);
@@ -87832,15 +88171,15 @@ rolesRouter.delete("/permissions/:key", requirePermission("roles:manage"), async
 var roles_default = rolesRouter;
 
 // src/routes/branches.ts
-var import_express21 = __toESM(require_express2(), 1);
+var import_express22 = __toESM(require_express2(), 1);
 init_drizzle_orm();
 init_src();
-var router18 = (0, import_express21.Router)();
-router18.get("/", async (req, res) => {
+var router19 = (0, import_express22.Router)();
+router19.get("/", async (req, res) => {
   const branches = await db.select().from(branchesTable).orderBy(asc(branchesTable.name));
   res.json(branches);
 });
-router18.post("/", requirePermission("branches:manage"), async (req, res) => {
+router19.post("/", requirePermission("branches:manage"), async (req, res) => {
   const parsed = insertBranchSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -87849,7 +88188,7 @@ router18.post("/", requirePermission("branches:manage"), async (req, res) => {
   const [branch] = await db.insert(branchesTable).values(parsed.data).returning();
   res.status(201).json(branch);
 });
-router18.patch("/:id", requirePermission("branches:manage"), async (req, res) => {
+router19.patch("/:id", requirePermission("branches:manage"), async (req, res) => {
   const id = parseInt(req.params.id);
   if (isNaN(id)) {
     res.status(400).json({ error: "Invalid id" });
@@ -87867,7 +88206,7 @@ router18.patch("/:id", requirePermission("branches:manage"), async (req, res) =>
   }
   res.json(branch);
 });
-router18.delete("/:id", requirePermission("branches:manage"), async (req, res) => {
+router19.delete("/:id", requirePermission("branches:manage"), async (req, res) => {
   const id = parseInt(req.params.id);
   if (isNaN(id)) {
     res.status(400).json({ error: "Invalid id" });
@@ -87880,10 +88219,10 @@ router18.delete("/:id", requirePermission("branches:manage"), async (req, res) =
   }
   res.sendStatus(204);
 });
-var branches_default = router18;
+var branches_default = router19;
 
 // src/routes/finance.ts
-var import_express22 = __toESM(require_express2(), 1);
+var import_express23 = __toESM(require_express2(), 1);
 init_drizzle_orm();
 init_src();
 
@@ -88064,8 +88403,8 @@ function startOfDay3(d) {
 function endOfDay3(d) {
   return toCairoMidnight2(d, true);
 }
-var router19 = (0, import_express22.Router)();
-router19.get("/finance/inventory-usage", requirePermission("reports:view"), async (req, res) => {
+var router20 = (0, import_express23.Router)();
+router20.get("/finance/inventory-usage", requirePermission("reports:view"), async (req, res) => {
   const { startDate, endDate, branchId } = req.query;
   const targetBranchId = branchId && branchId !== "all" ? parseInt(branchId) : null;
   const start = startDate ? startOfDay3(parseLocalDate2(startDate)) : startOfDay3(subDays(/* @__PURE__ */ new Date(), 30));
@@ -88111,7 +88450,7 @@ router19.get("/finance/inventory-usage", requirePermission("reports:view"), asyn
   });
   res.json(report);
 });
-router19.get("/finance/pl-report", requirePermission("reports:view"), async (req, res) => {
+router20.get("/finance/pl-report", requirePermission("reports:view"), async (req, res) => {
   const { startDate, endDate, branchId } = req.query;
   const targetBranchId = branchId && branchId !== "all" ? parseInt(branchId) : null;
   const start = startDate ? startOfDay3(parseLocalDate2(startDate)) : startOfDay3(subDays(/* @__PURE__ */ new Date(), 30));
@@ -88183,7 +88522,7 @@ router19.get("/finance/pl-report", requirePermission("reports:view"), async (req
   });
   res.json(report);
 });
-router19.get("/finance/pl-by-day", requirePermission("reports:view"), async (req, res) => {
+router20.get("/finance/pl-by-day", requirePermission("reports:view"), async (req, res) => {
   const { startDate, endDate, branchId } = req.query;
   const targetBranchId = branchId && branchId !== "all" ? parseInt(branchId) : null;
   const start = startDate ? startOfDay3(parseLocalDate2(startDate)) : startOfDay3(subDays(/* @__PURE__ */ new Date(), 30));
@@ -88249,7 +88588,7 @@ router19.get("/finance/pl-by-day", requirePermission("reports:view"), async (req
   const sortedResult = Object.values(dailyStats).sort((a, b) => a.date.localeCompare(b.date));
   res.json(serializeDates(sortedResult));
 });
-router19.get("/finance/ingredient-recipes", requirePermission("reports:view"), async (req, res) => {
+router20.get("/finance/ingredient-recipes", requirePermission("reports:view"), async (req, res) => {
   const ingredients = await db.select().from(ingredientsTable);
   const [
     slots,
@@ -88381,7 +88720,7 @@ router19.get("/finance/ingredient-recipes", requirePermission("reports:view"), a
   });
   res.json(report);
 });
-router19.get("/finance/sales-items", requirePermission("reports:view"), async (req, res) => {
+router20.get("/finance/sales-items", requirePermission("reports:view"), async (req, res) => {
   const { startDate, endDate, branchId } = req.query;
   const targetBranchId = branchId && branchId !== "all" ? parseInt(branchId) : null;
   const start = startDate ? startOfDay3(parseLocalDate2(startDate)) : startOfDay3(subDays(/* @__PURE__ */ new Date(), 30));
@@ -88459,7 +88798,7 @@ router19.get("/finance/sales-items", requirePermission("reports:view"), async (r
   });
   res.json(serializeDates(report));
 });
-router19.get("/finance/sales-summary", requirePermission("reports:view"), async (req, res) => {
+router20.get("/finance/sales-summary", requirePermission("reports:view"), async (req, res) => {
   const { startDate, endDate, branchId } = req.query;
   const targetBranchId = branchId && branchId !== "all" ? parseInt(branchId) : null;
   const start = startDate ? startOfDay3(parseLocalDate2(startDate)) : startOfDay3(subDays(/* @__PURE__ */ new Date(), 30));
@@ -88477,6 +88816,7 @@ router19.get("/finance/sales-summary", requirePermission("reports:view"), async 
   const [summary] = await db.select({
     revenue: sum(ordersTable.subtotal),
     discounts: sum(ordersTable.discount),
+    offerDiscounts: sum(ordersTable.offerDiscount),
     netRevenue: sum(ordersTable.total),
     count: count(ordersTable.id),
     hospitalityRevenue: sql`coalesce(sum(case when ${ordersTable.paymentMethod} = 'hospitality' then cast(${ordersTable.subtotal} as numeric) else 0 end), 0)`,
@@ -88492,6 +88832,7 @@ router19.get("/finance/sales-summary", requirePermission("reports:view"), async 
   res.json({
     revenue: parseFloat(summary.revenue || "0"),
     discounts: parseFloat(summary.discounts || "0"),
+    offerDiscounts: parseFloat(summary.offerDiscounts || "0"),
     netRevenue: parseFloat(summary.netRevenue || "0"),
     count: Number(summary.count || 0),
     drinks: Number(itemsResult[0]?.totalDrinks || 0),
@@ -88505,7 +88846,7 @@ router19.get("/finance/sales-summary", requirePermission("reports:view"), async 
     zeroRevenueRevenue: parseFloat(summary.zeroRevenueRevenue || "0")
   });
 });
-router19.get("/finance/customizations-report", requirePermission("reports:view"), async (req, res) => {
+router20.get("/finance/customizations-report", requirePermission("reports:view"), async (req, res) => {
   const { startDate, endDate, branchId } = req.query;
   const targetBranchId = branchId && branchId !== "all" ? parseInt(branchId) : null;
   const start = startDate ? startOfDay3(parseLocalDate2(startDate)) : startOfDay3(subDays(/* @__PURE__ */ new Date(), 30));
@@ -88541,7 +88882,7 @@ router19.get("/finance/customizations-report", requirePermission("reports:view")
   const report = rawCustoms.map((c) => analyzeCustomization(c, context)).filter(Boolean);
   res.json(serializeDates(report));
 });
-router19.get("/finance/customization-analytics", requirePermission("reports:view"), async (req, res) => {
+router20.get("/finance/customization-analytics", requirePermission("reports:view"), async (req, res) => {
   const { startDate, endDate, branchId } = req.query;
   const targetBranchId = branchId && branchId !== "all" ? parseInt(branchId) : null;
   const start = startDate ? startOfDay3(parseLocalDate2(startDate)) : startOfDay3(subDays(/* @__PURE__ */ new Date(), 30));
@@ -88622,7 +88963,7 @@ router19.get("/finance/customization-analytics", requirePermission("reports:view
     options: optionsReport
   });
 });
-router19.get("/finance/order-stats", requirePermission("reports:view"), async (req, res) => {
+router20.get("/finance/order-stats", requirePermission("reports:view"), async (req, res) => {
   const { startDate, endDate, branchId } = req.query;
   const start = startDate ? startOfDay3(parseLocalDate2(startDate)) : startOfDay3(subDays(/* @__PURE__ */ new Date(), 30));
   const end = endDate ? endOfDay3(parseLocalDate2(endDate)) : endOfDay3(/* @__PURE__ */ new Date());
@@ -88679,13 +89020,13 @@ router19.get("/finance/order-stats", requirePermission("reports:view"), async (r
     bySource: bySource.map((d) => ({ ...d, label: d.label || "pos", revenue: parseFloat(d.revenue || "0") }))
   });
 });
-var finance_default = router19;
+var finance_default = router20;
 
 // src/routes/suppliers.ts
-var import_express23 = __toESM(require_express2(), 1);
+var import_express24 = __toESM(require_express2(), 1);
 init_src();
 init_drizzle_orm();
-var suppliersRouter = (0, import_express23.Router)();
+var suppliersRouter = (0, import_express24.Router)();
 suppliersRouter.get("/purchases/suppliers", requirePermission("purchases:view"), async (req, res) => {
   try {
     const suppliers = await db.select().from(suppliersTable).orderBy(suppliersTable.name);
@@ -88770,10 +89111,10 @@ suppliersRouter.delete("/purchases/suppliers/:id", requirePermission("purchases:
 var suppliers_default = suppliersRouter;
 
 // src/routes/purchases.ts
-var import_express24 = __toESM(require_express2(), 1);
+var import_express25 = __toESM(require_express2(), 1);
 init_src();
 init_drizzle_orm();
-var purchasesRouter = (0, import_express24.Router)();
+var purchasesRouter = (0, import_express25.Router)();
 var formatPurchase = (p) => ({
   ...p,
   totalAmount: parseFloat(String(p.totalAmount || "0")),
@@ -89174,33 +89515,34 @@ var purchases_default = purchasesRouter;
 
 // src/routes/index.ts
 init_sse();
-var router20 = (0, import_express25.Router)();
-router20.get("/health-test", (req, res) => res.send("OK"));
-router20.use("/admin/branches", branches_default);
-router20.use(health_default);
-router20.use(auth_default);
-router20.use(drinks_default);
-router20.use(ingredients_default);
-router20.use(orders_default);
-router20.use(stock_default);
-router20.use(dashboard_default);
-router20.use(catalog_default);
-router20.use(drink_categories_default);
-router20.use(kitchen_stations_default);
-router20.use(settings_default);
-router20.use(predefined_slots_default);
-router20.use(users_default);
-router20.use(discounts_default);
-router20.use(customers_default);
-router20.use(tags_default);
-router20.use(cashier_sessions_default);
-router20.use(admin_default);
-router20.use(stock_audits_default);
-router20.use("/roles", roles_default);
-router20.use(finance_default);
-router20.use(suppliers_default);
-router20.use(purchases_default);
-router20.get("/events", (req, res) => {
+var router21 = (0, import_express26.Router)();
+router21.get("/health-test", (req, res) => res.send("OK"));
+router21.use("/admin/branches", branches_default);
+router21.use(health_default);
+router21.use(auth_default);
+router21.use(drinks_default);
+router21.use(ingredients_default);
+router21.use(orders_default);
+router21.use(stock_default);
+router21.use(dashboard_default);
+router21.use(catalog_default);
+router21.use(drink_categories_default);
+router21.use(kitchen_stations_default);
+router21.use(settings_default);
+router21.use(predefined_slots_default);
+router21.use(users_default);
+router21.use(discounts_default);
+router21.use(offers_default);
+router21.use(customers_default);
+router21.use(tags_default);
+router21.use(cashier_sessions_default);
+router21.use(admin_default);
+router21.use(stock_audits_default);
+router21.use("/roles", roles_default);
+router21.use(finance_default);
+router21.use(suppliers_default);
+router21.use(purchases_default);
+router21.get("/events", (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache, no-transform");
   res.setHeader("X-Accel-Buffering", "no");
@@ -89209,7 +89551,7 @@ router20.get("/events", (req, res) => {
   res.write("event: connected\ndata: {}\n\n");
   addSseClient(res);
 });
-var routes_default = router20;
+var routes_default = router21;
 
 // src/lib/logger.ts
 var import_pino = __toESM(require_pino(), 1);
@@ -89231,7 +89573,7 @@ var logger = (0, import_pino.default)({
 
 // src/app.ts
 var PostgresStore = (0, import_connect_pg_simple.default)(import_express_session.default);
-var app = (0, import_express26.default)();
+var app = (0, import_express27.default)();
 app.set("json replacer", (_key2, value) => {
   if (value instanceof Date) return value.toISOString();
   return value;
@@ -89257,8 +89599,8 @@ app.use(
 );
 app.set("trust proxy", 1);
 app.use((0, import_cors.default)({ credentials: true, origin: true, exposedHeaders: ["X-Total-Count"] }));
-app.use(import_express26.default.json());
-app.use(import_express26.default.urlencoded({ extended: true }));
+app.use(import_express27.default.json());
+app.use(import_express27.default.urlencoded({ extended: true }));
 app.use(
   (0, import_express_session.default)({
     store: new PostgresStore({
@@ -89276,7 +89618,7 @@ app.use(
     }
   })
 );
-app.use("/uploads", import_express26.default.static("uploads"));
+app.use("/uploads", import_express27.default.static("uploads"));
 app.use("/api", (req, res, next) => {
   res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
   res.setHeader("Pragma", "no-cache");

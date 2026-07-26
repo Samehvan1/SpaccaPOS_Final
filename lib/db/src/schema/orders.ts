@@ -6,6 +6,7 @@ import { drinksTable, kitchenStationsTable } from "./drinks";
 import { ingredientsTable, ingredientOptionsTable } from "./ingredients";
 import { discountsTable } from "./discounts";
 import { branchesTable } from "./branches";
+import { offersTable } from "./offers";
 
 export const ordersTable = pgTable("orders", {
   id: serial("id").primaryKey(),
@@ -23,7 +24,10 @@ export const ordersTable = pgTable("orders", {
   discountCode: text("discount_code"),
   discountValue: numeric("discount_value", { precision: 8, scale: 2 }),
   discountType: text("discount_type", { enum: ["percentage", "fixed", "fixed_per_item"] }),
+  offerId: integer("offer_id").references(() => offersTable.id),
+  offerDiscount: numeric("offer_discount", { precision: 8, scale: 2 }).notNull().default("0"),
   total: numeric("total", { precision: 8, scale: 2 }).notNull(),
+
   paymentMethod: text("payment_method", { enum: ["cash", "card", "wallet", "hospitality", "split", "refund"] }).notNull().default("cash"),
   source: text("source", { enum: ["pos", "kiosk", "web", "mobile"] }).notNull().default("pos"),
   amountTendered: numeric("amount_tendered", { precision: 8, scale: 2 }),

@@ -93,6 +93,7 @@ import {
   orderPaymentsTable,
   branchesTable,
   settingsTable,
+  offersTable,
 } from "@workspace/db";
 import {
   ListOrdersResponse,
@@ -231,7 +232,10 @@ async function buildOrderDetail(orderId: number) {
     discountCode: order.discountCode,
     discountValue: order.discountValue ? parseFloat(order.discountValue) : null,
     discountType: order.discountType as "percentage" | "fixed" | "fixed_per_item" | null,
+    offerId: order.offerId,
+    offerDiscount: order.offerDiscount ? parseFloat(order.offerDiscount) : 0,
     total: parseFloat(order.total),
+
     amountTendered: order.amountTendered ? parseFloat(order.amountTendered) : null,
     changeDue: order.changeDue ? parseFloat(order.changeDue) : null,
     payments: payments.map(p => ({
@@ -367,7 +371,10 @@ router.get("/orders", requirePermission("cashier:view"), async (req, res): Promi
         discountCode: o.discountCode,
         discountValue: o.discountValue ? parseFloat(o.discountValue) : null,
         discountType: o.discountType as "percentage" | "fixed" | "fixed_per_item" | null,
+        offerId: o.offerId,
+        offerDiscount: o.offerDiscount ? parseFloat(o.offerDiscount) : 0,
         total: parseFloat(o.total),
+
         amountTendered: o.amountTendered ? parseFloat(o.amountTendered) : null,
         changeDue: o.changeDue ? parseFloat(o.changeDue) : null,
         payments: paymentsByOrder.get(o.id) ?? [],
@@ -555,13 +562,47 @@ router.post("/orders", async (req, res): Promise<void> => {
     }
   }
 
+  // ── Calculate Offer Discount (Requirement #1, #2, #4) ──────────────────────
+  const [activeOffer] = await db
+    .select()
+    .from(offersTable)
+    .where(eq(offersTable.isActive, true))
+    .limit(1);
+
+  let offerDiscountAmount = 0;
+  let offerIdToSave: number | null = null;
+
+  if (activeOffer) {
+    const N = activeOffer.buyAmount;
+    const X = activeOffer.freeAmount;
+
+    // Flatten all items in itemDetails to their prices
+    const flatItems = itemDetails.flatMap(item => 
+      Array.from({ length: item.quantity }).map(() => item.unitPrice)
+    ).sort((a, b) => a - b);
+
+    const M = flatItems.length;
+    const F = Math.floor(M / (N + X)) * X + Math.min(X, Math.max(0, (M % (N + X)) - N));
+
+    if (F > 0) {
+      offerIdToSave = activeOffer.id;
+      // Sum the cheapest F items
+      for (let i = 0; i < F; i++) {
+        offerDiscountAmount += flatItems[i];
+      }
+    }
+  }
+
   let discountAmount = parsed.data.discount ?? 0;
   let discountId: number | null = null;
   let discountCode: string | null = null;
   let discountValue: number | null = null;
   let discountType: "percentage" | "fixed" | "fixed_per_item" | null = null;
 
-  if (parsed.data.discountCode) {
+  // Rule #5: when the order has an offer applied, discounts can not be accepted
+  if (offerDiscountAmount > 0) {
+    discountAmount = 0;
+  } else if (parsed.data.discountCode) {
     const [discountRow] = await db
       .select()
       .from(discountsTable)
@@ -586,11 +627,13 @@ router.post("/orders", async (req, res): Promise<void> => {
     }
   }
 
-  let total = subtotal - discountAmount;
+  let total = subtotal - (offerDiscountAmount > 0 ? offerDiscountAmount : discountAmount);
   let discountIdToSave = discountId;
   let discountCodeToSave = discountCode;
   if (parsed.data.paymentMethod === "hospitality") {
     discountAmount = subtotal;
+    offerDiscountAmount = 0;
+    offerIdToSave = null;
     total = 0;
     discountIdToSave = null;
     discountCodeToSave = "HOSPITALITY";
@@ -654,8 +697,11 @@ router.post("/orders", async (req, res): Promise<void> => {
           discountCode: discountCodeToSave,
           discountValue: discountValue != null ? String(discountValue) : null,
           discountType,
+          offerId: offerIdToSave,
+          offerDiscount: String(offerDiscountAmount),
           total: String(total),
           paymentMethod: parsed.data.paymentMethod,
+
           source: (parsed.data as any).source || "pos",
           amountTendered: amountTendered != null ? String(amountTendered) : null,
           changeDue: changeDue != null ? String(changeDue) : null,
@@ -771,7 +817,10 @@ router.post("/orders", async (req, res): Promise<void> => {
         discountCode: order.discountCode,
         discountValue: order.discountValue ? parseFloat(order.discountValue) : null,
         discountType: order.discountType as "percentage" | "fixed" | "fixed_per_item" | null,
+        offerId: order.offerId,
+        offerDiscount: order.offerDiscount ? parseFloat(order.offerDiscount) : 0,
         total: parseFloat(order.total),
+
         amountTendered: order.amountTendered ? parseFloat(order.amountTendered) : null,
         changeDue: order.changeDue ? parseFloat(order.changeDue) : null,
         items: savedItems.map((item) => ({

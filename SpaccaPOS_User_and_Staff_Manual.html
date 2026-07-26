@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>SpaccaPOS Documentation</title>
+<style>
+    @page {
+        size: A4;
+        margin: 20mm 15mm 20mm 15mm;
+        @bottom-right {
+            content: counter(page);
+        }
+    }
+    body {
+        font-family: 'Segoe UI', Arial, sans-serif;
+        color: #2D3748;
+        line-height: 1.6;
+        font-size: 11pt;
+        background-color: #FFFFFF;
+    }
+    h1 {
+        color: #1B365D;
+        font-size: 22pt;
+        border-bottom: 2px solid #1B365D;
+        padding-bottom: 6px;
+        margin-top: 24pt;
+        margin-bottom: 12pt;
+        page-break-before: always;
+    }
+    h1:first-of-type {
+        page-break-before: avoid;
+    }
+    h2 {
+        color: #0056B3;
+        font-size: 16pt;
+        border-bottom: 1px solid #E2E8F0;
+        padding-bottom: 4px;
+        margin-top: 18pt;
+        margin-bottom: 8pt;
+    }
+    h3 {
+        color: #2B2D42;
+        font-size: 13pt;
+        margin-top: 14pt;
+        margin-bottom: 6pt;
+    }
+    h4 {
+        color: #4A5568;
+        font-size: 11pt;
+        margin-top: 10pt;
+        margin-bottom: 4pt;
+    }
+    p {
+        margin-top: 0;
+        margin-bottom: 8pt;
+    }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 12pt;
+        margin-bottom: 16pt;
+        font-size: 10pt;
+        page-break-inside: avoid;
+    }
+    th {
+        background-color: #1B365D;
+        color: #FFFFFF;
+        font-weight: bold;
+        text-align: left;
+        padding: 8px 10px;
+        border: 1px solid #1B365D;
+    }
+    td {
+        padding: 8px 10px;
+        border: 1px solid #CBD5E0;
+    }
+    tr:nth-child(even) td {
+        background-color: #F7FAFC;
+    }
+    blockquote {
+        border-left: 4px solid #3182CE;
+        background-color: #EBF8FF;
+        margin: 12pt 0;
+        padding: 10pt 14pt;
+        border-radius: 4px;
+    }
+    pre, code {
+        font-family: 'Consolas', 'Courier New', monospace;
+    }
+    code {
+        background-color: #EDF2F7;
+        color: #C7254E;
+        padding: 2px 5px;
+        border-radius: 3px;
+        font-size: 9.5pt;
+    }
+    pre {
+        background-color: #2D3748;
+        color: #F7FAFC;
+        padding: 12px;
+        border-radius: 6px;
+        overflow-x: auto;
+        font-size: 9pt;
+        line-height: 1.4;
+    }
+    pre code {
+        background-color: transparent;
+        color: inherit;
+        padding: 0;
+    }
+    .mermaid-diagram {
+        background-color: #F7FAFC;
+        color: #1A202C;
+        border: 1px solid #E2E8F0;
+        border-left: 4px solid #0056B3;
+        font-family: 'Consolas', monospace;
+        white-space: pre-wrap;
+    }
+    ul, ol {
+        margin-top: 0;
+        margin-bottom: 8pt;
+        padding-left: 20pt;
+    }
+    li {
+        margin-bottom: 4pt;
+    }
+    hr {
+        border: 0;
+        height: 1px;
+        background: #E2E8F0;
+        margin: 18pt 0;
+    }
+</style>
+</head>
+<body>
+<h1 id="spaccapos-user-staff-operational-training-manual">📖 SpaccaPOS User &amp; Staff Operational Training Manual</h1>
+<p><strong>Complete Operational Guide for Cashiers, Baristas, Kitchen Staff, Inventory Managers &amp; Administrators</strong><br />
+<strong>Version:</strong> 2.0.0<br />
+<strong>Target Platform:</strong> SpaccaPOS Coffee Shop Point-of-Sale Ecosystem  </p>
+<hr />
+<h2 id="welcome-to-spaccapos">📘 Welcome to SpaccaPOS</h2>
+<p>SpaccaPOS is designed to make your daily coffee shop operations fast, efficient, and error-free. Whether you are taking orders at the front counter, preparing craft beverages at the espresso station, managing raw inventory in the backroom, or analyzing daily sales reports, this manual provides clear step-by-step instructions.</p>
+<hr />
+<h2 id="table-of-contents">📋 Table of Contents</h2>
+<ol>
+<li><a href="#1-quick-access--navigation-guide">Quick Access &amp; Navigation Guide</a></li>
+<li><a href="#2-module-1-cashier--pos-front-of-house-operations">Module 1: Cashier &amp; POS Front-of-House Operations</a></li>
+<li>2.1 <a href="#21-starting-your-shift-cashier-login">Starting Your Shift (Cashier Login)</a></li>
+<li>2.2 <a href="#22-navigating-the-pos-interface">Navigating the POS Interface</a></li>
+<li>2.3 <a href="#23-taking-a-standard-drink-order">Taking a Standard Drink Order</a></li>
+<li>2.4 <a href="#24-customizing-drinks-milk-coffee-beans-syrups-sizes">Customizing Drinks (Milk, Coffee Beans, Syrups, Sizes)</a></li>
+<li>2.5 <a href="#25-applying-promo-codes--discounts">Applying Promo Codes &amp; Discounts</a></li>
+<li>2.6 <a href="#26-customer-crm--loyalty-points-lookup">Customer CRM &amp; Loyalty Points Lookup</a></li>
+<li>2.7 <a href="#27-processing-payments-cash-card-wallet-hospitality-split">Processing Payments (Cash, Card, Wallet, Hospitality, Split)</a></li>
+<li>2.8 <a href="#28-printing-receipts--escpos-thermal-printer-setup">Printing Receipts &amp; Esc/POS Thermal Printer Setup</a></li>
+<li>2.9 <a href="#29-handling-order-cancellations--refunds">Handling Order Cancellations &amp; Refunds</a></li>
+<li>2.10 <a href="#210-closing-your-shift--printing-end-of-shift-reports">Closing Your Shift &amp; Printing End-of-Shift Reports</a></li>
+<li><a href="#3-module-2-barista--kitchen-display-system-kds-operations">Module 2: Barista &amp; Kitchen Display System (KDS) Operations</a></li>
+<li>3.1 <a href="#31-accessing-the-kds-interface">Accessing the KDS Interface</a></li>
+<li>3.2 <a href="#32-selecting-your-kitchen-station">Selecting Your Kitchen Station</a></li>
+<li>3.3 <a href="#33-understanding-ticket-color-timers--priority">Understanding Ticket Color Timers &amp; Priority</a></li>
+<li>3.4 <a href="#34-reading-custom-recipe-slots--barista-preparation-guides">Reading Custom Recipe Slots &amp; Barista Preparation Guides</a></li>
+<li>3.5 <a href="#35-bumping-items--completing-orders">Bumping Items &amp; Completing Orders</a></li>
+<li>3.6 <a href="#36-customer-order-pickup-screen-display">Customer Order Pickup Screen Display</a></li>
+<li><a href="#4-module-3-self-service-customer-kiosk-guide">Module 3: Self-Service Customer Kiosk Guide</a></li>
+<li>4.1 <a href="#41-kiosk-mode-setup">Kiosk Mode Setup</a></li>
+<li>4.2 <a href="#42-customer-self-ordering--recipe-customization">Customer Self-Ordering &amp; Recipe Customization</a></li>
+<li><a href="#5-module-4-stock-inventory--procurement-management">Module 4: Stock, Inventory &amp; Procurement Management</a></li>
+<li>5.1 <a href="#51-monitoring-live-branch-stock-levels">Monitoring Live Branch Stock Levels</a></li>
+<li>5.2 <a href="#52-fefo-inventory-batches--expiration-tracking">FEFO Inventory Batches &amp; Expiration Tracking</a></li>
+<li>5.3 <a href="#53-logging-stock-adjustments--waste-records">Logging Stock Adjustments &amp; Waste Records</a></li>
+<li>5.4 <a href="#54-conducting-physical-stock-audits--count-sheets">Conducting Physical Stock Audits &amp; Count Sheets</a></li>
+<li>5.5 <a href="#55-managing-suppliers--purchase-orders-po-lifecycle">Managing Suppliers &amp; Purchase Orders (PO Lifecycle)</a></li>
+<li><a href="#6-module-5-admin-control-panel--branch-management">Module 5: Admin Control Panel &amp; Branch Management</a></li>
+<li>6.1 <a href="#61-managing-staff-accounts-roles--6-digit-pins">Managing Staff Accounts, Roles &amp; 6-Digit PINs</a></li>
+<li>6.2 <a href="#62-designing-drink-catalogs--categories">Designing Drink Catalogs &amp; Categories</a></li>
+<li>6.3 <a href="#63-building-custom-recipe-slots--predefined-templates">Building Custom Recipe Slots &amp; Predefined Templates</a></li>
+<li>6.4 <a href="#64-configuring-kitchen-stations--routing-rules">Configuring Kitchen Stations &amp; Routing Rules</a></li>
+<li>6.5 <a href="#65-reviewing--approving-stock-audits">Reviewing &amp; Approving Stock Audits</a></li>
+<li>6.6 <a href="#66-financial-business-intelligence--performance-reports">Financial Business Intelligence &amp; Performance Reports</a></li>
+<li><a href="#7-troubleshooting--faqs">Troubleshooting &amp; FAQs</a></li>
+</ol>
+<hr />
+<h2 id="1-quick-access-navigation-guide">1. Quick Access &amp; Navigation Guide</h2>
+<h3 id="system-url-map">System URL Map</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Module Interface</th>
+<th style="text-align: left;">Web Access URL</th>
+<th style="text-align: left;">Primary Roles</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Main Login Screen</strong></td>
+<td style="text-align: left;"><code>/login</code></td>
+<td style="text-align: left;">All Staff</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>POS Cashier Terminal</strong></td>
+<td style="text-align: left;"><code>/pos</code> or <code>/cashier</code></td>
+<td style="text-align: left;">Cashiers, Baristas, Supervisors</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Kitchen Display System</strong></td>
+<td style="text-align: left;"><code>/kitchen</code></td>
+<td style="text-align: left;">Baristas, Kitchen Staff</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Customer Pickup Display</strong></td>
+<td style="text-align: left;"><code>/pickup</code></td>
+<td style="text-align: left;">Customers, Baristas</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Self-Service Kiosk</strong></td>
+<td style="text-align: left;"><code>/kiosk</code></td>
+<td style="text-align: left;">Customers</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Stock &amp; Inventory</strong></td>
+<td style="text-align: left;"><code>/stock-control</code> or <code>/admin/stock</code></td>
+<td style="text-align: left;">Stock Managers, Admins</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Admin Control Center</strong></td>
+<td style="text-align: left;"><code>/admin</code></td>
+<td style="text-align: left;">Store Managers, System Admins</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="2-module-1-cashier-pos-front-of-house-operations">2. Module 1: Cashier &amp; POS Front-of-House Operations</h2>
+<h3 id="21-starting-your-shift-cashier-login">2.1 Starting Your Shift (Cashier Login)</h3>
+<p>Before processing any customer transactions, a cashier <strong>must</strong> initiate an active shift session.</p>
+<pre><code>Step-by-Step Shift Start:
+1. Open your browser and navigate to /cashier.
+2. Enter your assigned Username and Password.
+3. Click &quot;Start Shift&quot;.
+4. The system validates your credentials and registers your IP Address and active Cashier Session ID.
+5. You are automatically taken to the active POS register screen.
+</code></pre>
+<blockquote>
+<p>[!NOTE]
+Multiple devices in the same branch can run under the active shift session without creating duplicate login conflicts.</p>
+</blockquote>
+<hr />
+<h3 id="22-navigating-the-pos-interface">2.2 Navigating the POS Interface</h3>
+<pre><code>┌────────────────────────────────────────────────────────────────────────────────────────┐
+│ ☕ SpaccaPOS | Branch: Main Downtown | Cashier: Sarah M. | Shift Active                │
+├──────────────────────┬─────────────────────────────────────────┬───────────────────────┤
+│ CATEGORIES           │ DRINK SELECTION GRID                    │ CURRENT ORDER CART    │
+│ 🔘 All Drinks        │ ┌───────────────┐ ┌───────────────┐     │ Order #1-203004       │
+│ ☕ Espresso Bar      │ │ Iced Latte    │ │ Spanish Latte │     │ ───────────────────── │
+│ 🧊 Cold Beverages    │ │ EGP 85.00     │ │ EGP 95.00     │     │ 1x Iced Latte EGP 105 │
+│ 🥐 Bakery &amp; Pastry   │ └───────────────┘ └───────────────┘     │   + Oat Milk (+EGP 20)│
+│ 🍵 Specialty Teas    │ ┌───────────────┐ ┌───────────────┐     │ ───────────────────── │
+│                      │ │ V60 Drip      │ │ Matcha Latte  │     │ Subtotal:  EGP 105.00 │
+│ CUSTOMER CRM         │ │ EGP 110.00    │ │ EGP 90.00     │     │ Discount:  EGP   0.00 │
+│ 🔍 Phone: 010123...  │ └───────────────┘ └───────────────┘     │ TOTAL:     EGP 105.00 │
+│ [Points: 140 pts]    │                                         │ [ PAY / CHECKOUT ]    │
+└──────────────────────┴─────────────────────────────────────────┴───────────────────────┘
+</code></pre>
+<ul>
+<li><strong>Category Sidebar (Left)</strong>: Filter beverages by drink category.</li>
+<li><strong>Product Grid (Center)</strong>: Visual drink buttons with real-time price and <code>Out of Stock</code> indicators.</li>
+<li><strong>Order Cart (Right)</strong>: Displays selected items, customized options, subtotal, discounts, and checkout button.</li>
+</ul>
+<hr />
+<h3 id="23-taking-a-standard-drink-order">2.3 Taking a Standard Drink Order</h3>
+<ol>
+<li>Click on any drink card (e.g. <em>Iced Flat White</em>) in the product grid.</li>
+<li>If the drink is not customizable, it will immediately add to the cart on the right.</li>
+<li>To increase quantity, click the item again or use the <code>+</code> button in the cart drawer.</li>
+</ol>
+<hr />
+<h3 id="24-customizing-drinks-milk-coffee-beans-syrups-sizes">2.4 Customizing Drinks (Milk, Coffee Beans, Syrups, Sizes)</h3>
+<p>If a drink has customizable recipe slots, clicking it opens the <strong>Drink Customization Sheet</strong>:</p>
+<pre><code> ┌──────────────────────────────────────────────────────────┐
+ │ Customize: Iced Cafe Latte                               │
+ ├──────────────────────────────────────────────────────────┤
+ │ 🥛 Milk Choice (Required)                                │
+ │   [*] Whole Fresh Milk (+EGP 0)                          │
+ │   [ ] Oat Milk (+EGP 20)                                 │
+ │   [ ] Almond Milk (+EGP 25)                              │
+ ├──────────────────────────────────────────────────────────┤
+ │ 🫘 Coffee Beans Origin (Required)                       │
+ │   [*] House Espresso Blend (+EGP 0)                      │
+ │   [ ] Ethiopian Single Origin (+EGP 15)                 │
+ ├──────────────────────────────────────────────────────────┤
+ │ 🧪 Portion / Volume                                      │
+ │   [ ] Single Shot (100ml)                                │
+ │   [*] Double Shot (200ml) (+EGP 10)                      │
+ ├──────────────────────────────────────────────────────────┤
+ │ 📝 Special Instructions: [ Extra Ice, Low Sugar        ] │
+ ├──────────────────────────────────────────────────────────┤
+ │ [ Cancel ]                             [ Add to Order ]  │
+ └──────────────────────────────────────────────────────────┘
+</code></pre>
+<ol>
+<li>Select option pills for required slots (e.g. Milk choice, Coffee bean origin).</li>
+<li>Select optional additions (extra syrup pumps, whipped cream, sweetener).</li>
+<li>Type custom customer notes if applicable (e.g., "Extra hot", "In customer thermo mug").</li>
+<li>Click <strong>Add to Order</strong>. The computed price update is reflected immediately in the cart.</li>
+</ol>
+<hr />
+<h3 id="25-applying-promo-codes-discounts">2.5 Applying Promo Codes &amp; Discounts</h3>
+<ol>
+<li>In the Cart Drawer, click <strong>Apply Discount / Promo Code</strong>.</li>
+<li>Enter the promo code (e.g. <code>WELCOME10</code> or <code>STAFF50</code>) or select an active predefined discount.</li>
+<li>The system validates the code:</li>
+<li><strong>Percentage</strong>: Deducts percentage from subtotal (pre-tax).</li>
+<li><strong>Fixed Amount</strong>: Deducts lump sum amount.</li>
+<li><strong>Fixed Per Item</strong>: Deducts amount multiplied by total item count.</li>
+<li>The discount line total updates instantly.</li>
+</ol>
+<hr />
+<h3 id="26-customer-crm-loyalty-points-lookup">2.6 Customer CRM &amp; Loyalty Points Lookup</h3>
+<ol>
+<li>In the top left CRM panel, type the customer's phone number (e.g. <code>01012345678</code>).</li>
+<li>If registered, the customer's name and <strong>Loyalty Points Balance</strong> appear.</li>
+<li>If not registered, typing the phone number links it to the order so the customer receives SMS order alerts.</li>
+<li>Registered customers earn <strong>1 Loyalty Point for every EGP 10 spent</strong>.</li>
+</ol>
+<hr />
+<h3 id="27-processing-payments">2.7 Processing Payments</h3>
+<p>Click <strong>Checkout / Pay</strong> to open the Payment Modal. SpaccaPOS supports 5 payment methods:</p>
+<pre class="mermaid-diagram">flowchart TD
+    Pay[Click Pay Button] --> SelectMethod{Select Payment Method}
+    SelectMethod -->|Cash| Cash[Enter Amount Tendered -> Calculate Change -> Confirm]
+    SelectMethod -->|Card| Card[Swipe/Tap POS Terminal -> Enter Trans ID -> Confirm]
+    SelectMethod -->|Wallet| Wallet[Scan QR / InstaPay -> Confirm]
+    SelectMethod -->|Hospitality| Hosp[Prompt Admin PIN -> Apply 100% Discount -> Confirm]
+    SelectMethod -->|Split| Split[Divide Total Across Cash + Card -> Confirm]
+
+    Cash --> Submit[Submit Transaction & Deduct Stock]
+    Card --> Submit
+    Wallet --> Submit
+    Hosp --> Submit
+    Split --> Submit
+</pre>
+
+<h4 id="1-cash-payment">1. Cash Payment</h4>
+<ul>
+<li>Enter the Cash Tendered amount (e.g. Customer gives EGP 200 for an EGP 135 bill).</li>
+<li>The screen automatically displays <strong>Change Due: EGP 65.00</strong>.</li>
+<li>Click <strong>Complete Order</strong>. The cash drawer opens automatically.</li>
+</ul>
+<h4 id="2-card-payment">2. Card Payment</h4>
+<ul>
+<li>Process card payment on your physical terminal.</li>
+<li>Enter the optional terminal reference code.</li>
+<li>Click <strong>Complete Order</strong>.</li>
+</ul>
+<h4 id="3-hospitality-payment-guest-management-courtesy">3. Hospitality Payment (Guest / Management Courtesy)</h4>
+<ul>
+<li>Select <strong>Hospitality</strong>.</li>
+<li>The system prompts for an <strong>Admin / Supervisor PIN</strong>.</li>
+<li>Enter a valid 6-digit PIN. The order subtotal is discounted 100% (Total: EGP 0.00).</li>
+</ul>
+<h4 id="4-split-payment">4. Split Payment</h4>
+<ul>
+<li>Select <strong>Split Payment</strong>.</li>
+<li>Specify amount for Payment Method 1 (e.g. EGP 50 Cash).</li>
+<li>Specify amount for Payment Method 2 (e.g. EGP 85 Card).</li>
+<li>Click <strong>Complete Order</strong> once the full balance is satisfied.</li>
+</ul>
+<hr />
+<h3 id="28-printing-receipts-escpos-thermal-printer-setup">2.8 Printing Receipts &amp; Esc/POS Thermal Printer Setup</h3>
+<ul>
+<li>Once payment is confirmed, the transaction is committed, and receipt printing triggers automatically.</li>
+<li>Ensure your 80mm ESC/POS printer is powered on and connected via USB or Local Network IP.</li>
+<li>If auto-print is disabled, click <strong>Print Receipt</strong> on the Order Success screen.</li>
+</ul>
+<hr />
+<h3 id="29-handling-order-cancellations-refunds">2.9 Handling Order Cancellations &amp; Refunds</h3>
+<blockquote>
+<p>[!CAUTION]
+Order cancellations and refunds permanently modify financial records and require <strong>Admin / Supervisor PIN Authorization</strong>.</p>
+</blockquote>
+<h4 id="full-or-partial-item-refund">Full or Partial Item Refund:</h4>
+<ol>
+<li>Navigate to <strong>Order History</strong> or search by Order Number (e.g. <code>1-203004</code>).</li>
+<li>Click <strong>Refund Order</strong>.</li>
+<li>Select which specific items to refund.</li>
+<li>Toggle <strong>Return to Stock</strong> if the raw materials/unopened items were returned to inventory undamaged.</li>
+<li>Enter the <strong>Supervisor 6-Digit PIN</strong>.</li>
+<li>Click <strong>Confirm Refund</strong>. The system issues a negative payment entry (<code>REFUND</code>) and updates inventory balances if requested.</li>
+</ol>
+<hr />
+<h3 id="210-closing-your-shift-printing-end-of-shift-reports">2.10 Closing Your Shift &amp; Printing End-of-Shift Reports</h3>
+<p>At the end of your working shift:
+1. Navigate to <code>/cashier</code> and click <strong>End Shift &amp; Close Register</strong>.
+2. The <strong>Shift Reconciliation Screen</strong> will display:
+   - Total Shift Duration &amp; Cashier Name.
+   - Total Orders Completed.
+   - Total Gross Revenue &amp; Payment Method Split (Cash in Drawer, Card Total, Digital Wallet Total).
+   - Top Selling Beverages.
+3. Count the physical cash in drawer and verify against <strong>Cash Revenue</strong>.
+4. Click <strong>Print Shift Z-Report</strong> and hand the Z-slip to your supervisor.</p>
+<hr />
+<h2 id="3-module-2-barista-kitchen-display-system-kds-operations">3. Module 2: Barista &amp; Kitchen Display System (KDS) Operations</h2>
+<h3 id="31-accessing-the-kds-interface">3.1 Accessing the KDS Interface</h3>
+<p>Open your tablet or kitchen monitor browser and navigate to <code>/kitchen</code>.</p>
+<h3 id="32-selecting-your-kitchen-station">3.2 Selecting Your Kitchen Station</h3>
+<p>At the top header, select your assigned station from the dropdown:
+- <strong>Espresso Bar</strong>: Displays coffee, espresso, and hot beverage tickets.
+- <strong>Cold Beverages</strong>: Displays iced teas, frappes, smoothies, and cold brews.
+- <strong>Bakery &amp; Kitchen</strong>: Displays toasted sandwiches, croissants, and food items.
+- <strong>All Stations</strong>: Global kitchen overview for supervisors.</p>
+<hr />
+<h3 id="33-understanding-ticket-color-timers-priority">3.3 Understanding Ticket Color Timers &amp; Priority</h3>
+<p>Incoming orders appear as visual cards sorted by creation time:</p>
+<pre><code>┌────────────────────────────────────────────────────────┐
+│ Ticket #1-203004 | ⏱️ 01:45 (GREEN) | Station: Espresso │
+├────────────────────────────────────────────────────────┤
+│ Customer: Alex M. | Order Type: Takeaway               │
+├────────────────────────────────────────────────────────┤
+│ 🟢 [BUMP ITEM] 1x Iced Cafe Latte                      │
+│    ▪️ Oat Milk (200ml)                                 │
+│    ▪️ Ethiopian Single Origin (Double Shot - 18g)      │
+│    ▪️ Note: Extra Ice, Low Sugar                       │
+├────────────────────────────────────────────────────────┤
+│ 🟢 [BUMP ITEM] 1x Double Espresso                      │
+│    ▪️ House Blend                                      │
+├────────────────────────────────────────────────────────┤
+│ [ BUMP ENTIRE ORDER AS READY ]                         │
+└────────────────────────────────────────────────────────┘
+</code></pre>
+<ul>
+<li>🟢 <strong>Green Header (0 - 3 minutes)</strong>: Order within target prep time window.</li>
+<li>🟡 <strong>Yellow Header (3 - 5 minutes)</strong>: Order approaching target threshold; prioritize.</li>
+<li>🔴 <strong>Red Header (&gt; 5 minutes)</strong>: Overdue order ticket; immediate preparation required.</li>
+</ul>
+<hr />
+<h3 id="34-reading-custom-recipe-slots-barista-preparation-guides">3.4 Reading Custom Recipe Slots &amp; Barista Preparation Guides</h3>
+<p>Each order ticket clearly outlines exact portion quantities:
+- Oat Milk: <code>200ml</code>
+- Espresso Shot: <code>18g Coffee Grounds</code> $\rightarrow$ <code>36ml Liquid Extraction</code>
+- Special customer notes are highlighted in <strong>Bold Yellow text</strong>.</p>
+<hr />
+<h3 id="35-bumping-items-completing-orders">3.5 Bumping Items &amp; Completing Orders</h3>
+<ul>
+<li>As you complete each individual drink, click <strong>Bump Item</strong>. The item turns grey with a checkmark.</li>
+<li>Once all items on a ticket are bumped, or when the entire order is finished, click <strong>Bump Entire Order</strong>.</li>
+<li>The ticket disappears from the KDS screen and automatically transitions the order to <strong>Ready</strong> status.</li>
+</ul>
+<hr />
+<h3 id="36-customer-order-pickup-screen-display">3.6 Customer Order Pickup Screen Display</h3>
+<p>When an order is bumped to <strong>Ready</strong> state on the KDS, it automatically streams via SSE to the public <strong>Order Pickup Screen</strong> (<code>/pickup</code>):</p>
+<pre><code>┌────────────────────────────────────────────────────────┐
+│               ☕ SPACCA COFFEE PICKUP                  │
+├──────────────────────────┬─────────────────────────────┤
+│ ⏳ PREPARING (IN PROGRESS)│ ✅ READY FOR PICKUP         │
+│ ──────────────────────── │ ─────────────────────────── │
+│   #1-203005 (John)       │   #1-203001 (Sarah)         │
+│   #1-203006 (Mark)       │   #1-203004 (Alex M.)  🔔   │
+└──────────────────────────┴─────────────────────────────┘
+</code></pre>
+<hr />
+<h2 id="4-module-3-self-service-customer-kiosk-guide">4. Module 3: Self-Service Customer Kiosk Guide</h2>
+<h3 id="41-kiosk-mode-setup">4.1 Kiosk Mode Setup</h3>
+<ol>
+<li>Mount an iPad or touch display tablet at the ordering counter.</li>
+<li>Open browser in full-screen kiosk mode to <code>/kiosk</code>.</li>
+<li>The interface locks to customer-facing mode, hiding administrative navigation bars.</li>
+</ol>
+<h3 id="42-customer-self-ordering-recipe-customization">4.2 Customer Self-Ordering &amp; Recipe Customization</h3>
+<ol>
+<li>Customer taps <strong>Touch to Start Order</strong>.</li>
+<li>Customer selects a beverage category and chooses a drink.</li>
+<li>An intuitive touch customization screen allows picking milk types, sugar levels, and cup sizes with real-time price updates.</li>
+<li>Customer enters their name and selects payment method.</li>
+<li>Order submits automatically to KDS and prints a numbered customer receipt token.</li>
+</ol>
+<hr />
+<h2 id="5-module-4-stock-inventory-procurement-management">5. Module 4: Stock, Inventory &amp; Procurement Management</h2>
+<h3 id="51-monitoring-live-branch-stock-levels">5.1 Monitoring Live Branch Stock Levels</h3>
+<p>Navigate to <code>/stock-control</code> or <code>/admin/stock</code>:
+- View real-time raw material balances for your branch (e.g. <em>Whole Milk: 45,000 ml</em>, <em>Espresso Beans: 12.5 KG</em>).
+- Items highlighted in <strong>Red</strong> are below their <code>Low Stock Threshold</code> and require reordering.</p>
+<hr />
+<h3 id="52-fefo-inventory-batches-expiration-tracking">5.2 FEFO Inventory Batches &amp; Expiration Tracking</h3>
+<p>Navigate to <strong>Stock Control $\rightarrow$ Inventory Batches</strong>:
+- Every ingredient delivery creates tracked inventory batches (<code>branch_inventory_batches</code>).
+- <strong>Sealed Expiry Date</strong>: Expiration date while package remains sealed in warehouse.
+- <strong>Opened Expiry Date</strong>: Calculated automatically when a barista opens a package:
+  $$\text{Effective Expiry} = \text{Opened At} + \text{Opened Shelf Life Days}$$
+- The system automatically consumes stock from batches nearing expiration first (FEFO rule).</p>
+<hr />
+<h3 id="53-logging-stock-adjustments-waste-records">5.3 Logging Stock Adjustments &amp; Waste Records</h3>
+<p>If an ingredient is spilled, damaged, or used for machine calibration:
+1. Click <strong>New Adjustment / Waste Log</strong>.
+2. Select Ingredient (e.g., <em>Whole Milk</em>).
+3. Select Movement Type: <code>waste</code>, <code>calibration</code>, <code>testing</code>, or <code>adjustment</code>.
+4. Enter Quantity (e.g., <code>-2000 ml</code>).
+5. Enter Reason Note (e.g. <em>"Milk carton dropped during peak shift"</em>).
+6. Click <strong>Submit Adjustment</strong>. Stock level updates immediately.</p>
+<hr />
+<h3 id="54-conducting-physical-stock-audits-count-sheets">5.4 Conducting Physical Stock Audits &amp; Count Sheets</h3>
+<p>Regular inventory counts ensure physical stock matches system calculations:</p>
+<pre class="mermaid-diagram">sequenceDiagram
+    autonumber
+    actor StoreManager as Stock Manager / Supervisor
+    actor System as SpaccaPOS Backend
+    actor Admin as System Admin / Owner
+
+    StoreManager->>System: Open New Stock Audit Sheet (/admin/stock-audit-review)
+    System-->>StoreManager: Generate Expected Stock Counts (System Balances)
+    StoreManager->>System: Enter Actual Physical Counts & Damage Notes
+    StoreManager->>System: Submit Audit Sheet (Status: PENDING)
+    Admin->>System: Review Audit Variance Sheet
+    alt Admin Approves Audit
+        Admin->>System: Click APPROVE
+        System->>System: Calculate Variance (Actual - Expected)
+        System->>System: Auto-Adjust Branch Stock Balances & Write Movements Log
+        System-->>Admin: Audit Status: APPROVED
+    else Admin Rejects Audit
+        Admin->>System: Click REJECT
+        System-->>Admin: Audit Status: REJECTED (No Stock Balances Modified)
+    end
+</pre>
+
+<hr />
+<h3 id="55-managing-suppliers-purchase-orders-po-lifecycle">5.5 Managing Suppliers &amp; Purchase Orders (PO Lifecycle)</h3>
+<p>Navigate to <code>/admin/purchases</code>:</p>
+<h4 id="1-creating-a-supplier-profile">1. Creating a Supplier Profile</h4>
+<ul>
+<li>Click <strong>Suppliers $\rightarrow$ Add Supplier</strong>.</li>
+<li>Input supplier company name, contact person, phone number, email, and tax ID.</li>
+</ul>
+<h4 id="2-creating-receiving-purchase-orders-po">2. Creating &amp; Receiving Purchase Orders (PO)</h4>
+<ol>
+<li>Click <strong>New Purchase Order</strong>.</li>
+<li>Select Supplier and Target Delivery Branch.</li>
+<li>Add raw material line items (e.g. <em>100 KG Espresso Beans @ EGP 450/KG = EGP 45,000</em>).</li>
+<li>Save as <strong>Draft</strong> or mark <strong>Ordered</strong>.</li>
+<li>When shipment arrives at the store, click <strong>Receive Purchase Order</strong>.</li>
+<li>Verify delivered quantities.</li>
+<li>Click <strong>Confirm Goods Received</strong>.</li>
+<li>SpaccaPOS automatically:</li>
+<li>Hydrates <code>branch_stock</code> levels.</li>
+<li>Generates new FEFO tracking batches.</li>
+<li>Logs <code>"restock"</code> movement audit logs.</li>
+</ol>
+<hr />
+<h2 id="6-module-5-admin-control-panel-branch-management">6. Module 5: Admin Control Panel &amp; Branch Management</h2>
+<h3 id="61-managing-staff-accounts-roles-6-digit-pins">6.1 Managing Staff Accounts, Roles &amp; 6-Digit PINs</h3>
+<p>Navigate to <code>/admin/users</code>:
+- <strong>Create New User</strong>: Set Name, Username, Role (<code>admin</code>, <code>supervisor</code>, <code>cashier</code>, <code>barista</code>), and Branch assignment.
+- <strong>Assign 6-Digit PIN</strong>: Set or reset a staff member's security PIN used for quick supervisor approvals.
+- <strong>Activate / Deactivate</strong>: Deactivate former employees to immediately revoke system access without deleting historical sales logs.</p>
+<hr />
+<h3 id="62-designing-drink-catalogs-categories">6.2 Designing Drink Catalogs &amp; Categories</h3>
+<p>Navigate to <code>/admin/drinks</code>:
+- <strong>Categories</strong>: Manage drink categories (e.g. <em>Espresso Bar</em>, <em>Cold Brews</em>, <em>Pastries</em>) and set display sort order.
+- <strong>Add New Drink</strong>: Input Drink Name, Base Price, Cup Size (ml), Preparation Time (seconds), Assigned Kitchen Station, and Upload high-resolution display image.</p>
+<hr />
+<h3 id="63-building-custom-recipe-slots-predefined-templates">6.3 Building Custom Recipe Slots &amp; Predefined Templates</h3>
+<p>Navigate to <code>/admin/drink-recipe</code>:
+- <strong>Predefined Slot Templates</strong>: Create reusable slot templates (e.g. "Standard Milk Selection") containing ingredient options and extra costs.
+- <strong>Drink Recipe Builder</strong>: Link slots to drinks, specify barista vs customer sort order, toggle required/optional status, and configure per-drink volume overrides.</p>
+<hr />
+<h3 id="64-financial-business-intelligence-performance-reports">6.4 Financial Business Intelligence &amp; Performance Reports</h3>
+<p>Navigate to <code>/admin/reports</code> or <code>/admin/finance</code>:</p>
+<pre><code>┌────────────────────────────────────────────────────────────────────────────────────────┐
+│ 📊 FINANCIAL ANALYTICS &amp; EXECUTIVE DASHBOARD                                            │
+├────────────────────────────────────────────────────────────────────────────────────────┤
+│ GROSS REVENUE       NET PROFIT            TOTAL ORDERS          AVG ORDER VALUE        │
+│ EGP 145,280.00      EGP 62,410.00         1,240                 EGP 117.16             │
+├────────────────────────────────────────────────────────────────────────────────────────┤
+│ PAYMENT METHOD BREAKDOWN                  HOURLY RUSH ANALYSIS (PEAK HOURS)            │
+│ 💵 Cash:       EGP 65,200 (45%)           08:00 - 10:00 AM:  340 Orders (Morning Rush) │
+│ 💳 Card:       EGP 58,100 (40%)           01:00 - 03:00 PM:  210 Orders (Afternoon)   │
+│ 📱 Wallet:     EGP 16,400 (11%)           05:00 - 08:00 PM:  480 Orders (Evening Rush)   │
+│ 🎁 Courtesy:   EGP  5,580  (4%)                                                        │
+├────────────────────────────────────────────────────────────────────────────────────────┤
+│ TOP 5 SELLING DRINKS BY VOLUME                                                         │
+│ 1. Iced Spanish Latte     (420 Sold | EGP 39,900)                                      │
+│ 2. Double Espresso        (310 Sold | EGP 18,600)                                      │
+│ 3. V60 Specialty Drip     (180 Sold | EGP 19,800)                                      │
+│ 4. Caramel Macchiato      (150 Sold | EGP 15,750)                                      │
+│ 5. Iced Matcha Latte      (110 Sold | EGP  9,900)                                      │
+└────────────────────────────────────────────────────────────────────────────────────────┘
+</code></pre>
+<ul>
+<li>Filter performance analytics by single branch or global company view.</li>
+<li>Export clean PDF or CSV reports for accounting and tax filing.</li>
+</ul>
+<hr />
+<h2 id="7-troubleshooting-faqs">7. Troubleshooting &amp; FAQs</h2>
+<h3 id="q1-the-pos-screen-displays-an-insufficient-stock-modal-when-adding-a-drink">Q1: The POS screen displays an "Insufficient Stock" modal when adding a drink.</h3>
+<p><strong>Cause</strong>: One or more required ingredients in the drink's recipe has a zero balance in <code>branch_stock</code>.<br />
+<strong>Solution</strong>:
+1. Check <strong>Stock Control</strong> to see which ingredient is depleted.
+2. If stock is physically available in store, submit a manual stock adjustment or PO receipt.
+3. Alternatively, if global setting <code>allowNoStockSell</code> is enabled by your Admin, stock checks can be temporarily bypassed.</p>
+<hr />
+<h3 id="q2-an-admin-pin-is-rejected-during-hospitality-or-refund-authorization">Q2: An Admin PIN is rejected during hospitality or refund authorization.</h3>
+<p><strong>Cause</strong>: Entered PIN does not match any active user assigned an <code>admin</code>, <code>supervisor</code>, or <code>cashier</code> role.<br />
+<strong>Solution</strong>: Verify the PIN in <code>/admin/users</code> or request a supervisor with appropriate role permissions to enter their PIN.</p>
+<hr />
+<h3 id="q3-kitchen-kds-tickets-are-not-updating-in-real-time">Q3: Kitchen KDS tickets are not updating in real time.</h3>
+<p><strong>Cause</strong>: Server-Sent Events (SSE) stream disconnected due to network instability.<br />
+<strong>Solution</strong>: Refresh the browser page (<code>F5</code> or <code>Ctrl+R</code>). The KDS automatically reconnects to <code>/api/events</code> and fetches the latest order status state.</p>
+<hr />
+<h3 id="q4-thermal-receipt-printer-is-not-firing-after-checkout">Q4: Thermal receipt printer is not firing after checkout.</h3>
+<p><strong>Cause</strong>: Browser popup block or receipt printer driver offline.<br />
+<strong>Solution</strong>: Ensure printer status is Online in OS Printer Settings. Check browser settings to ensure popups/automatic printing dialogs are allowed for the SpaccaPOS local domain.</p>
+</body>
+</html>

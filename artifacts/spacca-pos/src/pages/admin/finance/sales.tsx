@@ -12,8 +12,9 @@ import {
   BarChart2, TrendingUp, Coffee, Receipt, 
   Banknote, Calendar, ChevronLeft, ChevronRight,
   Download, Tag, CheckCircle2, History, Layers, Sliders,
-  Eye, Package, User, Clock, MapPin, Search, Loader2
+  Eye, Package, User, Clock, MapPin, Search, Loader2, Gift
 } from "lucide-react";
+
 import {
   Dialog,
   DialogContent,
@@ -125,16 +126,18 @@ export default function SalesAnalysisPage() {
 
   const totals = useMemo(() => {
     if (!rangeSummary) {
-      return { revenue: 0, count: 0, drinks: 0, discounts: 0, netRevenue: 0 };
+      return { revenue: 0, count: 0, drinks: 0, discounts: 0, offerDiscounts: 0, netRevenue: 0 };
     }
     return { 
       revenue: rangeSummary.revenue, 
       count: rangeSummary.count, 
       drinks: rangeSummary.drinks, 
       discounts: rangeSummary.discounts,
+      offerDiscounts: rangeSummary.offerDiscounts || 0,
       netRevenue: rangeSummary.netRevenue 
     };
   }, [rangeSummary]);
+
 
   const handleExportCSV = async () => {
     let headers: string[] = [];
@@ -155,13 +158,14 @@ export default function SalesAnalysisPage() {
         const allOrders = await api(`/api/orders?${params.toString()}`);
         if (!allOrders || allOrders.length === 0) return;
 
-        headers = ["OrderID", "Date", "Time", "Order Number", "Items Count", "Total Price", "Before Tax", "Tax Value", "Discount Name", "Discount Value", "Discount Amount", "Final Price", "Status", "Payment Method"];
+        headers = ["OrderID", "Date", "Time", "Order Number", "Items Count", "Total Price", "Before Tax", "Tax Value", "Discount Name", "Discount Value", "Discount Amount", "Offer Discount", "Final Price", "Status", "Payment Method"];
         
         let totalItemsCount = 0;
         let totalGrossPrice = 0;
         let totalNetPrice = 0;
         let totalTaxValue = 0;
         let totalDiscountAmount = 0;
+        let totalOfferDiscountAmount = 0;
         let totalFinalPrice = 0;
 
         rows = allOrders.map((o: any) => {
@@ -170,6 +174,7 @@ export default function SalesAnalysisPage() {
           const netPrice = grossPrice / 1.14;
           const taxValue = grossPrice - netPrice;
           const discountAmount = o.discount || 0;
+          const offerDiscountAmount = o.offerDiscount || 0;
           const finalPrice = o.total || 0;
 
           totalItemsCount += itemsCount;
@@ -177,6 +182,7 @@ export default function SalesAnalysisPage() {
           totalNetPrice += netPrice;
           totalTaxValue += taxValue;
           totalDiscountAmount += discountAmount;
+          totalOfferDiscountAmount += offerDiscountAmount;
           totalFinalPrice += finalPrice;
 
           return [
@@ -191,6 +197,7 @@ export default function SalesAnalysisPage() {
             o.paymentMethod === "hospitality" ? "HOSPITALITY" : ((o as any).discountCode || "-"),
             (o as any).discountValue ? ((o as any).discountType === 'percentage' ? `${(o as any).discountValue}%` : (o as any).discountValue.toFixed(2)) : "0",
             discountAmount.toFixed(2),
+            offerDiscountAmount.toFixed(2),
             finalPrice.toFixed(2),
             o.status,
             o.paymentMethod
@@ -210,6 +217,7 @@ export default function SalesAnalysisPage() {
           "",
           "",
           totalDiscountAmount.toFixed(2),
+          totalOfferDiscountAmount.toFixed(2),
           totalFinalPrice.toFixed(2),
           "",
           ""
@@ -330,13 +338,14 @@ export default function SalesAnalysisPage() {
         </CardContent>
       </Card>
       
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
         {[
           { label: "Revenue", value: fmt(totals.revenue), icon: Banknote },
           { label: "Range Net Rev", value: fmt(totals.netRevenue), icon: TrendingUp },
           { label: "Orders", value: totals.count, icon: Receipt },
           { label: "Drinks", value: totals.drinks, icon: Coffee },
           { label: "Discounts", value: fmt(totals.discounts), icon: Tag },
+          { label: "Offer Discounts", value: fmt(totals.offerDiscounts), icon: Gift },
         ].map((stat, i) => (
           <Card key={i}>
             <CardContent className="p-4 flex items-center gap-4">
@@ -419,7 +428,18 @@ export default function SalesAnalysisPage() {
                         {format(new Date(order.createdAt), "MMM dd, HH:mm")}
                       </TableCell>
                       <TableCell>{fmt(order.subtotal)}</TableCell>
-                      <TableCell className="text-destructive">-{fmt(order.discount)}</TableCell>
+                      <TableCell className="text-destructive">
+                        {order.offerDiscount > 0 ? (
+                          <div className="flex flex-col text-xs leading-none">
+                            <span className="text-[9px] text-muted-foreground uppercase font-black tracking-wider">Offer</span>
+                            <span>-{fmt(order.offerDiscount)}</span>
+                          </div>
+                        ) : order.discount > 0 ? (
+                          `-${fmt(order.discount)}`
+                        ) : (
+                          "0.00"
+                        )}
+                      </TableCell>
                       <TableCell className="font-bold">{fmt(order.total)}</TableCell>
                       <TableCell className="capitalize">{order.paymentMethod}</TableCell>
                       <TableCell>
@@ -637,6 +657,12 @@ export default function SalesAnalysisPage() {
                     <span className="text-muted-foreground">Subtotal</span>
                     <span>{fmt(selectedOrderDetails.subtotal)}</span>
                   </div>
+                  {selectedOrderDetails.offerDiscount > 0 && (
+                    <div className="flex justify-between text-sm text-destructive font-bold bg-destructive/5 px-2.5 py-1 rounded-md border border-destructive/15">
+                      <span className="flex items-center gap-1"><Tag className="h-3 w-3" /> Offer Discount</span>
+                      <span>-{fmt(selectedOrderDetails.offerDiscount)}</span>
+                    </div>
+                  )}
                   {selectedOrderDetails.discount > 0 && (
                     <div className="flex justify-between text-sm text-destructive font-medium">
                       <span className="flex items-center gap-1"><Tag className="h-3 w-3" /> Discount ({selectedOrderDetails.discountCode})</span>

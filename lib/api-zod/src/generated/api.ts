@@ -686,6 +686,8 @@ export const ListOrdersResponseItem = zod
     discountId: zod.number().nullish(),
     discountValue: zod.number().nullish(),
     discountType: zod.enum(["percentage", "fixed", "fixed_per_item"]).nullish(),
+    offerId: zod.number().nullish(),
+    offerDiscount: zod.number().nullish(),
     total: zod.number(),
     paymentMethod: zod.enum([
       "cash",
@@ -815,6 +817,8 @@ export const GetOrderResponse = zod
     discountId: zod.number().nullish(),
     discountValue: zod.number().nullish(),
     discountType: zod.enum(["percentage", "fixed", "fixed_per_item"]).nullish(),
+    offerId: zod.number().nullish(),
+    offerDiscount: zod.number().nullish(),
     total: zod.number(),
     paymentMethod: zod.enum([
       "cash",
@@ -923,6 +927,8 @@ export const UpdateOrderStatusResponse = zod.object({
   discountId: zod.number().nullish(),
   discountValue: zod.number().nullish(),
   discountType: zod.enum(["percentage", "fixed", "fixed_per_item"]).nullish(),
+  offerId: zod.number().nullish(),
+  offerDiscount: zod.number().nullish(),
   total: zod.number(),
   paymentMethod: zod.enum([
     "cash",
@@ -986,6 +992,8 @@ export const MarkOrderItemReadyResponse = zod.object({
   discountId: zod.number().nullish(),
   discountValue: zod.number().nullish(),
   discountType: zod.enum(["percentage", "fixed", "fixed_per_item"]).nullish(),
+  offerId: zod.number().nullish(),
+  offerDiscount: zod.number().nullish(),
   total: zod.number(),
   paymentMethod: zod.enum([
     "cash",
@@ -1110,6 +1118,8 @@ export const GetActiveOrdersResponseItem = zod
     discountId: zod.number().nullish(),
     discountValue: zod.number().nullish(),
     discountType: zod.enum(["percentage", "fixed", "fixed_per_item"]).nullish(),
+    offerId: zod.number().nullish(),
+    offerDiscount: zod.number().nullish(),
     total: zod.number(),
     paymentMethod: zod.enum([
       "cash",
@@ -1470,6 +1480,76 @@ export const DeleteDiscountParams = zod.object({
 
 export const DeleteDiscountQueryParams = zod.object({
   branchId: zod.coerce.number().optional(),
+});
+
+/**
+ * @summary List all offers
+ */
+export const ListOffersResponseItem = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  buyAmount: zod.number(),
+  freeAmount: zod.number(),
+  isActive: zod.boolean(),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+});
+export const ListOffersResponse = zod.array(ListOffersResponseItem);
+
+/**
+ * @summary Create a new offer
+ */
+export const CreateOfferBody = zod.object({
+  name: zod.string(),
+  buyAmount: zod.number(),
+  freeAmount: zod.number(),
+  isActive: zod.boolean().optional(),
+});
+
+/**
+ * @summary Get the currently active offer
+ */
+export const GetActiveOfferResponse = zod
+  .object({
+    id: zod.number(),
+    name: zod.string(),
+    buyAmount: zod.number(),
+    freeAmount: zod.number(),
+    isActive: zod.boolean(),
+    createdAt: zod.string(),
+    updatedAt: zod.string(),
+  })
+  .nullable();
+
+/**
+ * @summary Update an offer
+ */
+export const UpdateOfferParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const UpdateOfferBody = zod.object({
+  name: zod.string().optional(),
+  buyAmount: zod.number().optional(),
+  freeAmount: zod.number().optional(),
+  isActive: zod.boolean().optional(),
+});
+
+export const UpdateOfferResponse = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  buyAmount: zod.number(),
+  freeAmount: zod.number(),
+  isActive: zod.boolean(),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+});
+
+/**
+ * @summary Delete an offer
+ */
+export const DeleteOfferParams = zod.object({
+  id: zod.coerce.number(),
 });
 
 /**
