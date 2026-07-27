@@ -4,10 +4,11 @@ import {
   useGetDrink,
   useCalculateDrinkPrice,
   useCreateOrder,
+  useGetActiveOffer,
   Drink,
 } from "@workspace/api-client-react";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronRight, ShoppingCart, X, Plus, Minus, ArrowLeft, RotateCcw, Loader2, Coffee } from "lucide-react";
+import { ChevronRight, ShoppingCart, X, Plus, Minus, ArrowLeft, RotateCcw, Loader2, Coffee, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { fmt } from "@/lib/currency";
@@ -175,7 +176,45 @@ export default function KioskPage() {
     return drinks.filter(d => (d as any).categoryId === selectedCategoryId);
   }, [drinks, selectedCategoryId]);
 
-  const cartTotal = cart.reduce((sum, item) => sum + item.totalPrice * item.quantity, 0);
+  const { data: activeOffer } = useGetActiveOffer();
+
+  const cartSubtotal = useMemo(() => {
+    return cart.reduce((sum, item) => sum + item.totalPrice * item.quantity, 0);
+  }, [cart]);
+
+  const offerCalculation = useMemo(() => {
+    if (!activeOffer || cart.length === 0) {
+      return { discount: 0, extraFreeCount: 0, isOfferApplied: false };
+    }
+    const N = activeOffer.buyAmount;
+    const X = activeOffer.freeAmount;
+
+    // Flatten all items in cart to their prices
+    const flatItems = cart.flatMap(item => 
+      Array.from({ length: item.quantity }).map(() => item.totalPrice)
+    ).sort((a, b) => a - b);
+
+    const M = flatItems.length;
+    const F = Math.floor(M / (N + X)) * X + Math.min(X, Math.max(0, (M % (N + X)) - N));
+    const P = M - F;
+    const E = Math.floor(P / N) * X;
+    const extraFreeCount = E - F;
+
+    let discount = 0;
+    for (let i = 0; i < F; i++) {
+      discount += flatItems[i];
+    }
+
+    return {
+      discount,
+      extraFreeCount,
+      isOfferApplied: F > 0,
+    };
+  }, [cart, activeOffer]);
+
+  const offerDiscount = offerCalculation.discount;
+  const isOfferApplied = offerCalculation.isOfferApplied;
+  const cartTotal = cartSubtotal - offerDiscount;
 
   // --- Customization State ---
   const [activeDrink, setActiveDrink] = useState<Drink | null>(null);
@@ -901,6 +940,16 @@ export default function KioskPage() {
 
             <ScrollArea className="flex-1 p-6">
               <div className="space-y-4">
+                {offerCalculation.extraFreeCount > 0 && (
+                  <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200/50 p-6 rounded-[2rem] text-sm text-emerald-800 dark:text-emerald-200 font-semibold space-y-2 animate-pulse">
+                    <div className="font-black flex items-center gap-2 uppercase tracking-wider text-xs">
+                      <Tag className="h-5 w-5 text-emerald-500 animate-bounce" /> Extra Free Drink Available!
+                    </div>
+                    <div className="text-xs text-emerald-700/80 dark:text-emerald-300/80">
+                      You qualify for <span className="font-bold text-base">{offerCalculation.extraFreeCount}</span> more free drink(s). Go back and add them to your order!
+                    </div>
+                  </div>
+                )}
                 {cart.map(item => (
                   <div key={item.id} className="flex gap-4 items-center bg-muted/30 p-6 rounded-[2.5rem]">
                     <div className="w-24 h-24 bg-muted rounded-3xl overflow-hidden shrink-0">
@@ -946,6 +995,22 @@ export default function KioskPage() {
                   <span className="text-xs text-muted-foreground uppercase tracking-widest font-bold">Pick-up Location</span>
                   <span className="text-lg font-black italic uppercase">{selectedBranch?.name}</span>
                 </div>
+
+                {isOfferApplied && (
+                  <div className="space-y-1.5 border-b pb-4">
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-muted-foreground uppercase tracking-widest font-bold text-xs">Subtotal</span>
+                      <span className="font-bold text-lg">{fmt(cartSubtotal)}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm text-destructive font-semibold bg-destructive/5 px-4 py-2 rounded-2xl border border-destructive/15">
+                      <span className="flex items-center gap-1.5 capitalize text-xs tracking-wider font-bold">
+                        <Tag className="h-4 w-4 text-destructive" /> Offer: {activeOffer?.name}
+                      </span>
+                      <span className="font-black text-lg">-{fmt(offerDiscount)}</span>
+                    </div>
+                  </div>
+                )}
+
                 <div className="text-right">
                   <span className="text-xs text-muted-foreground uppercase tracking-widest font-bold">Total Amount</span>
                   <div className="text-4xl font-black text-primary italic">{fmt(cartTotal)}</div>
