@@ -9,12 +9,20 @@ import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
+type Conversion = {
+  id: number;
+  unitName: string;
+  conversionFactor: number;
+  isDefaultPurchase: boolean;
+};
+
 type Ingredient = {
   id: number;
   name: string;
   ingredientType: string;
   unit: string;
   stockQuantity: number;
+  conversions?: Conversion[];
 };
 
 const INGREDIENT_TYPES = ["coffee", "milk", "syrup", "sauce", "sweetener", "topping", "base", "cup", "tea", "packing", "other"] as const;
@@ -24,7 +32,7 @@ export default function StockControlPage() {
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [reportItems, setReportItems] = useState<Record<number, { actualQuantity: string; notes: string }>>({});
+  const [reportItems, setReportItems] = useState<Record<number, { actualQuantity: string; notes: string; selectedUnitId?: string }>>({});
   const [submitting, setSubmitting] = useState(false);
   const [notes, setNotes] = useState("");
 
@@ -44,7 +52,11 @@ export default function StockControlPage() {
   const handleQuantityChange = (id: number, val: string) => {
     setReportItems((prev) => ({
       ...prev,
-      [id]: { ...prev[id], actualQuantity: val },
+      [id]: { 
+        ...prev[id], 
+        actualQuantity: val,
+        selectedUnitId: prev[id]?.selectedUnitId ?? "base"
+      },
     }));
   };
 
@@ -55,14 +67,48 @@ export default function StockControlPage() {
     }));
   };
 
+  const handleUnitChange = (id: number, unitId: string) => {
+    setReportItems((prev) => ({
+      ...prev,
+      [id]: { 
+        ...prev[id], 
+        selectedUnitId: unitId
+      },
+    }));
+  };
+
   const handleSubmit = async () => {
     const items = Object.entries(reportItems)
       .filter(([_, item]) => item.actualQuantity !== "")
-      .map(([id, item]) => ({
-        ingredientId: parseInt(id),
-        actualQuantity: parseFloat(item.actualQuantity),
-        notes: item.notes,
-      }));
+      .map(([id, item]) => {
+        const ingId = parseInt(id);
+        const ing = ingredients.find(i => i.id === ingId);
+        
+        let factor = 1;
+        let selectedUnitLabel = "";
+        
+        if (item.selectedUnitId && item.selectedUnitId !== "base") {
+          const conv = ing?.conversions?.find(c => String(c.id) === item.selectedUnitId);
+          if (conv) {
+            factor = conv.conversionFactor;
+            selectedUnitLabel = conv.unitName;
+          }
+        }
+
+        const actualQtyBase = parseFloat(item.actualQuantity) * factor;
+        
+        let finalNotes = item.notes || "";
+        if (selectedUnitLabel) {
+          const auditMeta = `[Audited: ${item.actualQuantity} ${selectedUnitLabel}]`;
+          finalNotes = finalNotes ? `${auditMeta} ${finalNotes}` : auditMeta;
+        }
+
+        return {
+          ingredientId: ingId,
+          actualQuantity: actualQtyBase,
+          notes: finalNotes || null,
+        };
+      });
 
     if (items.length === 0) {
       toast({ variant: "destructive", title: "No items reported", description: "Please enter at least one quantity." });
@@ -168,6 +214,7 @@ export default function StockControlPage() {
                         report={reportItems[ing.id]} 
                         onChange={handleQuantityChange}
                         onNotesChange={handleNotesChange}
+                        onUnitChange={handleUnitChange}
                       />
                     ))
                   )}
@@ -184,6 +231,7 @@ export default function StockControlPage() {
                         report={reportItems[ing.id]} 
                         onChange={handleQuantityChange}
                         onNotesChange={handleNotesChange}
+                        onUnitChange={handleUnitChange}
                       />
                     ))}
                     {filteredIngredients.filter(i => i.ingredientType === type).length === 0 && (
@@ -200,13 +248,20 @@ export default function StockControlPage() {
   );
 }
 
-function IngredientItem({ ing, report, onChange, onNotesChange }: { 
+function IngredientItem({ ing, report, onChange, onNotesChange, onUnitChange }: { 
   ing: Ingredient; 
-  report?: { actualQuantity: string; notes: string };
+  report?: { actualQuantity: string; notes: string; selectedUnitId?: string };
   onChange: (id: number, val: string) => void;
   onNotesChange: (id: number, val: string) => void;
+  onUnitChange: (id: number, unitId: string) => void;
 }) {
   const isReported = report?.actualQuantity !== undefined && report?.actualQuantity !== "";
+  const selectedUnitId = report?.selectedUnitId ?? "base";
+
+  const conversions = ing.conversions || [];
+  const activeConv = selectedUnitId !== "base" ? conversions.find(c => String(c.id) === selectedUnitId) : null;
+  const factor = activeConv ? activeConv.conversionFactor : 1;
+  const equivalentQty = isReported ? (parseFloat(report!.actualQuantity) * factor).toFixed(2) : null;
 
   return (
     <Card className={`overflow-hidden transition-all duration-300 border shadow-sm hover:shadow-md ${isReported ? 'bg-primary/[0.03] border-primary/30 ring-1 ring-primary/20' : 'bg-card'}`}>
@@ -217,22 +272,48 @@ function IngredientItem({ ing, report, onChange, onNotesChange }: {
         </div>
         <CardDescription className="flex items-center gap-2">
           <Badge variant="secondary" className="text-[9px] uppercase font-black px-1.5 py-0 h-4">{ing.ingredientType}</Badge>
-          <span className="text-[10px] font-medium">UNIT: {ing.unit}</span>
+          <span className="text-[10px] font-medium">STOCK: {ing.stockQuantity} {ing.unit}</span>
         </CardDescription>
       </CardHeader>
       <CardContent className="p-4 pt-0 space-y-3">
         <div className="grid gap-1.5">
           <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Actual Stock Count</Label>
-          <div className="relative">
-            <Input
-              type="number"
-              placeholder="0.00"
-              className={`h-10 text-lg font-bold bg-background/50 border-muted-foreground/10 focus:ring-primary/30 ${isReported ? 'border-primary/30 ring-1 ring-primary/20' : ''}`}
-              value={report?.actualQuantity ?? ""}
-              onChange={(e) => onChange(ing.id, e.target.value)}
-            />
-            <div className="absolute right-3 top-2.5 text-[10px] font-black text-muted-foreground/60 uppercase">{ing.unit}</div>
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Input
+                type="number"
+                placeholder="0.00"
+                className={`h-10 text-lg font-bold bg-background/50 border-muted-foreground/10 focus:ring-primary/30 ${isReported ? 'border-primary/30 ring-1 ring-primary/20' : ''}`}
+                value={report?.actualQuantity ?? ""}
+                onChange={(e) => onChange(ing.id, e.target.value)}
+              />
+            </div>
+            
+            {conversions.length > 0 ? (
+              <select
+                className="h-10 px-3 py-2 rounded-md border border-input bg-background/50 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                value={selectedUnitId}
+                onChange={(e) => onUnitChange(ing.id, e.target.value)}
+              >
+                <option value="base">{ing.unit}</option>
+                {conversions.map((conv) => (
+                  <option key={conv.id} value={String(conv.id)}>
+                    {conv.unitName}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <div className="h-10 flex items-center justify-center px-3 rounded-md border border-dashed text-xs font-black text-muted-foreground/60 uppercase bg-muted/20">
+                {ing.unit}
+              </div>
+            )}
           </div>
+          
+          {selectedUnitId !== "base" && isReported && (
+            <div className="text-[10px] text-muted-foreground font-semibold italic">
+              Equivalent to: {equivalentQty} {ing.unit}
+            </div>
+          )}
         </div>
         <div className="grid gap-1">
            <Input
