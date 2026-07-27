@@ -164,9 +164,9 @@ export function printSimpleDrinksReceipt(order: CompletedOrder) {
   const tendered = order.amountTendered != null
     ? `<div class="row"><span class="label">Tendered:</span><span class="value">${fmt(order.amountTendered)}</span></div>` : "";
   const discount = order.discount > 0
-    ? `<div class="row"><span class="label">Discount${order.discountCode ? ` (${esc(order.discountCode)})` : ""}:</span><span class="value">-${fmt(order.discount)}</span></div>` : "";
+    ? `<div class="row"><span class="label">Discount amount${order.discountCode ? ` (${esc(order.discountCode)})` : ""}:</span><span class="value">-${fmt(order.discount)}</span></div>` : "";
   const offerDiscount = order.offerDiscount && order.offerDiscount > 0
-    ? `<div class="row"><span class="label">Offer Discount:</span><span class="value">-${fmt(order.offerDiscount)}</span></div>` : "";
+    ? `<div class="row"><span class="label">Offer:</span><span class="value">-${fmt(order.offerDiscount)}</span></div>` : "";
 
   openPrintWindow(`
     <div class="center" style="margin-bottom:6px">
@@ -185,7 +185,6 @@ export function printSimpleDrinksReceipt(order: CompletedOrder) {
     <div class="row"><span class="label">Before Tax:</span><span class="value">${fmt(beforeVat)}</span></div>
     ${discount}
     ${offerDiscount}
-    <div class="row"><span class="label">After Discount:</span><span class="value">${fmt(beforeVat - order.discount - (order.offerDiscount ?? 0))}</span></div>
     <div class="row"><span class="label">Tax Amount (14%):</span><span class="value">${fmt(vatAmount)}</span></div>
     <div class="divider"></div>
     <div class="row bold big"><span class="label">TOTAL:</span><span class="value">${fmt(order.total)}</span></div>
@@ -268,9 +267,9 @@ export function printCustomerReceipt(order: CompletedOrder) {
     ? `<div class="row"><span class="label">Tendered:</span><span class="value">${fmt(order.amountTendered)}</span></div>` : "";
 
   const discount = order.discount > 0
-    ? `<div class="row"><span class="label">Discount${order.discountCode ? ` (${esc(order.discountCode)})` : ""}:</span><span class="value">-${fmt(order.discount)}</span></div>` : "";
+    ? `<div class="row"><span class="label">Discount amount${order.discountCode ? ` (${esc(order.discountCode)})` : ""}:</span><span class="value">-${fmt(order.discount)}</span></div>` : "";
   const offerDiscount = order.offerDiscount && order.offerDiscount > 0
-    ? `<div class="row"><span class="label">Offer Discount:</span><span class="value">-${fmt(order.offerDiscount)}</span></div>` : "";
+    ? `<div class="row"><span class="label">Offer:</span><span class="value">-${fmt(order.offerDiscount)}</span></div>` : "";
 
   openPrintWindow(`
     <div class="center" style="margin-bottom:6px">
@@ -289,7 +288,6 @@ export function printCustomerReceipt(order: CompletedOrder) {
     <div class="row"><span class="label">Before Tax:</span><span class="value">${fmt(beforeVat)}</span></div>
     ${discount}
     ${offerDiscount}
-    <div class="row"><span class="label">After Discount:</span><span class="value">${fmt(beforeVat - order.discount - (order.offerDiscount ?? 0))}</span></div>
     <div class="row"><span class="label">Tax Amount (14%):</span><span class="value">${fmt(vatAmount)}</span></div>
     <div class="divider"></div>
     <div class="row bold big"><span class="label">TOTAL:</span><span class="value">${fmt(order.total)}</span></div>

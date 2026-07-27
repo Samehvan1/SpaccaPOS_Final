@@ -656,13 +656,18 @@ router.post("/orders", async (req, res): Promise<void> => {
           const [existingCust] = await tx
             .select()
             .from(customersTable)
-            .where(and(
-              eq(customersTable.phone, parsed.data.customerPhone.trim()),
-              eq(customersTable.isActive, true)
-            ))
+            .where(eq(customersTable.phone, parsed.data.customerPhone.trim()))
             .limit(1);
 
           if (existingCust) {
+            if (!existingCust.isActive) {
+              await tx
+                .update(customersTable)
+                .set({ isActive: true, updatedAt: new Date() })
+                .where(eq(customersTable.id, existingCust.id));
+              existingCust.isActive = true;
+            }
+
             if (!finalCustomerName) {
               finalCustomerName = existingCust.name;
             }
@@ -701,35 +706,11 @@ router.post("/orders", async (req, res): Promise<void> => {
               // Update local reference to reflect deduction
               existingCust.points -= pointsNeeded;
             }
-
-            // Award points & update statistics
-            let pointsToEarn = 0;
-            if (parsed.data.paymentMethod !== "points") {
-              const [pointsRateRow] = await tx
-                .select()
-                .from(settingsTable)
-                .where(and(eq(settingsTable.scope, "global"), eq(settingsTable.key, "pointsConversionRate")))
-                .limit(1);
-              const pointsRate = pointsRateRow ? parseFloat(pointsRateRow.value) : 10;
-              const finalPointsRate = isNaN(pointsRate) || pointsRate <= 0 ? 10 : pointsRate;
-              pointsToEarn = Math.floor((total / 1.14) / finalPointsRate);
-            }
-
-            await tx
-              .update(customersTable)
-              .set({
-                points: sql`${customersTable.points} + cast(${pointsToEarn} as integer)`,
-                totalSpent: sql`${customersTable.totalSpent} + cast(${String(total)} as numeric)`,
-                visitCount: sql`${customersTable.visitCount} + 1`,
-                updatedAt: new Date(),
-              })
-              .where(eq(customersTable.id, existingCust.id));
-            console.log(`[loyalty] Updated registered customer ${existingCust.name} (${parsed.data.customerPhone}): +${pointsToEarn} points`);
           } else {
             if (parsed.data.paymentMethod === "points") {
               throw new Error("CUSTOMER_NOT_FOUND: Customer phone not registered for points payment");
             }
-            console.log(`[loyalty] Phone ${parsed.data.customerPhone} is not registered. Skipping points.`);
+            console.log(`[loyalty] New customer phone entered: ${parsed.data.customerPhone}. Creation deferred to cashier approval.`);
           }
         } else if (parsed.data.paymentMethod === "points") {
           throw new Error("PHONE_REQUIRED: Customer phone is required for points payment");
@@ -1048,6 +1029,70 @@ router.patch("/orders/:id/status", async (req, res, next): Promise<void> => {
     // Perform stock deduction if the order transitions from pending to a paid/confirmed status
     const isConfirming = existingOrder.status === "pending" && ["paid", "in_progress", "ready", "completed"].includes(parsed.data.status);
     if (isConfirming) {
+      // 1. Process customer registration and loyalty points
+      if (existingOrder.customerPhone) {
+        const [existingCust] = await tx
+          .select()
+          .from(customersTable)
+          .where(eq(customersTable.phone, existingOrder.customerPhone.trim()))
+          .limit(1);
+
+        const orderTotal = parseFloat((updateData.total as string) ?? existingOrder.total);
+
+        // Award points & update statistics
+        let pointsToEarn = 0;
+        if ((updateData.paymentMethod ?? existingOrder.paymentMethod) !== "points") {
+          const [pointsRateRow] = await tx
+            .select()
+            .from(settingsTable)
+            .where(and(eq(settingsTable.scope, "global"), eq(settingsTable.key, "pointsConversionRate")))
+            .limit(1);
+          const pointsRate = pointsRateRow ? parseFloat(pointsRateRow.value) : 10;
+          const finalPointsRate = isNaN(pointsRate) || pointsRate <= 0 ? 10 : pointsRate;
+          pointsToEarn = Math.floor((orderTotal / 1.14) / finalPointsRate);
+        }
+
+        if (existingCust) {
+          if (!existingCust.isActive) {
+            await tx
+              .update(customersTable)
+              .set({ isActive: true, updatedAt: new Date() })
+              .where(eq(customersTable.id, existingCust.id));
+            existingCust.isActive = true;
+          }
+
+          await tx
+            .update(customersTable)
+            .set({
+              points: sql`${customersTable.points} + cast(${pointsToEarn} as integer)`,
+              totalSpent: sql`${customersTable.totalSpent} + cast(${String(orderTotal)} as numeric)`,
+              visitCount: sql`${customersTable.visitCount} + 1`,
+              updatedAt: new Date(),
+            })
+            .where(eq(customersTable.id, existingCust.id));
+          
+          console.log(`[loyalty] Cashier approved order: Updated customer ${existingCust.name} (${existingOrder.customerPhone}): +${pointsToEarn} points`);
+        } else {
+          // Register a new customer
+          const newCustName = existingOrder.customerName || "New Customer";
+          
+          const [newCust] = await tx
+            .insert(customersTable)
+            .values({
+              name: newCustName,
+              phone: existingOrder.customerPhone.trim(),
+              points: pointsToEarn,
+              totalSpent: String(orderTotal),
+              visitCount: 1,
+              isActive: true,
+            })
+            .returning();
+          
+          console.log(`[loyalty] Cashier approved order: Created customer ${newCust.name} (${existingOrder.customerPhone}) and earned +${pointsToEarn} points`);
+        }
+      }
+
+      // 2. Perform stock deductions
       const customizations = await tx
         .select({
           ingredientId: orderItemCustomizationsTable.ingredientId,
