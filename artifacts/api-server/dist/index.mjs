@@ -84571,9 +84571,11 @@ router5.post("/orders/:id/refund", requirePermission("cashier:refund_order"), as
     res.status(404).json({ error: "Order not found" });
     return;
   }
-  console.log(`[Refund-Debug] Order ${orderId}, Refund Items:`, itemsToRefund, "Return to Stock:", returnToStockItems);
-  if (itemsToRefund.length > 0) {
-    await db.transaction(async (tx) => {
+  let updatedOrder = null;
+  let allRefunded = false;
+  await db.transaction(async (tx) => {
+    console.log(`[Refund-Debug] Order ${orderId}, Refund Items:`, itemsToRefund, "Return to Stock:", returnToStockItems);
+    if (itemsToRefund.length > 0) {
       for (const itemId of itemsToRefund) {
         const shouldReturnToStock = returnToStockItems?.includes(itemId);
         if (shouldReturnToStock) {
@@ -84605,56 +84607,123 @@ router5.post("/orders/:id/refund", requirePermission("cashier:refund_order"), as
           }).where(eq(orderItemsTable.id, itemId));
         }
       }
-    });
-  }
-  const allItems = await db.select().from(orderItemsTable).where(eq(orderItemsTable.orderId, orderId));
-  const activeItems = allItems.filter((i) => i.status !== "refunded" && i.status !== "cancelled");
-  const allRefunded = allItems.every((i) => i.status === "refunded" || i.status === "cancelled");
-  const anyRefunded = allItems.some((i) => i.status === "refunded");
-  let nextSubtotal = 0;
-  for (const item of activeItems) {
-    nextSubtotal += parseFloat(item.lineTotal);
-  }
-  let nextDiscount = 0;
-  if (order.discountValue && order.discountType) {
-    if (order.discountType === "percentage") {
-      const beforeTax = nextSubtotal / 1.14;
-      nextDiscount = beforeTax * parseFloat(order.discountValue) / 100;
-    } else {
-      nextDiscount = Math.min(nextSubtotal, parseFloat(order.discountValue));
     }
+    const allItems = await tx.select().from(orderItemsTable).where(eq(orderItemsTable.orderId, orderId));
+    const activeItems = allItems.filter((i) => i.status !== "refunded" && i.status !== "cancelled");
+    allRefunded = allItems.every((i) => i.status === "refunded" || i.status === "cancelled");
+    const anyRefunded = allItems.some((i) => i.status === "refunded");
+    let nextSubtotal = 0;
+    for (const item of activeItems) {
+      nextSubtotal += parseFloat(item.lineTotal);
+    }
+    let nextDiscount = 0;
+    let nextOfferDiscount = 0;
+    if (order.offerId) {
+      const [offerRow] = await tx.select().from(offersTable).where(eq(offersTable.id, order.offerId)).limit(1);
+      if (offerRow) {
+        const N = offerRow.buyAmount;
+        const X = offerRow.freeAmount;
+        const flatPrices = activeItems.flatMap(
+          (item) => Array.from({ length: item.quantity }).map(() => parseFloat(item.unitPrice))
+        ).sort((a, b) => a - b);
+        const M = flatPrices.length;
+        const F = Math.floor(M / (N + X)) * X + Math.min(X, Math.max(0, M % (N + X) - N));
+        if (F > 0) {
+          for (let i = 0; i < F; i++) {
+            nextOfferDiscount += flatPrices[i];
+          }
+        }
+      }
+    }
+    if (nextOfferDiscount > 0) {
+      nextDiscount = 0;
+    } else if (order.discountValue && order.discountType) {
+      if (order.discountType === "percentage") {
+        const beforeTax = nextSubtotal / 1.14;
+        nextDiscount = beforeTax * parseFloat(order.discountValue) / 100;
+      } else {
+        nextDiscount = Math.min(nextSubtotal, parseFloat(order.discountValue));
+      }
+    }
+    if (order.discountCode === "HOSPITALITY") {
+      nextDiscount = nextSubtotal;
+      nextOfferDiscount = 0;
+    }
+    const nextTotal = Math.max(0, nextSubtotal - (nextOfferDiscount > 0 ? nextOfferDiscount : nextDiscount));
+    let nextStatus = order.status;
+    if (allRefunded) {
+      nextStatus = "refunded";
+    }
+    const refundAmount = parseFloat(order.total) - nextTotal;
+    if (refundAmount > 0) {
+      await tx.insert(orderPaymentsTable).values({
+        orderId,
+        paymentMethod: "refund",
+        amount: String(-refundAmount),
+        transactionId: `REFUND-${orderId}-${Date.now()}`
+      });
+    }
+    if (order.customerPhone) {
+      const [customer] = await tx.select().from(customersTable).where(and(eq(customersTable.phone, order.customerPhone.trim()), eq(customersTable.isActive, true))).limit(1);
+      if (customer) {
+        const originalTotal = parseFloat(order.total);
+        const totalDifference = originalTotal - nextTotal;
+        let pointsDiff = 0;
+        let pointsAction = "add";
+        if (order.paymentMethod === "points") {
+          let pointsToEgpRate = 10;
+          const [pointsToEgpRow] = await tx.select().from(settingsTable).where(and(eq(settingsTable.scope, "global"), eq(settingsTable.key, "pointsToEgpRate"))).limit(1);
+          if (pointsToEgpRow) {
+            const parsedRate = parseFloat(pointsToEgpRow.value);
+            if (!isNaN(parsedRate) && parsedRate > 0) {
+              pointsToEgpRate = parsedRate;
+            }
+          }
+          const originalPointsSpent = Math.ceil(originalTotal * pointsToEgpRate);
+          const newPointsSpent = Math.ceil(nextTotal * pointsToEgpRate);
+          pointsDiff = originalPointsSpent - newPointsSpent;
+          pointsAction = "add";
+        } else {
+          let pointsConversionRate = 10;
+          const [pointsConversionRow] = await tx.select().from(settingsTable).where(and(eq(settingsTable.scope, "global"), eq(settingsTable.key, "pointsConversionRate"))).limit(1);
+          if (pointsConversionRow) {
+            const parsedRate = parseFloat(pointsConversionRow.value);
+            if (!isNaN(parsedRate) && parsedRate > 0) {
+              pointsConversionRate = parsedRate;
+            }
+          }
+          const originalPointsEarned = Math.floor(originalTotal / 1.14 / pointsConversionRate);
+          const newPointsEarned = Math.floor(nextTotal / 1.14 / pointsConversionRate);
+          pointsDiff = originalPointsEarned - newPointsEarned;
+          pointsAction = "sub";
+        }
+        const pointsUpdate = pointsAction === "add" ? sql`${customersTable.points} + cast(${Math.max(0, pointsDiff)} as integer)` : sql`GREATEST(0, ${customersTable.points} - cast(${Math.max(0, pointsDiff)} as integer))`;
+        await tx.update(customersTable).set({
+          points: pointsUpdate,
+          totalSpent: sql`GREATEST(0, ${customersTable.totalSpent} - cast(${String(Math.max(0, totalDifference))} as numeric))`,
+          updatedAt: /* @__PURE__ */ new Date()
+        }).where(eq(customersTable.id, customer.id));
+        console.log(`[loyalty] Refund loyalty updates for customer ${customer.name}: points diff = ${pointsDiff} (${pointsAction}), spent diff = -${totalDifference}`);
+      }
+    }
+    const [updatedOrderRow] = await tx.update(ordersTable).set({
+      status: nextStatus,
+      subtotal: String(nextSubtotal),
+      discount: String(nextDiscount),
+      offerDiscount: String(nextOfferDiscount),
+      total: String(nextTotal),
+      ...allRefunded ? { cancelledAt: /* @__PURE__ */ new Date() } : {}
+    }).where(eq(ordersTable.id, orderId)).returning();
+    updatedOrder = updatedOrderRow;
+  });
+  if (updatedOrder) {
+    broadcastEvent("order_updated", { orderId: updatedOrder.id, status: updatedOrder.status });
   }
-  if (order.discountCode === "HOSPITALITY") {
-    nextDiscount = nextSubtotal;
-  }
-  const nextTotal = Math.max(0, nextSubtotal - nextDiscount);
-  let nextStatus = order.status;
-  if (allRefunded) {
-    nextStatus = "refunded";
-  } else if (anyRefunded && nextStatus !== "refunded") {
-  }
-  const refundAmount = parseFloat(order.total) - nextTotal;
-  if (refundAmount > 0) {
-    await db.insert(orderPaymentsTable).values({
-      orderId,
-      paymentMethod: "refund",
-      amount: String(-refundAmount),
-      transactionId: `REFUND-${orderId}-${Date.now()}`
-    });
-  }
-  const [updatedOrder] = await db.update(ordersTable).set({
-    status: nextStatus,
-    subtotal: String(nextSubtotal),
-    discount: String(nextDiscount),
-    total: String(nextTotal),
-    ...allRefunded ? { cancelledAt: /* @__PURE__ */ new Date() } : {}
-  }).where(eq(ordersTable.id, orderId)).returning();
-  broadcastEvent("order_updated", { orderId: updatedOrder.id, status: updatedOrder.status });
-  await logActivity(req, "REFUND_ORDER", "order", updatedOrder.id, { returnToStockItems, refundItems: itemsToRefund });
+  await logActivity(req, "REFUND_ORDER", "order", orderId, { returnToStockItems, refundItems: itemsToRefund });
   res.json({
     message: allRefunded ? "Order refunded successfully" : "Item(s) refunded successfully",
-    orderId: updatedOrder.id,
-    newTotal: updatedOrder.total
+    orderId,
+    newTotal: updatedOrder ? updatedOrder.total : order.total
   });
 });
 router5.post("/orders/:id/signature", async (req, res) => {

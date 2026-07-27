@@ -45,6 +45,8 @@ interface CompletedOrder {
   discountCode?: string | null;
   discountValue?: number | null;
   discountType?: "percentage" | "fixed" | null;
+  offerId?: number | null;
+  offerDiscount?: number | null;
   total: number;
   paymentMethod: string;
   amountTendered?: number | null;
@@ -108,15 +110,35 @@ export function printSimpleDrinksReceipt(order: CompletedOrder) {
   const date = format(new Date(order.createdAt), "MMM d, yyyy  h:mm a");
   const payLabel = order.paymentMethod.charAt(0).toUpperCase() + order.paymentMethod.slice(1);
 
+  const freeQtyMap = new Map<number, number>();
+  if (order.offerDiscount && order.offerDiscount > 0 && order.items) {
+    let remainingOfferDiscount = order.offerDiscount;
+    const activeItems = order.items.filter(i => i.status !== "refunded" && i.status !== "cancelled");
+    const flat = activeItems.flatMap(item =>
+      Array.from({ length: item.quantity }).map(() => ({ id: item.id, unitPrice: item.unitPrice }))
+    ).sort((a, b) => a.unitPrice - b.unitPrice);
+
+    for (const unit of flat) {
+      if (remainingOfferDiscount >= unit.unitPrice - 0.01) {
+        freeQtyMap.set(unit.id, (freeQtyMap.get(unit.id) ?? 0) + 1);
+        remainingOfferDiscount -= unit.unitPrice;
+      } else {
+        break;
+      }
+    }
+  }
+
   const activeItems = order.items.filter(i => i.status !== "refunded" && i.status !== "cancelled");
   const refundedItems = order.items.filter(i => i.status === "refunded" || i.status === "cancelled");
 
   const itemRows = [
     ...activeItems.map(item => {
+      const freeQty = freeQtyMap.get(item.id) ?? 0;
       const qty = item.quantity > 1 ? ` x${item.quantity}` : "";
+      const offerLabel = freeQty > 0 ? (freeQty === item.quantity ? " [FREE]" : ` [${freeQty} FREE]`) : "";
       return `
         <div class="row bold">
-          <span class="label">${esc(item.drinkName)}${qty}</span>
+          <span class="label">${esc(item.drinkName)}${qty}${offerLabel}</span>
           <span class="value">${fmt(item.lineTotal)}</span>
         </div>
         ${item.specialNotes ? `<div class="note">  "${esc(item.specialNotes)}"</div>` : ""}
@@ -143,6 +165,8 @@ export function printSimpleDrinksReceipt(order: CompletedOrder) {
     ? `<div class="row"><span class="label">Tendered:</span><span class="value">${fmt(order.amountTendered)}</span></div>` : "";
   const discount = order.discount > 0
     ? `<div class="row"><span class="label">Discount${order.discountCode ? ` (${esc(order.discountCode)})` : ""}:</span><span class="value">-${fmt(order.discount)}</span></div>` : "";
+  const offerDiscount = order.offerDiscount && order.offerDiscount > 0
+    ? `<div class="row"><span class="label">Offer Discount:</span><span class="value">-${fmt(order.offerDiscount)}</span></div>` : "";
 
   openPrintWindow(`
     <div class="center" style="margin-bottom:6px">
@@ -160,7 +184,8 @@ export function printSimpleDrinksReceipt(order: CompletedOrder) {
     <div class="divider"></div>
     <div class="row"><span class="label">Before Tax:</span><span class="value">${fmt(beforeVat)}</span></div>
     ${discount}
-    <div class="row"><span class="label">After Discount:</span><span class="value">${fmt(beforeVat - order.discount)}</span></div>
+    ${offerDiscount}
+    <div class="row"><span class="label">After Discount:</span><span class="value">${fmt(beforeVat - order.discount - (order.offerDiscount ?? 0))}</span></div>
     <div class="row"><span class="label">Tax Amount (14%):</span><span class="value">${fmt(vatAmount)}</span></div>
     <div class="divider"></div>
     <div class="row bold big"><span class="label">TOTAL:</span><span class="value">${fmt(order.total)}</span></div>
@@ -186,8 +211,27 @@ export function printCustomerReceipt(order: CompletedOrder) {
   const date = format(new Date(order.createdAt), "MMM d, yyyy  h:mm a");
   const payLabel = order.paymentMethod.charAt(0).toUpperCase() + order.paymentMethod.slice(1);
 
+  const freeQtyMap = new Map<number, number>();
+  if (order.offerDiscount && order.offerDiscount > 0 && order.items) {
+    let remainingOfferDiscount = order.offerDiscount;
+    const activeItems = order.items.filter(i => i.status !== "refunded" && i.status !== "cancelled");
+    const flat = activeItems.flatMap(item =>
+      Array.from({ length: item.quantity }).map(() => ({ id: item.id, unitPrice: item.unitPrice }))
+    ).sort((a, b) => a.unitPrice - b.unitPrice);
+
+    for (const unit of flat) {
+      if (remainingOfferDiscount >= unit.unitPrice - 0.01) {
+        freeQtyMap.set(unit.id, (freeQtyMap.get(unit.id) ?? 0) + 1);
+        remainingOfferDiscount -= unit.unitPrice;
+      } else {
+        break;
+      }
+    }
+  }
+
   const itemRows = order.items.map(item => {
     const isRefunded = item.status === "refunded" || item.status === "cancelled";
+    const freeQty = freeQtyMap.get(item.id) ?? 0;
     const customs = (item.customizations ?? [])
       .filter(c => (c.customerSortOrder ?? 1) > 0 && c.optionLabel?.toLowerCase() !== "none")
       .sort((a, b) => (a.customerSortOrder ?? 1) - (b.customerSortOrder ?? 1))
@@ -201,10 +245,11 @@ export function printCustomerReceipt(order: CompletedOrder) {
       }).join("");
     const notes = item.specialNotes ? `<div class="note">  "${esc(item.specialNotes)}"</div>` : "";
     const qty = item.quantity > 1 ? ` x${item.quantity}` : "";
+    const offerLabel = !isRefunded && freeQty > 0 ? (freeQty === item.quantity ? " [FREE]" : ` [${freeQty} FREE]`) : "";
     
     return `
       <div class="row bold ${isRefunded ? 'refunded' : ''}">
-        <span class="label">${esc(item.drinkName)}${qty} ${isRefunded ? '[REFUNDED]' : ''}</span>
+        <span class="label">${esc(item.drinkName)}${qty}${offerLabel} ${isRefunded ? '[REFUNDED]' : ''}</span>
         <span class="value">${fmt(item.lineTotal)}</span>
       </div>
       ${!isRefunded ? customs : ''}
@@ -224,6 +269,8 @@ export function printCustomerReceipt(order: CompletedOrder) {
 
   const discount = order.discount > 0
     ? `<div class="row"><span class="label">Discount${order.discountCode ? ` (${esc(order.discountCode)})` : ""}:</span><span class="value">-${fmt(order.discount)}</span></div>` : "";
+  const offerDiscount = order.offerDiscount && order.offerDiscount > 0
+    ? `<div class="row"><span class="label">Offer Discount:</span><span class="value">-${fmt(order.offerDiscount)}</span></div>` : "";
 
   openPrintWindow(`
     <div class="center" style="margin-bottom:6px">
@@ -241,7 +288,8 @@ export function printCustomerReceipt(order: CompletedOrder) {
     <div class="divider"></div>
     <div class="row"><span class="label">Before Tax:</span><span class="value">${fmt(beforeVat)}</span></div>
     ${discount}
-    <div class="row"><span class="label">After Discount:</span><span class="value">${fmt(beforeVat - order.discount)}</span></div>
+    ${offerDiscount}
+    <div class="row"><span class="label">After Discount:</span><span class="value">${fmt(beforeVat - order.discount - (order.offerDiscount ?? 0))}</span></div>
     <div class="row"><span class="label">Tax Amount (14%):</span><span class="value">${fmt(vatAmount)}</span></div>
     <div class="divider"></div>
     <div class="row bold big"><span class="label">TOTAL:</span><span class="value">${fmt(order.total)}</span></div>

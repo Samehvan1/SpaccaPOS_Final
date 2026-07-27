@@ -404,6 +404,7 @@ export declare const OrderPaymentMethod: {
     readonly hospitality: "hospitality";
     readonly split: "split";
     readonly refund: "refund";
+    readonly points: "points";
 };
 export interface Order {
     id: number;
@@ -459,6 +460,7 @@ export declare const CreateOrderBodyPaymentMethod: {
     readonly hospitality: "hospitality";
     readonly split: "split";
     readonly refund: "refund";
+    readonly points: "points";
 };
 export type CreateOrderBodyItemsItemSelectionsItem = {
     ingredientId?: number;
@@ -505,6 +507,7 @@ export declare const UpdateOrderStatusBodyPaymentMethod: {
     readonly hospitality: "hospitality";
     readonly split: "split";
     readonly refund: "refund";
+    readonly points: "points";
 };
 export interface UpdateOrderStatusBody {
     status: UpdateOrderStatusBodyStatus;
