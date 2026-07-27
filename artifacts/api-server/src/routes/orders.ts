@@ -667,8 +667,54 @@ router.post("/orders", async (req, res): Promise<void> => {
               finalCustomerName = existingCust.name;
             }
 
+            if (parsed.data.paymentMethod === "points") {
+              // Fetch pointsToEgpRate
+              let pointsRate = 10;
+              const [pointsToEgpRow] = await tx
+                .select()
+                .from(settingsTable)
+                .where(and(eq(settingsTable.scope, "global"), eq(settingsTable.key, "pointsToEgpRate")))
+                .limit(1);
+              if (pointsToEgpRow) {
+                const parsedRate = parseFloat(pointsToEgpRow.value);
+                if (!isNaN(parsedRate) && parsedRate > 0) {
+                  pointsRate = parsedRate;
+                }
+              }
+
+              const pointsNeeded = Math.ceil(total * pointsRate);
+              if (existingCust.points < pointsNeeded) {
+                throw new Error(`INSUFFICIENT_POINTS: Insufficient points. Needs ${pointsNeeded} points, customer only has ${existingCust.points}`);
+              }
+
+              // Deduct points
+              await tx
+                .update(customersTable)
+                .set({
+                  points: sql`${customersTable.points} - cast(${pointsNeeded} as integer)`,
+                  updatedAt: new Date(),
+                })
+                .where(eq(customersTable.id, existingCust.id));
+
+              console.log(`[loyalty] Paid by points: Deducted ${pointsNeeded} points from customer ${existingCust.name}`);
+              
+              // Update local reference to reflect deduction
+              existingCust.points -= pointsNeeded;
+            }
+
             // Award points & update statistics
-            const pointsToEarn = Math.floor((total / 1.14) / 10);
+            let pointsToEarn = 0;
+            if (parsed.data.paymentMethod !== "points") {
+              const [pointsRateRow] = await tx
+                .select()
+                .from(settingsTable)
+                .where(and(eq(settingsTable.scope, "global"), eq(settingsTable.key, "pointsConversionRate")))
+                .limit(1);
+              const pointsRate = pointsRateRow ? parseFloat(pointsRateRow.value) : 10;
+              const finalPointsRate = isNaN(pointsRate) || pointsRate <= 0 ? 10 : pointsRate;
+              pointsToEarn = Math.floor((total / 1.14) / finalPointsRate);
+            }
+
             await tx
               .update(customersTable)
               .set({
@@ -680,8 +726,13 @@ router.post("/orders", async (req, res): Promise<void> => {
               .where(eq(customersTable.id, existingCust.id));
             console.log(`[loyalty] Updated registered customer ${existingCust.name} (${parsed.data.customerPhone}): +${pointsToEarn} points`);
           } else {
+            if (parsed.data.paymentMethod === "points") {
+              throw new Error("CUSTOMER_NOT_FOUND: Customer phone not registered for points payment");
+            }
             console.log(`[loyalty] Phone ${parsed.data.customerPhone} is not registered. Skipping points.`);
           }
+        } else if (parsed.data.paymentMethod === "points") {
+          throw new Error("PHONE_REQUIRED: Customer phone is required for points payment");
         }
 
         const [newOrder] = await tx.insert(ordersTable).values({
@@ -786,6 +837,12 @@ router.post("/orders", async (req, res): Promise<void> => {
       savedItems = resTx.savedItems;
       break; // Success!
     } catch (err: any) {
+      if (err.message?.startsWith("INSUFFICIENT_POINTS:") || 
+          err.message?.startsWith("CUSTOMER_NOT_FOUND:") || 
+          err.message?.startsWith("PHONE_REQUIRED:")) {
+        res.status(400).json({ error: err.message.substring(err.message.indexOf(":") + 1).trim() });
+        return;
+      }
       retries--;
       const isUniqueViolation = err.code === "23505" || err.message?.includes("unique constraint") || err.message?.includes("duplicate key");
       const isLockContention = err.code === "40001" || err.code === "40P01" || err.message?.includes("deadlock") || err.message?.includes("serialization") || err.message?.includes("concurrent update");

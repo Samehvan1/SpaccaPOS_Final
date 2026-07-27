@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { fmt } from "@/lib/currency";
+import { useSettings } from "@/hooks/use-settings";
 
 interface CheckoutDialogProps {
   isOpen: boolean;
@@ -17,8 +18,8 @@ interface CheckoutDialogProps {
   customerPhone: string;
   setCustomerPhone: (val: string) => void;
   customerInfo?: { name: string; points: number } | null;
-  paymentMethod: "cash" | "card" | "wallet" | "hospitality";
-  setPaymentMethod: (val: "cash" | "card" | "wallet" | "hospitality") => void;
+  paymentMethod: "cash" | "card" | "wallet" | "hospitality" | "points";
+  setPaymentMethod: (val: "cash" | "card" | "wallet" | "hospitality" | "points") => void;
   adminPin: string;
   setAdminPin: (val: string) => void;
   amountTendered: string;
@@ -72,6 +73,10 @@ export const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
   isCreatingOrder,
   onSubmitCheckout,
 }) => {
+  const { pointsToEgpRate } = useSettings();
+  const pointsNeeded = Math.ceil(cartTotal * pointsToEgpRate);
+  const hasEnoughPoints = customerInfo ? customerInfo.points >= pointsNeeded : false;
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent className="sm:max-w-[425px]">
@@ -135,8 +140,8 @@ export const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
           </div>
           <div className="grid gap-2">
             <Label>Payment Method</Label>
-            <div className="grid grid-cols-3 gap-2">
-              {["cash", "card", "wallet"].map((method) => (
+            <div className="grid grid-cols-2 gap-2">
+              {["cash", "card", "wallet", ...(customerInfo && customerInfo.points > 0 ? ["points"] : [])].map((method) => (
                 <Button
                   key={method}
                   variant={paymentMethod === method ? "default" : "outline"}
@@ -144,7 +149,7 @@ export const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
                     setPaymentMethod(method as any);
                     if (method !== "hospitality") setAdminPin("");
                   }}
-                  className="capitalize"
+                  className="capitalize font-bold"
                 >
                   {method}
                 </Button>
@@ -165,6 +170,21 @@ export const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
                   className="pl-9 border-pink-200 focus-visible:ring-pink-500"
                   autoComplete="off"
                 />
+              </div>
+            </div>
+          )}
+          {paymentMethod === "points" && customerInfo && (
+            <div className="grid gap-2 animate-in fade-in slide-in-from-top-2 duration-300">
+              <div className={`p-4 rounded-xl border font-bold text-sm ${hasEnoughPoints ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-600" : "bg-destructive/10 border-destructive/20 text-destructive"}`}>
+                {hasEnoughPoints ? (
+                  <div>
+                    Will deduct <span className="text-base font-black">{pointsNeeded}</span> points from balance.
+                  </div>
+                ) : (
+                  <div>
+                    Insufficient points! Needs <span className="text-base font-black">{pointsNeeded}</span> points (Customer has {customerInfo.points}).
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -263,7 +283,7 @@ export const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
           <Button variant="outline" onClick={onClose} disabled={isCreatingOrder}>
             Cancel
           </Button>
-          <Button onClick={onSubmitCheckout} disabled={isCreatingOrder} className="min-w-[120px]">
+          <Button onClick={onSubmitCheckout} disabled={isCreatingOrder || (paymentMethod === "points" && !hasEnoughPoints)} className="min-w-[120px]">
             {isCreatingOrder ? "Processing..." : "Charge"}
           </Button>
         </DialogFooter>

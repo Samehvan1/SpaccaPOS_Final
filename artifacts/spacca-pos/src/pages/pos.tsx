@@ -628,7 +628,7 @@ export default function PosTerminal() {
   // Checkout
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [customerName, setCustomerName] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState<"cash" | "card" | "wallet" | "hospitality">("cash");
+  const [paymentMethod, setPaymentMethod] = useState<"cash" | "card" | "wallet" | "hospitality" | "points">("cash");
   const [adminPin, setAdminPin] = useState("");
   const [amountTendered, setAmountTendered] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");

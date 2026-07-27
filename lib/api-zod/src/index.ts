@@ -147,6 +147,7 @@ export const ListOrdersResponseItem = (
       "hospitality",
       "split",
       "refund",
+      "points",
     ]),
   })
   .and(
@@ -172,6 +173,15 @@ export const ListOrdersResponse = z.array(ListOrdersResponseItem);
 export type ListOrdersResponse = Infer<typeof ListOrdersResponse>;
 
 export const CreateOrderBody = api.CreateOrderBody.extend({
+  paymentMethod: z.enum([
+    "cash",
+    "card",
+    "wallet",
+    "hospitality",
+    "split",
+    "refund",
+    "points",
+  ]),
   payments: z
     .array(
       z.object({
@@ -181,6 +191,7 @@ export const CreateOrderBody = api.CreateOrderBody.extend({
           "wallet",
           "hospitality",
           "refund",
+          "points",
         ]),
         amount: z.number(),
         transactionId: z.string().optional(),
@@ -200,7 +211,7 @@ export const GetOrderResponse = (
     discountCode: z.string().nullish(),
     branchName: z.string().optional(),
     source: z.enum(["pos", "kiosk", "web", "mobile"]).optional(),
-    paymentMethod: z.enum(["cash", "card", "wallet", "hospitality", "split"]),
+    paymentMethod: z.enum(["cash", "card", "wallet", "hospitality", "split", "points"]),
     payments: z
       .array(
         z.object({

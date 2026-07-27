@@ -464,6 +464,7 @@ export const OrderPaymentMethod = {
   hospitality: "hospitality",
   split: "split",
   refund: "refund",
+  points: "points",
 } as const;
 
 export interface Order {
@@ -524,6 +525,7 @@ export const CreateOrderBodyPaymentMethod = {
   hospitality: "hospitality",
   split: "split",
   refund: "refund",
+  points: "points",
 } as const;
 
 export type CreateOrderBodyItemsItemSelectionsItem = {
@@ -579,6 +581,7 @@ export const UpdateOrderStatusBodyPaymentMethod = {
   hospitality: "hospitality",
   split: "split",
   refund: "refund",
+  points: "points",
 } as const;
 
 export interface UpdateOrderStatusBody {

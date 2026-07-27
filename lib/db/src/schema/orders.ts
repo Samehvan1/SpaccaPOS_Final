@@ -28,7 +28,7 @@ export const ordersTable = pgTable("orders", {
   offerDiscount: numeric("offer_discount", { precision: 8, scale: 2 }).notNull().default("0"),
   total: numeric("total", { precision: 8, scale: 2 }).notNull(),
 
-  paymentMethod: text("payment_method", { enum: ["cash", "card", "wallet", "hospitality", "split", "refund"] }).notNull().default("cash"),
+  paymentMethod: text("payment_method", { enum: ["cash", "card", "wallet", "hospitality", "split", "refund", "points"] }).notNull().default("cash"),
   source: text("source", { enum: ["pos", "kiosk", "web", "mobile"] }).notNull().default("pos"),
   amountTendered: numeric("amount_tendered", { precision: 8, scale: 2 }),
   changeDue: numeric("change_due", { precision: 8, scale: 2 }),
@@ -94,7 +94,7 @@ export const orderItemCustomizationsTable = pgTable("order_item_customizations",
 export const orderPaymentsTable = pgTable("order_payments", {
   id: serial("id").primaryKey(),
   orderId: integer("order_id").notNull().references(() => ordersTable.id, { onDelete: "cascade" }),
-  paymentMethod: text("payment_method", { enum: ["cash", "card", "wallet", "hospitality", "refund"] }).notNull(),
+  paymentMethod: text("payment_method", { enum: ["cash", "card", "wallet", "hospitality", "refund", "points"] }).notNull(),
   amount: numeric("amount", { precision: 8, scale: 2 }).notNull(),
   transactionId: text("transaction_id"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

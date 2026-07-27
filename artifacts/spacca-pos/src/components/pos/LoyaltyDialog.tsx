@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { useSettings } from "@/hooks/use-settings";
 
 interface LoyaltyDialogProps {
   isOpen: boolean;
@@ -17,6 +18,8 @@ export const LoyaltyDialog: React.FC<LoyaltyDialogProps> = ({
   createdOrder,
   onSaveSignature,
 }) => {
+  const { pointsConversionRate } = useSettings();
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent className="sm:max-w-[450px]">
@@ -29,7 +32,7 @@ export const LoyaltyDialog: React.FC<LoyaltyDialogProps> = ({
             <div className="text-5xl font-black text-primary italic">
               {loyaltyPoints !== null ? loyaltyPoints : "..."}
             </div>
-            <p className="text-sm font-medium">Points earned from this order: {createdOrder ? Math.floor((parseFloat(createdOrder.subtotal) / 1.14) / 10) : 0}</p>
+            <p className="text-sm font-medium">Points earned from this order: {createdOrder ? Math.floor((parseFloat(createdOrder.subtotal) / 1.14) / pointsConversionRate) : 0}</p>
           </div>
 
           <div className="space-y-4">

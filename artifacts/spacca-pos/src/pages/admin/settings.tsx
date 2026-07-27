@@ -1,8 +1,10 @@
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Save, Settings, PackageX } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { ArrowLeft, Save, Settings, PackageX, Coins } from "lucide-react";
 import { Link } from "wouter";
 import { useSettings } from "@/hooks/use-settings";
 import { useToast } from "@/hooks/use-toast";
@@ -15,11 +17,28 @@ export default function SystemSettingsAdmin() {
     setAutoPrintCustomer,
     autoPrintAgent,
     setAutoPrintAgent,
+    pointsConversionRate,
+    setPointsConversionRate,
+    pointsToEgpRate,
+    setPointsToEgpRate,
     isLoading 
   } = useSettings();
   const { toast } = useToast();
 
+  const [localPointsRate, setLocalPointsRate] = useState<number>(pointsConversionRate);
+  const [localPointsToEgpRate, setLocalPointsToEgpRate] = useState<number>(pointsToEgpRate);
+
+  useEffect(() => {
+    setLocalPointsRate(pointsConversionRate);
+  }, [pointsConversionRate]);
+
+  useEffect(() => {
+    setLocalPointsToEgpRate(pointsToEgpRate);
+  }, [pointsToEgpRate]);
+
   const handleSave = () => {
+    setPointsConversionRate(localPointsRate);
+    setPointsToEgpRate(localPointsToEgpRate);
     toast({ title: "Settings Saved", description: "System configuration has been updated." });
   };
 
@@ -114,6 +133,68 @@ export default function SystemSettingsAdmin() {
                 onCheckedChange={setAutoPrintAgent}
                 disabled={isLoading}
               />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Loyalty Settings */}
+        <Card className="border-2 hover:border-primary/20 transition-all">
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-emerald-500/10">
+                <Coins className="h-6 w-6 text-emerald-500" />
+              </div>
+              <div>
+                <CardTitle>Loyalty & Points</CardTitle>
+                <CardDescription>Configure customer loyalty point systems.</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Reward Points Earning Rate */}
+            <div className="flex flex-col gap-4 p-4 rounded-xl border bg-muted/30">
+              <div className="space-y-1">
+                <Label htmlFor="points-rate" className="text-base font-bold">Reward Conversion Rate (Earn Points)</Label>
+                <p className="text-sm text-muted-foreground">
+                  EGP spent (excluding tax) required to earn 1 loyalty point.
+                </p>
+              </div>
+              <div className="flex items-center gap-4">
+                <Input
+                  id="points-rate"
+                  type="number"
+                  step="any"
+                  min={0.01}
+                  className="max-w-[200px] font-bold"
+                  value={localPointsRate || ""}
+                  onChange={(e) => setLocalPointsRate(Math.max(0.01, parseFloat(e.target.value) || 0))}
+                  disabled={isLoading}
+                />
+                <span className="text-sm font-medium text-muted-foreground">EGP = 1 Point</span>
+              </div>
+            </div>
+
+            {/* Redemption Points to EGP Rate */}
+            <div className="flex flex-col gap-4 p-4 rounded-xl border bg-muted/30">
+              <div className="space-y-1">
+                <Label htmlFor="points-to-egp-rate" className="text-base font-bold">Redemption Conversion Rate (Pay with Points)</Label>
+                <p className="text-sm text-muted-foreground">
+                  Loyalty points required to redeem 1 EGP discount/payment.
+                </p>
+              </div>
+              <div className="flex items-center gap-4">
+                <Input
+                  id="points-to-egp-rate"
+                  type="number"
+                  step="any"
+                  min={0.01}
+                  className="max-w-[200px] font-bold"
+                  value={localPointsToEgpRate || ""}
+                  onChange={(e) => setLocalPointsToEgpRate(Math.max(0.01, parseFloat(e.target.value) || 0))}
+                  disabled={isLoading}
+                />
+                <span className="text-sm font-medium text-muted-foreground">Points = 1 EGP</span>
+              </div>
             </div>
           </CardContent>
         </Card>

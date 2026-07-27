@@ -86,7 +86,7 @@ const checkCartStock = (
 };
 
 export default function KioskPage() {
-  const { allowNoStockSell } = useSettings();
+  const { allowNoStockSell, pointsConversionRate, pointsToEgpRate } = useSettings();
   const { toast } = useToast();
   useOrderEvents();
   const [step, setStep] = useState<"start" | "menu" | "checkout" | "success">("start");
@@ -148,6 +148,8 @@ export default function KioskPage() {
   const [customerName, setCustomerName] = useState("");
   const [loyaltyPoints, setLoyaltyPoints] = useState<number | null>(null);
   const [createdOrder, setCreatedOrder] = useState<any>(null);
+  const [customerInfo, setCustomerInfo] = useState<{ name: string; points: number } | null>(null);
+  const [kioskPaymentMethod, setKioskPaymentMethod] = useState<"card" | "points">("card");
 
   const { data: branches = [] } = useQuery<any[]>({
     queryKey: ["branches"],
@@ -163,6 +165,44 @@ export default function KioskPage() {
       localStorage.setItem("kiosk_branch_id", selectedBranchId.toString());
     }
   }, [selectedBranchId]);
+
+  useEffect(() => {
+    const fetchKioskCustomerDetails = async () => {
+      const targetPhone = customerPhone.trim();
+      if (!targetPhone) {
+        setCustomerInfo(null);
+        setKioskPaymentMethod("card");
+        return;
+      }
+      try {
+        const res = await fetch(`${API_BASE}/customers/points/${encodeURIComponent(targetPhone)}`);
+        if (res.ok) {
+          const pointsData = await res.json();
+          if (pointsData.name) {
+            setCustomerInfo({ name: pointsData.name, points: pointsData.points });
+          } else {
+            setCustomerInfo(null);
+            setKioskPaymentMethod("card");
+          }
+        } else {
+          setCustomerInfo(null);
+          setKioskPaymentMethod("card");
+        }
+      } catch (e) {
+        console.error("Failed to fetch loyalty details", e);
+        setCustomerInfo(null);
+        setKioskPaymentMethod("card");
+      }
+    };
+
+    const isValidPhone = /^01[0125][0-9]{8}$/.test(customerPhone.trim()) || /^(?:\+20|20)1[0125][0-9]{8}$/.test(customerPhone.trim());
+    if (isValidPhone) {
+      fetchKioskCustomerDetails();
+    } else {
+      setCustomerInfo(null);
+      setKioskPaymentMethod("card");
+    }
+  }, [customerPhone]);
 
   const selectedBranch = useMemo(() => branches.find(b => b.id === selectedBranchId), [branches, selectedBranchId]);
 
@@ -569,7 +609,7 @@ export default function KioskPage() {
         branchId: selectedBranchId || undefined,
         customerName: customerName || undefined,
         customerPhone: customerPhone || undefined,
-        paymentMethod: "card", // Default to card for Kiosk
+        paymentMethod: kioskPaymentMethod,
         items: cart.map(item => ({
           drinkId: item.drinkId,
           quantity: item.quantity,
@@ -1066,12 +1106,65 @@ export default function KioskPage() {
                     Enter phone for loyalty points and future health tracking system.
                   </p>
                 </div>
+
+                {customerInfo && customerInfo.points > 0 && (
+                  <div className="space-y-3">
+                    <Label className="text-xs font-black uppercase tracking-widest opacity-60">Payment Method</Label>
+                    <div className="grid grid-cols-2 gap-4">
+                      <button
+                        type="button"
+                        onClick={() => setKioskPaymentMethod("card")}
+                        className={`h-16 rounded-2xl border-2 font-black uppercase tracking-wider text-sm transition-all ${
+                          kioskPaymentMethod === "card"
+                            ? "border-primary bg-primary text-white shadow-lg shadow-primary/20"
+                            : "border-white/10 bg-white/5 text-white/60 hover:bg-white/10"
+                        }`}
+                      >
+                        Pay with Card
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setKioskPaymentMethod("points")}
+                        className={`h-16 rounded-2xl border-2 font-black uppercase tracking-wider text-sm transition-all ${
+                          kioskPaymentMethod === "points"
+                            ? "border-primary bg-primary text-white shadow-lg shadow-primary/20"
+                            : "border-white/10 bg-white/5 text-white/60 hover:bg-white/10"
+                        }`}
+                      >
+                        Pay with Points
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {kioskPaymentMethod === "points" && customerInfo && (
+                  <div className={`p-6 rounded-[2rem] border font-semibold text-sm animate-in fade-in slide-in-from-top-2 duration-300 ${
+                    customerInfo.points >= Math.ceil(cartTotal * pointsToEgpRate)
+                      ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-500"
+                      : "bg-destructive/10 border-destructive/20 text-destructive"
+                  }`}>
+                    <div className="flex justify-between items-center">
+                      <span className="uppercase text-xs tracking-wider opacity-80">Points Balance:</span>
+                      <span className="font-black text-base">{customerInfo.points} points</span>
+                    </div>
+                    <div className="flex justify-between items-center mt-2">
+                      <span className="uppercase text-xs tracking-wider opacity-80">Points Needed:</span>
+                      <span className="font-black text-lg">{Math.ceil(cartTotal * pointsToEgpRate)} points</span>
+                    </div>
+                    {customerInfo.points < Math.ceil(cartTotal * pointsToEgpRate) && (
+                      <div className="mt-4 text-xs font-bold text-destructive">
+                        Insufficient points to cover this order. Please select "Pay with Card".
+                      </div>
+                    )}
+                  </div>
+                )}
+
               </div>
 
               <Button 
                 className="w-full h-24 rounded-[2rem] text-2xl font-black uppercase tracking-[0.2em] shadow-2xl"
                 onClick={handleFinish}
-                disabled={isCreatingOrder}
+                disabled={isCreatingOrder || (kioskPaymentMethod === "points" && (!customerInfo || customerInfo.points < Math.ceil(cartTotal * pointsToEgpRate)))}
               >
                 {isCreatingOrder ? "Sending..." : "Finish Order"}
               </Button>
@@ -1094,7 +1187,7 @@ export default function KioskPage() {
                 <h2 className="text-8xl font-black text-primary italic leading-none">
                   {loyaltyPoints !== null ? loyaltyPoints : "..."}
                 </h2>
-                <p className="text-xl font-bold opacity-80">Points earned from this order: {createdOrder ? Math.floor((parseFloat(createdOrder.total) / 1.14) / 10) : 0}</p>
+                <p className="text-xl font-bold opacity-80">Points earned from this order: {createdOrder ? Math.floor((parseFloat(createdOrder.total) / 1.14) / pointsConversionRate) : 0}</p>
               </div>
 
               <div className="space-y-6">

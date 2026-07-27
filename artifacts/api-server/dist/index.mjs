@@ -56240,7 +56240,7 @@ var init_orders = __esm({
       offerId: integer("offer_id").references(() => offersTable.id),
       offerDiscount: numeric("offer_discount", { precision: 8, scale: 2 }).notNull().default("0"),
       total: numeric("total", { precision: 8, scale: 2 }).notNull(),
-      paymentMethod: text("payment_method", { enum: ["cash", "card", "wallet", "hospitality", "split", "refund"] }).notNull().default("cash"),
+      paymentMethod: text("payment_method", { enum: ["cash", "card", "wallet", "hospitality", "split", "refund", "points"] }).notNull().default("cash"),
       source: text("source", { enum: ["pos", "kiosk", "web", "mobile"] }).notNull().default("pos"),
       amountTendered: numeric("amount_tendered", { precision: 8, scale: 2 }),
       changeDue: numeric("change_due", { precision: 8, scale: 2 }),
@@ -56306,7 +56306,7 @@ var init_orders = __esm({
     orderPaymentsTable = pgTable("order_payments", {
       id: serial("id").primaryKey(),
       orderId: integer("order_id").notNull().references(() => ordersTable.id, { onDelete: "cascade" }),
-      paymentMethod: text("payment_method", { enum: ["cash", "card", "wallet", "hospitality", "refund"] }).notNull(),
+      paymentMethod: text("payment_method", { enum: ["cash", "card", "wallet", "hospitality", "refund", "points"] }).notNull(),
       amount: numeric("amount", { precision: 8, scale: 2 }).notNull(),
       transactionId: text("transaction_id"),
       createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
@@ -79308,7 +79308,8 @@ var ListOrdersResponseItem2 = ListOrdersResponseItem._def.left.extend({
     "wallet",
     "hospitality",
     "split",
-    "refund"
+    "refund",
+    "points"
   ])
 }).and(
   ListOrdersResponseItem._def.right.extend(
@@ -79329,6 +79330,15 @@ var ListOrdersResponseItem2 = ListOrdersResponseItem._def.left.extend({
 );
 var ListOrdersResponse2 = external_exports2.array(ListOrdersResponseItem2);
 var CreateOrderBody2 = CreateOrderBody.extend({
+  paymentMethod: external_exports2.enum([
+    "cash",
+    "card",
+    "wallet",
+    "hospitality",
+    "split",
+    "refund",
+    "points"
+  ]),
   payments: external_exports2.array(
     external_exports2.object({
       paymentMethod: external_exports2.enum([
@@ -79336,7 +79346,8 @@ var CreateOrderBody2 = CreateOrderBody.extend({
         "card",
         "wallet",
         "hospitality",
-        "refund"
+        "refund",
+        "points"
       ]),
       amount: external_exports2.number(),
       transactionId: external_exports2.string().optional()
@@ -79349,7 +79360,7 @@ var GetOrderResponse2 = GetOrderResponse._def.left.extend({
   discountCode: external_exports2.string().nullish(),
   branchName: external_exports2.string().optional(),
   source: external_exports2.enum(["pos", "kiosk", "web", "mobile"]).optional(),
-  paymentMethod: external_exports2.enum(["cash", "card", "wallet", "hospitality", "split"]),
+  paymentMethod: external_exports2.enum(["cash", "card", "wallet", "hospitality", "split", "points"]),
   payments: external_exports2.array(
     external_exports2.object({
       id: external_exports2.number(),
@@ -84132,7 +84143,33 @@ router5.post("/orders", async (req, res) => {
             if (!finalCustomerName) {
               finalCustomerName = existingCust.name;
             }
-            const pointsToEarn = Math.floor(total / 1.14 / 10);
+            if (parsed.data.paymentMethod === "points") {
+              let pointsRate = 10;
+              const [pointsToEgpRow] = await tx.select().from(settingsTable).where(and(eq(settingsTable.scope, "global"), eq(settingsTable.key, "pointsToEgpRate"))).limit(1);
+              if (pointsToEgpRow) {
+                const parsedRate = parseFloat(pointsToEgpRow.value);
+                if (!isNaN(parsedRate) && parsedRate > 0) {
+                  pointsRate = parsedRate;
+                }
+              }
+              const pointsNeeded = Math.ceil(total * pointsRate);
+              if (existingCust.points < pointsNeeded) {
+                throw new Error(`INSUFFICIENT_POINTS: Insufficient points. Needs ${pointsNeeded} points, customer only has ${existingCust.points}`);
+              }
+              await tx.update(customersTable).set({
+                points: sql`${customersTable.points} - cast(${pointsNeeded} as integer)`,
+                updatedAt: /* @__PURE__ */ new Date()
+              }).where(eq(customersTable.id, existingCust.id));
+              console.log(`[loyalty] Paid by points: Deducted ${pointsNeeded} points from customer ${existingCust.name}`);
+              existingCust.points -= pointsNeeded;
+            }
+            let pointsToEarn = 0;
+            if (parsed.data.paymentMethod !== "points") {
+              const [pointsRateRow] = await tx.select().from(settingsTable).where(and(eq(settingsTable.scope, "global"), eq(settingsTable.key, "pointsConversionRate"))).limit(1);
+              const pointsRate = pointsRateRow ? parseFloat(pointsRateRow.value) : 10;
+              const finalPointsRate = isNaN(pointsRate) || pointsRate <= 0 ? 10 : pointsRate;
+              pointsToEarn = Math.floor(total / 1.14 / finalPointsRate);
+            }
             await tx.update(customersTable).set({
               points: sql`${customersTable.points} + cast(${pointsToEarn} as integer)`,
               totalSpent: sql`${customersTable.totalSpent} + cast(${String(total)} as numeric)`,
@@ -84141,8 +84178,13 @@ router5.post("/orders", async (req, res) => {
             }).where(eq(customersTable.id, existingCust.id));
             console.log(`[loyalty] Updated registered customer ${existingCust.name} (${parsed.data.customerPhone}): +${pointsToEarn} points`);
           } else {
+            if (parsed.data.paymentMethod === "points") {
+              throw new Error("CUSTOMER_NOT_FOUND: Customer phone not registered for points payment");
+            }
             console.log(`[loyalty] Phone ${parsed.data.customerPhone} is not registered. Skipping points.`);
           }
+        } else if (parsed.data.paymentMethod === "points") {
+          throw new Error("PHONE_REQUIRED: Customer phone is required for points payment");
         }
         const [newOrder] = await tx.insert(ordersTable).values({
           branchId: targetBranchId,
@@ -84231,6 +84273,10 @@ router5.post("/orders", async (req, res) => {
       savedItems = resTx.savedItems;
       break;
     } catch (err) {
+      if (err.message?.startsWith("INSUFFICIENT_POINTS:") || err.message?.startsWith("CUSTOMER_NOT_FOUND:") || err.message?.startsWith("PHONE_REQUIRED:")) {
+        res.status(400).json({ error: err.message.substring(err.message.indexOf(":") + 1).trim() });
+        return;
+      }
       retries--;
       const isUniqueViolation = err.code === "23505" || err.message?.includes("unique constraint") || err.message?.includes("duplicate key");
       const isLockContention = err.code === "40001" || err.code === "40P01" || err.message?.includes("deadlock") || err.message?.includes("serialization") || err.message?.includes("concurrent update");
