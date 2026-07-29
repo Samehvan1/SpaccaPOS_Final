@@ -596,6 +596,7 @@ router.get("/finance/sales-items", requirePermission("reports:view"), async (req
       cashier: item.cashier || "System",
       branch: item.branch,
       item: item.drinkName,
+      drinkId: item.drinkId,
       quantity: item.quantity,
       isCustomized: actualOverrides.length > 0 ? "Customize" : "Standard",
       salePrice: parseFloat(item.unitPrice as string),

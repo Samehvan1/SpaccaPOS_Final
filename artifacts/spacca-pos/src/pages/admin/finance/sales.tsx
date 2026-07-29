@@ -171,7 +171,8 @@ export default function SalesAnalysisPage() {
 
     drinkSales.forEach(item => {
       const matchesCategory = selectedCategory === "all" || item.category === selectedCategory || (categories.find(c => String(c.id) === selectedCategory)?.name === item.category);
-      const matchesDrink = selectedDrink === "all" || String(item.drinkId) === selectedDrink || item.item === selectedDrink;
+      const selectedDrinkObj = catalogDrinks.find(d => String(d.id) === selectedDrink);
+      const matchesDrink = selectedDrink === "all" || String(item.drinkId) === selectedDrink || (selectedDrinkObj && item.item === selectedDrinkObj.name);
       
       if (matchesCategory && matchesDrink) {
         totalRevenue += item.totalGross;
@@ -190,14 +191,15 @@ export default function SalesAnalysisPage() {
       discounts: totalDisc,
       offerDiscounts: 0,
     };
-  }, [rangeSummary, selectedCategory, selectedDrink, drinkSales, categories]);
+  }, [rangeSummary, selectedCategory, selectedDrink, drinkSales, categories, catalogDrinks]);
 
   const filteredOrders = useMemo(() => {
     if (selectedCategory === "all" && selectedDrink === "all") return orders;
     return orders.filter((o: any) => {
       const items = o.items || [];
       return items.some((item: any) => {
-        const matchesDrink = selectedDrink === "all" || String(item.drinkId) === selectedDrink;
+        const selectedDrinkObj = catalogDrinks.find(d => String(d.id) === selectedDrink);
+        const matchesDrink = selectedDrink === "all" || String(item.drinkId) === selectedDrink || (selectedDrinkObj && item.drinkName === selectedDrinkObj.name);
         const drinkInCatalog = catalogDrinks.find(d => d.id === item.drinkId);
         const matchesCategory = selectedCategory === "all" || drinkInCatalog?.category === selectedCategory || String(drinkInCatalog?.categoryId) === selectedCategory;
         return matchesDrink && matchesCategory;
@@ -208,10 +210,11 @@ export default function SalesAnalysisPage() {
   const filteredDrinkSales = useMemo(() => {
     return drinkSales.filter(item => {
       const matchesCategory = selectedCategory === "all" || item.category === selectedCategory || (categories.find(c => String(c.id) === selectedCategory)?.name === item.category);
-      const matchesDrink = selectedDrink === "all" || String(item.drinkId) === selectedDrink || item.item === selectedDrink;
+      const selectedDrinkObj = catalogDrinks.find(d => String(d.id) === selectedDrink);
+      const matchesDrink = selectedDrink === "all" || String(item.drinkId) === selectedDrink || (selectedDrinkObj && item.item === selectedDrinkObj.name);
       return matchesCategory && matchesDrink;
     });
-  }, [drinkSales, selectedCategory, selectedDrink, categories]);
+  }, [drinkSales, selectedCategory, selectedDrink, categories, catalogDrinks]);
 
   const filteredDailySummary = useMemo(() => {
     if (selectedCategory === "all" && selectedDrink === "all") return dailySummary;
@@ -232,6 +235,7 @@ export default function SalesAnalysisPage() {
     return Array.from(map.values()).map(d => ({
       date: d.date,
       count: d.uniqueOrders.size,
+      orders: d.uniqueOrders.size,
       revenue: d.revenue,
       net: d.net,
       tax: d.tax,
@@ -243,7 +247,8 @@ export default function SalesAnalysisPage() {
     return customizations.filter(c => {
       const drinkInCatalog = catalogDrinks.find(d => d.id === c.drinkId || d.name === c.drinkName);
       const matchesCategory = selectedCategory === "all" || drinkInCatalog?.category === selectedCategory || String(drinkInCatalog?.categoryId) === selectedCategory;
-      const matchesDrink = selectedDrink === "all" || String(c.drinkId) === selectedDrink || c.drinkName === selectedDrink;
+      const selectedDrinkObj = catalogDrinks.find(d => String(d.id) === selectedDrink);
+      const matchesDrink = selectedDrink === "all" || String(c.drinkId) === selectedDrink || (selectedDrinkObj && c.drinkName === selectedDrinkObj.name);
       return matchesCategory && matchesDrink;
     });
   }, [customizations, selectedCategory, selectedDrink, catalogDrinks]);
