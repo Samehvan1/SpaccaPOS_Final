@@ -17,6 +17,13 @@ const api = async (path: string, opts?: RequestInit) => {
   return res.json();
 };
 
+const fmtQty = (val: any): string => {
+  const num = Number(val);
+  if (isNaN(num)) return "0";
+  if (Number.isInteger(num)) return num.toString();
+  return num.toFixed(3);
+};
+
 export default function StockMovementPage() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -158,15 +165,15 @@ export default function StockMovementPage() {
       const headers = ["Item Name", "Sale Total Qty", "Calibration", "Test", "Waste", "Stock-Audit", "Received", "Total Out Movement", "Total In", "Final Total"];
       const rows = groupedData.map(g => [
         `"${g.ingredientName.replace(/"/g, '""')}"`,
-        g.saleQty.toFixed(3),
-        g.calibrationQty.toFixed(3),
-        g.testQty.toFixed(3),
-        g.wasteQty.toFixed(3),
-        g.adjPos > 0 && g.adjNeg > 0 ? `"+${g.adjPos.toFixed(3)} / -${g.adjNeg.toFixed(3)}"` : g.adjNet.toFixed(3),
-        g.restockPos > 0 && g.restockNeg > 0 ? `"+${g.restockPos.toFixed(3)} / -${g.restockNeg.toFixed(3)}"` : g.restockNet.toFixed(3),
-        g.totalOut.toFixed(3),
-        g.totalIn.toFixed(3),
-        g.finalTotal.toFixed(3)
+        fmtQty(g.saleQty),
+        fmtQty(g.calibrationQty),
+        fmtQty(g.testQty),
+        fmtQty(g.wasteQty),
+        g.adjPos > 0 && g.adjNeg > 0 ? `"+${fmtQty(g.adjPos)} / -${fmtQty(g.adjNeg)}"` : fmtQty(g.adjNet),
+        g.restockPos > 0 && g.restockNeg > 0 ? `"+${fmtQty(g.restockPos)} / -${fmtQty(g.restockNeg)}"` : fmtQty(g.restockNet),
+        fmtQty(g.totalOut),
+        fmtQty(g.totalIn),
+        fmtQty(g.finalTotal)
       ]);
 
       const csvContent = "data:text/csv;charset=utf-8," 
@@ -186,8 +193,8 @@ export default function StockMovementPage() {
         format(new Date(m.createdAt), "yyyy-MM-dd HH:mm"),
         `"${(m.ingredientName || "").replace(/"/g, '""')}"`,
         m.movementType,
-        Number(m.quantity).toFixed(3),
-        Number(m.quantityAfter).toFixed(3),
+        fmtQty(m.quantity),
+        fmtQty(m.quantityAfter),
         `"${(m.createdByName || "").replace(/"/g, '""')}"`,
         `"${(m.note || "").replace(/"/g, '""')}"`
       ]);
@@ -376,10 +383,10 @@ export default function StockMovementPage() {
                       </Badge>
                     </TableCell>
                     <TableCell className={`text-right font-mono ${m.quantity > 0 ? "text-green-600" : "text-red-600"}`}>
-                      {m.quantity > 0 ? "+" : ""}{Number(m.quantity).toFixed(3)}
+                      {m.quantity > 0 ? "+" : ""}{fmtQty(m.quantity)}
                     </TableCell>
                     <TableCell className="text-right font-bold font-mono">
-                      {Number(m.quantityAfter).toFixed(3)}
+                      {fmtQty(m.quantityAfter)}
                     </TableCell>
                     <TableCell>{m.createdByName}</TableCell>
                     <TableCell className="max-w-[200px] truncate text-muted-foreground italic">
@@ -431,82 +438,82 @@ export default function StockMovementPage() {
                     <TableRow key={g.ingredientId || g.ingredientName}>
                       <TableCell className="font-semibold">{g.ingredientName}</TableCell>
                       <TableCell className="text-right font-mono text-amber-700">
-                        {g.saleQty > 0 ? g.saleQty.toFixed(3) : "—"}
+                        {g.saleQty > 0 ? fmtQty(g.saleQty) : "—"}
                       </TableCell>
                       <TableCell className="text-right font-mono text-orange-600">
-                        {g.calibrationQty > 0 ? g.calibrationQty.toFixed(3) : "—"}
+                        {g.calibrationQty > 0 ? fmtQty(g.calibrationQty) : "—"}
                       </TableCell>
                       <TableCell className="text-right font-mono text-cyan-600">
-                        {g.testQty > 0 ? g.testQty.toFixed(3) : "—"}
+                        {g.testQty > 0 ? fmtQty(g.testQty) : "—"}
                       </TableCell>
                       <TableCell className="text-right font-mono text-red-600">
-                        {g.wasteQty > 0 ? g.wasteQty.toFixed(3) : "—"}
+                        {g.wasteQty > 0 ? fmtQty(g.wasteQty) : "—"}
                       </TableCell>
                       <TableCell className={`text-right font-mono ${g.adjNet > 0 ? "text-green-600" : g.adjNet < 0 ? "text-red-600" : ""}`}>
                         {g.adjPos > 0 && g.adjNeg > 0
-                          ? `+${g.adjPos.toFixed(3)} / -${g.adjNeg.toFixed(3)}`
+                          ? `+${fmtQty(g.adjPos)} / -${fmtQty(g.adjNeg)}`
                           : g.adjNet > 0
-                          ? `+${g.adjNet.toFixed(3)}`
+                          ? `+${fmtQty(g.adjNet)}`
                           : g.adjNet < 0
-                          ? `${g.adjNet.toFixed(3)}`
+                          ? `${fmtQty(g.adjNet)}`
                           : "—"}
                       </TableCell>
                       <TableCell className={`text-right font-mono ${g.restockNet > 0 ? "text-green-600" : g.restockNet < 0 ? "text-red-600" : ""}`}>
                         {g.restockPos > 0 && g.restockNeg > 0
-                          ? `+${g.restockPos.toFixed(3)} / -${g.restockNeg.toFixed(3)}`
+                          ? `+${fmtQty(g.restockPos)} / -${fmtQty(g.restockNeg)}`
                           : g.restockNet > 0
-                          ? `+${g.restockNet.toFixed(3)}`
+                          ? `+${fmtQty(g.restockNet)}`
                           : g.restockNet < 0
-                          ? `${g.restockNet.toFixed(3)}`
+                          ? `${fmtQty(g.restockNet)}`
                           : "—"}
                       </TableCell>
                       <TableCell className="text-right font-mono font-medium text-red-700 dark:text-red-400 bg-rose-50/70 dark:bg-rose-950/20">
-                        {g.totalOut > 0 ? `-${g.totalOut.toFixed(3)}` : "0.000"}
+                        {g.totalOut > 0 ? `-${fmtQty(g.totalOut)}` : "0"}
                       </TableCell>
                       <TableCell className="text-right font-mono font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-50/70 dark:bg-emerald-950/20">
-                        {g.totalIn > 0 ? `+${g.totalIn.toFixed(3)}` : "0.000"}
+                        {g.totalIn > 0 ? `+${fmtQty(g.totalIn)}` : "0"}
                       </TableCell>
                       <TableCell className={`text-right font-mono font-bold bg-sky-50/70 dark:bg-sky-950/20 ${g.finalTotal > 0 ? "text-emerald-700 dark:text-emerald-400" : g.finalTotal < 0 ? "text-rose-700 dark:text-rose-400" : ""}`}>
-                        {g.finalTotal > 0 ? `+${g.finalTotal.toFixed(3)}` : g.finalTotal.toFixed(3)}
+                        {g.finalTotal > 0 ? `+${fmtQty(g.finalTotal)}` : fmtQty(g.finalTotal)}
                       </TableCell>
                     </TableRow>
                   ))}
                   <TableRow className="bg-muted/50 font-bold border-t-2">
                     <TableCell>Total ({groupedData.length} items)</TableCell>
                     <TableCell className="text-right font-mono text-amber-700">
-                      {groupedData.reduce((acc, g) => acc + g.saleQty, 0).toFixed(3)}
+                      {fmtQty(groupedData.reduce((acc, g) => acc + g.saleQty, 0))}
                     </TableCell>
                     <TableCell className="text-right font-mono text-orange-600">
-                      {groupedData.reduce((acc, g) => acc + g.calibrationQty, 0).toFixed(3)}
+                      {fmtQty(groupedData.reduce((acc, g) => acc + g.calibrationQty, 0))}
                     </TableCell>
                     <TableCell className="text-right font-mono text-cyan-600">
-                      {groupedData.reduce((acc, g) => acc + g.testQty, 0).toFixed(3)}
+                      {fmtQty(groupedData.reduce((acc, g) => acc + g.testQty, 0))}
                     </TableCell>
                     <TableCell className="text-right font-mono text-red-600">
-                      {groupedData.reduce((acc, g) => acc + g.wasteQty, 0).toFixed(3)}
+                      {fmtQty(groupedData.reduce((acc, g) => acc + g.wasteQty, 0))}
                     </TableCell>
                     <TableCell className="text-right font-mono">
                       {(() => {
                         const totalAdj = groupedData.reduce((acc, g) => acc + g.adjNet, 0);
-                        return totalAdj > 0 ? `+${totalAdj.toFixed(3)}` : totalAdj < 0 ? totalAdj.toFixed(3) : "0.000";
+                        return totalAdj > 0 ? `+${fmtQty(totalAdj)}` : totalAdj < 0 ? fmtQty(totalAdj) : "0";
                       })()}
                     </TableCell>
                     <TableCell className="text-right font-mono">
                       {(() => {
                         const totalRestock = groupedData.reduce((acc, g) => acc + g.restockNet, 0);
-                        return totalRestock > 0 ? `+${totalRestock.toFixed(3)}` : totalRestock < 0 ? totalRestock.toFixed(3) : "0.000";
+                        return totalRestock > 0 ? `+${fmtQty(totalRestock)}` : totalRestock < 0 ? fmtQty(totalRestock) : "0";
                       })()}
                     </TableCell>
                     <TableCell className="text-right font-mono font-bold text-red-700 dark:text-red-400 bg-rose-100/80 dark:bg-rose-900/40">
-                      -{groupedData.reduce((acc, g) => acc + g.totalOut, 0).toFixed(3)}
+                      -{fmtQty(groupedData.reduce((acc, g) => acc + g.totalOut, 0))}
                     </TableCell>
                     <TableCell className="text-right font-mono font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-100/80 dark:bg-emerald-900/40">
-                      +{groupedData.reduce((acc, g) => acc + g.totalIn, 0).toFixed(3)}
+                      +{fmtQty(groupedData.reduce((acc, g) => acc + g.totalIn, 0))}
                     </TableCell>
                     <TableCell className="text-right font-mono font-bold bg-sky-100/80 dark:bg-sky-900/40">
                       {(() => {
                         const net = groupedData.reduce((acc, g) => acc + g.finalTotal, 0);
-                        return net > 0 ? `+${net.toFixed(3)}` : net.toFixed(3);
+                        return net > 0 ? `+${fmtQty(net)}` : fmtQty(net);
                       })()}
                     </TableCell>
                   </TableRow>
