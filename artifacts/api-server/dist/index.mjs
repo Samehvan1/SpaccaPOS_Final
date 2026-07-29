@@ -56208,6 +56208,45 @@ var init_offers = __esm({
   }
 });
 
+// ../../lib/db/src/schema/partners.ts
+var partnersTable, partnerDrinkPricesTable, insertPartnerSchema, insertPartnerDrinkPriceSchema;
+var init_partners = __esm({
+  "../../lib/db/src/schema/partners.ts"() {
+    "use strict";
+    init_pg_core();
+    init_drizzle_zod();
+    init_branches();
+    init_drinks();
+    partnersTable = pgTable("ordering_partners", {
+      id: serial("id").primaryKey(),
+      name: text("name").notNull(),
+      code: varchar("code", { length: 50 }).unique().notNull(),
+      // e.g. "talabat", "breakfast"
+      commissionType: text("commission_type", { enum: ["percentage", "fixed"] }).notNull().default("percentage"),
+      commissionValue: numeric("commission_value", { precision: 8, scale: 2 }).notNull().default("0.00"),
+      isActive: boolean("is_active").notNull().default(true),
+      createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+      updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => /* @__PURE__ */ new Date())
+    });
+    partnerDrinkPricesTable = pgTable("partner_drink_prices", {
+      id: serial("id").primaryKey(),
+      partnerId: integer("partner_id").notNull().references(() => partnersTable.id, { onDelete: "cascade" }),
+      drinkId: integer("drink_id").notNull().references(() => drinksTable.id, { onDelete: "cascade" }),
+      branchId: integer("branch_id").references(() => branchesTable.id, { onDelete: "cascade" }),
+      // Nullable: if null, applies to all branches
+      price: numeric("price", { precision: 8, scale: 2 }).notNull(),
+      createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+      updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => /* @__PURE__ */ new Date())
+    }, (table) => {
+      return {
+        partnerDrinkBranchIdx: index("partner_drink_prices_idx").on(table.partnerId, table.drinkId, table.branchId)
+      };
+    });
+    insertPartnerSchema = createInsertSchema(partnersTable).omit({ id: true, createdAt: true, updatedAt: true });
+    insertPartnerDrinkPriceSchema = createInsertSchema(partnerDrinkPricesTable).omit({ id: true, createdAt: true, updatedAt: true });
+  }
+});
+
 // ../../lib/db/src/schema/orders.ts
 var ordersTable, orderItemsTable, orderItemCustomizationsTable, orderPaymentsTable, insertOrderSchema;
 var init_orders = __esm({
@@ -56221,6 +56260,7 @@ var init_orders = __esm({
     init_discounts();
     init_branches();
     init_offers();
+    init_partners();
     ordersTable = pgTable("orders", {
       id: serial("id").primaryKey(),
       branchId: integer("branch_id").notNull().references(() => branchesTable.id),
@@ -56251,7 +56291,11 @@ var init_orders = __esm({
       completedAt: timestamp("completed_at", { withTimezone: true }),
       cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
       createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-      updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => /* @__PURE__ */ new Date())
+      updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => /* @__PURE__ */ new Date()),
+      partnerId: integer("partner_id").references(() => partnersTable.id, { onDelete: "set null" }),
+      commissionRate: numeric("commission_rate", { precision: 8, scale: 2 }),
+      commissionAmount: numeric("commission_amount", { precision: 8, scale: 2 }),
+      netAmount: numeric("net_amount", { precision: 8, scale: 2 })
     }, (table) => {
       return {
         createdAtIdx: index("orders_created_at_idx").on(table.createdAt),
@@ -56697,10 +56741,34 @@ var init_stock_batches = __esm({
   }
 });
 
+// ../../lib/db/src/schema/branch-drink-prices.ts
+var branchDrinkPricesTable;
+var init_branch_drink_prices = __esm({
+  "../../lib/db/src/schema/branch-drink-prices.ts"() {
+    "use strict";
+    init_pg_core();
+    init_branches();
+    init_drinks();
+    branchDrinkPricesTable = pgTable("branch_drink_prices", {
+      id: serial("id").primaryKey(),
+      branchId: integer("branch_id").notNull().references(() => branchesTable.id, { onDelete: "cascade" }),
+      drinkId: integer("drink_id").notNull().references(() => drinksTable.id, { onDelete: "cascade" }),
+      price: numeric("price", { precision: 8, scale: 2 }).notNull(),
+      createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+      updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => /* @__PURE__ */ new Date())
+    }, (table) => {
+      return {
+        branchDrinkIdx: index("branch_drink_prices_branch_drink_idx").on(table.branchId, table.drinkId)
+      };
+    });
+  }
+});
+
 // ../../lib/db/src/schema/index.ts
 var schema_exports = {};
 __export(schema_exports, {
   activityLogsTable: () => activityLogsTable,
+  branchDrinkPricesTable: () => branchDrinkPricesTable,
   branchInventoryBatchesTable: () => branchInventoryBatchesTable,
   branchStockTable: () => branchStockTable,
   branchesTable: () => branchesTable,
@@ -56741,6 +56809,8 @@ __export(schema_exports, {
   insertKitchenStationSchema: () => insertKitchenStationSchema,
   insertOfferSchema: () => insertOfferSchema,
   insertOrderSchema: () => insertOrderSchema,
+  insertPartnerDrinkPriceSchema: () => insertPartnerDrinkPriceSchema,
+  insertPartnerSchema: () => insertPartnerSchema,
   insertPermissionSchema: () => insertPermissionSchema,
   insertPredefinedSlotSchema: () => insertPredefinedSlotSchema,
   insertPurchaseItemSchema: () => insertPurchaseItemSchema,
@@ -56760,6 +56830,8 @@ __export(schema_exports, {
   orderItemsTable: () => orderItemsTable,
   orderPaymentsTable: () => orderPaymentsTable,
   ordersTable: () => ordersTable,
+  partnerDrinkPricesTable: () => partnerDrinkPricesTable,
+  partnersTable: () => partnersTable,
   permissionsTable: () => permissionsTable,
   predefinedSlotTypeOptionsTable: () => predefinedSlotTypeOptionsTable,
   predefinedSlotVolumesTable: () => predefinedSlotVolumesTable,
@@ -56804,6 +56876,8 @@ var init_schema2 = __esm({
     init_tags();
     init_stock_batches();
     init_offers();
+    init_branch_drink_prices();
+    init_partners();
   }
 });
 
@@ -56858,6 +56932,7 @@ var init_migrator2 = __esm({
 var src_exports = {};
 __export(src_exports, {
   activityLogsTable: () => activityLogsTable,
+  branchDrinkPricesTable: () => branchDrinkPricesTable,
   branchInventoryBatchesTable: () => branchInventoryBatchesTable,
   branchStockTable: () => branchStockTable,
   branchesTable: () => branchesTable,
@@ -56899,6 +56974,8 @@ __export(src_exports, {
   insertKitchenStationSchema: () => insertKitchenStationSchema,
   insertOfferSchema: () => insertOfferSchema,
   insertOrderSchema: () => insertOrderSchema,
+  insertPartnerDrinkPriceSchema: () => insertPartnerDrinkPriceSchema,
+  insertPartnerSchema: () => insertPartnerSchema,
   insertPermissionSchema: () => insertPermissionSchema,
   insertPredefinedSlotSchema: () => insertPredefinedSlotSchema,
   insertPurchaseItemSchema: () => insertPurchaseItemSchema,
@@ -56918,6 +56995,8 @@ __export(src_exports, {
   orderItemsTable: () => orderItemsTable,
   orderPaymentsTable: () => orderPaymentsTable,
   ordersTable: () => ordersTable,
+  partnerDrinkPricesTable: () => partnerDrinkPricesTable,
+  partnersTable: () => partnersTable,
   permissionsTable: () => permissionsTable,
   pool: () => pool,
   predefinedSlotTypeOptionsTable: () => predefinedSlotTypeOptionsTable,
@@ -79353,7 +79432,8 @@ var CreateOrderBody2 = CreateOrderBody.extend({
       transactionId: external_exports2.string().optional()
     })
   ).optional(),
-  source: external_exports2.enum(["pos", "kiosk", "web", "mobile"]).optional()
+  source: external_exports2.enum(["pos", "kiosk", "web", "mobile"]).optional(),
+  partnerId: external_exports2.number().nullish()
 });
 var GetOrderParams2 = GetOrderParams;
 var GetOrderResponse2 = GetOrderResponse._def.left.extend({
@@ -81516,9 +81596,48 @@ init_drizzle_orm();
 init_src();
 init_schema2();
 init_schema2();
-async function calculateDrinkData(drinkId, selections, branchId = null) {
+async function calculateDrinkData(drinkId, selections, branchId = null, partnerId = null) {
   const [drink] = await db.select().from(drinksTable).where(eq(drinksTable.id, drinkId));
   if (!drink) throw new Error("Drink not found");
+  let resolvedBasePrice = drink.basePrice;
+  if (partnerId) {
+    if (branchId) {
+      const [partnerBranchPriceRow] = await db.select().from(partnerDrinkPricesTable).where(
+        and(
+          eq(partnerDrinkPricesTable.partnerId, partnerId),
+          eq(partnerDrinkPricesTable.drinkId, drinkId),
+          eq(partnerDrinkPricesTable.branchId, branchId)
+        )
+      ).limit(1);
+      if (partnerBranchPriceRow) {
+        resolvedBasePrice = partnerBranchPriceRow.price;
+      }
+    }
+    if (resolvedBasePrice === drink.basePrice) {
+      const [partnerGeneralPriceRow] = await db.select().from(partnerDrinkPricesTable).where(
+        and(
+          eq(partnerDrinkPricesTable.partnerId, partnerId),
+          eq(partnerDrinkPricesTable.drinkId, drinkId),
+          isNull(partnerDrinkPricesTable.branchId)
+        )
+      ).limit(1);
+      if (partnerGeneralPriceRow) {
+        resolvedBasePrice = partnerGeneralPriceRow.price;
+      }
+    }
+  }
+  if (resolvedBasePrice === drink.basePrice && branchId) {
+    const [branchPriceRow] = await db.select().from(branchDrinkPricesTable).where(
+      and(
+        eq(branchDrinkPricesTable.branchId, branchId),
+        eq(branchDrinkPricesTable.drinkId, drinkId)
+      )
+    ).limit(1);
+    if (branchPriceRow) {
+      resolvedBasePrice = branchPriceRow.price;
+    }
+  }
+  drink.basePrice = resolvedBasePrice;
   const rawSlots = await db.select().from(drinkIngredientSlotsTable).where(eq(drinkIngredientSlotsTable.drinkId, drinkId));
   const predefinedSlotIds = rawSlots.map((s) => s.predefinedSlotId).filter((id) => id !== null);
   const predefinedSlots = predefinedSlotIds.length > 0 ? await db.select().from(predefinedSlotsTable).where(inArray(predefinedSlotsTable.id, predefinedSlotIds)) : [];
@@ -82321,12 +82440,12 @@ async function buildDrinkDetail(drinkId, branchId) {
   globalCache.set(cacheKey, result);
   return result;
 }
-async function computeDefaultPrice(drinkId) {
-  const cacheKey = `drink_default_price_${drinkId}`;
+async function computeDefaultPrice(drinkId, branchId, partnerId) {
+  const cacheKey = `drink_default_price_${drinkId}_${branchId ?? "global"}_${partnerId ?? "global"}`;
   const cached2 = globalCache.get(cacheKey);
   if (cached2 !== null) return cached2;
   try {
-    const data = await calculateDrinkData(drinkId, []);
+    const data = await calculateDrinkData(drinkId, [], branchId, partnerId);
     globalCache.set(cacheKey, data.totalPrice);
     return data.totalPrice;
   } catch (error40) {
@@ -82337,9 +82456,10 @@ async function computeDefaultPrice(drinkId) {
 router3.get("/drinks", async (req, res) => {
   const params = ListDrinksQueryParams2.safeParse(req.query);
   const sessionUser = req.session;
-  const sessionBranchId = sessionUser.branchId;
-  const isAdmin = sessionUser.role === "admin";
+  const sessionBranchId = sessionUser?.branchId;
+  const isAdmin = sessionUser?.role === "admin";
   const targetBranchId = req.query.branchId && (isAdmin || !sessionBranchId) ? parseInt(req.query.branchId) : sessionBranchId;
+  const queryPartnerId = req.query.partnerId ? parseInt(req.query.partnerId) : void 0;
   const conditions = [];
   if (params.success && params.data.active !== void 0) {
     conditions.push(eq(drinksTable.isActive, params.data.active));
@@ -82358,10 +82478,42 @@ router3.get("/drinks", async (req, res) => {
   const drinksWithDetails = await Promise.all(
     filtered.map(async (d) => {
       const detail = await buildDrinkDetail(d.id, targetBranchId);
-      const defaultPrice = await computeDefaultPrice(d.id);
+      const defaultPrice = await computeDefaultPrice(d.id, targetBranchId, queryPartnerId);
+      let basePrice = Number(d.basePrice);
+      if (queryPartnerId) {
+        if (targetBranchId) {
+          const [row] = await db.select().from(partnerDrinkPricesTable).where(
+            and(
+              eq(partnerDrinkPricesTable.partnerId, queryPartnerId),
+              eq(partnerDrinkPricesTable.drinkId, d.id),
+              eq(partnerDrinkPricesTable.branchId, targetBranchId)
+            )
+          ).limit(1);
+          if (row) basePrice = Number(row.price);
+        }
+        if (basePrice === Number(d.basePrice)) {
+          const [row] = await db.select().from(partnerDrinkPricesTable).where(
+            and(
+              eq(partnerDrinkPricesTable.partnerId, queryPartnerId),
+              eq(partnerDrinkPricesTable.drinkId, d.id),
+              isNull(partnerDrinkPricesTable.branchId)
+            )
+          ).limit(1);
+          if (row) basePrice = Number(row.price);
+        }
+      }
+      if (basePrice === Number(d.basePrice) && targetBranchId) {
+        const [row] = await db.select().from(branchDrinkPricesTable).where(
+          and(
+            eq(branchDrinkPricesTable.branchId, targetBranchId),
+            eq(branchDrinkPricesTable.drinkId, d.id)
+          )
+        ).limit(1);
+        if (row) basePrice = Number(row.price);
+      }
       return {
         ...d,
-        basePrice: Number(d.basePrice),
+        basePrice,
         defaultPrice,
         isAvailable: detail ? detail.isAvailable : true,
         unavailableReasons: detail ? detail.unavailableReasons : [],
@@ -83996,7 +84148,12 @@ router5.post("/orders", async (req, res) => {
   const itemDetails = [];
   for (const item of orderItems) {
     try {
-      const calcData = await calculateDrinkData(item.drinkId, item.selections);
+      const calcData = await calculateDrinkData(
+        item.drinkId,
+        item.selections,
+        targetBranchId,
+        parsed.data.partnerId || null
+      );
       const customizations = calcData.customizations.map((c) => ({
         ingredientId: c.ingredientId,
         optionId: c.optionId,
@@ -84173,6 +84330,22 @@ router5.post("/orders", async (req, res) => {
         } else if (parsed.data.paymentMethod === "points") {
           throw new Error("PHONE_REQUIRED: Customer phone is required for points payment");
         }
+        let commissionRate = null;
+        let commissionAmount = null;
+        let netAmount = null;
+        if (parsed.data.partnerId) {
+          const [partner] = await tx.select().from(partnersTable).where(eq(partnersTable.id, parsed.data.partnerId)).limit(1);
+          if (partner) {
+            commissionRate = partner.commissionValue;
+            const rateNum = parseFloat(partner.commissionValue) || 0;
+            if (partner.commissionType === "percentage") {
+              commissionAmount = (total * rateNum / 100).toFixed(2);
+            } else {
+              commissionAmount = rateNum.toFixed(2);
+            }
+            netAmount = (total - parseFloat(commissionAmount)).toFixed(2);
+          }
+        }
         const [newOrder] = await tx.insert(ordersTable).values({
           branchId: targetBranchId,
           orderNumber,
@@ -84193,7 +84366,11 @@ router5.post("/orders", async (req, res) => {
           source: parsed.data.source || "pos",
           amountTendered: amountTendered != null ? String(amountTendered) : null,
           changeDue: changeDue != null ? String(changeDue) : null,
-          notes: parsed.data.notes ?? null
+          notes: parsed.data.notes ?? null,
+          partnerId: parsed.data.partnerId ?? null,
+          commissionRate,
+          commissionAmount,
+          netAmount
         }).returning();
         const allIngredientIds = [
           ...new Set(itemDetails.flatMap((d) => d.customizations.map((c) => c.ingredientId).filter((id) => id !== null)))
@@ -84386,11 +84563,15 @@ router5.patch("/orders/:id/status", async (req, res, next) => {
       updateData.total = "0";
       updateData.discountCode = "HOSPITALITY";
       updateData.discountId = null;
+      updateData.offerId = null;
+      updateData.offerDiscount = "0";
     } else if (existingOrder.paymentMethod === "hospitality") {
       updateData.discount = "0";
       updateData.total = String(existingOrder.subtotal);
       updateData.discountCode = null;
       updateData.discountId = null;
+      updateData.offerId = null;
+      updateData.offerDiscount = "0";
     }
     updateData.paymentMethod = parsed.data.paymentMethod;
   }
@@ -87950,6 +88131,197 @@ adminRouter.post("/admin/backup", requirePermission("settings:manage"), async (r
     });
   } catch (error40) {
     res.status(500).json({ error: error40.message });
+  }
+});
+adminRouter.get("/admin/partners", requirePermission("branches:manage"), async (req, res) => {
+  try {
+    const list = await db.select().from(partnersTable).orderBy(desc(partnersTable.createdAt));
+    res.json(list);
+  } catch (error40) {
+    res.status(500).json({ error: "Failed to list partners" });
+  }
+});
+adminRouter.post("/admin/partners", requirePermission("branches:manage"), async (req, res) => {
+  try {
+    const { name, code, commissionType, commissionValue, isActive } = req.body;
+    if (!name || !code) {
+      res.status(400).json({ error: "Name and Code are required" });
+      return;
+    }
+    const [partner] = await db.insert(partnersTable).values({
+      name,
+      code,
+      commissionType: commissionType || "percentage",
+      commissionValue: String(commissionValue || "0.00"),
+      isActive: isActive !== void 0 ? isActive : true
+    }).returning();
+    res.status(201).json(partner);
+  } catch (error40) {
+    res.status(500).json({ error: error40.message || "Failed to create partner" });
+  }
+});
+adminRouter.patch("/admin/partners/:id", requirePermission("branches:manage"), async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      res.status(400).json({ error: "Invalid ID" });
+      return;
+    }
+    const { name, code, commissionType, commissionValue, isActive } = req.body;
+    const [partner] = await db.update(partnersTable).set({
+      ...name !== void 0 && { name },
+      ...code !== void 0 && { code },
+      ...commissionType !== void 0 && { commissionType },
+      ...commissionValue !== void 0 && { commissionValue: String(commissionValue) },
+      ...isActive !== void 0 && { isActive },
+      updatedAt: /* @__PURE__ */ new Date()
+    }).where(eq(partnersTable.id, id)).returning();
+    if (!partner) {
+      res.status(404).json({ error: "Partner not found" });
+      return;
+    }
+    res.json(partner);
+  } catch (error40) {
+    res.status(500).json({ error: error40.message || "Failed to update partner" });
+  }
+});
+adminRouter.delete("/admin/partners/:id", requirePermission("branches:manage"), async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      res.status(400).json({ error: "Invalid ID" });
+      return;
+    }
+    const [partner] = await db.delete(partnersTable).where(eq(partnersTable.id, id)).returning();
+    if (!partner) {
+      res.status(404).json({ error: "Partner not found" });
+      return;
+    }
+    res.sendStatus(204);
+  } catch (error40) {
+    res.status(500).json({ error: "Failed to delete partner" });
+  }
+});
+adminRouter.get("/admin/branch-prices", requirePermission("catalog:view"), async (req, res) => {
+  try {
+    const branchId = parseInt(req.query.branchId);
+    if (isNaN(branchId)) {
+      res.status(400).json({ error: "Invalid or missing branchId" });
+      return;
+    }
+    const drinks = await db.select().from(drinksTable).orderBy(drinksTable.name);
+    const overrides = await db.select().from(branchDrinkPricesTable).where(eq(branchDrinkPricesTable.branchId, branchId));
+    const overridesMap = new Map(overrides.map((o) => [o.drinkId, o.price]));
+    const result = drinks.map((d) => ({
+      drinkId: d.id,
+      name: d.name,
+      globalPrice: Number(d.basePrice),
+      overridePrice: overridesMap.has(d.id) ? Number(overridesMap.get(d.id)) : null
+    }));
+    res.json(result);
+  } catch (error40) {
+    res.status(500).json({ error: "Failed to load branch prices" });
+  }
+});
+adminRouter.post("/admin/branch-prices", requirePermission("catalog:manage"), async (req, res) => {
+  try {
+    const { branchId, prices } = req.body;
+    if (!branchId || !Array.isArray(prices)) {
+      res.status(400).json({ error: "Invalid branchId or prices list" });
+      return;
+    }
+    await db.transaction(async (tx) => {
+      for (const p of prices) {
+        if (p.price === null || p.price === void 0 || isNaN(p.price)) {
+          await tx.delete(branchDrinkPricesTable).where(and(eq(branchDrinkPricesTable.branchId, branchId), eq(branchDrinkPricesTable.drinkId, p.drinkId)));
+        } else {
+          const [existing] = await tx.select().from(branchDrinkPricesTable).where(and(eq(branchDrinkPricesTable.branchId, branchId), eq(branchDrinkPricesTable.drinkId, p.drinkId))).limit(1);
+          if (existing) {
+            await tx.update(branchDrinkPricesTable).set({ price: String(p.price), updatedAt: /* @__PURE__ */ new Date() }).where(eq(branchDrinkPricesTable.id, existing.id));
+          } else {
+            await tx.insert(branchDrinkPricesTable).values({
+              branchId,
+              drinkId: p.drinkId,
+              price: String(p.price)
+            });
+          }
+        }
+      }
+    });
+    res.json({ message: "Branch prices updated successfully" });
+  } catch (error40) {
+    res.status(500).json({ error: error40.message || "Failed to save branch prices" });
+  }
+});
+adminRouter.get("/admin/partner-prices", requirePermission("catalog:view"), async (req, res) => {
+  try {
+    const partnerId = parseInt(req.query.partnerId);
+    if (isNaN(partnerId)) {
+      res.status(400).json({ error: "Invalid or missing partnerId" });
+      return;
+    }
+    const branchIdStr = req.query.branchId;
+    const branchId = branchIdStr ? parseInt(branchIdStr) : null;
+    const drinks = await db.select().from(drinksTable).orderBy(drinksTable.name);
+    const conditions = [
+      eq(partnerDrinkPricesTable.partnerId, partnerId)
+    ];
+    if (branchId) {
+      conditions.push(eq(partnerDrinkPricesTable.branchId, branchId));
+    } else {
+      conditions.push(isNull(partnerDrinkPricesTable.branchId));
+    }
+    const overrides = await db.select().from(partnerDrinkPricesTable).where(and(...conditions));
+    const overridesMap = new Map(overrides.map((o) => [o.drinkId, o.price]));
+    const result = drinks.map((d) => ({
+      drinkId: d.id,
+      name: d.name,
+      globalPrice: Number(d.basePrice),
+      overridePrice: overridesMap.has(d.id) ? Number(overridesMap.get(d.id)) : null
+    }));
+    res.json(result);
+  } catch (error40) {
+    res.status(500).json({ error: "Failed to load partner prices" });
+  }
+});
+adminRouter.post("/admin/partner-prices", requirePermission("catalog:manage"), async (req, res) => {
+  try {
+    const { partnerId, branchId, prices } = req.body;
+    if (!partnerId || !Array.isArray(prices)) {
+      res.status(400).json({ error: "Invalid partnerId or prices list" });
+      return;
+    }
+    await db.transaction(async (tx) => {
+      for (const p of prices) {
+        const deleteConditions = [
+          eq(partnerDrinkPricesTable.partnerId, partnerId),
+          eq(partnerDrinkPricesTable.drinkId, p.drinkId)
+        ];
+        if (branchId) {
+          deleteConditions.push(eq(partnerDrinkPricesTable.branchId, branchId));
+        } else {
+          deleteConditions.push(isNull(partnerDrinkPricesTable.branchId));
+        }
+        if (p.price === null || p.price === void 0 || isNaN(p.price)) {
+          await tx.delete(partnerDrinkPricesTable).where(and(...deleteConditions));
+        } else {
+          const [existing] = await tx.select().from(partnerDrinkPricesTable).where(and(...deleteConditions)).limit(1);
+          if (existing) {
+            await tx.update(partnerDrinkPricesTable).set({ price: String(p.price), updatedAt: /* @__PURE__ */ new Date() }).where(eq(partnerDrinkPricesTable.id, existing.id));
+          } else {
+            await tx.insert(partnerDrinkPricesTable).values({
+              partnerId,
+              drinkId: p.drinkId,
+              branchId: branchId || null,
+              price: String(p.price)
+            });
+          }
+        }
+      }
+    });
+    res.json({ message: "Partner prices updated successfully" });
+  } catch (error40) {
+    res.status(500).json({ error: error40.message || "Failed to save partner prices" });
   }
 });
 var admin_default = adminRouter;

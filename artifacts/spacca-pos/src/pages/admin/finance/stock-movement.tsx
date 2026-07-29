@@ -158,15 +158,15 @@ export default function StockMovementPage() {
       const headers = ["Item Name", "Sale Total Qty", "Calibration", "Test", "Waste", "Stock-Audit", "Received", "Total Out Movement", "Total In", "Final Total"];
       const rows = groupedData.map(g => [
         `"${g.ingredientName.replace(/"/g, '""')}"`,
-        g.saleQty,
-        g.calibrationQty,
-        g.testQty,
-        g.wasteQty,
-        g.adjPos > 0 && g.adjNeg > 0 ? `"+${g.adjPos} / -${g.adjNeg}"` : g.adjNet,
-        g.restockPos > 0 && g.restockNeg > 0 ? `"+${g.restockPos} / -${g.restockNeg}"` : g.restockNet,
-        g.totalOut,
-        g.totalIn,
-        g.finalTotal
+        g.saleQty.toFixed(3),
+        g.calibrationQty.toFixed(3),
+        g.testQty.toFixed(3),
+        g.wasteQty.toFixed(3),
+        g.adjPos > 0 && g.adjNeg > 0 ? `"+${g.adjPos.toFixed(3)} / -${g.adjNeg.toFixed(3)}"` : g.adjNet.toFixed(3),
+        g.restockPos > 0 && g.restockNeg > 0 ? `"+${g.restockPos.toFixed(3)} / -${g.restockNeg.toFixed(3)}"` : g.restockNet.toFixed(3),
+        g.totalOut.toFixed(3),
+        g.totalIn.toFixed(3),
+        g.finalTotal.toFixed(3)
       ]);
 
       const csvContent = "data:text/csv;charset=utf-8," 
@@ -186,8 +186,8 @@ export default function StockMovementPage() {
         format(new Date(m.createdAt), "yyyy-MM-dd HH:mm"),
         `"${(m.ingredientName || "").replace(/"/g, '""')}"`,
         m.movementType,
-        m.quantity,
-        m.quantityAfter,
+        Number(m.quantity).toFixed(3),
+        Number(m.quantityAfter).toFixed(3),
         `"${(m.createdByName || "").replace(/"/g, '""')}"`,
         `"${(m.note || "").replace(/"/g, '""')}"`
       ]);
@@ -376,10 +376,10 @@ export default function StockMovementPage() {
                       </Badge>
                     </TableCell>
                     <TableCell className={`text-right font-mono ${m.quantity > 0 ? "text-green-600" : "text-red-600"}`}>
-                      {m.quantity > 0 ? "+" : ""}{m.quantity}
+                      {m.quantity > 0 ? "+" : ""}{Number(m.quantity).toFixed(3)}
                     </TableCell>
                     <TableCell className="text-right font-bold font-mono">
-                      {m.quantityAfter}
+                      {Number(m.quantityAfter).toFixed(3)}
                     </TableCell>
                     <TableCell>{m.createdByName}</TableCell>
                     <TableCell className="max-w-[200px] truncate text-muted-foreground italic">
@@ -431,82 +431,82 @@ export default function StockMovementPage() {
                     <TableRow key={g.ingredientId || g.ingredientName}>
                       <TableCell className="font-semibold">{g.ingredientName}</TableCell>
                       <TableCell className="text-right font-mono text-amber-700">
-                        {g.saleQty > 0 ? g.saleQty : "—"}
+                        {g.saleQty > 0 ? g.saleQty.toFixed(3) : "—"}
                       </TableCell>
                       <TableCell className="text-right font-mono text-orange-600">
-                        {g.calibrationQty > 0 ? g.calibrationQty : "—"}
+                        {g.calibrationQty > 0 ? g.calibrationQty.toFixed(3) : "—"}
                       </TableCell>
                       <TableCell className="text-right font-mono text-cyan-600">
-                        {g.testQty > 0 ? g.testQty : "—"}
+                        {g.testQty > 0 ? g.testQty.toFixed(3) : "—"}
                       </TableCell>
                       <TableCell className="text-right font-mono text-red-600">
-                        {g.wasteQty > 0 ? g.wasteQty : "—"}
+                        {g.wasteQty > 0 ? g.wasteQty.toFixed(3) : "—"}
                       </TableCell>
                       <TableCell className={`text-right font-mono ${g.adjNet > 0 ? "text-green-600" : g.adjNet < 0 ? "text-red-600" : ""}`}>
                         {g.adjPos > 0 && g.adjNeg > 0
-                          ? `+${g.adjPos} / -${g.adjNeg}`
+                          ? `+${g.adjPos.toFixed(3)} / -${g.adjNeg.toFixed(3)}`
                           : g.adjNet > 0
-                          ? `+${g.adjNet}`
+                          ? `+${g.adjNet.toFixed(3)}`
                           : g.adjNet < 0
-                          ? `${g.adjNet}`
+                          ? `${g.adjNet.toFixed(3)}`
                           : "—"}
                       </TableCell>
                       <TableCell className={`text-right font-mono ${g.restockNet > 0 ? "text-green-600" : g.restockNet < 0 ? "text-red-600" : ""}`}>
                         {g.restockPos > 0 && g.restockNeg > 0
-                          ? `+${g.restockPos} / -${g.restockNeg}`
+                          ? `+${g.restockPos.toFixed(3)} / -${g.restockNeg.toFixed(3)}`
                           : g.restockNet > 0
-                          ? `+${g.restockNet}`
+                          ? `+${g.restockNet.toFixed(3)}`
                           : g.restockNet < 0
-                          ? `${g.restockNet}`
+                          ? `${g.restockNet.toFixed(3)}`
                           : "—"}
                       </TableCell>
                       <TableCell className="text-right font-mono font-medium text-red-700 dark:text-red-400 bg-rose-50/70 dark:bg-rose-950/20">
-                        {g.totalOut > 0 ? `-${g.totalOut}` : "0"}
+                        {g.totalOut > 0 ? `-${g.totalOut.toFixed(3)}` : "0.000"}
                       </TableCell>
                       <TableCell className="text-right font-mono font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-50/70 dark:bg-emerald-950/20">
-                        {g.totalIn > 0 ? `+${g.totalIn}` : "0"}
+                        {g.totalIn > 0 ? `+${g.totalIn.toFixed(3)}` : "0.000"}
                       </TableCell>
                       <TableCell className={`text-right font-mono font-bold bg-sky-50/70 dark:bg-sky-950/20 ${g.finalTotal > 0 ? "text-emerald-700 dark:text-emerald-400" : g.finalTotal < 0 ? "text-rose-700 dark:text-rose-400" : ""}`}>
-                        {g.finalTotal > 0 ? `+${g.finalTotal}` : g.finalTotal}
+                        {g.finalTotal > 0 ? `+${g.finalTotal.toFixed(3)}` : g.finalTotal.toFixed(3)}
                       </TableCell>
                     </TableRow>
                   ))}
                   <TableRow className="bg-muted/50 font-bold border-t-2">
                     <TableCell>Total ({groupedData.length} items)</TableCell>
                     <TableCell className="text-right font-mono text-amber-700">
-                      {groupedData.reduce((acc, g) => acc + g.saleQty, 0)}
+                      {groupedData.reduce((acc, g) => acc + g.saleQty, 0).toFixed(3)}
                     </TableCell>
                     <TableCell className="text-right font-mono text-orange-600">
-                      {groupedData.reduce((acc, g) => acc + g.calibrationQty, 0)}
+                      {groupedData.reduce((acc, g) => acc + g.calibrationQty, 0).toFixed(3)}
                     </TableCell>
                     <TableCell className="text-right font-mono text-cyan-600">
-                      {groupedData.reduce((acc, g) => acc + g.testQty, 0)}
+                      {groupedData.reduce((acc, g) => acc + g.testQty, 0).toFixed(3)}
                     </TableCell>
                     <TableCell className="text-right font-mono text-red-600">
-                      {groupedData.reduce((acc, g) => acc + g.wasteQty, 0)}
+                      {groupedData.reduce((acc, g) => acc + g.wasteQty, 0).toFixed(3)}
                     </TableCell>
                     <TableCell className="text-right font-mono">
                       {(() => {
                         const totalAdj = groupedData.reduce((acc, g) => acc + g.adjNet, 0);
-                        return totalAdj > 0 ? `+${totalAdj}` : totalAdj < 0 ? totalAdj : "0";
+                        return totalAdj > 0 ? `+${totalAdj.toFixed(3)}` : totalAdj < 0 ? totalAdj.toFixed(3) : "0.000";
                       })()}
                     </TableCell>
                     <TableCell className="text-right font-mono">
                       {(() => {
                         const totalRestock = groupedData.reduce((acc, g) => acc + g.restockNet, 0);
-                        return totalRestock > 0 ? `+${totalRestock}` : totalRestock < 0 ? totalRestock : "0";
+                        return totalRestock > 0 ? `+${totalRestock.toFixed(3)}` : totalRestock < 0 ? totalRestock.toFixed(3) : "0.000";
                       })()}
                     </TableCell>
                     <TableCell className="text-right font-mono font-bold text-red-700 dark:text-red-400 bg-rose-100/80 dark:bg-rose-900/40">
-                      -{groupedData.reduce((acc, g) => acc + g.totalOut, 0)}
+                      -{groupedData.reduce((acc, g) => acc + g.totalOut, 0).toFixed(3)}
                     </TableCell>
                     <TableCell className="text-right font-mono font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-100/80 dark:bg-emerald-900/40">
-                      +{groupedData.reduce((acc, g) => acc + g.totalIn, 0)}
+                      +{groupedData.reduce((acc, g) => acc + g.totalIn, 0).toFixed(3)}
                     </TableCell>
                     <TableCell className="text-right font-mono font-bold bg-sky-100/80 dark:bg-sky-900/40">
                       {(() => {
                         const net = groupedData.reduce((acc, g) => acc + g.finalTotal, 0);
-                        return net > 0 ? `+${net}` : net;
+                        return net > 0 ? `+${net.toFixed(3)}` : net.toFixed(3);
                       })()}
                     </TableCell>
                   </TableRow>

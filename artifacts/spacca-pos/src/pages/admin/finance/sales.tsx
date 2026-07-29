@@ -50,6 +50,10 @@ export default function SalesAnalysisPage() {
   const [summary, setSummary] = useState<any[]>([]);
   const [dailySummary, setDailySummary] = useState<any[]>([]);
   const [branches, setBranches] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
+  const [catalogDrinks, setCatalogDrinks] = useState<any[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [selectedDrink, setSelectedDrink] = useState<string>("all");
   const [loading, setLoading] = useState(true);
   const [rangeSummary, setRangeSummary] = useState<any>(null);
   const [selectedOrderDetails, setSelectedOrderDetails] = useState<any>(null);
@@ -90,12 +94,14 @@ export default function SalesAnalysisPage() {
       if (activeTab === "orders") {
         params.append("limit", String(rowsPerPage));
         params.append("offset", String((reportPage - 1) * rowsPerPage));
-        const [orderData, summaryData] = await Promise.all([
+        const [orderData, summaryData, drinkSalesData] = await Promise.all([
           api(`/api/orders?${params.toString()}`),
           api(`/api/dashboard/sales-by-category?${params.toString()}`),
+          api(`/api/finance/sales-items?${params.toString()}`),
         ]);
         setOrders(orderData);
         setSummary(summaryData);
+        setDrinkSales(drinkSalesData);
 
         if (isDailyGrouped) {
           const dailyData = await api(`/api/dashboard/sales-by-day?${params.toString()}`);
@@ -105,13 +111,24 @@ export default function SalesAnalysisPage() {
         const data = await api(`/api/finance/sales-items?${params.toString()}`);
         setDrinkSales(data);
       } else if (activeTab === "customs") {
-        const data = await api(`/api/finance/customizations-report?${params.toString()}`);
-        setCustomizations(data);
+        const [customsData, drinkSalesData] = await Promise.all([
+          api(`/api/finance/customizations-report?${params.toString()}`),
+          api(`/api/finance/sales-items?${params.toString()}`)
+        ]);
+        setCustomizations(customsData);
+        setDrinkSales(drinkSalesData);
       }
       
-      // 3. Always load branches for filter if not yet loaded
-      if (branches.length === 0) {
-        setBranches(await api("/api/admin/branches"));
+      // 3. Always load filter config tables if not yet loaded
+      if (branches.length === 0 || categories.length === 0 || catalogDrinks.length === 0) {
+        const [branchData, catData, drinkData] = await Promise.all([
+          api("/api/admin/branches"),
+          api("/api/drink-categories"),
+          api("/api/drinks")
+        ]);
+        setBranches(branchData);
+        setCategories(catData.filter((c: any) => c.isActive !== false));
+        setCatalogDrinks(drinkData);
       }
     } catch (err) {
       toast({ variant: "destructive", title: "Failed to load sales data" });
@@ -124,19 +141,112 @@ export default function SalesAnalysisPage() {
     loadData();
   }, [reportStartDate, reportEndDate, reportPage, isDailyGrouped, selectedBranch, activeTab]);
 
+  const filteredCatalogDrinks = useMemo(() => {
+    if (selectedCategory === "all") return catalogDrinks;
+    const catObj = categories.find(c => String(c.id) === selectedCategory || c.name === selectedCategory);
+    if (!catObj) return catalogDrinks;
+    return catalogDrinks.filter(d => d.category === catObj.name || String(d.categoryId) === selectedCategory);
+  }, [catalogDrinks, selectedCategory, categories]);
+
   const totals = useMemo(() => {
-    if (!rangeSummary) {
-      return { revenue: 0, count: 0, drinks: 0, discounts: 0, offerDiscounts: 0, netRevenue: 0 };
+    if (selectedCategory === "all" && selectedDrink === "all") {
+      if (!rangeSummary) {
+        return { revenue: 0, count: 0, drinks: 0, discounts: 0, offerDiscounts: 0, netRevenue: 0 };
+      }
+      return { 
+        revenue: rangeSummary.revenue, 
+        count: rangeSummary.count, 
+        drinks: rangeSummary.drinks, 
+        discounts: rangeSummary.discounts,
+        offerDiscounts: rangeSummary.offerDiscounts || 0,
+        netRevenue: rangeSummary.netRevenue 
+      };
     }
-    return { 
-      revenue: rangeSummary.revenue, 
-      count: rangeSummary.count, 
-      drinks: rangeSummary.drinks, 
-      discounts: rangeSummary.discounts,
-      offerDiscounts: rangeSummary.offerDiscounts || 0,
-      netRevenue: rangeSummary.netRevenue 
+
+    let totalRevenue = 0;
+    let totalNet = 0;
+    let totalQty = 0;
+    let totalDisc = 0;
+    const uniqueOrders = new Set<number>();
+
+    drinkSales.forEach(item => {
+      const matchesCategory = selectedCategory === "all" || item.category === selectedCategory || (categories.find(c => String(c.id) === selectedCategory)?.name === item.category);
+      const matchesDrink = selectedDrink === "all" || String(item.drinkId) === selectedDrink || item.item === selectedDrink;
+      
+      if (matchesCategory && matchesDrink) {
+        totalRevenue += item.totalGross;
+        totalNet += item.finalPrice;
+        totalQty += item.quantity;
+        totalDisc += item.discountAmount;
+        uniqueOrders.add(item.invNo);
+      }
+    });
+
+    return {
+      revenue: totalRevenue,
+      netRevenue: totalNet,
+      count: uniqueOrders.size,
+      drinks: totalQty,
+      discounts: totalDisc,
+      offerDiscounts: 0,
     };
-  }, [rangeSummary]);
+  }, [rangeSummary, selectedCategory, selectedDrink, drinkSales, categories]);
+
+  const filteredOrders = useMemo(() => {
+    if (selectedCategory === "all" && selectedDrink === "all") return orders;
+    return orders.filter((o: any) => {
+      const items = o.items || [];
+      return items.some((item: any) => {
+        const matchesDrink = selectedDrink === "all" || String(item.drinkId) === selectedDrink;
+        const drinkInCatalog = catalogDrinks.find(d => d.id === item.drinkId);
+        const matchesCategory = selectedCategory === "all" || drinkInCatalog?.category === selectedCategory || String(drinkInCatalog?.categoryId) === selectedCategory;
+        return matchesDrink && matchesCategory;
+      });
+    });
+  }, [orders, selectedCategory, selectedDrink, catalogDrinks]);
+
+  const filteredDrinkSales = useMemo(() => {
+    return drinkSales.filter(item => {
+      const matchesCategory = selectedCategory === "all" || item.category === selectedCategory || (categories.find(c => String(c.id) === selectedCategory)?.name === item.category);
+      const matchesDrink = selectedDrink === "all" || String(item.drinkId) === selectedDrink || item.item === selectedDrink;
+      return matchesCategory && matchesDrink;
+    });
+  }, [drinkSales, selectedCategory, selectedDrink, categories]);
+
+  const filteredDailySummary = useMemo(() => {
+    if (selectedCategory === "all" && selectedDrink === "all") return dailySummary;
+    const map = new Map<string, { date: string; uniqueOrders: Set<number>; revenue: number; net: number; tax: number; discount: number }>();
+    filteredDrinkSales.forEach(item => {
+      const dateKey = format(new Date(item.date), "yyyy-MM-dd");
+      let day = map.get(dateKey);
+      if (!day) {
+        day = { date: dateKey, uniqueOrders: new Set(), revenue: 0, net: 0, tax: 0, discount: 0 };
+        map.set(dateKey, day);
+      }
+      day.revenue += item.totalGross;
+      day.net += item.finalPrice;
+      day.tax += item.taxAmount;
+      day.discount += item.discountAmount;
+      day.uniqueOrders.add(item.invNo);
+    });
+    return Array.from(map.values()).map(d => ({
+      date: d.date,
+      count: d.uniqueOrders.size,
+      revenue: d.revenue,
+      net: d.net,
+      tax: d.tax,
+      discount: d.discount
+    })).sort((a, b) => b.date.localeCompare(a.date));
+  }, [dailySummary, filteredDrinkSales, selectedCategory, selectedDrink]);
+
+  const filteredCustomizations = useMemo(() => {
+    return customizations.filter(c => {
+      const drinkInCatalog = catalogDrinks.find(d => d.id === c.drinkId || d.name === c.drinkName);
+      const matchesCategory = selectedCategory === "all" || drinkInCatalog?.category === selectedCategory || String(drinkInCatalog?.categoryId) === selectedCategory;
+      const matchesDrink = selectedDrink === "all" || String(c.drinkId) === selectedDrink || c.drinkName === selectedDrink;
+      return matchesCategory && matchesDrink;
+    });
+  }, [customizations, selectedCategory, selectedDrink, catalogDrinks]);
 
 
   const handleExportCSV = async () => {
