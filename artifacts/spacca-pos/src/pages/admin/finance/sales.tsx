@@ -268,6 +268,19 @@ export default function SalesAnalysisPage() {
         const allOrders = await api(`/api/orders?${params.toString()}`);
         if (!allOrders || allOrders.length === 0) return;
 
+        let filteredAllOrders = allOrders;
+        if (selectedCategory !== "all" || selectedDrink !== "all") {
+          filteredAllOrders = allOrders.filter((o: any) => {
+            const items = o.items || [];
+            return items.some((item: any) => {
+              const matchesDrink = selectedDrink === "all" || String(item.drinkId) === selectedDrink;
+              const drinkInCatalog = catalogDrinks.find(d => d.id === item.drinkId);
+              const matchesCategory = selectedCategory === "all" || drinkInCatalog?.category === selectedCategory || String(drinkInCatalog?.categoryId) === selectedCategory;
+              return matchesDrink && matchesCategory;
+            });
+          });
+        }
+
         headers = ["OrderID", "Date", "Time", "Order Number", "Items Count", "Total Price", "Before Tax", "Tax Value", "Discount Name", "Discount Value", "Discount Amount", "Offer Discount", "Final Price", "Status", "Payment Method"];
         
         let totalItemsCount = 0;
@@ -278,7 +291,7 @@ export default function SalesAnalysisPage() {
         let totalOfferDiscountAmount = 0;
         let totalFinalPrice = 0;
 
-        rows = allOrders.map((o: any) => {
+        rows = filteredAllOrders.map((o: any) => {
           const itemsCount = o.items?.reduce((acc: number, item: any) => acc + item.quantity, 0) || 0;
           const grossPrice = o.subtotal || 0;
           const netPrice = grossPrice / 1.14;
@@ -320,7 +333,7 @@ export default function SalesAnalysisPage() {
           "",
           "",
           "",
-          totalItemsCount,
+          "TOTAL ITEMS: " + totalItemsCount,
           totalGrossPrice.toFixed(2),
           totalNetPrice.toFixed(2),
           totalTaxValue.toFixed(2),
@@ -335,7 +348,7 @@ export default function SalesAnalysisPage() {
       } else if (activeTab === "drinks") {
         filename = `drink_sales_${reportStartDate}_to_${reportEndDate}.csv`;
         headers = ["Date", "Order NO", "Inv.NO", "Cashier", "Branch", "Item", "Quantity", "Standard/Customize", "Sale Price", "Total Price (Gross)", "Before Tax (Net)", "Tax Amount", "Discount Name", "Discount value", "Discount Amount", "SubTotal Price", "Final Price", "Payment Method", "Category"];
-        rows = drinkSales.map(i => [
+        rows = filteredDrinkSales.map(i => [
           format(new Date(i.date), "yyyy-MM-dd"),
           i.orderNo,
           i.invNo,
@@ -359,7 +372,7 @@ export default function SalesAnalysisPage() {
       } else if (activeTab === "customs") {
         filename = `customizations_${reportStartDate}_to_${reportEndDate}.csv`;
         headers = ["Date", "Order NO", "Inv.NO", "Cashier", "Branch", "Item/Drink", "Standard Ing.", "Quantity", "Customized Ing.", "Quantity", "Unit", "Sales Price"];
-        rows = customizations.map(c => [
+        rows = filteredCustomizations.map(c => [
           format(new Date(c.date), "yyyy-MM-dd"),
           c.orderNumber,
           "-",
@@ -399,7 +412,7 @@ export default function SalesAnalysisPage() {
 
       <Card>
         <CardContent className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-4 items-end">
             <div className="space-y-2">
               <Label>Branch</Label>
               <Select value={selectedBranch} onValueChange={setSelectedBranch}>
@@ -410,6 +423,37 @@ export default function SalesAnalysisPage() {
                   <SelectItem value="all">All Branches</SelectItem>
                   {branches.map(b => (
                     <SelectItem key={b.id} value={String(b.id)}>{b.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Category</Label>
+              <Select value={selectedCategory} onValueChange={(val) => {
+                setSelectedCategory(val);
+                setSelectedDrink("all");
+              }}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All Categories" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  {categories.map(c => (
+                    <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Product/Drink</Label>
+              <Select value={selectedDrink} onValueChange={setSelectedDrink}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All Products" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Products</SelectItem>
+                  {filteredCatalogDrinks.map(d => (
+                    <SelectItem key={d.id} value={String(d.id)}>{d.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -493,7 +537,7 @@ export default function SalesAnalysisPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {dailySummary.map((day) => (
+                  {filteredDailySummary.map((day) => (
                     <TableRow key={day.date}>
                       <TableCell className="font-bold">{day.date}</TableCell>
                       <TableCell className="text-right">{day.orders}</TableCell>
@@ -523,7 +567,7 @@ export default function SalesAnalysisPage() {
                     <TableRow>
                       <TableCell colSpan={7} className="text-center py-10">Loading orders...</TableCell>
                     </TableRow>
-                  ) : orders.map((order) => (
+                  ) : filteredOrders.map((order) => (
                     <TableRow key={order.id}>
                       <TableCell>
                         <button 
@@ -607,9 +651,9 @@ export default function SalesAnalysisPage() {
               <TableBody>
                 {loading ? (
                   <TableRow><TableCell colSpan={7} className="text-center py-10">Loading drink sales...</TableCell></TableRow>
-                ) : drinkSales.length === 0 ? (
+                ) : filteredDrinkSales.length === 0 ? (
                   <TableRow><TableCell colSpan={7} className="text-center py-10 text-muted-foreground">No data found for this range.</TableCell></TableRow>
-                ) : drinkSales.map((item, i) => (
+                ) : filteredDrinkSales.map((item, i) => (
                   <TableRow key={i}>
                     <TableCell className="text-sm">{format(new Date(item.date), "MMM dd")}</TableCell>
                     <TableCell className="font-medium">
@@ -654,9 +698,9 @@ export default function SalesAnalysisPage() {
               <TableBody>
                 {loading ? (
                   <TableRow><TableCell colSpan={7} className="text-center py-10">Loading customizations...</TableCell></TableRow>
-                ) : customizations.length === 0 ? (
+                ) : filteredCustomizations.length === 0 ? (
                   <TableRow><TableCell colSpan={7} className="text-center py-10 text-muted-foreground">No customizations found.</TableCell></TableRow>
-                ) : customizations.map((c, i) => (
+                ) : filteredCustomizations.map((c, i) => (
                   <TableRow key={i}>
                     <TableCell className="text-sm">{format(new Date(c.date), "MMM dd")}</TableCell>
                     <TableCell className="font-medium">{c.drinkName}</TableCell>
