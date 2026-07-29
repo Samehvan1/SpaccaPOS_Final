@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, and, inArray, asc, sql } from "drizzle-orm";
+import { eq, and, inArray, asc, sql, isNull } from "drizzle-orm";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -20,6 +20,8 @@ import {
   predefinedSlotTypeOptionsTable,
   predefinedSlotVolumesTable,
   branchStockTable,
+  branchDrinkPricesTable,
+  partnerDrinkPricesTable,
 } from "@workspace/db";
 import { serializeDates } from "../lib/serialize";
 import { globalCache } from "../lib/cache";
@@ -441,13 +443,13 @@ async function buildDrinkDetail(drinkId: number, branchId?: number) {
   return result;
 }
 
-async function computeDefaultPrice(drinkId: number): Promise<number> {
-  const cacheKey = `drink_default_price_${drinkId}`;
+async function computeDefaultPrice(drinkId: number, branchId?: number, partnerId?: number): Promise<number> {
+  const cacheKey = `drink_default_price_${drinkId}_${branchId ?? "global"}_${partnerId ?? "global"}`;
   const cached = globalCache.get<number>(cacheKey);
   if (cached !== null) return cached;
 
   try {
-    const data = await calculateDrinkData(drinkId, []);
+    const data = await calculateDrinkData(drinkId, [], branchId, partnerId);
     globalCache.set(cacheKey, data.totalPrice);
     return data.totalPrice;
   } catch (error) {
@@ -459,13 +461,15 @@ async function computeDefaultPrice(drinkId: number): Promise<number> {
 router.get("/drinks", async (req, res): Promise<void> => {
   const params = ListDrinksQueryParams.safeParse(req.query);
   const sessionUser = (req.session as any);
-  const sessionBranchId = sessionUser.branchId;
-  const isAdmin = sessionUser.role === "admin";
+  const sessionBranchId = sessionUser?.branchId;
+  const isAdmin = sessionUser?.role === "admin";
   
   // Use session branch by default, but allow query override for admins OR if no session exists (Kiosk/Public)
   const targetBranchId = (req.query.branchId && (isAdmin || !sessionBranchId))
     ? parseInt(req.query.branchId as string)
     : sessionBranchId;
+
+  const queryPartnerId = req.query.partnerId ? parseInt(req.query.partnerId as string) : undefined;
 
   const conditions = [];
   if (params.success && params.data.active !== undefined) {
@@ -494,10 +498,56 @@ router.get("/drinks", async (req, res): Promise<void> => {
       // Caching ensures this remains performant even for large lists.
       const detail = await buildDrinkDetail(d.id, targetBranchId);
       
-      const defaultPrice = await computeDefaultPrice(d.id);
+      const defaultPrice = await computeDefaultPrice(d.id, targetBranchId, queryPartnerId);
+
+      let basePrice = Number(d.basePrice);
+      if (queryPartnerId) {
+        if (targetBranchId) {
+          const [row] = await db
+            .select()
+            .from(partnerDrinkPricesTable)
+            .where(
+              and(
+                eq(partnerDrinkPricesTable.partnerId, queryPartnerId),
+                eq(partnerDrinkPricesTable.drinkId, d.id),
+                eq(partnerDrinkPricesTable.branchId, targetBranchId)
+              )
+            )
+            .limit(1);
+          if (row) basePrice = Number(row.price);
+        }
+        if (basePrice === Number(d.basePrice)) {
+          const [row] = await db
+            .select()
+            .from(partnerDrinkPricesTable)
+            .where(
+              and(
+                eq(partnerDrinkPricesTable.partnerId, queryPartnerId),
+                eq(partnerDrinkPricesTable.drinkId, d.id),
+                isNull(partnerDrinkPricesTable.branchId)
+              )
+            )
+            .limit(1);
+          if (row) basePrice = Number(row.price);
+        }
+      }
+      if (basePrice === Number(d.basePrice) && targetBranchId) {
+        const [row] = await db
+          .select()
+          .from(branchDrinkPricesTable)
+          .where(
+            and(
+              eq(branchDrinkPricesTable.branchId, targetBranchId),
+              eq(branchDrinkPricesTable.drinkId, d.id)
+            )
+          )
+          .limit(1);
+        if (row) basePrice = Number(row.price);
+      }
+
       return { 
         ...d, 
-        basePrice: Number(d.basePrice), 
+        basePrice, 
         defaultPrice,
         isAvailable: detail ? detail.isAvailable : true,
         unavailableReasons: detail ? detail.unavailableReasons : [],

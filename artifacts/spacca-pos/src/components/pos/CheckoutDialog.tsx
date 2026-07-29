@@ -210,9 +210,9 @@ export const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
                   id="coupon"
                   value={discountCode}
                   onChange={(e) => setDiscountCode(e.target.value)}
-                  placeholder={isOfferApplied ? "Offers Applied - Coupons Disabled" : "Enter code"}
+                  placeholder={paymentMethod === "hospitality" ? "Hospitality - Coupons Disabled" : isOfferApplied ? "Offers Applied - Coupons Disabled" : "Enter code"}
                   className="pl-9 font-mono font-bold uppercase"
-                  disabled={isOfferApplied || !!appliedDiscount || isValidatingDiscount}
+                  disabled={paymentMethod === "hospitality" || isOfferApplied || !!appliedDiscount || isValidatingDiscount}
                   autoComplete="off"
                 />
               </div>
@@ -222,7 +222,7 @@ export const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
                   size="icon"
                   className="text-destructive border-destructive/20 hover:bg-destructive/5"
                   onClick={() => { setAppliedDiscount(null); setDiscountCode(""); }}
-                  disabled={isOfferApplied}
+                  disabled={paymentMethod === "hospitality" || isOfferApplied}
                 >
                   <X className="h-4 w-4" />
                 </Button>
@@ -230,7 +230,7 @@ export const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
                 <Button
                   variant="secondary"
                   onClick={onValidateDiscount}
-                  disabled={isOfferApplied || !discountCode.trim() || isValidatingDiscount}
+                  disabled={paymentMethod === "hospitality" || isOfferApplied || !discountCode.trim() || isValidatingDiscount}
                 >
                   {isValidatingDiscount ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
                 </Button>

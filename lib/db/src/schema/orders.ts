@@ -7,6 +7,7 @@ import { ingredientsTable, ingredientOptionsTable } from "./ingredients";
 import { discountsTable } from "./discounts";
 import { branchesTable } from "./branches";
 import { offersTable } from "./offers";
+import { partnersTable } from "./partners";
 
 export const ordersTable = pgTable("orders", {
   id: serial("id").primaryKey(),
@@ -40,6 +41,11 @@ export const ordersTable = pgTable("orders", {
   cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
+
+  partnerId: integer("partner_id").references(() => partnersTable.id, { onDelete: "set null" }),
+  commissionRate: numeric("commission_rate", { precision: 8, scale: 2 }),
+  commissionAmount: numeric("commission_amount", { precision: 8, scale: 2 }),
+  netAmount: numeric("net_amount", { precision: 8, scale: 2 }),
 }, (table) => {
   return {
     createdAtIdx: index("orders_created_at_idx").on(table.createdAt),

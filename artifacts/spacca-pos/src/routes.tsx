@@ -20,6 +20,8 @@ import BranchesAdmin from "@/pages/admin/branches";
 import DiscountsAdmin from "@/pages/admin/discounts";
 import OffersAdmin from "@/pages/admin/offers";
 import CustomersAdmin from "@/pages/admin/customers";
+import BranchPricesAdmin from "@/pages/admin/branch-prices";
+import PartnersAdmin from "@/pages/admin/partners";
 
 import TagsAdmin from "@/pages/admin/tags";
 import ActivityLogs from "@/pages/admin/activity-logs";
@@ -116,6 +118,8 @@ export const appRoutes: RouteConfig[] = [
   { path: "/admin/users", component: AdminUsers, permission: "users:view" },
 
   { path: "/admin/branches", component: BranchesAdmin, permission: "branches:manage" },
+  { path: "/admin/branch-prices", component: BranchPricesAdmin, permission: "catalog:view" },
+  { path: "/admin/partners", component: PartnersAdmin, permission: "branches:manage" },
   { path: "/admin/activity-logs", component: ActivityLogs, permission: "admin:view" },
   { path: "/admin/permissions", component: PermissionsAdmin, permission: "roles:manage" },
   { path: "/admin/settings", component: SystemSettingsAdmin, permission: "settings:manage" },

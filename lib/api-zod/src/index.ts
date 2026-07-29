@@ -199,6 +199,7 @@ export const CreateOrderBody = api.CreateOrderBody.extend({
     )
     .optional(),
   source: z.enum(["pos", "kiosk", "web", "mobile"]).optional(),
+  partnerId: z.number().nullish(),
 });
 export type CreateOrderBody = Infer<typeof CreateOrderBody>;
 

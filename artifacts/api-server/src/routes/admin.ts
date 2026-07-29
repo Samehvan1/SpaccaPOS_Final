@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { db, activityLogsTable, permissionsTable, usersTable, rolePermissionsTable, branchesTable } from "@workspace/db";
-import { eq, desc, and, gte, lte, ilike, sql } from "drizzle-orm";
+import { db, activityLogsTable, permissionsTable, usersTable, rolePermissionsTable, branchesTable, partnersTable, partnerDrinkPricesTable, branchDrinkPricesTable, drinksTable } from "@workspace/db";
+import { eq, desc, and, gte, lte, ilike, sql, isNull } from "drizzle-orm";
 import { exec } from "child_process";
 import path from "path";
 import fs from "fs";
@@ -182,5 +182,261 @@ adminRouter.post("/admin/backup", requirePermission("settings:manage"), async (r
 });
 
 // Branches route moved to index.ts for better visibility
+
+// GET /admin/partners
+adminRouter.get("/admin/partners", requirePermission("branches:manage"), async (req, res) => {
+  try {
+    const list = await db.select().from(partnersTable).orderBy(desc(partnersTable.createdAt));
+    res.json(list);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to list partners" });
+  }
+});
+
+// POST /admin/partners
+adminRouter.post("/admin/partners", requirePermission("branches:manage"), async (req, res): Promise<void> => {
+  try {
+    const { name, code, commissionType, commissionValue, isActive } = req.body;
+    if (!name || !code) {
+      res.status(400).json({ error: "Name and Code are required" });
+      return;
+    }
+    const [partner] = await db
+      .insert(partnersTable)
+      .values({
+        name,
+        code,
+        commissionType: commissionType || "percentage",
+        commissionValue: String(commissionValue || "0.00"),
+        isActive: isActive !== undefined ? isActive : true,
+      })
+      .returning();
+    res.status(201).json(partner);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Failed to create partner" });
+  }
+});
+
+// PATCH /admin/partners/:id
+adminRouter.patch("/admin/partners/:id", requirePermission("branches:manage"), async (req, res): Promise<void> => {
+  try {
+    const id = parseInt(req.params.id as string);
+    if (isNaN(id)) {
+      res.status(400).json({ error: "Invalid ID" });
+      return;
+    }
+    const { name, code, commissionType, commissionValue, isActive } = req.body;
+    const [partner] = await db
+      .update(partnersTable)
+      .set({
+        ...(name !== undefined && { name }),
+        ...(code !== undefined && { code }),
+        ...(commissionType !== undefined && { commissionType }),
+        ...(commissionValue !== undefined && { commissionValue: String(commissionValue) }),
+        ...(isActive !== undefined && { isActive }),
+        updatedAt: new Date(),
+      })
+      .where(eq(partnersTable.id, id))
+      .returning();
+    if (!partner) {
+      res.status(404).json({ error: "Partner not found" });
+      return;
+    }
+    res.json(partner);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Failed to update partner" });
+  }
+});
+
+// DELETE /admin/partners/:id
+adminRouter.delete("/admin/partners/:id", requirePermission("branches:manage"), async (req, res): Promise<void> => {
+  try {
+    const id = parseInt(req.params.id as string);
+    if (isNaN(id)) {
+      res.status(400).json({ error: "Invalid ID" });
+      return;
+    }
+    const [partner] = await db.delete(partnersTable).where(eq(partnersTable.id, id)).returning();
+    if (!partner) {
+      res.status(404).json({ error: "Partner not found" });
+      return;
+    }
+    res.sendStatus(204);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to delete partner" });
+  }
+});
+
+// GET /admin/branch-prices
+adminRouter.get("/admin/branch-prices", requirePermission("catalog:view"), async (req, res): Promise<void> => {
+  try {
+    const branchId = parseInt(req.query.branchId as string);
+    if (isNaN(branchId)) {
+      res.status(400).json({ error: "Invalid or missing branchId" });
+      return;
+    }
+
+    const drinks = await db.select().from(drinksTable).orderBy(drinksTable.name);
+    const overrides = await db.select().from(branchDrinkPricesTable).where(eq(branchDrinkPricesTable.branchId, branchId));
+    
+    const overridesMap = new Map(overrides.map(o => [o.drinkId, o.price]));
+
+    const result = drinks.map(d => ({
+      drinkId: d.id,
+      name: d.name,
+      globalPrice: Number(d.basePrice),
+      overridePrice: overridesMap.has(d.id) ? Number(overridesMap.get(d.id)) : null,
+    }));
+
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to load branch prices" });
+  }
+});
+
+// POST /admin/branch-prices (Bulk Save)
+adminRouter.post("/admin/branch-prices", requirePermission("catalog:manage"), async (req, res): Promise<void> => {
+  try {
+    const { branchId, prices } = req.body as { branchId: number; prices: { drinkId: number; price: number | null }[] };
+    if (!branchId || !Array.isArray(prices)) {
+      res.status(400).json({ error: "Invalid branchId or prices list" });
+      return;
+    }
+
+    await db.transaction(async (tx) => {
+      for (const p of prices) {
+        if (p.price === null || p.price === undefined || isNaN(p.price)) {
+          // Delete override if null
+          await tx
+            .delete(branchDrinkPricesTable)
+            .where(and(eq(branchDrinkPricesTable.branchId, branchId), eq(branchDrinkPricesTable.drinkId, p.drinkId)));
+        } else {
+          // Upsert override
+          const [existing] = await tx
+            .select()
+            .from(branchDrinkPricesTable)
+            .where(and(eq(branchDrinkPricesTable.branchId, branchId), eq(branchDrinkPricesTable.drinkId, p.drinkId)))
+            .limit(1);
+          if (existing) {
+            await tx
+              .update(branchDrinkPricesTable)
+              .set({ price: String(p.price), updatedAt: new Date() })
+              .where(eq(branchDrinkPricesTable.id, existing.id));
+          } else {
+            await tx
+              .insert(branchDrinkPricesTable)
+              .values({
+                branchId,
+                drinkId: p.drinkId,
+                price: String(p.price),
+              });
+          }
+        }
+      }
+    });
+
+    res.json({ message: "Branch prices updated successfully" });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Failed to save branch prices" });
+  }
+});
+
+// GET /admin/partner-prices
+adminRouter.get("/admin/partner-prices", requirePermission("catalog:view"), async (req, res): Promise<void> => {
+  try {
+    const partnerId = parseInt(req.query.partnerId as string);
+    if (isNaN(partnerId)) {
+      res.status(400).json({ error: "Invalid or missing partnerId" });
+      return;
+    }
+    const branchIdStr = req.query.branchId as string;
+    const branchId = branchIdStr ? parseInt(branchIdStr) : null;
+
+    const drinks = await db.select().from(drinksTable).orderBy(drinksTable.name);
+    
+    const conditions = [
+      eq(partnerDrinkPricesTable.partnerId, partnerId)
+    ];
+    if (branchId) {
+      conditions.push(eq(partnerDrinkPricesTable.branchId, branchId));
+    } else {
+      conditions.push(isNull(partnerDrinkPricesTable.branchId));
+    }
+
+    const overrides = await db
+      .select()
+      .from(partnerDrinkPricesTable)
+      .where(and(...conditions));
+    
+    const overridesMap = new Map(overrides.map(o => [o.drinkId, o.price]));
+
+    const result = drinks.map(d => ({
+      drinkId: d.id,
+      name: d.name,
+      globalPrice: Number(d.basePrice),
+      overridePrice: overridesMap.has(d.id) ? Number(overridesMap.get(d.id)) : null,
+    }));
+
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to load partner prices" });
+  }
+});
+
+// POST /admin/partner-prices (Bulk Save)
+adminRouter.post("/admin/partner-prices", requirePermission("catalog:manage"), async (req, res): Promise<void> => {
+  try {
+    const { partnerId, branchId, prices } = req.body as { partnerId: number; branchId: number | null; prices: { drinkId: number; price: number | null }[] };
+    if (!partnerId || !Array.isArray(prices)) {
+      res.status(400).json({ error: "Invalid partnerId or prices list" });
+      return;
+    }
+
+    await db.transaction(async (tx) => {
+      for (const p of prices) {
+        const deleteConditions = [
+          eq(partnerDrinkPricesTable.partnerId, partnerId),
+          eq(partnerDrinkPricesTable.drinkId, p.drinkId)
+        ];
+        if (branchId) {
+          deleteConditions.push(eq(partnerDrinkPricesTable.branchId, branchId));
+        } else {
+          deleteConditions.push(isNull(partnerDrinkPricesTable.branchId));
+        }
+
+        if (p.price === null || p.price === undefined || isNaN(p.price)) {
+          // Delete override if null
+          await tx.delete(partnerDrinkPricesTable).where(and(...deleteConditions));
+        } else {
+          // Upsert override
+          const [existing] = await tx
+            .select()
+            .from(partnerDrinkPricesTable)
+            .where(and(...deleteConditions))
+            .limit(1);
+          if (existing) {
+            await tx
+              .update(partnerDrinkPricesTable)
+              .set({ price: String(p.price), updatedAt: new Date() })
+              .where(eq(partnerDrinkPricesTable.id, existing.id));
+          } else {
+            await tx
+              .insert(partnerDrinkPricesTable)
+              .values({
+                partnerId,
+                drinkId: p.drinkId,
+                branchId: branchId || null,
+                price: String(p.price),
+              });
+          }
+        }
+      }
+    });
+
+    res.json({ message: "Partner prices updated successfully" });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Failed to save partner prices" });
+  }
+});
 
 export default adminRouter;

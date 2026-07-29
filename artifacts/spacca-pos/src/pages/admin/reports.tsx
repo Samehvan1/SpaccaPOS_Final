@@ -701,7 +701,30 @@ export default function ReportsPage() {
                   { label: "Range Net Rev", value: fmt(rangeSummary?.netRevenue || 0), icon: TrendingUp, loading: loadingRangeSummary },
                   { label: "Range Orders", value: rangeSummary?.count || 0, icon: Receipt, loading: loadingRangeSummary },
                   { label: "Range Drinks", value: rangeSummary?.drinks || 0, icon: Coffee, loading: loadingRangeSummary },
-                  { label: "Range Discounts", value: fmt(rangeSummary?.discounts || 0), icon: Tag, loading: loadingRangeSummary },
+                  { 
+                    label: "Range Discounts & Offers", 
+                    value: (
+                      <div className="space-y-1.5 mt-1">
+                        <div className="flex flex-col">
+                          <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-tight">Discounts</span>
+                          <span className="text-sm lg:text-base font-bold text-red-500 whitespace-nowrap">
+                            {fmt(rangeSummary?.discounts || 0)}
+                            {rangeSummary?.revenue > 0 ? ` (${((rangeSummary.discounts / rangeSummary.revenue) * 100).toFixed(0)}%)` : " (0%)"}
+                          </span>
+                        </div>
+                        <div className="flex flex-col border-t border-muted-foreground/10 pt-1">
+                          <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-tight">Net Offers</span>
+                          <span className="text-sm lg:text-base font-bold text-amber-500 whitespace-nowrap">
+                            {fmt(rangeSummary?.offerDiscounts || 0)}
+                            {rangeSummary?.revenue > 0 ? ` (${((rangeSummary.offerDiscounts / rangeSummary.revenue) * 100).toFixed(0)}%)` : " (0%)"}
+                          </span>
+                        </div>
+                      </div>
+                    ),
+                    isCustom: true,
+                    icon: Tag, 
+                    loading: loadingRangeSummary 
+                  },
                   { 
                     label: "Range Hospitality", 
                     value: `${fmt(rangeSummary?.hospitalityRevenue || 0)} (${rangeSummary?.hospitalityCount || 0} ord)`, 
@@ -733,9 +756,11 @@ export default function ReportsPage() {
                         <p className="text-xs text-muted-foreground font-medium">{stat.label}</p>
                         {stat.loading ? (
                           <div className="h-6 w-16 bg-muted animate-pulse rounded mt-1" />
+                        ) : (stat as any).isCustom ? (
+                          (stat as any).value
                         ) : (
                           <>
-                            <p className="text-sm lg:text-base font-bold whitespace-nowrap">{stat.value}</p>
+                            <p className="text-sm lg:text-base font-bold whitespace-nowrap">{stat.value as string}</p>
                             {(stat as any).desc && (
                               <p className="text-[10px] text-muted-foreground mt-0.5 font-bold uppercase tracking-tight">{(stat as any).desc}</p>
                             )}

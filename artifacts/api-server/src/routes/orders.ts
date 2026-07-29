@@ -94,6 +94,7 @@ import {
   branchesTable,
   settingsTable,
   offersTable,
+  partnersTable,
 } from "@workspace/db";
 import {
   ListOrdersResponse,
@@ -471,7 +472,12 @@ router.post("/orders", async (req, res): Promise<void> => {
 
   for (const item of orderItems) {
     try {
-      const calcData = await calculateDrinkData(item.drinkId, item.selections as any[]);
+      const calcData = await calculateDrinkData(
+        item.drinkId,
+        item.selections as any[],
+        targetBranchId,
+        parsed.data.partnerId || null
+      );
       
       const customizations: Customization[] = calcData.customizations.map(c => ({
         ingredientId: c.ingredientId,
@@ -716,6 +722,28 @@ router.post("/orders", async (req, res): Promise<void> => {
           throw new Error("PHONE_REQUIRED: Customer phone is required for points payment");
         }
 
+        let commissionRate: string | null = null;
+        let commissionAmount: string | null = null;
+        let netAmount: string | null = null;
+
+        if (parsed.data.partnerId) {
+          const [partner] = await tx
+            .select()
+            .from(partnersTable)
+            .where(eq(partnersTable.id, parsed.data.partnerId))
+            .limit(1);
+          if (partner) {
+            commissionRate = partner.commissionValue;
+            const rateNum = parseFloat(partner.commissionValue) || 0;
+            if (partner.commissionType === "percentage") {
+              commissionAmount = ((total * rateNum) / 100).toFixed(2);
+            } else {
+              commissionAmount = rateNum.toFixed(2);
+            }
+            netAmount = (total - parseFloat(commissionAmount)).toFixed(2);
+          }
+        }
+
         const [newOrder] = await tx.insert(ordersTable).values({
           branchId: targetBranchId,
           orderNumber,
@@ -738,6 +766,11 @@ router.post("/orders", async (req, res): Promise<void> => {
           amountTendered: amountTendered != null ? String(amountTendered) : null,
           changeDue: changeDue != null ? String(changeDue) : null,
           notes: parsed.data.notes ?? null,
+
+          partnerId: parsed.data.partnerId ?? null,
+          commissionRate,
+          commissionAmount,
+          netAmount,
         }).returning();
 
         const allIngredientIds = [
@@ -969,17 +1002,21 @@ router.patch("/orders/:id/status", async (req, res, next): Promise<void> => {
 
       console.log(`[Security] Hospitality authorized by admin: ${admin.name} (ID: ${admin.id}) for order ${params.data.id}`);
 
-      // If changed to hospitality, apply 100% discount (which is equal to subtotal)
+      // If changed to hospitality, apply 100% discount (which is equal to subtotal) and remove offers
       updateData.discount = String(existingOrder.subtotal);
       updateData.total = "0";
       updateData.discountCode = "HOSPITALITY";
       updateData.discountId = null;
+      updateData.offerId = null;
+      updateData.offerDiscount = "0";
     } else if (existingOrder.paymentMethod === "hospitality") {
       // Transitioning away from hospitality: clear hospitality discount and restore total
       updateData.discount = "0";
       updateData.total = String(existingOrder.subtotal);
       updateData.discountCode = null;
       updateData.discountId = null;
+      updateData.offerId = null;
+      updateData.offerDiscount = "0";
     }
     updateData.paymentMethod = parsed.data.paymentMethod;
   }

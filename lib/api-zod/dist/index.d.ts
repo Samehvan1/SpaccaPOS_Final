@@ -1636,6 +1636,7 @@ export declare const CreateOrderBody: z.ZodObject<{
         transactionId?: string | undefined;
     }>, "many">>;
     source: z.ZodOptional<z.ZodEnum<["pos", "kiosk", "web", "mobile"]>>;
+    partnerId: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
 }, "strip", z.ZodTypeAny, {
     paymentMethod: "cash" | "card" | "wallet" | "hospitality" | "split" | "refund" | "points";
     items: {
@@ -1665,6 +1666,7 @@ export declare const CreateOrderBody: z.ZodObject<{
         transactionId?: string | undefined;
     }[] | undefined;
     adminPin?: string | undefined;
+    partnerId?: number | null | undefined;
 }, {
     paymentMethod: "cash" | "card" | "wallet" | "hospitality" | "split" | "refund" | "points";
     items: {
@@ -1694,6 +1696,7 @@ export declare const CreateOrderBody: z.ZodObject<{
         transactionId?: string | undefined;
     }[] | undefined;
     adminPin?: string | undefined;
+    partnerId?: number | null | undefined;
 }>;
 export type CreateOrderBody = Infer<typeof CreateOrderBody>;
 export declare const GetOrderParams: z.ZodObject<{

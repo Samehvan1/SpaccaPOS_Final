@@ -20,8 +20,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
-import { Minus, Plus, ShoppingCart, Trash2, X, ChevronRight, Droplets, Search, Menu, RotateCcw, Ticket, Check, Loader2, Tag, User, Lock } from "lucide-react";
+import { Minus, Plus, ShoppingCart, Trash2, X, ChevronRight, Droplets, Search, Menu, RotateCcw, Ticket, Check, Loader2, Tag, User, Lock, ShoppingBag, Building2 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { fmt } from "@/lib/currency";
 import { CupSimulator, type CupLayer } from "@/components/cup-simulator";
 import { useCustomerAuth } from "@/hooks/use-customer-auth";
@@ -48,6 +49,18 @@ function useDrinkCategories() {
     queryFn: async () => {
       const res = await fetch(`${API_BASE}/drink-categories`);
       if (!res.ok) throw new Error("Failed to fetch categories");
+      return res.json();
+    },
+    staleTime: 60_000,
+  });
+}
+
+function usePartners() {
+  return useQuery<any[]>({
+    queryKey: ["pos-partners"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/admin/partners`);
+      if (!res.ok) throw new Error("Failed to fetch partners");
       return res.json();
     },
     staleTime: 60_000,
@@ -136,7 +149,14 @@ export default function PosTerminal() {
   const { allowNoStockSell } = useSettings();
 
   const { data: branches = [], isLoading: isLoadingBranches } = useListBranches();
-  const { data: drinks, isLoading: isLoadingDrinks } = useListDrinks({ active: true, branchId: selectedBranchId || undefined });
+  const [selectedPartnerId, setSelectedPartnerId] = useState<number | null>(null);
+  const { data: partners = [] } = usePartners();
+  
+  const { data: drinks, isLoading: isLoadingDrinks } = useListDrinks({ 
+    active: true, 
+    branchId: selectedBranchId || undefined,
+    partnerId: selectedPartnerId || undefined,
+  } as any);
   const { data: allCategories = [] } = useDrinkCategories();
   const { data: activeOffer } = useGetActiveOffer();
 
@@ -488,6 +508,23 @@ export default function PosTerminal() {
     }
   }, [cart.length, discountCode, appliedDiscount]);
 
+  // Dynamically recalculate cart item pricing if branch/partner changes the base drink prices
+  useEffect(() => {
+    if (!drinks || drinks.length === 0 || cart.length === 0) return;
+    setCart(prevCart => prevCart.map(item => {
+      const updatedDrink = drinks.find(d => d.id === item.drinkId);
+      if (!updatedDrink) return item;
+      const basePrice = Number(updatedDrink.basePrice);
+      const customizationsCost = item.selections.reduce((sum, sel) => sum + sel.extraCost, 0);
+      const totalPrice = basePrice + customizationsCost;
+      return {
+        ...item,
+        basePrice,
+        totalPrice,
+      };
+    }));
+  }, [drinks]);
+
 
 
   const handleAddToCart = () => {
@@ -640,7 +677,7 @@ export default function PosTerminal() {
   const cartSubtotal = cart.reduce((sum, item) => sum + item.totalPrice * item.quantity, 0);
 
   const offerCalculation = useMemo(() => {
-    if (!activeOffer || cart.length === 0) {
+    if (!activeOffer || cart.length === 0 || paymentMethod === "hospitality") {
       return { discount: 0, extraFreeCount: 0, isOfferApplied: false };
     }
     const N = activeOffer.buyAmount;
@@ -667,10 +704,18 @@ export default function PosTerminal() {
       extraFreeCount,
       isOfferApplied: F > 0,
     };
-  }, [cart, activeOffer]);
+  }, [cart, activeOffer, paymentMethod]);
 
   const offerDiscount = offerCalculation.discount;
   const isOfferApplied = offerCalculation.isOfferApplied;
+
+  // Clear discounts/coupons if hospitality is selected
+  useEffect(() => {
+    if (paymentMethod === "hospitality" && (appliedDiscount || discountCode)) {
+      setAppliedDiscount(null);
+      setDiscountCode("");
+    }
+  }, [paymentMethod, appliedDiscount, discountCode]);
 
   // Rule #5: when the order has an offer applied, discounts can not be accepted
   useEffect(() => {
@@ -834,6 +879,7 @@ export default function PosTerminal() {
           })),
         })),
         source: "pos",
+        partnerId: selectedPartnerId || undefined,
       } as any,
     });
   };
@@ -1018,6 +1064,33 @@ export default function PosTerminal() {
               </span>
             </button>
           </Link>
+
+          {/* Order Channel Selector */}
+          <div className="w-36 sm:w-44 shrink-0">
+            <Select
+              value={selectedPartnerId ? String(selectedPartnerId) : "pos"}
+              onValueChange={(val) => {
+                if (val === "pos") {
+                  setSelectedPartnerId(null);
+                } else {
+                  setSelectedPartnerId(parseInt(val));
+                }
+              }}
+            >
+              <SelectTrigger className="h-9 rounded-full bg-stone-800 border border-stone-600 text-stone-200 text-xs font-bold gap-2">
+                <ShoppingBag className="h-3.5 w-3.5 text-amber-400 shrink-0" />
+                <SelectValue placeholder="Channel: POS" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="pos" className="font-bold text-xs">Store POS</SelectItem>
+                {partners.filter((p: any) => p.isActive).map((p: any) => (
+                  <SelectItem key={p.id} value={String(p.id)} className="font-bold text-xs">
+                    {p.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
           {/* Cart toggle button */}
           <button

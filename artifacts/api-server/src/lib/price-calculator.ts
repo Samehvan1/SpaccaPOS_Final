@@ -1,10 +1,12 @@
-import { eq, and, inArray } from "drizzle-orm";
+import { eq, and, inArray, isNull } from "drizzle-orm";
 import { db } from "@workspace/db";
 import {
   drinksTable,
   drinkIngredientSlotsTable,
   drinkSlotVolumesTable,
   drinkSlotTypeOptionsTable,
+  branchDrinkPricesTable,
+  partnerDrinkPricesTable,
 } from "@workspace/db/schema";
 import {
   ingredientsTable,
@@ -32,9 +34,78 @@ export type CustomizationData = {
   customerSortOrder: number;
 };
 
-export async function calculateDrinkData(drinkId: number, selections: any[], branchId: number | null = null) {
+export async function calculateDrinkData(
+  drinkId: number,
+  selections: any[],
+  branchId: number | null = null,
+  partnerId: number | null = null
+) {
   const [drink] = await db.select().from(drinksTable).where(eq(drinksTable.id, drinkId));
   if (!drink) throw new Error("Drink not found");
+
+  // Price resolution hierarchy:
+  // 1. Partner-specific branch price
+  // 2. Partner-specific general price
+  // 3. Branch price
+  // 4. Default global drink base price
+  let resolvedBasePrice = drink.basePrice;
+
+  if (partnerId) {
+    // 1. Partner-specific branch price
+    if (branchId) {
+      const [partnerBranchPriceRow] = await db
+        .select()
+        .from(partnerDrinkPricesTable)
+        .where(
+          and(
+            eq(partnerDrinkPricesTable.partnerId, partnerId),
+            eq(partnerDrinkPricesTable.drinkId, drinkId),
+            eq(partnerDrinkPricesTable.branchId, branchId)
+          )
+        )
+        .limit(1);
+      if (partnerBranchPriceRow) {
+        resolvedBasePrice = partnerBranchPriceRow.price;
+      }
+    }
+
+    // 2. Partner general price
+    if (resolvedBasePrice === drink.basePrice) {
+      const [partnerGeneralPriceRow] = await db
+        .select()
+        .from(partnerDrinkPricesTable)
+        .where(
+          and(
+            eq(partnerDrinkPricesTable.partnerId, partnerId),
+            eq(partnerDrinkPricesTable.drinkId, drinkId),
+            isNull(partnerDrinkPricesTable.branchId)
+          )
+        )
+        .limit(1);
+      if (partnerGeneralPriceRow) {
+        resolvedBasePrice = partnerGeneralPriceRow.price;
+      }
+    }
+  }
+
+  // 3. Branch price
+  if (resolvedBasePrice === drink.basePrice && branchId) {
+    const [branchPriceRow] = await db
+      .select()
+      .from(branchDrinkPricesTable)
+      .where(
+        and(
+          eq(branchDrinkPricesTable.branchId, branchId),
+          eq(branchDrinkPricesTable.drinkId, drinkId)
+        )
+      )
+      .limit(1);
+    if (branchPriceRow) {
+      resolvedBasePrice = branchPriceRow.price;
+    }
+  }
+
+  drink.basePrice = resolvedBasePrice;
 
   const rawSlots = await db.select().from(drinkIngredientSlotsTable).where(eq(drinkIngredientSlotsTable.drinkId, drinkId));
   const predefinedSlotIds = rawSlots.map(s => s.predefinedSlotId).filter((id): id is number => id !== null);

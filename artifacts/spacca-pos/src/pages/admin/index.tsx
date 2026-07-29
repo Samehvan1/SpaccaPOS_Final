@@ -165,6 +165,24 @@ export default function AdminHub() {
       color: "text-blue-600",
       bg: "bg-blue-600/10",
       permission: "branches:manage"
+    },
+    {
+      title: "Branch Pricing Overrides",
+      description: "Configure drink prices per branch location",
+      icon: Building2,
+      href: "/admin/branch-prices",
+      color: "text-indigo-600",
+      bg: "bg-indigo-600/10",
+      permission: "catalog:view"
+    },
+    {
+      title: "Partners & Commissions",
+      description: "Manage Talabat/Break-Fast aggregators and price lists",
+      icon: Coffee,
+      href: "/admin/partners",
+      color: "text-amber-600",
+      bg: "bg-amber-600/10",
+      permission: "branches:manage"
     }
   ];
 
