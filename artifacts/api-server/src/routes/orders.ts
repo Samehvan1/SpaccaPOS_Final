@@ -410,18 +410,21 @@ router.get("/orders", requirePermission("cashier:view"), async (req, res): Promi
 router.post("/orders", async (req, res): Promise<void> => {
   const parsed = CreateOrderBody.safeParse(req.body);
   if (!parsed.success) {
+    console.error("[POST /orders] Zod validation error:", JSON.stringify(parsed.error.format(), null, 2));
+    console.error("[POST /orders] Received body:", JSON.stringify(req.body, null, 2));
     res.status(400).json({ error: parsed.error.message });
     return;
   }
 
   const sessionUserId = ((req.session as unknown as Record<string, unknown>).userId as number) ?? 1;
   const sessionBranchId = (req.session as any).branchId;
-  const bodyBranchId = (req.body as any).branchId;
-  const targetBranchId = sessionBranchId || bodyBranchId;
+  const bodyBranchId = (req.body as any).branchId || parsed.data.branchId;
+  let targetBranchId = sessionBranchId || bodyBranchId;
 
   if (!targetBranchId) {
-    res.status(400).json({ error: "No branch associated with session or request" });
-    return;
+    const [firstBranch] = await db.select({ id: branchesTable.id }).from(branchesTable).limit(1);
+    targetBranchId = firstBranch ? firstBranch.id : 1;
+    console.log(`[POST /orders] Defaulting targetBranchId to ${targetBranchId}`);
   }
 
   const { items: orderItems, adminPin } = parsed.data;
@@ -869,7 +872,7 @@ router.post("/orders", async (req, res): Promise<void> => {
           await tx.insert(orderPaymentsTable).values(
             orderPayments.map((p) => ({
               orderId: newOrder.id,
-              paymentMethod: p.paymentMethod,
+              paymentMethod: p.paymentMethod as any,
               amount: String(p.amount),
               transactionId: p.transactionId ?? null,
             }))

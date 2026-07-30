@@ -79486,6 +79486,7 @@ var ListOrdersResponseItem2 = ListOrdersResponseItem._def.left.extend({
 );
 var ListOrdersResponse2 = external_exports2.array(ListOrdersResponseItem2);
 var CreateOrderBody2 = CreateOrderBody.extend({
+  branchId: external_exports2.union([external_exports2.number(), external_exports2.string()]).nullish().transform((v) => v && !isNaN(Number(v)) ? Number(v) : void 0),
   paymentMethod: external_exports2.enum([
     "cash",
     "card",
@@ -79497,20 +79498,30 @@ var CreateOrderBody2 = CreateOrderBody.extend({
   ]),
   payments: external_exports2.array(
     external_exports2.object({
-      paymentMethod: external_exports2.enum([
-        "cash",
-        "card",
-        "wallet",
-        "hospitality",
-        "refund",
-        "points"
-      ]),
-      amount: external_exports2.number(),
-      transactionId: external_exports2.string().optional()
+      paymentMethod: external_exports2.string(),
+      amount: external_exports2.coerce.number(),
+      transactionId: external_exports2.string().nullish()
     })
   ).optional(),
   source: external_exports2.enum(["pos", "kiosk", "web", "mobile"]).optional(),
-  partnerId: external_exports2.number().nullish()
+  partnerId: external_exports2.union([external_exports2.number(), external_exports2.string()]).nullish().transform((v) => v && v !== "store" && !isNaN(Number(v)) ? Number(v) : void 0),
+  items: external_exports2.array(
+    external_exports2.object({
+      drinkId: external_exports2.coerce.number(),
+      quantity: external_exports2.coerce.number(),
+      specialNotes: external_exports2.string().nullish(),
+      selections: external_exports2.array(
+        external_exports2.object({
+          ingredientId: external_exports2.coerce.number().nullish(),
+          optionId: external_exports2.coerce.number().nullish(),
+          subOptionId: external_exports2.coerce.number().nullish(),
+          slotId: external_exports2.coerce.number().nullish(),
+          typeVolumeId: external_exports2.coerce.number().nullish(),
+          ingredientTypeId: external_exports2.coerce.number().nullish()
+        })
+      ).optional().default([])
+    })
+  )
 });
 var GetOrderParams2 = GetOrderParams;
 var GetOrderResponse2 = GetOrderResponse._def.left.extend({
@@ -84204,16 +84215,19 @@ router5.get("/orders", requirePermission("cashier:view"), async (req, res) => {
 router5.post("/orders", async (req, res) => {
   const parsed = CreateOrderBody2.safeParse(req.body);
   if (!parsed.success) {
+    console.error("[POST /orders] Zod validation error:", JSON.stringify(parsed.error.format(), null, 2));
+    console.error("[POST /orders] Received body:", JSON.stringify(req.body, null, 2));
     res.status(400).json({ error: parsed.error.message });
     return;
   }
   const sessionUserId = req.session.userId ?? 1;
   const sessionBranchId = req.session.branchId;
-  const bodyBranchId = req.body.branchId;
-  const targetBranchId = sessionBranchId || bodyBranchId;
+  const bodyBranchId = req.body.branchId || parsed.data.branchId;
+  let targetBranchId = sessionBranchId || bodyBranchId;
   if (!targetBranchId) {
-    res.status(400).json({ error: "No branch associated with session or request" });
-    return;
+    const [firstBranch] = await db.select({ id: branchesTable.id }).from(branchesTable).limit(1);
+    targetBranchId = firstBranch ? firstBranch.id : 1;
+    console.log(`[POST /orders] Defaulting targetBranchId to ${targetBranchId}`);
   }
   const { items: orderItems, adminPin } = parsed.data;
   if (parsed.data.paymentMethod === "hospitality") {
