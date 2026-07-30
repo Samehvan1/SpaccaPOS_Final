@@ -662,6 +662,8 @@ export const ListOrdersQueryParams = zod.object({
   limit: zod.coerce.number().optional(),
   offset: zod.coerce.number().optional(),
   branchId: zod.coerce.number().optional(),
+  partnerId: zod.coerce.string().optional(),
+  source: zod.coerce.string().optional(),
 });
 
 export const ListOrdersResponseItem = zod
@@ -706,6 +708,9 @@ export const ListOrdersResponseItem = zod
     readyAt: zod.string().nullish(),
     completedAt: zod.string().nullish(),
     cancelledAt: zod.string().nullish(),
+    partnerId: zod.number().nullish(),
+    partnerName: zod.string().nullish(),
+    source: zod.string().nullish(),
   })
   .and(
     zod.object({
@@ -837,6 +842,9 @@ export const GetOrderResponse = zod
     readyAt: zod.string().nullish(),
     completedAt: zod.string().nullish(),
     cancelledAt: zod.string().nullish(),
+    partnerId: zod.number().nullish(),
+    partnerName: zod.string().nullish(),
+    source: zod.string().nullish(),
   })
   .and(
     zod.object({
@@ -947,6 +955,9 @@ export const UpdateOrderStatusResponse = zod.object({
   readyAt: zod.string().nullish(),
   completedAt: zod.string().nullish(),
   cancelledAt: zod.string().nullish(),
+  partnerId: zod.number().nullish(),
+  partnerName: zod.string().nullish(),
+  source: zod.string().nullish(),
 });
 
 /**
@@ -1012,6 +1023,9 @@ export const MarkOrderItemReadyResponse = zod.object({
   readyAt: zod.string().nullish(),
   completedAt: zod.string().nullish(),
   cancelledAt: zod.string().nullish(),
+  partnerId: zod.number().nullish(),
+  partnerName: zod.string().nullish(),
+  source: zod.string().nullish(),
 });
 
 /**
@@ -1138,6 +1152,9 @@ export const GetActiveOrdersResponseItem = zod
     readyAt: zod.string().nullish(),
     completedAt: zod.string().nullish(),
     cancelledAt: zod.string().nullish(),
+    partnerId: zod.number().nullish(),
+    partnerName: zod.string().nullish(),
+    source: zod.string().nullish(),
   })
   .and(
     zod.object({

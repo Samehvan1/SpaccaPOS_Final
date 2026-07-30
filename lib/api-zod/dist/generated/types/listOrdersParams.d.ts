@@ -12,5 +12,7 @@ export type ListOrdersParams = {
     limit?: number;
     offset?: number;
     branchId?: number;
+    partnerId?: string;
+    source?: string;
 };
 //# sourceMappingURL=listOrdersParams.d.ts.map

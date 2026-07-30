@@ -20,7 +20,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { 
   ArrowLeft, BarChart2, TrendingUp, Coffee, Receipt, 
   Banknote, Medal, Calendar, ChevronLeft, ChevronRight,
-  Download, Tag, CheckCircle2, XCircle, FileText, Layers, Clock, Loader2, User, Printer
+  Download, Tag, CheckCircle2, XCircle, FileText, Layers, Clock, Loader2, User, Printer, Globe, Store
 } from "lucide-react";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
@@ -160,8 +160,26 @@ export default function ReportsPage() {
   const [reportStartDate, setReportStartDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [reportEndDate, setReportEndDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [reportStatus, setReportStatus] = useState<string>("active");
+  const [reportChannel, setReportChannel] = useState<string>("all");
   const [reportPage, setReportPage] = useState(1);
   const rowsPerPage = 50;
+
+  const { data: partnersList } = useQuery<any[]>({
+    queryKey: ["admin-partners"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/admin/partners`);
+      if (!res.ok) return [];
+      return res.json();
+    },
+  });
+
+  const channelFilterParams = useMemo(() => {
+    if (reportChannel === "store" || reportChannel === "pos") return { partnerId: "store" };
+    if (reportChannel === "kiosk") return { source: "kiosk" };
+    if (reportChannel === "partners" || reportChannel === "all_partners") return { partnerId: "all_partners" };
+    if (reportChannel !== "all") return { partnerId: reportChannel };
+    return {};
+  }, [reportChannel]);
 
   const { data: reportOrders, isLoading: loadingReportOrders } = useListOrders({
     startDate: reportStartDate,
@@ -173,7 +191,8 @@ export default function ReportsPage() {
           : reportStatus),
     limit: rowsPerPage,
     offset: (reportPage - 1) * rowsPerPage,
-    branchId: selectedBranchId
+    branchId: selectedBranchId,
+    ...channelFilterParams
   } as any);
 
   // Calculate totals for report banner using the updated category sales endpoint
@@ -227,12 +246,18 @@ export default function ReportsPage() {
 
   // Sales Range Summary Query (Accurate totals for banner)
   const { data: rangeSummary, isLoading: loadingRangeSummary } = useQuery({
-    queryKey: ["sales-range-summary", reportStartDate, reportEndDate, selectedBranchId],
+    queryKey: ["sales-range-summary", reportStartDate, reportEndDate, selectedBranchId, reportChannel],
     queryFn: async () => {
       const url = new URL(`${API_BASE}/finance/sales-summary`, window.location.origin);
       url.searchParams.set("startDate", reportStartDate);
       url.searchParams.set("endDate", reportEndDate);
       if (selectedBranchId) url.searchParams.set("branchId", String(selectedBranchId));
+      if (reportChannel !== "all") {
+        if (["store", "pos"].includes(reportChannel)) url.searchParams.set("partnerId", "store");
+        else if (reportChannel === "kiosk") url.searchParams.set("source", "kiosk");
+        else if (["partners", "all_partners"].includes(reportChannel)) url.searchParams.set("partnerId", "all_partners");
+        else url.searchParams.set("partnerId", reportChannel);
+      }
       
       const res = await fetch(url.toString());
       if (!res.ok) throw new Error("Failed to fetch range summary");
@@ -317,13 +342,14 @@ export default function ReportsPage() {
         endDate: reportEndDate,
         status: statusParam,
         limit: 1000000,
-        branchId: selectedBranchId ? Number(selectedBranchId) : undefined
+        branchId: selectedBranchId ? Number(selectedBranchId) : undefined,
+        ...channelFilterParams
       } as any);
 
       if (!allOrders || allOrders.length === 0) return;
 
       const headers = [
-        "OrderID", "Date", "Time", "Order Number", "Customer Name", "Items Count", "Drinks", "Total Price (Gross)", "Before Tax (Net)", 
+        "OrderID", "Date", "Time", "Order Number", "Channel / Partner", "Customer Name", "Items Count", "Drinks", "Total Price (Gross)", "Before Tax (Net)", 
         "Tax Amount", "Discount Name", "Discount Value", "Discount Amount", "Offer Discount", "Final Price", "Status", "Payment Method"
       ];
 
@@ -343,12 +369,14 @@ export default function ReportsPage() {
           .join("; ");
 
         const discountName = order.paymentMethod === "hospitality" ? "HOSPITALITY" : [((order as any).discountCode || ""), offerDiscountAmt > 0 ? "PROMO OFFER" : ""].filter(Boolean).join(" + ") || "None";
+        const channelLabel = (order as any).partnerName || ((order as any).partnerId ? `Partner #${(order as any).partnerId}` : ((order as any).source === 'kiosk' ? 'Kiosk' : 'Store (POS)'));
 
         return [
           order.id,
           order.createdAt ? format(new Date(order.createdAt), "yyyy-MM-dd") : "—",
           order.createdAt ? format(new Date(order.createdAt), "HH:mm") : "—",
           `#${order.orderNumber}`,
+          channelLabel,
           order.customerName || "Walk-in Guest",
           (order.items || []).length,
           drinksList,
@@ -672,6 +700,27 @@ export default function ReportsPage() {
                         <SelectItem value="completed">Completed</SelectItem>
                         <SelectItem value="cancelled">Cancelled</SelectItem>
                         <SelectItem value="refunded">Refunded</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid gap-2 w-full md:w-auto">
+                    <Label htmlFor="channel-filter" className="flex items-center gap-2 text-sm font-bold">
+                      <Globe className="h-4 w-4 text-primary" /> Source / Channel
+                    </Label>
+                    <Select value={reportChannel} onValueChange={(val) => { setReportChannel(val); setReportPage(1); }}>
+                      <SelectTrigger id="channel-filter" className="bg-background w-full md:w-48">
+                        <SelectValue placeholder="All Channels" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Channels</SelectItem>
+                        <SelectItem value="store">Store (POS)</SelectItem>
+                        <SelectItem value="kiosk">Kiosk</SelectItem>
+                        <SelectItem value="all_partners">All Ordering Partners</SelectItem>
+                        {partnersList?.map((p: any) => (
+                          <SelectItem key={p.id} value={String(p.id)}>
+                            {p.name}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -1262,7 +1311,17 @@ export default function ReportsPage() {
                                 className="font-medium text-primary underline cursor-pointer hover:text-primary/70 transition-colors"
                                 onClick={() => setSelectedOrderDetails(order)}
                               >
-                                {order.id}
+                                <div className="font-bold">{order.id}</div>
+                                {(order.partnerName || order.partnerId) ? (
+                                  <Badge variant="outline" className="bg-purple-500/10 text-purple-700 border-purple-200 text-[10px] font-bold mt-1 inline-flex items-center gap-1">
+                                    <Store className="h-3 w-3" />
+                                    {order.partnerName || `Partner #${order.partnerId}`}
+                                  </Badge>
+                                ) : order.source === "kiosk" ? (
+                                  <Badge variant="outline" className="bg-blue-500/10 text-blue-700 border-blue-200 text-[10px] font-bold mt-1 inline-flex items-center gap-1">
+                                    Kiosk
+                                  </Badge>
+                                ) : null}
                               </TableCell>
                               <TableCell className="whitespace-nowrap">{order.createdAt ? format(new Date(order.createdAt), "yyyy-MM-dd") : "—"}</TableCell>
                               <TableCell>{order.createdAt ? format(new Date(order.createdAt), "HH:mm") : "—"}</TableCell>

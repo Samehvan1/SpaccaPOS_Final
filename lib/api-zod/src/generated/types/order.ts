@@ -51,4 +51,10 @@ export interface Order {
   completedAt?: string | null;
   /** @nullable */
   cancelledAt?: string | null;
+  /** @nullable */
+  partnerId?: number | null;
+  /** @nullable */
+  partnerName?: string | null;
+  /** @nullable */
+  source?: string | null;
 }

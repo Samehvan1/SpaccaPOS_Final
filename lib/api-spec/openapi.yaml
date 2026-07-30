@@ -510,6 +510,14 @@ paths:
           name: branchId
           schema:
             type: integer
+        - in: query
+          name: partnerId
+          schema:
+            type: string
+        - in: query
+          name: source
+          schema:
+            type: string
       responses:
         "200":
           description: List of orders
@@ -2074,6 +2082,12 @@ components:
         completedAt:
           type: ["string", "null"]
         cancelledAt:
+          type: ["string", "null"]
+        partnerId:
+          type: ["integer", "null"]
+        partnerName:
+          type: ["string", "null"]
+        source:
           type: ["string", "null"]
       required:
         - id

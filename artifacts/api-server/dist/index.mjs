@@ -78592,7 +78592,9 @@ var ListOrdersQueryParams = objectType({
   endDate: coerce.date().optional(),
   limit: coerce.number().optional(),
   offset: coerce.number().optional(),
-  branchId: coerce.number().optional()
+  branchId: coerce.number().optional(),
+  partnerId: coerce.string().optional(),
+  source: coerce.string().optional()
 });
 var ListOrdersResponseItem = objectType({
   id: numberType(),
@@ -78634,7 +78636,10 @@ var ListOrdersResponseItem = objectType({
   paidAt: stringType().nullish(),
   readyAt: stringType().nullish(),
   completedAt: stringType().nullish(),
-  cancelledAt: stringType().nullish()
+  cancelledAt: stringType().nullish(),
+  partnerId: numberType().nullish(),
+  partnerName: stringType().nullish(),
+  source: stringType().nullish()
 }).and(
   objectType({
     items: arrayType(
@@ -78750,7 +78755,10 @@ var GetOrderResponse = objectType({
   paidAt: stringType().nullish(),
   readyAt: stringType().nullish(),
   completedAt: stringType().nullish(),
-  cancelledAt: stringType().nullish()
+  cancelledAt: stringType().nullish(),
+  partnerId: numberType().nullish(),
+  partnerName: stringType().nullish(),
+  source: stringType().nullish()
 }).and(
   objectType({
     items: arrayType(
@@ -78844,7 +78852,10 @@ var UpdateOrderStatusResponse = objectType({
   paidAt: stringType().nullish(),
   readyAt: stringType().nullish(),
   completedAt: stringType().nullish(),
-  cancelledAt: stringType().nullish()
+  cancelledAt: stringType().nullish(),
+  partnerId: numberType().nullish(),
+  partnerName: stringType().nullish(),
+  source: stringType().nullish()
 });
 var SaveOrderSignatureParams = objectType({
   id: coerce.number()
@@ -78898,7 +78909,10 @@ var MarkOrderItemReadyResponse = objectType({
   paidAt: stringType().nullish(),
   readyAt: stringType().nullish(),
   completedAt: stringType().nullish(),
-  cancelledAt: stringType().nullish()
+  cancelledAt: stringType().nullish(),
+  partnerId: numberType().nullish(),
+  partnerName: stringType().nullish(),
+  source: stringType().nullish()
 });
 var ListStockMovementsQueryParams = objectType({
   ingredientId: coerce.number().optional(),
@@ -79004,7 +79018,10 @@ var GetActiveOrdersResponseItem = objectType({
   paidAt: stringType().nullish(),
   readyAt: stringType().nullish(),
   completedAt: stringType().nullish(),
-  cancelledAt: stringType().nullish()
+  cancelledAt: stringType().nullish(),
+  partnerId: numberType().nullish(),
+  partnerName: stringType().nullish(),
+  source: stringType().nullish()
 }).and(
   objectType({
     items: arrayType(
@@ -84080,6 +84097,8 @@ router5.get("/orders", requirePermission("cashier:view"), async (req, res) => {
   if (targetBranchId) {
     conditions.push(eq(ordersTable.branchId, targetBranchId));
   }
+  const partnerIdStr = req.query.partnerId;
+  const sourceStr = req.query.source;
   if (statusStr && statusStr !== "null" && statusStr !== "undefined" && statusStr !== "") {
     const statuses = statusStr.split(",");
     conditions.push(inArray(ordersTable.status, statuses));
@@ -84089,6 +84108,18 @@ router5.get("/orders", requirePermission("cashier:view"), async (req, res) => {
   }
   if (endDateStr && endDateStr !== "null" && endDateStr !== "undefined" && endDateStr !== "") {
     conditions.push(lte(ordersTable.createdAt, endOfDay(parseLocalDate(endDateStr))));
+  }
+  if (sourceStr && sourceStr !== "all" && sourceStr !== "null" && sourceStr !== "undefined" && sourceStr !== "") {
+    conditions.push(eq(ordersTable.source, sourceStr));
+  }
+  if (partnerIdStr && partnerIdStr !== "all" && partnerIdStr !== "null" && partnerIdStr !== "undefined" && partnerIdStr !== "") {
+    if (partnerIdStr === "all_partners" || partnerIdStr === "partners") {
+      conditions.push(isNotNull(ordersTable.partnerId));
+    } else if (partnerIdStr === "store" || partnerIdStr === "none") {
+      conditions.push(isNull(ordersTable.partnerId));
+    } else if (!isNaN(parseInt(partnerIdStr, 10))) {
+      conditions.push(eq(ordersTable.partnerId, parseInt(partnerIdStr, 10)));
+    }
   }
   const limit = req.query.limit ? parseInt(req.query.limit, 10) : 50;
   const offset = req.query.offset ? parseInt(req.query.offset, 10) : 0;
@@ -84106,18 +84137,21 @@ router5.get("/orders", requirePermission("cashier:view"), async (req, res) => {
   res.setHeader("X-Total-Count", String(totalCount));
   res.setHeader("Access-Control-Expose-Headers", "X-Total-Count");
   const orderIds = orders.map((o) => o.id);
-  const [items, baristas, payments, branches] = await Promise.all([
+  const [items, baristas, payments, branches, partners] = await Promise.all([
     orderIds.length > 0 ? db.select().from(orderItemsTable).where(inArray(orderItemsTable.orderId, orderIds)) : Promise.resolve([]),
     db.select().from(usersTable),
     // Fetch all baristas for mapping
     orderIds.length > 0 ? db.select().from(orderPaymentsTable).where(inArray(orderPaymentsTable.orderId, orderIds)) : Promise.resolve([]),
-    db.select().from(branchesTable)
+    db.select().from(branchesTable),
     // Fetch all branches for mapping
+    db.select().from(partnersTable)
+    // Fetch all ordering partners for mapping
   ]);
   const itemIds = items.map((i) => i.id);
   const customizations = itemIds.length > 0 ? await db.select().from(orderItemCustomizationsTable).where(inArray(orderItemCustomizationsTable.orderItemId, itemIds)) : [];
   const baristaMap = Object.fromEntries(baristas.map((b) => [b.id, b.name]));
   const branchMap = Object.fromEntries(branches.map((b) => [b.id, b.name]));
+  const partnerMap = Object.fromEntries(partners.map((p) => [p.id, p.name]));
   const custByItem = /* @__PURE__ */ new Map();
   for (const c of customizations) {
     const list = custByItem.get(c.orderItemId) ?? [];
@@ -84158,6 +84192,9 @@ router5.get("/orders", requirePermission("cashier:view"), async (req, res) => {
         total: parseFloat(o.total),
         amountTendered: o.amountTendered ? parseFloat(o.amountTendered) : null,
         changeDue: o.changeDue ? parseFloat(o.changeDue) : null,
+        partnerId: o.partnerId,
+        partnerName: o.partnerId ? partnerMap[o.partnerId] ?? `Partner #${o.partnerId}` : null,
+        source: o.source,
         payments: paymentsByOrder.get(o.id) ?? [],
         items: itemsByOrder.get(o.id) ?? []
       })))
@@ -88295,7 +88332,7 @@ adminRouter.post("/admin/backup", requirePermission("settings:manage"), async (r
     res.status(500).json({ error: error40.message });
   }
 });
-adminRouter.get("/admin/partners", requirePermission("branches:manage"), async (req, res) => {
+adminRouter.get("/admin/partners", requirePermission("partners:view"), async (req, res) => {
   try {
     const list = await db.select().from(partnersTable).orderBy(desc(partnersTable.createdAt));
     res.json(list);
@@ -88303,7 +88340,7 @@ adminRouter.get("/admin/partners", requirePermission("branches:manage"), async (
     res.status(500).json({ error: "Failed to list partners" });
   }
 });
-adminRouter.post("/admin/partners", requirePermission("branches:manage"), async (req, res) => {
+adminRouter.post("/admin/partners", requirePermission("partners:manage"), async (req, res) => {
   try {
     const { name, code, commissionType, commissionValue, isActive } = req.body;
     if (!name || !code) {
@@ -88322,7 +88359,7 @@ adminRouter.post("/admin/partners", requirePermission("branches:manage"), async 
     res.status(500).json({ error: error40.message || "Failed to create partner" });
   }
 });
-adminRouter.patch("/admin/partners/:id", requirePermission("branches:manage"), async (req, res) => {
+adminRouter.patch("/admin/partners/:id", requirePermission("partners:manage"), async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     if (isNaN(id)) {
@@ -88347,7 +88384,7 @@ adminRouter.patch("/admin/partners/:id", requirePermission("branches:manage"), a
     res.status(500).json({ error: error40.message || "Failed to update partner" });
   }
 });
-adminRouter.delete("/admin/partners/:id", requirePermission("branches:manage"), async (req, res) => {
+adminRouter.delete("/admin/partners/:id", requirePermission("partners:manage"), async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     if (isNaN(id)) {
@@ -89471,7 +89508,7 @@ router20.get("/finance/sales-items", requirePermission("reports:view"), async (r
   res.json(serializeDates(report));
 });
 router20.get("/finance/sales-summary", requirePermission("reports:view"), async (req, res) => {
-  const { startDate, endDate, branchId } = req.query;
+  const { startDate, endDate, branchId, partnerId, source } = req.query;
   const targetBranchId = branchId && branchId !== "all" ? parseInt(branchId) : null;
   const start = startDate ? startOfDay3(parseLocalDate2(startDate)) : startOfDay3(subDays(/* @__PURE__ */ new Date(), 30));
   const end = endDate ? endOfDay3(parseLocalDate2(endDate)) : endOfDay3(/* @__PURE__ */ new Date());
@@ -89485,6 +89522,20 @@ router20.get("/finance/sales-summary", requirePermission("reports:view"), async 
     sql`${ordersTable.status} NOT IN ('cancelled', 'refunded')`
   ];
   if (targetBranchId) conditions.push(eq(ordersTable.branchId, targetBranchId));
+  const sourceStr = source;
+  if (sourceStr && sourceStr !== "all" && sourceStr !== "null" && sourceStr !== "undefined" && sourceStr !== "") {
+    conditions.push(eq(ordersTable.source, sourceStr));
+  }
+  const partnerIdStr = partnerId;
+  if (partnerIdStr && partnerIdStr !== "all" && partnerIdStr !== "null" && partnerIdStr !== "undefined" && partnerIdStr !== "") {
+    if (partnerIdStr === "all_partners" || partnerIdStr === "partners") {
+      conditions.push(isNotNull(ordersTable.partnerId));
+    } else if (partnerIdStr === "store" || partnerIdStr === "none") {
+      conditions.push(isNull(ordersTable.partnerId));
+    } else if (!isNaN(parseInt(partnerIdStr, 10))) {
+      conditions.push(eq(ordersTable.partnerId, parseInt(partnerIdStr, 10)));
+    }
+  }
   const [summary] = await db.select({
     revenue: sum(ordersTable.subtotal),
     discounts: sum(ordersTable.discount),
@@ -90644,7 +90695,10 @@ var APP_PERMISSIONS = [
   { key: "discounts:manage", name: "Manage Discounts", description: "Create and edit discount codes" },
   // Settings & Infrastructure
   { key: "branches:manage", name: "Manage Branches", description: "Add and edit branch locations" },
-  { key: "settings:manage", name: "Manage Settings", description: "Change system-wide configurations" }
+  { key: "settings:manage", name: "Manage Settings", description: "Change system-wide configurations" },
+  // Aggregator Partners (Talabat, Bread Fast, etc.)
+  { key: "partners:view", name: "View Partners", description: "List and view aggregator partner platforms" },
+  { key: "partners:manage", name: "Manage Partners", description: "Create, edit and delete aggregator partner platforms" }
 ];
 var standardRoles = [
   { key: "admin", name: "Administrator" },
@@ -90696,7 +90750,8 @@ async function syncPermissions() {
     "cashier:view_reports",
     "pos:apply_discount",
     "catalog:view",
-    "inventory:view"
+    "inventory:view",
+    "partners:view"
   ]);
   await assignPermissions("barista", [
     "pos:view",

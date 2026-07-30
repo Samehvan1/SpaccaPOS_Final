@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, and, sql, sum, count, desc, gte, lte, inArray } from "drizzle-orm";
+import { eq, and, sql, sum, count, desc, gte, lte, inArray, isNull, isNotNull } from "drizzle-orm";
 import { 
   db, 
   ingredientsTable, 
@@ -618,7 +618,7 @@ router.get("/finance/sales-items", requirePermission("reports:view"), async (req
 
 // ── Sales Summary ──────────────────────────────────────────────────────────
 router.get("/finance/sales-summary", requirePermission("reports:view"), async (req, res) => {
-  const { startDate, endDate, branchId } = req.query;
+  const { startDate, endDate, branchId, partnerId, source } = req.query;
   const targetBranchId = branchId && branchId !== "all" ? parseInt(branchId as string) : null;
   const start = startDate ? startOfDay(parseLocalDate(startDate as string)) : startOfDay(subDays(new Date(), 30));
   const end = endDate ? endOfDay(parseLocalDate(endDate as string)) : endOfDay(new Date());
@@ -634,6 +634,22 @@ router.get("/finance/sales-summary", requirePermission("reports:view"), async (r
     sql`${ordersTable.status} NOT IN ('cancelled', 'refunded')`,
   ];
   if (targetBranchId) conditions.push(eq(ordersTable.branchId, targetBranchId));
+
+  const sourceStr = source as string | undefined;
+  if (sourceStr && sourceStr !== 'all' && sourceStr !== 'null' && sourceStr !== 'undefined' && sourceStr !== '') {
+    conditions.push(eq(ordersTable.source, sourceStr as any));
+  }
+
+  const partnerIdStr = partnerId as string | undefined;
+  if (partnerIdStr && partnerIdStr !== 'all' && partnerIdStr !== 'null' && partnerIdStr !== 'undefined' && partnerIdStr !== '') {
+    if (partnerIdStr === 'all_partners' || partnerIdStr === 'partners') {
+      conditions.push(isNotNull(ordersTable.partnerId));
+    } else if (partnerIdStr === 'store' || partnerIdStr === 'none') {
+      conditions.push(isNull(ordersTable.partnerId));
+    } else if (!isNaN(parseInt(partnerIdStr, 10))) {
+      conditions.push(eq(ordersTable.partnerId, parseInt(partnerIdStr, 10)));
+    }
+  }
 
   const [summary] = await db
     .select({

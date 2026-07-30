@@ -12,7 +12,7 @@ import {
   BarChart2, TrendingUp, Coffee, Receipt, 
   Banknote, Calendar, ChevronLeft, ChevronRight,
   Download, Tag, CheckCircle2, History, Layers, Sliders,
-  Eye, Package, User, Clock, MapPin, Search, Loader2, Gift
+  Eye, Package, User, Clock, MapPin, Search, Loader2, Gift, Store, Globe
 } from "lucide-react";
 
 import {
@@ -50,10 +50,12 @@ export default function SalesAnalysisPage() {
   const [summary, setSummary] = useState<any[]>([]);
   const [dailySummary, setDailySummary] = useState<any[]>([]);
   const [branches, setBranches] = useState<any[]>([]);
+  const [partners, setPartners] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [catalogDrinks, setCatalogDrinks] = useState<any[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedDrink, setSelectedDrink] = useState<string>("all");
+  const [selectedChannel, setSelectedChannel] = useState<string>("all");
   const [loading, setLoading] = useState(true);
   const [rangeSummary, setRangeSummary] = useState<any>(null);
   const [selectedOrderDetails, setSelectedOrderDetails] = useState<any>(null);
@@ -85,6 +87,12 @@ export default function SalesAnalysisPage() {
         status: "paid,completed,ready,in_progress",
       });
       if (selectedBranch !== "all") params.append("branchId", selectedBranch);
+      if (selectedChannel !== "all") {
+        if (selectedChannel === "store" || selectedChannel === "pos") params.append("partnerId", "store");
+        else if (selectedChannel === "kiosk") params.append("source", "kiosk");
+        else if (selectedChannel === "partners" || selectedChannel === "all_partners") params.append("partnerId", "all_partners");
+        else params.append("partnerId", selectedChannel);
+      }
 
       // 1. Always fetch Range Summary for the top cards
       const rangeData = await api(`/api/finance/sales-summary?${params.toString()}`);
@@ -120,15 +128,17 @@ export default function SalesAnalysisPage() {
       }
       
       // 3. Always load filter config tables if not yet loaded
-      if (branches.length === 0 || categories.length === 0 || catalogDrinks.length === 0) {
-        const [branchData, catData, drinkData] = await Promise.all([
+      if (branches.length === 0 || categories.length === 0 || catalogDrinks.length === 0 || partners.length === 0) {
+        const [branchData, catData, drinkData, partnerData] = await Promise.all([
           api("/api/admin/branches"),
           api("/api/drink-categories"),
-          api("/api/drinks")
+          api("/api/drinks"),
+          api("/api/admin/partners").catch(() => [])
         ]);
         setBranches(branchData);
         setCategories(catData.filter((c: any) => c.isActive !== false));
         setCatalogDrinks(drinkData);
+        setPartners(partnerData || []);
       }
     } catch (err) {
       toast({ variant: "destructive", title: "Failed to load sales data" });
@@ -139,7 +149,7 @@ export default function SalesAnalysisPage() {
 
   useEffect(() => {
     loadData();
-  }, [reportStartDate, reportEndDate, reportPage, isDailyGrouped, selectedBranch, activeTab]);
+  }, [reportStartDate, reportEndDate, reportPage, isDailyGrouped, selectedBranch, selectedChannel, activeTab]);
 
   const filteredCatalogDrinks = useMemo(() => {
     const activeDrinks = catalogDrinks.filter(d => d.isActive !== false);
@@ -287,7 +297,7 @@ export default function SalesAnalysisPage() {
           });
         }
 
-        headers = ["OrderID", "Date", "Time", "Order Number", "Items Count", "Total Price", "Before Tax", "Tax Value", "Discount Name", "Discount Value", "Discount Amount", "Offer Discount", "Final Price", "Status", "Payment Method"];
+        headers = ["OrderID", "Date", "Time", "Order Number", "Channel / Partner", "Items Count", "Total Price", "Before Tax", "Tax Value", "Discount Name", "Discount Value", "Discount Amount", "Offer Discount", "Final Price", "Status", "Payment Method"];
         
         let totalItemsCount = 0;
         let totalGrossPrice = 0;
@@ -314,11 +324,14 @@ export default function SalesAnalysisPage() {
           totalOfferDiscountAmount += offerDiscountAmount;
           totalFinalPrice += finalPrice;
 
+          const channelLabel = o.partnerName || (o.partnerId ? `Partner #${o.partnerId}` : (o.source === 'kiosk' ? 'Kiosk' : 'Store (POS)'));
+
           return [
             o.id,
             format(new Date(o.createdAt), "yyyy-MM-dd"),
             format(new Date(o.createdAt), "HH:mm"),
             `#${o.orderNumber}`,
+            channelLabel,
             itemsCount,
             grossPrice.toFixed(2),
             netPrice.toFixed(2),
@@ -418,10 +431,10 @@ export default function SalesAnalysisPage() {
 
       <Card>
         <CardContent className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-4 items-end">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-8 gap-4 items-end">
             <div className="space-y-2">
               <Label>Branch</Label>
-              <Select value={selectedBranch} onValueChange={setSelectedBranch}>
+              <Select value={selectedBranch} onValueChange={(val) => { setSelectedBranch(val); setReportPage(1); }}>
                 <SelectTrigger>
                   <SelectValue placeholder="All Branches" />
                 </SelectTrigger>
@@ -429,6 +442,23 @@ export default function SalesAnalysisPage() {
                   <SelectItem value="all">All Branches</SelectItem>
                   {branches.map(b => (
                     <SelectItem key={b.id} value={String(b.id)}>{b.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Channel</Label>
+              <Select value={selectedChannel} onValueChange={(val) => { setSelectedChannel(val); setReportPage(1); }}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All Channels" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Channels</SelectItem>
+                  <SelectItem value="store">Store (POS)</SelectItem>
+                  <SelectItem value="kiosk">Kiosk</SelectItem>
+                  <SelectItem value="all_partners">All Ordering Partners</SelectItem>
+                  {partners.map(p => (
+                    <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -576,13 +606,25 @@ export default function SalesAnalysisPage() {
                   ) : filteredOrders.map((order) => (
                     <TableRow key={order.id}>
                       <TableCell>
-                        <button 
-                          onClick={() => fetchOrderDetails(order.id)}
-                          className="font-mono font-medium text-primary hover:underline"
-                          disabled={fetchingOrder}
-                        >
-                          #{order.orderNumber}
-                        </button>
+                        <div className="flex flex-col">
+                          <button 
+                            onClick={() => fetchOrderDetails(order.id)}
+                            className="font-mono font-medium text-primary hover:underline text-left"
+                            disabled={fetchingOrder}
+                          >
+                            #{order.orderNumber}
+                          </button>
+                          {(order.partnerName || order.partnerId) ? (
+                            <Badge variant="outline" className="bg-purple-500/10 text-purple-700 border-purple-200 text-[10px] font-bold mt-1 w-fit inline-flex items-center gap-1">
+                              <Store className="h-3 w-3" />
+                              {order.partnerName || `Partner #${order.partnerId}`}
+                            </Badge>
+                          ) : order.source === "kiosk" ? (
+                            <Badge variant="outline" className="bg-blue-500/10 text-blue-700 border-blue-200 text-[10px] font-bold mt-1 w-fit inline-flex items-center gap-1">
+                              Kiosk
+                            </Badge>
+                          ) : null}
+                        </div>
                       </TableCell>
                       <TableCell className="text-muted-foreground text-sm">
                         {format(new Date(order.createdAt), "MMM dd, HH:mm")}

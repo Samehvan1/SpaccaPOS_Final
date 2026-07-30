@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, and, inArray, gte, lte, sql, desc, ilike } from "drizzle-orm";
+import { eq, and, inArray, gte, lte, sql, desc, ilike, isNull, isNotNull } from "drizzle-orm";
 import { serializeDates } from "../lib/serialize";
 
 function parseLocalDate(dateStr: any): Date {
@@ -278,6 +278,9 @@ router.get("/orders", requirePermission("cashier:view"), async (req, res): Promi
     conditions.push(eq(ordersTable.branchId, targetBranchId));
   }
 
+  const partnerIdStr = req.query.partnerId as string | undefined;
+  const sourceStr = req.query.source as string | undefined;
+
   if (statusStr && statusStr !== 'null' && statusStr !== 'undefined' && statusStr !== '') {
     const statuses = statusStr.split(",") as any[];
     conditions.push(inArray(ordersTable.status, statuses));
@@ -287,6 +290,18 @@ router.get("/orders", requirePermission("cashier:view"), async (req, res): Promi
   }
   if (endDateStr && endDateStr !== 'null' && endDateStr !== 'undefined' && endDateStr !== '') {
     conditions.push(lte(ordersTable.createdAt, endOfDay(parseLocalDate(endDateStr))));
+  }
+  if (sourceStr && sourceStr !== 'all' && sourceStr !== 'null' && sourceStr !== 'undefined' && sourceStr !== '') {
+    conditions.push(eq(ordersTable.source, sourceStr as any));
+  }
+  if (partnerIdStr && partnerIdStr !== 'all' && partnerIdStr !== 'null' && partnerIdStr !== 'undefined' && partnerIdStr !== '') {
+    if (partnerIdStr === 'all_partners' || partnerIdStr === 'partners') {
+      conditions.push(isNotNull(ordersTable.partnerId));
+    } else if (partnerIdStr === 'store' || partnerIdStr === 'none') {
+      conditions.push(isNull(ordersTable.partnerId));
+    } else if (!isNaN(parseInt(partnerIdStr, 10))) {
+      conditions.push(eq(ordersTable.partnerId, parseInt(partnerIdStr, 10)));
+    }
   }
 
   const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 50;
@@ -318,7 +333,7 @@ router.get("/orders", requirePermission("cashier:view"), async (req, res): Promi
 
   const orderIds = orders.map((o) => o.id);
 
-  const [items, baristas, payments, branches] = await Promise.all([
+  const [items, baristas, payments, branches, partners] = await Promise.all([
     orderIds.length > 0
       ? db.select().from(orderItemsTable).where(inArray(orderItemsTable.orderId, orderIds))
       : Promise.resolve([]),
@@ -327,6 +342,7 @@ router.get("/orders", requirePermission("cashier:view"), async (req, res): Promi
       ? db.select().from(orderPaymentsTable).where(inArray(orderPaymentsTable.orderId, orderIds))
       : Promise.resolve([]),
     db.select().from(branchesTable), // Fetch all branches for mapping
+    db.select().from(partnersTable), // Fetch all ordering partners for mapping
   ]);
 
   const itemIds = items.map((i) => i.id);
@@ -336,6 +352,7 @@ router.get("/orders", requirePermission("cashier:view"), async (req, res): Promi
 
   const baristaMap = Object.fromEntries(baristas.map((b) => [b.id, b.name]));
   const branchMap = Object.fromEntries(branches.map((b) => [b.id, b.name]));
+  const partnerMap = Object.fromEntries(partners.map((p) => [p.id, p.name]));
   const custByItem = new Map<number, any[]>();
   for (const c of customizations) {
     const list = custByItem.get(c.orderItemId) ?? [];
@@ -380,6 +397,9 @@ router.get("/orders", requirePermission("cashier:view"), async (req, res): Promi
 
         amountTendered: o.amountTendered ? parseFloat(o.amountTendered) : null,
         changeDue: o.changeDue ? parseFloat(o.changeDue) : null,
+        partnerId: o.partnerId,
+        partnerName: o.partnerId ? (partnerMap[o.partnerId] ?? `Partner #${o.partnerId}`) : null,
+        source: o.source,
         payments: paymentsByOrder.get(o.id) ?? [],
         items: itemsByOrder.get(o.id) ?? [],
       })))

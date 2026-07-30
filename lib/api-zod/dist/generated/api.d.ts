@@ -1553,6 +1553,8 @@ export declare const ListOrdersQueryParams: zod.ZodObject<{
     limit: zod.ZodOptional<zod.ZodNumber>;
     offset: zod.ZodOptional<zod.ZodNumber>;
     branchId: zod.ZodOptional<zod.ZodNumber>;
+    partnerId: zod.ZodOptional<zod.ZodString>;
+    source: zod.ZodOptional<zod.ZodString>;
 }, "strip", zod.ZodTypeAny, {
     status?: string | undefined;
     branchId?: number | undefined;
@@ -1560,6 +1562,8 @@ export declare const ListOrdersQueryParams: zod.ZodObject<{
     endDate?: Date | undefined;
     limit?: number | undefined;
     offset?: number | undefined;
+    partnerId?: string | undefined;
+    source?: string | undefined;
 }, {
     status?: string | undefined;
     branchId?: number | undefined;
@@ -1567,6 +1571,8 @@ export declare const ListOrdersQueryParams: zod.ZodObject<{
     endDate?: Date | undefined;
     limit?: number | undefined;
     offset?: number | undefined;
+    partnerId?: string | undefined;
+    source?: string | undefined;
 }>;
 export declare const ListOrdersResponseItem: zod.ZodIntersection<zod.ZodObject<{
     id: zod.ZodNumber;
@@ -1594,6 +1600,9 @@ export declare const ListOrdersResponseItem: zod.ZodIntersection<zod.ZodObject<{
     readyAt: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
     completedAt: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
     cancelledAt: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
+    partnerId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
+    partnerName: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
+    source: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
 }, "strip", zod.ZodTypeAny, {
     status: "pending" | "paid" | "in_progress" | "ready" | "completed" | "cancelled" | "refunded";
     id: number;
@@ -1606,6 +1615,8 @@ export declare const ListOrdersResponseItem: zod.ZodIntersection<zod.ZodObject<{
     paymentMethod: "cash" | "card" | "wallet" | "hospitality" | "split" | "refund";
     createdAt?: string | null | undefined;
     updatedAt?: string | null | undefined;
+    partnerId?: number | null | undefined;
+    source?: string | null | undefined;
     customerName?: string | null | undefined;
     customerPhone?: string | null | undefined;
     discountId?: number | null | undefined;
@@ -1620,6 +1631,7 @@ export declare const ListOrdersResponseItem: zod.ZodIntersection<zod.ZodObject<{
     readyAt?: string | null | undefined;
     completedAt?: string | null | undefined;
     cancelledAt?: string | null | undefined;
+    partnerName?: string | null | undefined;
 }, {
     status: "pending" | "paid" | "in_progress" | "ready" | "completed" | "cancelled" | "refunded";
     id: number;
@@ -1632,6 +1644,8 @@ export declare const ListOrdersResponseItem: zod.ZodIntersection<zod.ZodObject<{
     paymentMethod: "cash" | "card" | "wallet" | "hospitality" | "split" | "refund";
     createdAt?: string | null | undefined;
     updatedAt?: string | null | undefined;
+    partnerId?: number | null | undefined;
+    source?: string | null | undefined;
     customerName?: string | null | undefined;
     customerPhone?: string | null | undefined;
     discountId?: number | null | undefined;
@@ -1646,6 +1660,7 @@ export declare const ListOrdersResponseItem: zod.ZodIntersection<zod.ZodObject<{
     readyAt?: string | null | undefined;
     completedAt?: string | null | undefined;
     cancelledAt?: string | null | undefined;
+    partnerName?: string | null | undefined;
 }>, zod.ZodObject<{
     items: zod.ZodArray<zod.ZodObject<{
         id: zod.ZodNumber;
@@ -1823,6 +1838,9 @@ export declare const ListOrdersResponse: zod.ZodArray<zod.ZodIntersection<zod.Zo
     readyAt: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
     completedAt: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
     cancelledAt: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
+    partnerId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
+    partnerName: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
+    source: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
 }, "strip", zod.ZodTypeAny, {
     status: "pending" | "paid" | "in_progress" | "ready" | "completed" | "cancelled" | "refunded";
     id: number;
@@ -1835,6 +1853,8 @@ export declare const ListOrdersResponse: zod.ZodArray<zod.ZodIntersection<zod.Zo
     paymentMethod: "cash" | "card" | "wallet" | "hospitality" | "split" | "refund";
     createdAt?: string | null | undefined;
     updatedAt?: string | null | undefined;
+    partnerId?: number | null | undefined;
+    source?: string | null | undefined;
     customerName?: string | null | undefined;
     customerPhone?: string | null | undefined;
     discountId?: number | null | undefined;
@@ -1849,6 +1869,7 @@ export declare const ListOrdersResponse: zod.ZodArray<zod.ZodIntersection<zod.Zo
     readyAt?: string | null | undefined;
     completedAt?: string | null | undefined;
     cancelledAt?: string | null | undefined;
+    partnerName?: string | null | undefined;
 }, {
     status: "pending" | "paid" | "in_progress" | "ready" | "completed" | "cancelled" | "refunded";
     id: number;
@@ -1861,6 +1882,8 @@ export declare const ListOrdersResponse: zod.ZodArray<zod.ZodIntersection<zod.Zo
     paymentMethod: "cash" | "card" | "wallet" | "hospitality" | "split" | "refund";
     createdAt?: string | null | undefined;
     updatedAt?: string | null | undefined;
+    partnerId?: number | null | undefined;
+    source?: string | null | undefined;
     customerName?: string | null | undefined;
     customerPhone?: string | null | undefined;
     discountId?: number | null | undefined;
@@ -1875,6 +1898,7 @@ export declare const ListOrdersResponse: zod.ZodArray<zod.ZodIntersection<zod.Zo
     readyAt?: string | null | undefined;
     completedAt?: string | null | undefined;
     cancelledAt?: string | null | undefined;
+    partnerName?: string | null | undefined;
 }>, zod.ZodObject<{
     items: zod.ZodArray<zod.ZodObject<{
         id: zod.ZodNumber;
@@ -2180,6 +2204,9 @@ export declare const GetOrderResponse: zod.ZodIntersection<zod.ZodObject<{
     readyAt: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
     completedAt: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
     cancelledAt: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
+    partnerId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
+    partnerName: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
+    source: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
 }, "strip", zod.ZodTypeAny, {
     status: "pending" | "paid" | "in_progress" | "ready" | "completed" | "cancelled" | "refunded";
     id: number;
@@ -2192,6 +2219,8 @@ export declare const GetOrderResponse: zod.ZodIntersection<zod.ZodObject<{
     paymentMethod: "cash" | "card" | "wallet" | "hospitality" | "split" | "refund";
     createdAt?: string | null | undefined;
     updatedAt?: string | null | undefined;
+    partnerId?: number | null | undefined;
+    source?: string | null | undefined;
     customerName?: string | null | undefined;
     customerPhone?: string | null | undefined;
     discountId?: number | null | undefined;
@@ -2206,6 +2235,7 @@ export declare const GetOrderResponse: zod.ZodIntersection<zod.ZodObject<{
     readyAt?: string | null | undefined;
     completedAt?: string | null | undefined;
     cancelledAt?: string | null | undefined;
+    partnerName?: string | null | undefined;
 }, {
     status: "pending" | "paid" | "in_progress" | "ready" | "completed" | "cancelled" | "refunded";
     id: number;
@@ -2218,6 +2248,8 @@ export declare const GetOrderResponse: zod.ZodIntersection<zod.ZodObject<{
     paymentMethod: "cash" | "card" | "wallet" | "hospitality" | "split" | "refund";
     createdAt?: string | null | undefined;
     updatedAt?: string | null | undefined;
+    partnerId?: number | null | undefined;
+    source?: string | null | undefined;
     customerName?: string | null | undefined;
     customerPhone?: string | null | undefined;
     discountId?: number | null | undefined;
@@ -2232,6 +2264,7 @@ export declare const GetOrderResponse: zod.ZodIntersection<zod.ZodObject<{
     readyAt?: string | null | undefined;
     completedAt?: string | null | undefined;
     cancelledAt?: string | null | undefined;
+    partnerName?: string | null | undefined;
 }>, zod.ZodObject<{
     items: zod.ZodArray<zod.ZodObject<{
         id: zod.ZodNumber;
@@ -2442,6 +2475,9 @@ export declare const UpdateOrderStatusResponse: zod.ZodObject<{
     readyAt: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
     completedAt: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
     cancelledAt: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
+    partnerId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
+    partnerName: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
+    source: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
 }, "strip", zod.ZodTypeAny, {
     status: "pending" | "paid" | "in_progress" | "ready" | "completed" | "cancelled" | "refunded";
     id: number;
@@ -2454,6 +2490,8 @@ export declare const UpdateOrderStatusResponse: zod.ZodObject<{
     paymentMethod: "cash" | "card" | "wallet" | "hospitality" | "split" | "refund";
     createdAt?: string | null | undefined;
     updatedAt?: string | null | undefined;
+    partnerId?: number | null | undefined;
+    source?: string | null | undefined;
     customerName?: string | null | undefined;
     customerPhone?: string | null | undefined;
     discountId?: number | null | undefined;
@@ -2468,6 +2506,7 @@ export declare const UpdateOrderStatusResponse: zod.ZodObject<{
     readyAt?: string | null | undefined;
     completedAt?: string | null | undefined;
     cancelledAt?: string | null | undefined;
+    partnerName?: string | null | undefined;
 }, {
     status: "pending" | "paid" | "in_progress" | "ready" | "completed" | "cancelled" | "refunded";
     id: number;
@@ -2480,6 +2519,8 @@ export declare const UpdateOrderStatusResponse: zod.ZodObject<{
     paymentMethod: "cash" | "card" | "wallet" | "hospitality" | "split" | "refund";
     createdAt?: string | null | undefined;
     updatedAt?: string | null | undefined;
+    partnerId?: number | null | undefined;
+    source?: string | null | undefined;
     customerName?: string | null | undefined;
     customerPhone?: string | null | undefined;
     discountId?: number | null | undefined;
@@ -2494,6 +2535,7 @@ export declare const UpdateOrderStatusResponse: zod.ZodObject<{
     readyAt?: string | null | undefined;
     completedAt?: string | null | undefined;
     cancelledAt?: string | null | undefined;
+    partnerName?: string | null | undefined;
 }>;
 /**
  * @summary Save order digital signature
@@ -2555,6 +2597,9 @@ export declare const MarkOrderItemReadyResponse: zod.ZodObject<{
     readyAt: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
     completedAt: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
     cancelledAt: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
+    partnerId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
+    partnerName: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
+    source: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
 }, "strip", zod.ZodTypeAny, {
     status: "pending" | "paid" | "in_progress" | "ready" | "completed" | "cancelled" | "refunded";
     id: number;
@@ -2567,6 +2612,8 @@ export declare const MarkOrderItemReadyResponse: zod.ZodObject<{
     paymentMethod: "cash" | "card" | "wallet" | "hospitality" | "split" | "refund";
     createdAt?: string | null | undefined;
     updatedAt?: string | null | undefined;
+    partnerId?: number | null | undefined;
+    source?: string | null | undefined;
     customerName?: string | null | undefined;
     customerPhone?: string | null | undefined;
     discountId?: number | null | undefined;
@@ -2581,6 +2628,7 @@ export declare const MarkOrderItemReadyResponse: zod.ZodObject<{
     readyAt?: string | null | undefined;
     completedAt?: string | null | undefined;
     cancelledAt?: string | null | undefined;
+    partnerName?: string | null | undefined;
 }, {
     status: "pending" | "paid" | "in_progress" | "ready" | "completed" | "cancelled" | "refunded";
     id: number;
@@ -2593,6 +2641,8 @@ export declare const MarkOrderItemReadyResponse: zod.ZodObject<{
     paymentMethod: "cash" | "card" | "wallet" | "hospitality" | "split" | "refund";
     createdAt?: string | null | undefined;
     updatedAt?: string | null | undefined;
+    partnerId?: number | null | undefined;
+    source?: string | null | undefined;
     customerName?: string | null | undefined;
     customerPhone?: string | null | undefined;
     discountId?: number | null | undefined;
@@ -2607,6 +2657,7 @@ export declare const MarkOrderItemReadyResponse: zod.ZodObject<{
     readyAt?: string | null | undefined;
     completedAt?: string | null | undefined;
     cancelledAt?: string | null | undefined;
+    partnerName?: string | null | undefined;
 }>;
 /**
  * @summary List stock movements ledger
@@ -2812,6 +2863,9 @@ export declare const GetActiveOrdersResponseItem: zod.ZodIntersection<zod.ZodObj
     readyAt: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
     completedAt: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
     cancelledAt: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
+    partnerId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
+    partnerName: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
+    source: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
 }, "strip", zod.ZodTypeAny, {
     status: "pending" | "paid" | "in_progress" | "ready" | "completed" | "cancelled" | "refunded";
     id: number;
@@ -2824,6 +2878,8 @@ export declare const GetActiveOrdersResponseItem: zod.ZodIntersection<zod.ZodObj
     paymentMethod: "cash" | "card" | "wallet" | "hospitality" | "split" | "refund";
     createdAt?: string | null | undefined;
     updatedAt?: string | null | undefined;
+    partnerId?: number | null | undefined;
+    source?: string | null | undefined;
     customerName?: string | null | undefined;
     customerPhone?: string | null | undefined;
     discountId?: number | null | undefined;
@@ -2838,6 +2894,7 @@ export declare const GetActiveOrdersResponseItem: zod.ZodIntersection<zod.ZodObj
     readyAt?: string | null | undefined;
     completedAt?: string | null | undefined;
     cancelledAt?: string | null | undefined;
+    partnerName?: string | null | undefined;
 }, {
     status: "pending" | "paid" | "in_progress" | "ready" | "completed" | "cancelled" | "refunded";
     id: number;
@@ -2850,6 +2907,8 @@ export declare const GetActiveOrdersResponseItem: zod.ZodIntersection<zod.ZodObj
     paymentMethod: "cash" | "card" | "wallet" | "hospitality" | "split" | "refund";
     createdAt?: string | null | undefined;
     updatedAt?: string | null | undefined;
+    partnerId?: number | null | undefined;
+    source?: string | null | undefined;
     customerName?: string | null | undefined;
     customerPhone?: string | null | undefined;
     discountId?: number | null | undefined;
@@ -2864,6 +2923,7 @@ export declare const GetActiveOrdersResponseItem: zod.ZodIntersection<zod.ZodObj
     readyAt?: string | null | undefined;
     completedAt?: string | null | undefined;
     cancelledAt?: string | null | undefined;
+    partnerName?: string | null | undefined;
 }>, zod.ZodObject<{
     items: zod.ZodArray<zod.ZodObject<{
         id: zod.ZodNumber;
@@ -3041,6 +3101,9 @@ export declare const GetActiveOrdersResponse: zod.ZodArray<zod.ZodIntersection<z
     readyAt: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
     completedAt: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
     cancelledAt: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
+    partnerId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
+    partnerName: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
+    source: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
 }, "strip", zod.ZodTypeAny, {
     status: "pending" | "paid" | "in_progress" | "ready" | "completed" | "cancelled" | "refunded";
     id: number;
@@ -3053,6 +3116,8 @@ export declare const GetActiveOrdersResponse: zod.ZodArray<zod.ZodIntersection<z
     paymentMethod: "cash" | "card" | "wallet" | "hospitality" | "split" | "refund";
     createdAt?: string | null | undefined;
     updatedAt?: string | null | undefined;
+    partnerId?: number | null | undefined;
+    source?: string | null | undefined;
     customerName?: string | null | undefined;
     customerPhone?: string | null | undefined;
     discountId?: number | null | undefined;
@@ -3067,6 +3132,7 @@ export declare const GetActiveOrdersResponse: zod.ZodArray<zod.ZodIntersection<z
     readyAt?: string | null | undefined;
     completedAt?: string | null | undefined;
     cancelledAt?: string | null | undefined;
+    partnerName?: string | null | undefined;
 }, {
     status: "pending" | "paid" | "in_progress" | "ready" | "completed" | "cancelled" | "refunded";
     id: number;
@@ -3079,6 +3145,8 @@ export declare const GetActiveOrdersResponse: zod.ZodArray<zod.ZodIntersection<z
     paymentMethod: "cash" | "card" | "wallet" | "hospitality" | "split" | "refund";
     createdAt?: string | null | undefined;
     updatedAt?: string | null | undefined;
+    partnerId?: number | null | undefined;
+    source?: string | null | undefined;
     customerName?: string | null | undefined;
     customerPhone?: string | null | undefined;
     discountId?: number | null | undefined;
@@ -3093,6 +3161,7 @@ export declare const GetActiveOrdersResponse: zod.ZodArray<zod.ZodIntersection<z
     readyAt?: string | null | undefined;
     completedAt?: string | null | undefined;
     cancelledAt?: string | null | undefined;
+    partnerName?: string | null | undefined;
 }>, zod.ZodObject<{
     items: zod.ZodArray<zod.ZodObject<{
         id: zod.ZodNumber;

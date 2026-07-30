@@ -447,6 +447,12 @@ export interface Order {
     completedAt?: string | null;
     /** @nullable */
     cancelledAt?: string | null;
+    /** @nullable */
+    partnerId?: number | null;
+    /** @nullable */
+    partnerName?: string | null;
+    /** @nullable */
+    source?: string | null;
 }
 export type OrderDetail = Order & {
     items: OrderItem[];
@@ -762,6 +768,8 @@ export type ListOrdersParams = {
     limit?: number;
     offset?: number;
     branchId?: number;
+    partnerId?: string;
+    source?: string;
 };
 export type GetOrderParams = {
     branchId?: number;
