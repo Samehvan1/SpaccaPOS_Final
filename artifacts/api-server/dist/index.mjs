@@ -56186,28 +56186,6 @@ var init_discounts = __esm({
   }
 });
 
-// ../../lib/db/src/schema/offers.ts
-var offersTable, insertOfferSchema;
-var init_offers = __esm({
-  "../../lib/db/src/schema/offers.ts"() {
-    "use strict";
-    init_pg_core();
-    init_drizzle_zod();
-    offersTable = pgTable("offers", {
-      id: serial("id").primaryKey(),
-      name: text("name").notNull(),
-      buyAmount: integer("buy_amount").notNull(),
-      // N
-      freeAmount: integer("free_amount").notNull(),
-      // X
-      isActive: boolean("is_active").notNull().default(true),
-      createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-      updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => /* @__PURE__ */ new Date())
-    });
-    insertOfferSchema = createInsertSchema(offersTable).omit({ id: true, createdAt: true, updatedAt: true });
-  }
-});
-
 // ../../lib/db/src/schema/partners.ts
 var partnersTable, partnerDrinkPricesTable, insertPartnerSchema, insertPartnerDrinkPriceSchema;
 var init_partners = __esm({
@@ -56244,6 +56222,48 @@ var init_partners = __esm({
     });
     insertPartnerSchema = createInsertSchema(partnersTable).omit({ id: true, createdAt: true, updatedAt: true });
     insertPartnerDrinkPriceSchema = createInsertSchema(partnerDrinkPricesTable).omit({ id: true, createdAt: true, updatedAt: true });
+  }
+});
+
+// ../../lib/db/src/schema/offers.ts
+var offersTable, offersBranchesTable, offersPartnersTable, insertOfferSchema;
+var init_offers = __esm({
+  "../../lib/db/src/schema/offers.ts"() {
+    "use strict";
+    init_pg_core();
+    init_drizzle_zod();
+    init_branches();
+    init_partners();
+    offersTable = pgTable("offers", {
+      id: serial("id").primaryKey(),
+      name: text("name").notNull(),
+      buyAmount: integer("buy_amount").notNull(),
+      // N
+      freeAmount: integer("free_amount").notNull(),
+      // X
+      isActive: boolean("is_active").notNull().default(true),
+      applyToStore: boolean("apply_to_store").notNull().default(true),
+      applyToAllPartners: boolean("apply_to_all_partners").notNull().default(true),
+      createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+      updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => /* @__PURE__ */ new Date())
+    });
+    offersBranchesTable = pgTable("offers_branches", {
+      offerId: integer("offer_id").notNull().references(() => offersTable.id, { onDelete: "cascade" }),
+      branchId: integer("branch_id").notNull().references(() => branchesTable.id, { onDelete: "cascade" })
+    }, (table) => {
+      return {
+        pk: primaryKey({ columns: [table.offerId, table.branchId] })
+      };
+    });
+    offersPartnersTable = pgTable("offers_partners", {
+      offerId: integer("offer_id").notNull().references(() => offersTable.id, { onDelete: "cascade" }),
+      partnerId: integer("partner_id").notNull().references(() => partnersTable.id, { onDelete: "cascade" })
+    }, (table) => {
+      return {
+        pk: primaryKey({ columns: [table.offerId, table.partnerId] })
+      };
+    });
+    insertOfferSchema = createInsertSchema(offersTable).omit({ id: true, createdAt: true, updatedAt: true });
   }
 });
 
@@ -56825,6 +56845,8 @@ __export(schema_exports, {
   insertUserPermissionSchema: () => insertUserPermissionSchema,
   insertUserSchema: () => insertUserSchema,
   kitchenStationsTable: () => kitchenStationsTable,
+  offersBranchesTable: () => offersBranchesTable,
+  offersPartnersTable: () => offersPartnersTable,
   offersTable: () => offersTable,
   orderItemCustomizationsTable: () => orderItemCustomizationsTable,
   orderItemsTable: () => orderItemsTable,
@@ -56990,6 +57012,8 @@ __export(src_exports, {
   insertUserPermissionSchema: () => insertUserPermissionSchema,
   insertUserSchema: () => insertUserSchema,
   kitchenStationsTable: () => kitchenStationsTable,
+  offersBranchesTable: () => offersBranchesTable,
+  offersPartnersTable: () => offersPartnersTable,
   offersTable: () => offersTable,
   orderItemCustomizationsTable: () => orderItemCustomizationsTable,
   orderItemsTable: () => orderItemsTable,
@@ -79246,6 +79270,12 @@ var ListOffersResponseItem = objectType({
   buyAmount: numberType(),
   freeAmount: numberType(),
   isActive: booleanType(),
+  branchIds: arrayType(numberType()).describe("Specific branches this offer applies to. Empty = all branches."),
+  partnerIds: arrayType(numberType()).describe(
+    "Specific partners this offer applies to. Empty = all partners (when applyToAllPartners=true)."
+  ),
+  applyToStore: booleanType(),
+  applyToAllPartners: booleanType(),
   createdAt: stringType(),
   updatedAt: stringType()
 });
@@ -79254,7 +79284,17 @@ var CreateOfferBody = objectType({
   name: stringType(),
   buyAmount: numberType(),
   freeAmount: numberType(),
-  isActive: booleanType().optional()
+  isActive: booleanType().optional(),
+  branchIds: arrayType(numberType()).optional().describe("Specific branch IDs. Empty array = all branches."),
+  partnerIds: arrayType(numberType()).optional().describe(
+    "Specific partner IDs. Empty array = all partners (when applyToAllPartners=true)."
+  ),
+  applyToStore: booleanType().optional(),
+  applyToAllPartners: booleanType().optional()
+});
+var GetActiveOfferQueryParams = objectType({
+  branchId: coerce.number().optional().describe("Branch ID to filter by"),
+  partnerId: coerce.number().optional().describe("Partner ID to filter by")
 });
 var GetActiveOfferResponse = objectType({
   id: numberType(),
@@ -79262,6 +79302,14 @@ var GetActiveOfferResponse = objectType({
   buyAmount: numberType(),
   freeAmount: numberType(),
   isActive: booleanType(),
+  branchIds: arrayType(numberType()).describe(
+    "Specific branches this offer applies to. Empty = all branches."
+  ),
+  partnerIds: arrayType(numberType()).describe(
+    "Specific partners this offer applies to. Empty = all partners (when applyToAllPartners=true)."
+  ),
+  applyToStore: booleanType(),
+  applyToAllPartners: booleanType(),
   createdAt: stringType(),
   updatedAt: stringType()
 }).nullable();
@@ -79272,7 +79320,13 @@ var UpdateOfferBody = objectType({
   name: stringType().optional(),
   buyAmount: numberType().optional(),
   freeAmount: numberType().optional(),
-  isActive: booleanType().optional()
+  isActive: booleanType().optional(),
+  branchIds: arrayType(numberType()).optional().describe("Specific branch IDs. Empty array = all branches."),
+  partnerIds: arrayType(numberType()).optional().describe(
+    "Specific partner IDs. Empty array = all partners (when applyToAllPartners=true)."
+  ),
+  applyToStore: booleanType().optional(),
+  applyToAllPartners: booleanType().optional()
 });
 var UpdateOfferResponse = objectType({
   id: numberType(),
@@ -79280,6 +79334,12 @@ var UpdateOfferResponse = objectType({
   buyAmount: numberType(),
   freeAmount: numberType(),
   isActive: booleanType(),
+  branchIds: arrayType(numberType()).describe("Specific branches this offer applies to. Empty = all branches."),
+  partnerIds: arrayType(numberType()).describe(
+    "Specific partners this offer applies to. Empty = all partners (when applyToAllPartners=true)."
+  ),
+  applyToStore: booleanType(),
+  applyToAllPartners: booleanType(),
   createdAt: stringType(),
   updatedAt: stringType()
 });
@@ -79440,7 +79500,14 @@ var GetOrderResponse2 = GetOrderResponse._def.left.extend({
   discountCode: external_exports2.string().nullish(),
   branchName: external_exports2.string().optional(),
   source: external_exports2.enum(["pos", "kiosk", "web", "mobile"]).optional(),
-  paymentMethod: external_exports2.enum(["cash", "card", "wallet", "hospitality", "split", "points"]),
+  paymentMethod: external_exports2.enum([
+    "cash",
+    "card",
+    "wallet",
+    "hospitality",
+    "split",
+    "points"
+  ]),
   payments: external_exports2.array(
     external_exports2.object({
       id: external_exports2.number(),
@@ -84226,7 +84293,23 @@ router5.post("/orders", async (req, res) => {
       }
     }
   }
-  const [activeOffer] = await db.select().from(offersTable).where(eq(offersTable.isActive, true)).limit(1);
+  const offersList = await db.select().from(offersTable).where(eq(offersTable.isActive, true));
+  let activeOffer;
+  for (const o of offersList) {
+    const offerBranches = await db.select().from(offersBranchesTable).where(eq(offersBranchesTable.offerId, o.id));
+    const offerPartners = await db.select().from(offersPartnersTable).where(eq(offersPartnersTable.offerId, o.id));
+    const oBranchIds = offerBranches.map((b) => b.branchId);
+    const oPartnerIds = offerPartners.map((p) => p.partnerId);
+    if (targetBranchId && oBranchIds.length > 0 && !oBranchIds.includes(targetBranchId)) continue;
+    if (parsed.data.partnerId) {
+      const matchesPartner = (o.applyToAllPartners ?? true) || oPartnerIds.includes(parsed.data.partnerId);
+      if (!matchesPartner) continue;
+    } else {
+      if (!(o.applyToStore ?? true)) continue;
+    }
+    activeOffer = o;
+    break;
+  }
   let offerDiscountAmount = 0;
   let offerIdToSave = null;
   if (activeOffer) {
@@ -86728,10 +86811,60 @@ var import_express15 = __toESM(require_express2(), 1);
 init_drizzle_orm();
 init_src();
 var router14 = (0, import_express15.Router)();
+async function loadOfferScopes(tx, offerId) {
+  const branches = await tx.select().from(offersBranchesTable).where(eq(offersBranchesTable.offerId, offerId));
+  const partners = await tx.select().from(offersPartnersTable).where(eq(offersPartnersTable.offerId, offerId));
+  return {
+    branchIds: branches.map((b) => b.branchId),
+    partnerIds: partners.map((p) => p.partnerId)
+  };
+}
+async function enrichOffer(tx, offer) {
+  const { branchIds, partnerIds } = await loadOfferScopes(tx, offer.id);
+  return { ...serializeDates(offer), branchIds, partnerIds };
+}
+async function syncOfferScopes(tx, offerId, branchIds, partnerIds) {
+  if (branchIds !== void 0) {
+    await tx.delete(offersBranchesTable).where(eq(offersBranchesTable.offerId, offerId));
+    if (branchIds.length > 0) {
+      await tx.insert(offersBranchesTable).values(branchIds.map((bid) => ({ offerId, branchId: bid })));
+    }
+  }
+  if (partnerIds !== void 0) {
+    await tx.delete(offersPartnersTable).where(eq(offersPartnersTable.offerId, offerId));
+    if (partnerIds.length > 0) {
+      await tx.insert(offersPartnersTable).values(partnerIds.map((pid) => ({ offerId, partnerId: pid })));
+    }
+  }
+}
+async function deactivateOverlappingOffers(tx, newOffer, excludeId) {
+  let query = tx.select().from(offersTable).where(eq(offersTable.isActive, true));
+  if (excludeId) {
+    query = tx.select().from(offersTable).where(and(eq(offersTable.isActive, true), ne(offersTable.id, excludeId)));
+  }
+  const activeOffers = await query;
+  const overlappingIds = [];
+  for (const o of activeOffers) {
+    const { branchIds: oBranchIds, partnerIds: oPartnerIds } = await loadOfferScopes(tx, o.id);
+    const branchesOverlap = oBranchIds.length === 0 || newOffer.branchIds.length === 0 || oBranchIds.some((b) => newOffer.branchIds.includes(b));
+    if (!branchesOverlap) continue;
+    const storeOverlap = (o.applyToStore ?? true) && (newOffer.applyToStore ?? true);
+    const oAllPartners = o.applyToAllPartners ?? true;
+    const newAllPartners = newOffer.applyToAllPartners ?? true;
+    const partnerOverlap = oAllPartners && newAllPartners || oAllPartners && newOffer.partnerIds.length > 0 || newAllPartners && oPartnerIds.length > 0 || oPartnerIds.some((p) => newOffer.partnerIds.includes(p));
+    if (storeOverlap || partnerOverlap) {
+      overlappingIds.push(o.id);
+    }
+  }
+  if (overlappingIds.length > 0) {
+    await tx.update(offersTable).set({ isActive: false, updatedAt: /* @__PURE__ */ new Date() }).where(inArray(offersTable.id, overlappingIds));
+  }
+}
 router14.get("/offers", requirePermission("discounts:view"), async (req, res) => {
   try {
     const offers = await db.select().from(offersTable);
-    res.json(offers.map((o) => serializeDates(o)));
+    const enriched = await Promise.all(offers.map((o) => enrichOffer(db, o)));
+    res.json(enriched);
   } catch (error40) {
     console.error("[GET /offers] error:", error40?.message);
     res.status(500).json({ error: "Failed to list offers" });
@@ -86739,12 +86872,25 @@ router14.get("/offers", requirePermission("discounts:view"), async (req, res) =>
 });
 router14.get("/offers/active", async (req, res) => {
   try {
-    const [activeOffer] = await db.select().from(offersTable).where(eq(offersTable.isActive, true)).limit(1);
-    if (!activeOffer) {
-      res.json(null);
+    const { branchId, partnerId } = req.query;
+    const targetBranchId = branchId && branchId !== "null" && branchId !== "undefined" ? parseInt(branchId) : null;
+    const targetPartnerId = partnerId && partnerId !== "all" && partnerId !== "null" && partnerId !== "undefined" ? parseInt(partnerId) : null;
+    const offers = await db.select().from(offersTable).where(eq(offersTable.isActive, true));
+    for (const o of offers) {
+      const { branchIds, partnerIds } = await loadOfferScopes(db, o.id);
+      if (targetBranchId && branchIds.length > 0 && !branchIds.includes(targetBranchId)) {
+        continue;
+      }
+      if (targetPartnerId) {
+        const matchesPartner = (o.applyToAllPartners ?? true) || partnerIds.includes(targetPartnerId);
+        if (!matchesPartner) continue;
+      } else {
+        if (!(o.applyToStore ?? true)) continue;
+      }
+      res.json({ ...serializeDates(o), branchIds, partnerIds });
       return;
     }
-    res.json(serializeDates(activeOffer));
+    res.json(null);
   } catch (error40) {
     console.error("[GET /offers/active] error:", error40?.message);
     res.status(500).json({ error: "Failed to fetch active offer" });
@@ -86757,20 +86903,27 @@ router14.post("/offers", requirePermission("discounts:manage"), async (req, res)
     return;
   }
   try {
-    const offer = await db.transaction(async (tx) => {
+    const enrichedOffer = await db.transaction(async (tx) => {
       const isAct = parsed.data.isActive ?? true;
+      const branchIds = parsed.data.branchIds ?? [];
+      const partnerIds = parsed.data.partnerIds ?? [];
+      const applyToStore = parsed.data.applyToStore ?? true;
+      const applyToAllPartners = parsed.data.applyToAllPartners ?? true;
       if (isAct) {
-        await tx.update(offersTable).set({ isActive: false, updatedAt: /* @__PURE__ */ new Date() });
+        await deactivateOverlappingOffers(tx, { branchIds, partnerIds, applyToStore, applyToAllPartners });
       }
       const [newOffer] = await tx.insert(offersTable).values({
         name: parsed.data.name,
         buyAmount: parsed.data.buyAmount,
         freeAmount: parsed.data.freeAmount,
-        isActive: isAct
+        isActive: isAct,
+        applyToStore,
+        applyToAllPartners
       }).returning();
-      return newOffer;
+      await syncOfferScopes(tx, newOffer.id, branchIds, partnerIds);
+      return { ...serializeDates(newOffer), branchIds, partnerIds };
     });
-    res.status(201).json(serializeDates(offer));
+    res.status(201).json(enrichedOffer);
   } catch (error40) {
     console.error("[POST /offers] error:", error40?.message);
     res.status(500).json({ error: "Failed to create offer: " + error40.message });
@@ -86784,23 +86937,32 @@ router14.patch("/offers/:id", requirePermission("discounts:manage"), async (req,
     return;
   }
   try {
-    const offer = await db.transaction(async (tx) => {
-      if (parsed.data.isActive === true) {
-        await tx.update(offersTable).set({ isActive: false, updatedAt: /* @__PURE__ */ new Date() }).where(ne(offersTable.id, id));
+    const enrichedOffer = await db.transaction(async (tx) => {
+      const [existing] = await tx.select().from(offersTable).where(eq(offersTable.id, id));
+      if (!existing) {
+        throw new Error("Offer not found");
       }
-      const updateData = {};
+      const { branchIds: existingBranchIds, partnerIds: existingPartnerIds } = await loadOfferScopes(tx, id);
+      const isAct = parsed.data.isActive !== void 0 ? parsed.data.isActive : existing.isActive;
+      const branchIds = parsed.data.branchIds !== void 0 ? parsed.data.branchIds : existingBranchIds;
+      const partnerIds = parsed.data.partnerIds !== void 0 ? parsed.data.partnerIds : existingPartnerIds;
+      const applyToStore = parsed.data.applyToStore !== void 0 ? parsed.data.applyToStore : existing.applyToStore;
+      const applyToAllPartners = parsed.data.applyToAllPartners !== void 0 ? parsed.data.applyToAllPartners : existing.applyToAllPartners;
+      if (isAct) {
+        await deactivateOverlappingOffers(tx, { branchIds, partnerIds, applyToStore, applyToAllPartners }, id);
+      }
+      const updateData = { updatedAt: /* @__PURE__ */ new Date() };
       if (parsed.data.name !== void 0) updateData.name = parsed.data.name;
       if (parsed.data.buyAmount !== void 0) updateData.buyAmount = parsed.data.buyAmount;
       if (parsed.data.freeAmount !== void 0) updateData.freeAmount = parsed.data.freeAmount;
       if (parsed.data.isActive !== void 0) updateData.isActive = parsed.data.isActive;
-      updateData.updatedAt = /* @__PURE__ */ new Date();
+      if (parsed.data.applyToStore !== void 0) updateData.applyToStore = parsed.data.applyToStore;
+      if (parsed.data.applyToAllPartners !== void 0) updateData.applyToAllPartners = parsed.data.applyToAllPartners;
       const [updatedOffer] = await tx.update(offersTable).set(updateData).where(eq(offersTable.id, id)).returning();
-      if (!updatedOffer) {
-        throw new Error("Offer not found");
-      }
-      return updatedOffer;
+      await syncOfferScopes(tx, id, parsed.data.branchIds, parsed.data.partnerIds);
+      return { ...serializeDates(updatedOffer), branchIds, partnerIds };
     });
-    res.json(serializeDates(offer));
+    res.json(enrichedOffer);
   } catch (error40) {
     console.error("[PATCH /offers/:id] error:", error40?.message);
     if (error40.message === "Offer not found") {
@@ -89290,6 +89452,7 @@ router20.get("/finance/sales-items", requirePermission("reports:view"), async (r
       cashier: item.cashier || "System",
       branch: item.branch,
       item: item.drinkName,
+      drinkId: item.drinkId,
       quantity: item.quantity,
       isCustomized: actualOverrides.length > 0 ? "Customize" : "Standard",
       salePrice: parseFloat(item.unitPrice),

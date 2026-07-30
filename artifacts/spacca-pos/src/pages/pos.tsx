@@ -158,7 +158,10 @@ export default function PosTerminal() {
     partnerId: selectedPartnerId || undefined,
   } as any);
   const { data: allCategories = [] } = useDrinkCategories();
-  const { data: activeOffer } = useGetActiveOffer();
+  const { data: activeOffer } = useGetActiveOffer({
+    branchId: selectedBranchId || undefined,
+    partnerId: selectedPartnerId || undefined,
+  } as any);
 
 
   const { data: ingredients = [] } = useQuery<any[]>({

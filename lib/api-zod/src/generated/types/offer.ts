@@ -12,6 +12,12 @@ export interface Offer {
   buyAmount: number;
   freeAmount: number;
   isActive: boolean;
+  /** Specific branches this offer applies to. Empty = all branches. */
+  branchIds: number[];
+  /** Specific partners this offer applies to. Empty = all partners (when applyToAllPartners=true). */
+  partnerIds: number[];
+  applyToStore: boolean;
+  applyToAllPartners: boolean;
   createdAt: string;
   updatedAt: string;
 }

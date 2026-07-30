@@ -38,6 +38,7 @@ export * from "./discountType";
 export * from "./drink";
 export * from "./drinkDetail";
 export * from "./drinkIngredientSlot";
+export * from "./getActiveOfferParams";
 export * from "./getActiveOrdersParams";
 export * from "./getActiveOrdersStatus";
 export * from "./getCustomerPoints200";

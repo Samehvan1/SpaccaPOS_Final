@@ -94,6 +94,8 @@ import {
   branchesTable,
   settingsTable,
   offersTable,
+  offersBranchesTable,
+  offersPartnersTable,
   partnersTable,
 } from "@workspace/db";
 import {
@@ -569,11 +571,33 @@ router.post("/orders", async (req, res): Promise<void> => {
   }
 
   // ── Calculate Offer Discount (Requirement #1, #2, #4) ──────────────────────
-  const [activeOffer] = await db
+  const offersList = await db
     .select()
     .from(offersTable)
-    .where(eq(offersTable.isActive, true))
-    .limit(1);
+    .where(eq(offersTable.isActive, true));
+
+  let activeOffer: (typeof offersList[0]) | undefined;
+  for (const o of offersList) {
+    // Load branch and partner scopes from junction tables
+    const offerBranches = await db.select().from(offersBranchesTable).where(eq(offersBranchesTable.offerId, o.id));
+    const offerPartners = await db.select().from(offersPartnersTable).where(eq(offersPartnersTable.offerId, o.id));
+    const oBranchIds = offerBranches.map((b: any) => b.branchId);
+    const oPartnerIds = offerPartners.map((p: any) => p.partnerId);
+
+    // Branch match: offer applies to all branches (empty list) or includes this branch
+    if (targetBranchId && oBranchIds.length > 0 && !oBranchIds.includes(targetBranchId)) continue;
+
+    // Channel match
+    if (parsed.data.partnerId) {
+      const matchesPartner = (o.applyToAllPartners ?? true) || oPartnerIds.includes(parsed.data.partnerId);
+      if (!matchesPartner) continue;
+    } else {
+      if (!(o.applyToStore ?? true)) continue;
+    }
+
+    activeOffer = o;
+    break;
+  }
 
   let offerDiscountAmount = 0;
   let offerIdToSave: number | null = null;

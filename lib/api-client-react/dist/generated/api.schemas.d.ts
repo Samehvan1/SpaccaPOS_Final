@@ -404,7 +404,6 @@ export declare const OrderPaymentMethod: {
     readonly hospitality: "hospitality";
     readonly split: "split";
     readonly refund: "refund";
-    readonly points: "points";
 };
 export interface Order {
     id: number;
@@ -460,7 +459,6 @@ export declare const CreateOrderBodyPaymentMethod: {
     readonly hospitality: "hospitality";
     readonly split: "split";
     readonly refund: "refund";
-    readonly points: "points";
 };
 export type CreateOrderBodyItemsItemSelectionsItem = {
     ingredientId?: number;
@@ -507,7 +505,6 @@ export declare const UpdateOrderStatusBodyPaymentMethod: {
     readonly hospitality: "hospitality";
     readonly split: "split";
     readonly refund: "refund";
-    readonly points: "points";
 };
 export interface UpdateOrderStatusBody {
     status: UpdateOrderStatusBodyStatus;
@@ -681,6 +678,12 @@ export interface Offer {
     buyAmount: number;
     freeAmount: number;
     isActive: boolean;
+    /** Specific branches this offer applies to. Empty = all branches. */
+    branchIds: number[];
+    /** Specific partners this offer applies to. Empty = all partners (when applyToAllPartners=true). */
+    partnerIds: number[];
+    applyToStore: boolean;
+    applyToAllPartners: boolean;
     createdAt: string;
     updatedAt: string;
 }
@@ -689,12 +692,24 @@ export interface CreateOfferBody {
     buyAmount: number;
     freeAmount: number;
     isActive?: boolean;
+    /** Specific branch IDs. Empty array = all branches. */
+    branchIds?: number[];
+    /** Specific partner IDs. Empty array = all partners (when applyToAllPartners=true). */
+    partnerIds?: number[];
+    applyToStore?: boolean;
+    applyToAllPartners?: boolean;
 }
 export interface UpdateOfferBody {
     name?: string;
     buyAmount?: number;
     freeAmount?: number;
     isActive?: boolean;
+    /** Specific branch IDs. Empty array = all branches. */
+    branchIds?: number[];
+    /** Specific partner IDs. Empty array = all partners (when applyToAllPartners=true). */
+    partnerIds?: number[];
+    applyToStore?: boolean;
+    applyToAllPartners?: boolean;
 }
 export type ListDrinksParams = {
     category?: string;
@@ -829,5 +844,15 @@ export type UpdateDiscountParams = {
 };
 export type DeleteDiscountParams = {
     branchId?: number;
+};
+export type GetActiveOfferParams = {
+    /**
+     * Branch ID to filter by
+     */
+    branchId?: number;
+    /**
+     * Partner ID to filter by
+     */
+    partnerId?: number;
 };
 //# sourceMappingURL=api.schemas.d.ts.map

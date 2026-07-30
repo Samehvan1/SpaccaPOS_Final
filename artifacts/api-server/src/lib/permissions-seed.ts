@@ -49,6 +49,10 @@ export const APP_PERMISSIONS = [
   // Settings & Infrastructure
   { key: "branches:manage", name: "Manage Branches", description: "Add and edit branch locations" },
   { key: "settings:manage", name: "Manage Settings", description: "Change system-wide configurations" },
+
+  // Aggregator Partners (Talabat, Bread Fast, etc.)
+  { key: "partners:view", name: "View Partners", description: "List and view aggregator partner platforms" },
+  { key: "partners:manage", name: "Manage Partners", description: "Create, edit and delete aggregator partner platforms" },
 ];
 
 const standardRoles = [
@@ -114,7 +118,8 @@ export async function syncPermissions() {
     "cashier:view_reports",
     "pos:apply_discount",
     "catalog:view",
-    "inventory:view"
+    "inventory:view",
+    "partners:view"
   ]);
   await assignPermissions("barista", [
     "pos:view",

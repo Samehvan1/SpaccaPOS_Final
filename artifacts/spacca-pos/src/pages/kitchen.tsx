@@ -83,7 +83,7 @@ export default function KitchenDisplay() {
       case "pending": return "text-neon-yellow border-neon-yellow/30 bg-neon-yellow/10";
       case "in_progress": return "text-neon-cyan border-neon-cyan/30 bg-neon-cyan/10";
       case "ready": return "text-neon-green border-neon-green/30 bg-neon-green/10";
-      default: return "text-muted-foreground border-white/10 bg-white/5";
+      default: return "text-muted-foreground border-border bg-muted/40";
     }
   };
 
@@ -159,10 +159,10 @@ export default function KitchenDisplay() {
   }
 
   return (
-    <div className="flex flex-col h-full bg-[#080808] overflow-hidden text-foreground">
+    <div className="flex flex-col h-full bg-background overflow-hidden text-foreground">
       <div className="flex-1 overflow-y-auto">
         {/* Header Area */}
-      <div className="shrink-0 bg-background/40 backdrop-blur-md border-b border-white/5 z-10">
+      <div className="shrink-0 bg-background/40 backdrop-blur-md border-b border-border/40 z-10">
         <div className="px-8 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
              <div className="w-10 h-10 rounded-xl bg-neon-cyan/10 flex items-center justify-center text-neon-cyan border border-neon-cyan/20">
@@ -178,11 +178,11 @@ export default function KitchenDisplay() {
           </div>
 
           <div className="flex items-center gap-6">
-            <div className="flex items-center gap-2 px-3 py-1 bg-white/5 rounded-lg border border-white/5">
+            <div className="flex items-center gap-2 px-3 py-1 bg-muted/50 rounded-lg border border-border/50">
               <div className="w-1.5 h-1.5 rounded-full bg-neon-cyan shadow-[0_0_8px_rgba(0,243,255,0.8)]" />
               <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Waitroom: {activeOrders?.filter(o => (o.status as string) === 'paid').length || 0}</span>
             </div>
-            <div className="flex items-center gap-2 px-3 py-1 bg-white/5 rounded-lg border border-white/5">
+            <div className="flex items-center gap-2 px-3 py-1 bg-muted/50 rounded-lg border border-border/50">
               <div className="w-1.5 h-1.5 rounded-full bg-neon-yellow shadow-[0_0_8px_rgba(255,234,0,0.8)]" />
               <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">In Progress: {activeOrders?.filter(o => (o.status as string) === 'in_progress').length || 0}</span>
             </div>
@@ -204,7 +204,7 @@ export default function KitchenDisplay() {
                 className={`flex items-center gap-3 px-6 py-2.5 rounded-2xl text-xs font-black uppercase tracking-widest border transition-all duration-300 whitespace-nowrap ${
                   isActive
                     ? "bg-neon-cyan text-black border-neon-cyan glow-cyan"
-                    : "bg-white/5 text-muted-foreground border-white/10 hover:border-neon-cyan/40 hover:bg-white/10"
+                    : "bg-muted/40 text-muted-foreground border-border/50 hover:border-neon-cyan/40 hover:bg-muted/60"
                 }`}
               >
                 {station.label === "Global View" ? <Zap className="h-4 w-4" /> : <Flame className="h-4 w-4" />}
@@ -233,10 +233,10 @@ export default function KitchenDisplay() {
                     <TooltipContent 
                       side="bottom" 
                       align="start"
-                      className="w-80 p-4 rounded-xl border border-white/10 bg-[#0c0c0e]/95 backdrop-blur-md shadow-[0_10px_30px_rgba(0,0,0,0.8),0_0_15px_rgba(0,243,255,0.05)] text-foreground"
+                      className="w-80 p-4 rounded-xl border border-border bg-popover/95 backdrop-blur-md shadow-lg text-popover-foreground"
                     >
                       <div className="flex flex-col gap-2">
-                        <div className="flex items-center justify-between pb-2 border-b border-white/10">
+                        <div className="flex items-center justify-between pb-2 border-b border-border">
                           <span className="font-black text-[10px] uppercase tracking-widest text-muted-foreground">Active Queue</span>
                           <Badge variant="outline" className="text-[10px] font-black bg-neon-cyan/10 text-neon-cyan border-neon-cyan/20 px-2 py-0.5">
                             {globalOrders.length} {globalOrders.length === 1 ? 'Order' : 'Orders'}
@@ -261,10 +261,10 @@ export default function KitchenDisplay() {
                               );
 
                               return (
-                                <div key={order.id} className="flex items-center justify-between py-1.5 border-b border-white/5 last:border-b-0 gap-4">
+                                <div key={order.id} className="flex items-center justify-between py-1.5 border-b border-border/40 last:border-b-0 gap-4">
                                   <div className="flex items-center gap-2 min-w-0">
                                     <span className="font-extrabold text-neon-cyan text-sm">#{order.orderNumber}</span>
-                                    <span className="text-[10px] text-white/50 truncate font-semibold">
+                                    <span className="text-[10px] text-muted-foreground truncate font-semibold">
                                       {order.customerName || "Walk-in"}
                                     </span>
                                   </div>
@@ -274,11 +274,11 @@ export default function KitchenDisplay() {
                                         ? "bg-neon-yellow shadow-[0_0_6px_rgba(255,234,0,0.8)] animate-pulse" 
                                         : "bg-neon-cyan shadow-[0_0_6px_rgba(0,243,255,0.8)] animate-pulse"
                                     }`} />
-                                    <span className="text-[9px] uppercase tracking-wider font-extrabold text-white/70">
+                                    <span className="text-[9px] uppercase tracking-wider font-extrabold text-muted-foreground/80">
                                       {order.status === "in_progress" ? "Prep" : "Paid"}
                                     </span>
                                     {uniqueStations.length > 0 && (
-                                      <span className="text-[8px] text-white/40 uppercase font-black tracking-widest border border-white/10 px-1.5 py-0.5 rounded bg-white/5 max-w-[100px] truncate">
+                                      <span className="text-[8px] text-muted-foreground uppercase font-black tracking-widest border border-border px-1.5 py-0.5 rounded bg-muted/40 max-w-[100px] truncate">
                                         {uniqueStations.join(", ")}
                                       </span>
                                     )}
@@ -310,8 +310,8 @@ export default function KitchenDisplay() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 items-start auto-rows-max pb-10">
             {filteredOrders.map(order => (
-              <Card key={order.id} className="glass-card border-white/10 ring-1 ring-white/5 rounded-xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-500">
-                <CardHeader className="p-4 pb-2 border-b border-white/5 space-y-3">
+              <Card key={order.id} className="bg-card/60 backdrop-blur-md border border-border/50 ring-1 ring-border/20 rounded-xl overflow-hidden shadow-lg animate-in zoom-in-95 duration-500">
+                <CardHeader className="p-4 pb-2 border-b border-border/40 space-y-3">
                   <div className="flex justify-between items-start">
                     <div>
                       <div className="flex items-center gap-2">
@@ -330,7 +330,7 @@ export default function KitchenDisplay() {
                        <Badge variant="outline" className={`text-[10px] font-black px-2 py-0.5 rounded-lg uppercase tracking-widest border-0 ${getStatusColor(order.status)}`}>
                         {order.status.replace("_", " ")}
                       </Badge>
-                      <div className="text-[9px] font-black text-white/30 flex items-center gap-1 uppercase tracking-widest">
+                      <div className="text-[9px] font-black text-muted-foreground/50 flex items-center gap-1 uppercase tracking-widest">
                         <Timer className="h-3 w-3" />
                         {formatDistanceToNow(new Date(order.createdAt))}
                       </div>
@@ -339,7 +339,7 @@ export default function KitchenDisplay() {
                 </CardHeader>
 
                 <CardContent className="p-0">
-                  <div className="divide-y divide-white/5">
+                  <div className="divide-y divide-border/40">
                     {order.items.map((item: any) => {
                       const isMatched = stationMatches(item, activeStation);
                       const isThisStation = activeStation === "all" || isMatched;
@@ -350,19 +350,19 @@ export default function KitchenDisplay() {
                           className={`p-1 transition-all relative ${
                             isThisStation && item.status === "pending"
                               ? "bg-transparent"
-                              : "bg-black/40 opacity-40 grayscale"
+                              : "bg-muted/40 opacity-40 grayscale"
                           }`}
                         >
                           <div className="flex items-start gap-1.5">
                             <div className={`font-bold w-7 h-7 rounded-lg flex items-center justify-center text-xs shrink-0 shadow-lg ${
                               isThisStation && item.status === "pending"
                                 ? "bg-neon-cyan/20 text-neon-cyan ring-1 ring-neon-cyan/40"
-                                : "bg-white/5 text-white/20 ring-1 ring-white/10"
+                                : "bg-muted text-muted-foreground/30 ring-1 ring-border/50"
                             }`}>
                               {item.quantity}x
                             </div>
                             <div className="flex-1 space-y-1">
-                              <div className={`font-bold text-lg leading-tight tracking-tight flex items-center gap-2 ${(!isThisStation || item.status === "ready") && "text-white/40"}`}>
+                              <div className={`font-bold text-lg leading-tight tracking-tight flex items-center gap-2 ${(!isThisStation || item.status === "ready") && "text-muted-foreground/40"}`}>
                                 {item.drinkName}
                                 {item.status === "ready" && <CheckCircle2 className="h-4 w-4 text-neon-green" />}
                               </div>
@@ -378,7 +378,7 @@ export default function KitchenDisplay() {
                                           return (
                                             <li key={cust.id} className="text-[11px] flex items-center gap-1">
                                               <div className="w-1 h-1 rounded-full bg-neon-cyan shrink-0" />
-                                              <span className="font-bold text-white/40 uppercase tracking-widest">{cust.slotLabel}:</span>
+                                              <span className="font-bold text-muted-foreground uppercase tracking-widest">{cust.slotLabel}:</span>
                                               <span className="font-medium text-foreground">{cust.optionLabel}</span>
                                               {displayQty > 0 && (
                                                 <span className="text-[10px] text-primary font-black ml-1">({Math.round(displayQty)}ml)</span>
@@ -421,7 +421,7 @@ export default function KitchenDisplay() {
                   </div>
                 </CardContent>
 
-                <CardFooter className="px-4 py-2 border-t border-white/5 bg-white/[0.02] flex items-center justify-between">
+                <CardFooter className="px-4 py-2 border-t border-border/40 bg-muted/20 flex items-center justify-between">
                    <div className="flex gap-1 items-center">
                       <Coffee className="h-3 w-3 text-muted-foreground" />
                       <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-[0.2em]">{stationLabel(activeStation)}</span>

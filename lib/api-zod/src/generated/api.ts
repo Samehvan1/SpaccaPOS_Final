@@ -1491,6 +1491,16 @@ export const ListOffersResponseItem = zod.object({
   buyAmount: zod.number(),
   freeAmount: zod.number(),
   isActive: zod.boolean(),
+  branchIds: zod
+    .array(zod.number())
+    .describe("Specific branches this offer applies to. Empty = all branches."),
+  partnerIds: zod
+    .array(zod.number())
+    .describe(
+      "Specific partners this offer applies to. Empty = all partners (when applyToAllPartners=true).",
+    ),
+  applyToStore: zod.boolean(),
+  applyToAllPartners: zod.boolean(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
@@ -1504,11 +1514,28 @@ export const CreateOfferBody = zod.object({
   buyAmount: zod.number(),
   freeAmount: zod.number(),
   isActive: zod.boolean().optional(),
+  branchIds: zod
+    .array(zod.number())
+    .optional()
+    .describe("Specific branch IDs. Empty array = all branches."),
+  partnerIds: zod
+    .array(zod.number())
+    .optional()
+    .describe(
+      "Specific partner IDs. Empty array = all partners (when applyToAllPartners=true).",
+    ),
+  applyToStore: zod.boolean().optional(),
+  applyToAllPartners: zod.boolean().optional(),
 });
 
 /**
  * @summary Get the currently active offer
  */
+export const GetActiveOfferQueryParams = zod.object({
+  branchId: zod.coerce.number().optional().describe("Branch ID to filter by"),
+  partnerId: zod.coerce.number().optional().describe("Partner ID to filter by"),
+});
+
 export const GetActiveOfferResponse = zod
   .object({
     id: zod.number(),
@@ -1516,6 +1543,18 @@ export const GetActiveOfferResponse = zod
     buyAmount: zod.number(),
     freeAmount: zod.number(),
     isActive: zod.boolean(),
+    branchIds: zod
+      .array(zod.number())
+      .describe(
+        "Specific branches this offer applies to. Empty = all branches.",
+      ),
+    partnerIds: zod
+      .array(zod.number())
+      .describe(
+        "Specific partners this offer applies to. Empty = all partners (when applyToAllPartners=true).",
+      ),
+    applyToStore: zod.boolean(),
+    applyToAllPartners: zod.boolean(),
     createdAt: zod.string(),
     updatedAt: zod.string(),
   })
@@ -1533,6 +1572,18 @@ export const UpdateOfferBody = zod.object({
   buyAmount: zod.number().optional(),
   freeAmount: zod.number().optional(),
   isActive: zod.boolean().optional(),
+  branchIds: zod
+    .array(zod.number())
+    .optional()
+    .describe("Specific branch IDs. Empty array = all branches."),
+  partnerIds: zod
+    .array(zod.number())
+    .optional()
+    .describe(
+      "Specific partner IDs. Empty array = all partners (when applyToAllPartners=true).",
+    ),
+  applyToStore: zod.boolean().optional(),
+  applyToAllPartners: zod.boolean().optional(),
 });
 
 export const UpdateOfferResponse = zod.object({
@@ -1541,6 +1592,16 @@ export const UpdateOfferResponse = zod.object({
   buyAmount: zod.number(),
   freeAmount: zod.number(),
   isActive: zod.boolean(),
+  branchIds: zod
+    .array(zod.number())
+    .describe("Specific branches this offer applies to. Empty = all branches."),
+  partnerIds: zod
+    .array(zod.number())
+    .describe(
+      "Specific partners this offer applies to. Empty = all partners (when applyToAllPartners=true).",
+    ),
+  applyToStore: zod.boolean(),
+  applyToAllPartners: zod.boolean(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });

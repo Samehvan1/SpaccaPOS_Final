@@ -464,7 +464,6 @@ export const OrderPaymentMethod = {
   hospitality: "hospitality",
   split: "split",
   refund: "refund",
-  points: "points",
 } as const;
 
 export interface Order {
@@ -525,7 +524,6 @@ export const CreateOrderBodyPaymentMethod = {
   hospitality: "hospitality",
   split: "split",
   refund: "refund",
-  points: "points",
 } as const;
 
 export type CreateOrderBodyItemsItemSelectionsItem = {
@@ -581,7 +579,6 @@ export const UpdateOrderStatusBodyPaymentMethod = {
   hospitality: "hospitality",
   split: "split",
   refund: "refund",
-  points: "points",
 } as const;
 
 export interface UpdateOrderStatusBody {
@@ -789,6 +786,12 @@ export interface Offer {
   buyAmount: number;
   freeAmount: number;
   isActive: boolean;
+  /** Specific branches this offer applies to. Empty = all branches. */
+  branchIds: number[];
+  /** Specific partners this offer applies to. Empty = all partners (when applyToAllPartners=true). */
+  partnerIds: number[];
+  applyToStore: boolean;
+  applyToAllPartners: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -798,6 +801,12 @@ export interface CreateOfferBody {
   buyAmount: number;
   freeAmount: number;
   isActive?: boolean;
+  /** Specific branch IDs. Empty array = all branches. */
+  branchIds?: number[];
+  /** Specific partner IDs. Empty array = all partners (when applyToAllPartners=true). */
+  partnerIds?: number[];
+  applyToStore?: boolean;
+  applyToAllPartners?: boolean;
 }
 
 export interface UpdateOfferBody {
@@ -805,6 +814,12 @@ export interface UpdateOfferBody {
   buyAmount?: number;
   freeAmount?: number;
   isActive?: boolean;
+  /** Specific branch IDs. Empty array = all branches. */
+  branchIds?: number[];
+  /** Specific partner IDs. Empty array = all partners (when applyToAllPartners=true). */
+  partnerIds?: number[];
+  applyToStore?: boolean;
+  applyToAllPartners?: boolean;
 }
 
 export type ListDrinksParams = {
@@ -976,4 +991,15 @@ export type UpdateDiscountParams = {
 
 export type DeleteDiscountParams = {
   branchId?: number;
+};
+
+export type GetActiveOfferParams = {
+  /**
+   * Branch ID to filter by
+   */
+  branchId?: number;
+  /**
+   * Partner ID to filter by
+   */
+  partnerId?: number;
 };

@@ -184,7 +184,7 @@ adminRouter.post("/admin/backup", requirePermission("settings:manage"), async (r
 // Branches route moved to index.ts for better visibility
 
 // GET /admin/partners
-adminRouter.get("/admin/partners", requirePermission("branches:manage"), async (req, res) => {
+adminRouter.get("/admin/partners", requirePermission("partners:view"), async (req, res) => {
   try {
     const list = await db.select().from(partnersTable).orderBy(desc(partnersTable.createdAt));
     res.json(list);
@@ -194,7 +194,7 @@ adminRouter.get("/admin/partners", requirePermission("branches:manage"), async (
 });
 
 // POST /admin/partners
-adminRouter.post("/admin/partners", requirePermission("branches:manage"), async (req, res): Promise<void> => {
+adminRouter.post("/admin/partners", requirePermission("partners:manage"), async (req, res): Promise<void> => {
   try {
     const { name, code, commissionType, commissionValue, isActive } = req.body;
     if (!name || !code) {
@@ -218,7 +218,7 @@ adminRouter.post("/admin/partners", requirePermission("branches:manage"), async 
 });
 
 // PATCH /admin/partners/:id
-adminRouter.patch("/admin/partners/:id", requirePermission("branches:manage"), async (req, res): Promise<void> => {
+adminRouter.patch("/admin/partners/:id", requirePermission("partners:manage"), async (req, res): Promise<void> => {
   try {
     const id = parseInt(req.params.id as string);
     if (isNaN(id)) {
@@ -249,7 +249,7 @@ adminRouter.patch("/admin/partners/:id", requirePermission("branches:manage"), a
 });
 
 // DELETE /admin/partners/:id
-adminRouter.delete("/admin/partners/:id", requirePermission("branches:manage"), async (req, res): Promise<void> => {
+adminRouter.delete("/admin/partners/:id", requirePermission("partners:manage"), async (req, res): Promise<void> => {
   try {
     const id = parseInt(req.params.id as string);
     if (isNaN(id)) {

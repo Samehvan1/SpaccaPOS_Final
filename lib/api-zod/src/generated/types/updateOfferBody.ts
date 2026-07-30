@@ -11,4 +11,10 @@ export interface UpdateOfferBody {
   buyAmount?: number;
   freeAmount?: number;
   isActive?: boolean;
+  /** Specific branch IDs. Empty array = all branches. */
+  branchIds?: number[];
+  /** Specific partner IDs. Empty array = all partners (when applyToAllPartners=true). */
+  partnerIds?: number[];
+  applyToStore?: boolean;
+  applyToAllPartners?: boolean;
 }

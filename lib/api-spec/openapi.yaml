@@ -1152,6 +1152,19 @@ paths:
       operationId: getActiveOffer
       tags: [offers]
       summary: Get the currently active offer
+      parameters:
+        - in: query
+          name: branchId
+          schema:
+            type: integer
+          required: false
+          description: Branch ID to filter by
+        - in: query
+          name: partnerId
+          schema:
+            type: integer
+          required: false
+          description: Partner ID to filter by
       responses:
         "200":
           description: Active offer details
@@ -2444,6 +2457,20 @@ components:
           type: integer
         isActive:
           type: boolean
+        branchIds:
+          type: array
+          items:
+            type: integer
+          description: Specific branches this offer applies to. Empty = all branches.
+        partnerIds:
+          type: array
+          items:
+            type: integer
+          description: Specific partners this offer applies to. Empty = all partners (when applyToAllPartners=true).
+        applyToStore:
+          type: boolean
+        applyToAllPartners:
+          type: boolean
         createdAt:
           type: string
         updatedAt:
@@ -2454,6 +2481,10 @@ components:
         - buyAmount
         - freeAmount
         - isActive
+        - branchIds
+        - partnerIds
+        - applyToStore
+        - applyToAllPartners
         - createdAt
         - updatedAt
 
@@ -2467,6 +2498,20 @@ components:
         freeAmount:
           type: integer
         isActive:
+          type: boolean
+        branchIds:
+          type: array
+          items:
+            type: integer
+          description: Specific branch IDs. Empty array = all branches.
+        partnerIds:
+          type: array
+          items:
+            type: integer
+          description: Specific partner IDs. Empty array = all partners (when applyToAllPartners=true).
+        applyToStore:
+          type: boolean
+        applyToAllPartners:
           type: boolean
       required:
         - name
@@ -2483,5 +2528,19 @@ components:
         freeAmount:
           type: integer
         isActive:
+          type: boolean
+        branchIds:
+          type: array
+          items:
+            type: integer
+          description: Specific branch IDs. Empty array = all branches.
+        partnerIds:
+          type: array
+          items:
+            type: integer
+          description: Specific partner IDs. Empty array = all partners (when applyToAllPartners=true).
+        applyToStore:
+          type: boolean
+        applyToAllPartners:
           type: boolean
 

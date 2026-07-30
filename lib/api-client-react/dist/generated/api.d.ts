@@ -1,5 +1,5 @@
 import type { QueryKey, UseMutationOptions, UseMutationResult, UseQueryOptions, UseQueryResult } from "@tanstack/react-query";
-import type { ActivityLog, Branch, CalculateDrinkPriceParams, CategorySales, CreateBranchBody, CreateDiscountBody, CreateDrinkBody, CreateIngredientBody, CreateIngredientOptionBody, CreateIngredientOptionParams, CreateOfferBody, CreateOrderBody, CreateUserBody, DashboardSummary, DeleteDiscountParams, DeleteDrinkParams, DeleteIngredientOptionParams, DeleteIngredientParams, DeleteUserParams, Discount, Drink, DrinkDetail, GetActiveOrdersParams, GetCustomerPoints200, GetDashboardSummaryParams, GetDrinkParams, GetIngredientParams, GetLowStockIngredientsParams, GetOrderParams, GetSalesByCategoryParams, GetSettingsParams, GetTopDrinksParams, HealthStatus, Ingredient, IngredientDetail, IngredientOption, ListActivityLogsParams, ListDrinksParams, ListIngredientsParams, ListOrdersParams, ListStockMovementsParams, LoginBody, LoginResponse, MarkOrderItemReadyParams, Offer, Order, OrderDetail, Permission, PriceBreakdown, PriceCalculationBody, RestockBody, RestockIngredientParams, SaveOrderSignatureBody, Setting, StockAdjustmentBody, StockMovement, TopDrink, UpdateBranchBody, UpdateDiscountBody, UpdateDiscountParams, UpdateDrinkBody, UpdateDrinkParams, UpdateIngredientBody, UpdateIngredientOptionBody, UpdateIngredientOptionParams, UpdateIngredientParams, UpdateOfferBody, UpdateOrderStatusBody, UpdateOrderStatusParams, UpdateSettingsBody, UpdateUserBody, UpdateUserParams, User, UserDetail } from "./api.schemas";
+import type { ActivityLog, Branch, CalculateDrinkPriceParams, CategorySales, CreateBranchBody, CreateDiscountBody, CreateDrinkBody, CreateIngredientBody, CreateIngredientOptionBody, CreateIngredientOptionParams, CreateOfferBody, CreateOrderBody, CreateUserBody, DashboardSummary, DeleteDiscountParams, DeleteDrinkParams, DeleteIngredientOptionParams, DeleteIngredientParams, DeleteUserParams, Discount, Drink, DrinkDetail, GetActiveOfferParams, GetActiveOrdersParams, GetCustomerPoints200, GetDashboardSummaryParams, GetDrinkParams, GetIngredientParams, GetLowStockIngredientsParams, GetOrderParams, GetSalesByCategoryParams, GetSettingsParams, GetTopDrinksParams, HealthStatus, Ingredient, IngredientDetail, IngredientOption, ListActivityLogsParams, ListDrinksParams, ListIngredientsParams, ListOrdersParams, ListStockMovementsParams, LoginBody, LoginResponse, MarkOrderItemReadyParams, Offer, Order, OrderDetail, Permission, PriceBreakdown, PriceCalculationBody, RestockBody, RestockIngredientParams, SaveOrderSignatureBody, Setting, StockAdjustmentBody, StockMovement, TopDrink, UpdateBranchBody, UpdateDiscountBody, UpdateDiscountParams, UpdateDrinkBody, UpdateDrinkParams, UpdateIngredientBody, UpdateIngredientOptionBody, UpdateIngredientOptionParams, UpdateIngredientParams, UpdateOfferBody, UpdateOrderStatusBody, UpdateOrderStatusParams, UpdateSettingsBody, UpdateUserBody, UpdateUserParams, User, UserDetail } from "./api.schemas";
 import { customFetch } from "../custom-fetch";
 import type { ErrorType, BodyType } from "../custom-fetch";
 type AwaitedInput<T> = PromiseLike<T> | T;
@@ -1304,10 +1304,10 @@ export declare const useCreateOffer: <TError = ErrorType<unknown>, TContext = un
 /**
  * @summary Get the currently active offer
  */
-export declare const getGetActiveOfferUrl: () => string;
-export declare const getActiveOffer: (options?: RequestInit) => Promise<Offer | null>;
-export declare const getGetActiveOfferQueryKey: () => readonly ["/api/offers/active"];
-export declare const getGetActiveOfferQueryOptions: <TData = Awaited<ReturnType<typeof getActiveOffer>>, TError = ErrorType<unknown>>(options?: {
+export declare const getGetActiveOfferUrl: (params?: GetActiveOfferParams) => string;
+export declare const getActiveOffer: (params?: GetActiveOfferParams, options?: RequestInit) => Promise<Offer | null>;
+export declare const getGetActiveOfferQueryKey: (params?: GetActiveOfferParams) => readonly ["/api/offers/active", ...GetActiveOfferParams[]];
+export declare const getGetActiveOfferQueryOptions: <TData = Awaited<ReturnType<typeof getActiveOffer>>, TError = ErrorType<unknown>>(params?: GetActiveOfferParams, options?: {
     query?: UseQueryOptions<Awaited<ReturnType<typeof getActiveOffer>>, TError, TData>;
     request?: SecondParameter<typeof customFetch>;
 }) => UseQueryOptions<Awaited<ReturnType<typeof getActiveOffer>>, TError, TData> & {
@@ -1318,7 +1318,7 @@ export type GetActiveOfferQueryError = ErrorType<unknown>;
 /**
  * @summary Get the currently active offer
  */
-export declare function useGetActiveOffer<TData = Awaited<ReturnType<typeof getActiveOffer>>, TError = ErrorType<unknown>>(options?: {
+export declare function useGetActiveOffer<TData = Awaited<ReturnType<typeof getActiveOffer>>, TError = ErrorType<unknown>>(params?: GetActiveOfferParams, options?: {
     query?: UseQueryOptions<Awaited<ReturnType<typeof getActiveOffer>>, TError, TData>;
     request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & {

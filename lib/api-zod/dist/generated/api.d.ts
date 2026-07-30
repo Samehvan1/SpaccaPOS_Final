@@ -4065,6 +4065,10 @@ export declare const ListOffersResponseItem: zod.ZodObject<{
     buyAmount: zod.ZodNumber;
     freeAmount: zod.ZodNumber;
     isActive: zod.ZodBoolean;
+    branchIds: zod.ZodArray<zod.ZodNumber, "many">;
+    partnerIds: zod.ZodArray<zod.ZodNumber, "many">;
+    applyToStore: zod.ZodBoolean;
+    applyToAllPartners: zod.ZodBoolean;
     createdAt: zod.ZodString;
     updatedAt: zod.ZodString;
 }, "strip", zod.ZodTypeAny, {
@@ -4075,6 +4079,10 @@ export declare const ListOffersResponseItem: zod.ZodObject<{
     updatedAt: string;
     buyAmount: number;
     freeAmount: number;
+    branchIds: number[];
+    partnerIds: number[];
+    applyToStore: boolean;
+    applyToAllPartners: boolean;
 }, {
     id: number;
     name: string;
@@ -4083,6 +4091,10 @@ export declare const ListOffersResponseItem: zod.ZodObject<{
     updatedAt: string;
     buyAmount: number;
     freeAmount: number;
+    branchIds: number[];
+    partnerIds: number[];
+    applyToStore: boolean;
+    applyToAllPartners: boolean;
 }>;
 export declare const ListOffersResponse: zod.ZodArray<zod.ZodObject<{
     id: zod.ZodNumber;
@@ -4090,6 +4102,10 @@ export declare const ListOffersResponse: zod.ZodArray<zod.ZodObject<{
     buyAmount: zod.ZodNumber;
     freeAmount: zod.ZodNumber;
     isActive: zod.ZodBoolean;
+    branchIds: zod.ZodArray<zod.ZodNumber, "many">;
+    partnerIds: zod.ZodArray<zod.ZodNumber, "many">;
+    applyToStore: zod.ZodBoolean;
+    applyToAllPartners: zod.ZodBoolean;
     createdAt: zod.ZodString;
     updatedAt: zod.ZodString;
 }, "strip", zod.ZodTypeAny, {
@@ -4100,6 +4116,10 @@ export declare const ListOffersResponse: zod.ZodArray<zod.ZodObject<{
     updatedAt: string;
     buyAmount: number;
     freeAmount: number;
+    branchIds: number[];
+    partnerIds: number[];
+    applyToStore: boolean;
+    applyToAllPartners: boolean;
 }, {
     id: number;
     name: string;
@@ -4108,6 +4128,10 @@ export declare const ListOffersResponse: zod.ZodArray<zod.ZodObject<{
     updatedAt: string;
     buyAmount: number;
     freeAmount: number;
+    branchIds: number[];
+    partnerIds: number[];
+    applyToStore: boolean;
+    applyToAllPartners: boolean;
 }>, "many">;
 /**
  * @summary Create a new offer
@@ -4117,26 +4141,52 @@ export declare const CreateOfferBody: zod.ZodObject<{
     buyAmount: zod.ZodNumber;
     freeAmount: zod.ZodNumber;
     isActive: zod.ZodOptional<zod.ZodBoolean>;
+    branchIds: zod.ZodOptional<zod.ZodArray<zod.ZodNumber, "many">>;
+    partnerIds: zod.ZodOptional<zod.ZodArray<zod.ZodNumber, "many">>;
+    applyToStore: zod.ZodOptional<zod.ZodBoolean>;
+    applyToAllPartners: zod.ZodOptional<zod.ZodBoolean>;
 }, "strip", zod.ZodTypeAny, {
     name: string;
     buyAmount: number;
     freeAmount: number;
     isActive?: boolean | undefined;
+    branchIds?: number[] | undefined;
+    partnerIds?: number[] | undefined;
+    applyToStore?: boolean | undefined;
+    applyToAllPartners?: boolean | undefined;
 }, {
     name: string;
     buyAmount: number;
     freeAmount: number;
     isActive?: boolean | undefined;
+    branchIds?: number[] | undefined;
+    partnerIds?: number[] | undefined;
+    applyToStore?: boolean | undefined;
+    applyToAllPartners?: boolean | undefined;
 }>;
 /**
  * @summary Get the currently active offer
  */
+export declare const GetActiveOfferQueryParams: zod.ZodObject<{
+    branchId: zod.ZodOptional<zod.ZodNumber>;
+    partnerId: zod.ZodOptional<zod.ZodNumber>;
+}, "strip", zod.ZodTypeAny, {
+    branchId?: number | undefined;
+    partnerId?: number | undefined;
+}, {
+    branchId?: number | undefined;
+    partnerId?: number | undefined;
+}>;
 export declare const GetActiveOfferResponse: zod.ZodNullable<zod.ZodObject<{
     id: zod.ZodNumber;
     name: zod.ZodString;
     buyAmount: zod.ZodNumber;
     freeAmount: zod.ZodNumber;
     isActive: zod.ZodBoolean;
+    branchIds: zod.ZodArray<zod.ZodNumber, "many">;
+    partnerIds: zod.ZodArray<zod.ZodNumber, "many">;
+    applyToStore: zod.ZodBoolean;
+    applyToAllPartners: zod.ZodBoolean;
     createdAt: zod.ZodString;
     updatedAt: zod.ZodString;
 }, "strip", zod.ZodTypeAny, {
@@ -4147,6 +4197,10 @@ export declare const GetActiveOfferResponse: zod.ZodNullable<zod.ZodObject<{
     updatedAt: string;
     buyAmount: number;
     freeAmount: number;
+    branchIds: number[];
+    partnerIds: number[];
+    applyToStore: boolean;
+    applyToAllPartners: boolean;
 }, {
     id: number;
     name: string;
@@ -4155,6 +4209,10 @@ export declare const GetActiveOfferResponse: zod.ZodNullable<zod.ZodObject<{
     updatedAt: string;
     buyAmount: number;
     freeAmount: number;
+    branchIds: number[];
+    partnerIds: number[];
+    applyToStore: boolean;
+    applyToAllPartners: boolean;
 }>>;
 /**
  * @summary Update an offer
@@ -4171,16 +4229,28 @@ export declare const UpdateOfferBody: zod.ZodObject<{
     buyAmount: zod.ZodOptional<zod.ZodNumber>;
     freeAmount: zod.ZodOptional<zod.ZodNumber>;
     isActive: zod.ZodOptional<zod.ZodBoolean>;
+    branchIds: zod.ZodOptional<zod.ZodArray<zod.ZodNumber, "many">>;
+    partnerIds: zod.ZodOptional<zod.ZodArray<zod.ZodNumber, "many">>;
+    applyToStore: zod.ZodOptional<zod.ZodBoolean>;
+    applyToAllPartners: zod.ZodOptional<zod.ZodBoolean>;
 }, "strip", zod.ZodTypeAny, {
     name?: string | undefined;
     isActive?: boolean | undefined;
     buyAmount?: number | undefined;
     freeAmount?: number | undefined;
+    branchIds?: number[] | undefined;
+    partnerIds?: number[] | undefined;
+    applyToStore?: boolean | undefined;
+    applyToAllPartners?: boolean | undefined;
 }, {
     name?: string | undefined;
     isActive?: boolean | undefined;
     buyAmount?: number | undefined;
     freeAmount?: number | undefined;
+    branchIds?: number[] | undefined;
+    partnerIds?: number[] | undefined;
+    applyToStore?: boolean | undefined;
+    applyToAllPartners?: boolean | undefined;
 }>;
 export declare const UpdateOfferResponse: zod.ZodObject<{
     id: zod.ZodNumber;
@@ -4188,6 +4258,10 @@ export declare const UpdateOfferResponse: zod.ZodObject<{
     buyAmount: zod.ZodNumber;
     freeAmount: zod.ZodNumber;
     isActive: zod.ZodBoolean;
+    branchIds: zod.ZodArray<zod.ZodNumber, "many">;
+    partnerIds: zod.ZodArray<zod.ZodNumber, "many">;
+    applyToStore: zod.ZodBoolean;
+    applyToAllPartners: zod.ZodBoolean;
     createdAt: zod.ZodString;
     updatedAt: zod.ZodString;
 }, "strip", zod.ZodTypeAny, {
@@ -4198,6 +4272,10 @@ export declare const UpdateOfferResponse: zod.ZodObject<{
     updatedAt: string;
     buyAmount: number;
     freeAmount: number;
+    branchIds: number[];
+    partnerIds: number[];
+    applyToStore: boolean;
+    applyToAllPartners: boolean;
 }, {
     id: number;
     name: string;
@@ -4206,6 +4284,10 @@ export declare const UpdateOfferResponse: zod.ZodObject<{
     updatedAt: string;
     buyAmount: number;
     freeAmount: number;
+    branchIds: number[];
+    partnerIds: number[];
+    applyToStore: boolean;
+    applyToAllPartners: boolean;
 }>;
 /**
  * @summary Delete an offer

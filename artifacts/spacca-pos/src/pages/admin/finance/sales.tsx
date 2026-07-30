@@ -142,10 +142,11 @@ export default function SalesAnalysisPage() {
   }, [reportStartDate, reportEndDate, reportPage, isDailyGrouped, selectedBranch, activeTab]);
 
   const filteredCatalogDrinks = useMemo(() => {
-    if (selectedCategory === "all") return catalogDrinks;
+    const activeDrinks = catalogDrinks.filter(d => d.isActive !== false);
+    if (selectedCategory === "all") return activeDrinks;
     const catObj = categories.find(c => String(c.id) === selectedCategory || c.name === selectedCategory);
-    if (!catObj) return catalogDrinks;
-    return catalogDrinks.filter(d => d.category === catObj.name || String(d.categoryId) === selectedCategory);
+    if (!catObj) return activeDrinks;
+    return activeDrinks.filter(d => d.category === catObj.name || String(d.categoryId) === selectedCategory);
   }, [catalogDrinks, selectedCategory, categories]);
 
   const totals = useMemo(() => {

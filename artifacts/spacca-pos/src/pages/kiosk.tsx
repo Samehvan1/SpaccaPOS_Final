@@ -216,7 +216,9 @@ export default function KioskPage() {
     return drinks.filter(d => (d as any).categoryId === selectedCategoryId);
   }, [drinks, selectedCategoryId]);
 
-  const { data: activeOffer } = useGetActiveOffer();
+  const { data: activeOffer } = useGetActiveOffer({
+    branchId: selectedBranchId || undefined,
+  } as any);
 
   const cartSubtotal = useMemo(() => {
     return cart.reduce((sum, item) => sum + item.totalPrice * item.quantity, 0);

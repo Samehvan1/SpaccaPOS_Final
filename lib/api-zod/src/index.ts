@@ -212,7 +212,14 @@ export const GetOrderResponse = (
     discountCode: z.string().nullish(),
     branchName: z.string().optional(),
     source: z.enum(["pos", "kiosk", "web", "mobile"]).optional(),
-    paymentMethod: z.enum(["cash", "card", "wallet", "hospitality", "split", "points"]),
+    paymentMethod: z.enum([
+      "cash",
+      "card",
+      "wallet",
+      "hospitality",
+      "split",
+      "points",
+    ]),
     payments: z
       .array(
         z.object({
@@ -426,5 +433,3 @@ export type CreateOfferBody = Infer<typeof api.CreateOfferBody>;
 
 export const UpdateOfferBody = api.UpdateOfferBody;
 export type UpdateOfferBody = Infer<typeof api.UpdateOfferBody>;
-
-

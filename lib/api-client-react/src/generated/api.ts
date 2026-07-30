@@ -39,6 +39,7 @@ import type {
   Discount,
   Drink,
   DrinkDetail,
+  GetActiveOfferParams,
   GetActiveOrdersParams,
   GetCustomerPoints200,
   GetDashboardSummaryParams,
@@ -4673,41 +4674,57 @@ export const useCreateOffer = <
 /**
  * @summary Get the currently active offer
  */
-export const getGetActiveOfferUrl = () => {
-  return `/api/offers/active`;
+export const getGetActiveOfferUrl = (params?: GetActiveOfferParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/offers/active?${stringifiedParams}`
+    : `/api/offers/active`;
 };
 
 export const getActiveOffer = async (
+  params?: GetActiveOfferParams,
   options?: RequestInit,
 ): Promise<Offer | null> => {
-  return customFetch<Offer | null>(getGetActiveOfferUrl(), {
+  return customFetch<Offer | null>(getGetActiveOfferUrl(params), {
     ...options,
     method: "GET",
   });
 };
 
-export const getGetActiveOfferQueryKey = () => {
-  return [`/api/offers/active`] as const;
+export const getGetActiveOfferQueryKey = (params?: GetActiveOfferParams) => {
+  return [`/api/offers/active`, ...(params ? [params] : [])] as const;
 };
 
 export const getGetActiveOfferQueryOptions = <
   TData = Awaited<ReturnType<typeof getActiveOffer>>,
   TError = ErrorType<unknown>,
->(options?: {
-  query?: UseQueryOptions<
-    Awaited<ReturnType<typeof getActiveOffer>>,
-    TError,
-    TData
-  >;
-  request?: SecondParameter<typeof customFetch>;
-}) => {
+>(
+  params?: GetActiveOfferParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getActiveOffer>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey = queryOptions?.queryKey ?? getGetActiveOfferQueryKey();
+  const queryKey = queryOptions?.queryKey ?? getGetActiveOfferQueryKey(params);
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof getActiveOffer>>> = ({
     signal,
-  }) => getActiveOffer({ signal, ...requestOptions });
+  }) => getActiveOffer(params, { signal, ...requestOptions });
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof getActiveOffer>>,
@@ -4728,15 +4745,18 @@ export type GetActiveOfferQueryError = ErrorType<unknown>;
 export function useGetActiveOffer<
   TData = Awaited<ReturnType<typeof getActiveOffer>>,
   TError = ErrorType<unknown>,
->(options?: {
-  query?: UseQueryOptions<
-    Awaited<ReturnType<typeof getActiveOffer>>,
-    TError,
-    TData
-  >;
-  request?: SecondParameter<typeof customFetch>;
-}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-  const queryOptions = getGetActiveOfferQueryOptions(options);
+>(
+  params?: GetActiveOfferParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getActiveOffer>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetActiveOfferQueryOptions(params, options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;
