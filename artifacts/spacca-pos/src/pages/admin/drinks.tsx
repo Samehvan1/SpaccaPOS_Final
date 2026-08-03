@@ -364,11 +364,113 @@ export default function DrinksAdmin() {
     toast({ title: "Drinks Exported", description: `Exported ${listToExport.length} drinks as ${filename}` });
   };
 
-  const handleExportRecipesCSV = () => {
-    const listToExport = filteredDrinks || [];
+  const extractSlotItems = (slot: any) => {
+    const items: Array<{
+      optionName: string;
+      volumeName: string;
+      processedQty: number | string;
+      unit: string;
+      extraCost: number | string;
+      isDefaultOption: boolean;
+      isDefaultVolume: boolean;
+      isStandardSelection: boolean;
+    }> = [];
+
+    const typeOptions: any[] = slot.typeOptions || [];
+    const ingOptions: any[] = slot.ingredient?.options || slot.options || [];
+
+    if (typeOptions.length > 0) {
+      typeOptions.forEach((to: any) => {
+        const optName = to.typeName || to.categoryName || to.name || "Option";
+        const vols: any[] = to.volumes || [];
+        const isOptDefault = !!to.isDefault;
+
+        if (vols.length > 0) {
+          vols.forEach((v: any) => {
+            const isVolDefault = !!v.isDefault;
+            items.push({
+              optionName: optName,
+              volumeName: v.volumeName || "Standard",
+              processedQty: v.processedQty ?? to.processedQty ?? 0,
+              unit: v.unit || to.unit || "ml",
+              extraCost: v.extraCost ?? to.extraCost ?? 0,
+              isDefaultOption: isOptDefault,
+              isDefaultVolume: isVolDefault,
+              isStandardSelection: isOptDefault && isVolDefault,
+            });
+          });
+        } else {
+          items.push({
+            optionName: optName,
+            volumeName: "Standard",
+            processedQty: to.processedQty ?? 0,
+            unit: to.unit || "ml",
+            extraCost: to.extraCost ?? 0,
+            isDefaultOption: isOptDefault,
+            isDefaultVolume: true,
+            isStandardSelection: isOptDefault,
+          });
+        }
+      });
+    } else if (ingOptions.length > 0) {
+      ingOptions.forEach((opt: any) => {
+        const isOptDefault = !!opt.isDefault;
+        items.push({
+          optionName: opt.name || opt.optionName || opt.ingredientName || "Option",
+          volumeName: "Standard",
+          processedQty: opt.processedQty ?? 0,
+          unit: opt.unit || "ml",
+          extraCost: opt.extraCost ?? 0,
+          isDefaultOption: isOptDefault,
+          isDefaultVolume: true,
+          isStandardSelection: isOptDefault,
+        });
+      });
+    } else if (slot.ingredient) {
+      items.push({
+        optionName: slot.ingredient.name || "Ingredient",
+        volumeName: "Standard",
+        processedQty: slot.processedQty ?? 1,
+        unit: slot.unit || "unit",
+        extraCost: slot.extraCost ?? 0,
+        isDefaultOption: true,
+        isDefaultVolume: true,
+        isStandardSelection: true,
+      });
+    } else if (slot.ingredientName || slot.name) {
+      items.push({
+        optionName: slot.ingredientName || slot.name || "Ingredient",
+        volumeName: "Standard",
+        processedQty: slot.processedQty ?? 0,
+        unit: slot.unit || "ml",
+        extraCost: slot.extraCost ?? 0,
+        isDefaultOption: true,
+        isDefaultVolume: true,
+        isStandardSelection: true,
+      });
+    }
+
+    return items;
+  };
+
+  const handleExportRecipesCSV = async () => {
+    let listToExport: any[] = filteredDrinks || [];
     if (listToExport.length === 0) {
       toast({ variant: "destructive", title: "No drinks to export" });
       return;
+    }
+
+    toast({ title: "Preparing Recipe Export...", description: "Fetching full recipe details." });
+
+    try {
+      const res = await fetch(`${API_BASE}/drinks?includeSlots=true${selectedBranchId ? `&branchId=${selectedBranchId}` : ""}`);
+      if (res.ok) {
+        const fullDrinks = await res.json();
+        const map = new Map(fullDrinks.map((d: any) => [d.id, d]));
+        listToExport = listToExport.map(d => map.get(d.id) || d);
+      }
+    } catch (e) {
+      console.warn("Failed to fetch fresh recipe slots", e);
     }
 
     const now = new Date();
@@ -390,7 +492,9 @@ export default function DrinksAdmin() {
       "Processed Quantity",
       "Unit",
       "Extra Cost (EGP)",
-      "Is Default Option"
+      "Is Default Option",
+      "Is Default Portion",
+      "Is Standard Selection"
     ];
 
     const clean = (val: any) => {
@@ -427,6 +531,8 @@ export default function DrinksAdmin() {
           0,
           clean("-"),
           0,
+          clean("-"),
+          clean("-"),
           clean("-")
         ].join(","));
         return;
@@ -436,68 +542,38 @@ export default function DrinksAdmin() {
         const slotLabel = slot.slotLabel || "Slot";
         const isReq = slot.isRequired ? "Yes" : "No";
 
-        const typeOptions: any[] = slot.typeOptions || [];
-        const legacyOptions: any[] = slot.options || [];
+        const items = extractSlotItems(slot);
 
-        if (typeOptions.length > 0) {
-          typeOptions.forEach(to => {
-            const optName = to.typeName || to.categoryName || "Option";
-            const vols: any[] = to.volumes || [];
-            if (vols.length > 0) {
-              vols.forEach(v => {
-                rows.push([
-                  ...drinkPrefix,
-                  clean(slotLabel),
-                  clean(isReq),
-                  clean(optName),
-                  clean(v.volumeName || "Standard"),
-                  v.processedQty ?? 0,
-                  clean(v.unit || "ml"),
-                  v.extraCost ?? 0,
-                  clean(v.isDefault || to.isDefault ? "Yes" : "No")
-                ].join(","));
-              });
-            } else {
-              rows.push([
-                ...drinkPrefix,
-                clean(slotLabel),
-                clean(isReq),
-                clean(optName),
-                clean("Standard"),
-                to.processedQty ?? 0,
-                clean(to.unit || "ml"),
-                to.extraCost ?? 0,
-                clean(to.isDefault ? "Yes" : "No")
-              ].join(","));
-            }
-          });
-        } else if (legacyOptions.length > 0) {
-          legacyOptions.forEach(opt => {
-            rows.push([
-              ...drinkPrefix,
-              clean(slotLabel),
-              clean(isReq),
-              clean(opt.name || opt.ingredientName || "Ingredient"),
-              clean("Standard"),
-              opt.processedQty ?? 0,
-              clean(opt.unit || "ml"),
-              opt.extraCost ?? 0,
-              clean(opt.isDefault ? "Yes" : "No")
-            ].join(","));
-          });
-        } else {
-          const ingName = slot.ingredientName || slot.name || "Ingredient";
+        if (items.length === 0) {
           rows.push([
             ...drinkPrefix,
             clean(slotLabel),
             clean(isReq),
-            clean(ingName),
-            clean("Standard"),
-            slot.processedQty ?? 0,
-            clean(slot.unit || "ml"),
-            slot.extraCost ?? 0,
-            clean(slot.isDefault ? "Yes" : "No")
+            clean("(No Options)"),
+            clean("-"),
+            0,
+            clean("-"),
+            0,
+            clean("-"),
+            clean("-"),
+            clean("-")
           ].join(","));
+        } else {
+          items.forEach(item => {
+            rows.push([
+              ...drinkPrefix,
+              clean(slotLabel),
+              clean(isReq),
+              clean(item.optionName),
+              clean(item.volumeName),
+              item.processedQty,
+              clean(item.unit),
+              item.extraCost,
+              clean(item.isDefaultOption ? "Yes" : "No"),
+              clean(item.isDefaultVolume ? "Yes" : "No"),
+              clean(item.isStandardSelection ? "Yes" : "No")
+            ].join(","));
+          });
         }
       });
     });
@@ -516,11 +592,24 @@ export default function DrinksAdmin() {
     toast({ title: "Recipe Details Exported", description: `Exported recipes for ${listToExport.length} drinks as ${filename}` });
   };
 
-  const handleExportRecipesJSON = () => {
-    const listToExport = filteredDrinks || [];
+  const handleExportRecipesJSON = async () => {
+    let listToExport: any[] = filteredDrinks || [];
     if (listToExport.length === 0) {
       toast({ variant: "destructive", title: "No drinks to export" });
       return;
+    }
+
+    toast({ title: "Preparing Recipe Export...", description: "Fetching full recipe details." });
+
+    try {
+      const res = await fetch(`${API_BASE}/drinks?includeSlots=true${selectedBranchId ? `&branchId=${selectedBranchId}` : ""}`);
+      if (res.ok) {
+        const fullDrinks = await res.json();
+        const map = new Map(fullDrinks.map((d: any) => [d.id, d]));
+        listToExport = listToExport.map(d => map.get(d.id) || d);
+      }
+    } catch (e) {
+      console.warn("Failed to fetch fresh recipe slots", e);
     }
 
     const now = new Date();
@@ -535,51 +624,11 @@ export default function DrinksAdmin() {
       const standardPrice = (drink as any).defaultPrice ?? drink.basePrice;
 
       const rawSlots: any[] = (drink as any).slots || [];
-      const recipeSlots = rawSlots.map(slot => {
-        const typeOptions: any[] = slot.typeOptions || [];
-        const legacyOptions: any[] = slot.options || [];
-
-        let options: any[] = [];
-        if (typeOptions.length > 0) {
-          options = typeOptions.map(to => ({
-            name: to.typeName || to.categoryName || "Option",
-            categoryName: to.categoryName || null,
-            isDefault: !!to.isDefault,
-            processedQty: to.processedQty ?? 0,
-            unit: to.unit || "ml",
-            extraCost: to.extraCost ?? 0,
-            volumes: (to.volumes || []).map((v: any) => ({
-              volumeName: v.volumeName,
-              processedQty: v.processedQty ?? 0,
-              unit: v.unit || "ml",
-              extraCost: v.extraCost ?? 0,
-              isDefault: !!v.isDefault
-            }))
-          }));
-        } else if (legacyOptions.length > 0) {
-          options = legacyOptions.map(opt => ({
-            name: opt.name || opt.ingredientName || "Ingredient",
-            isDefault: !!opt.isDefault,
-            processedQty: opt.processedQty ?? 0,
-            unit: opt.unit || "ml",
-            extraCost: opt.extraCost ?? 0
-          }));
-        } else {
-          options = [{
-            name: slot.ingredientName || slot.name || "Ingredient",
-            isDefault: true,
-            processedQty: slot.processedQty ?? 0,
-            unit: slot.unit || "ml",
-            extraCost: slot.extraCost ?? 0
-          }];
-        }
-
-        return {
-          slotLabel: slot.slotLabel || "Slot",
-          isRequired: !!slot.isRequired,
-          options
-        };
-      });
+      const recipeSlots = rawSlots.map(slot => ({
+        slotLabel: slot.slotLabel || "Slot",
+        isRequired: !!slot.isRequired,
+        options: extractSlotItems(slot)
+      }));
 
       return {
         id: drink.id,

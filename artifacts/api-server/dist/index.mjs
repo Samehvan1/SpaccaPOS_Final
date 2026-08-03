@@ -82612,7 +82612,7 @@ router3.get("/drinks", async (req, res) => {
         defaultPrice,
         isAvailable: detail ? detail.isAvailable : true,
         unavailableReasons: detail ? detail.unavailableReasons : [],
-        slots: params.success && params.data.includeSlots ? detail?.slots : void 0
+        slots: req.query.includeSlots === "true" || req.query.includeSlots === "1" || params.success && !!params.data.includeSlots ? detail?.slots : void 0
       };
     })
   );
