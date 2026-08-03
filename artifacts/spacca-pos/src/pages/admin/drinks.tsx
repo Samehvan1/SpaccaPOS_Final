@@ -10,7 +10,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { ArrowLeft, Plus, Search, Edit, FlaskConical, Tag, Upload, X, ImageIcon, Trash2 } from "lucide-react";
+import { ArrowLeft, Plus, Search, Edit, FlaskConical, Tag, Upload, X, ImageIcon, Trash2, Download, FileSpreadsheet, FileCode } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
@@ -75,7 +76,7 @@ export default function DrinksAdmin() {
   const { selectedBranchId } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [showInactive, setShowInactive] = useState(false);
-  const { data: drinks, isLoading, refetch } = useListDrinks({ branchId: selectedBranchId } as any);
+  const { data: drinks, isLoading, refetch } = useListDrinks({ branchId: selectedBranchId, includeSlots: true } as any);
   const { data: categories = [] } = useDrinkCategories();
   const { data: stations = [] } = useKitchenStations();
   const { toast } = useToast();
@@ -251,6 +252,361 @@ export default function DrinksAdmin() {
   // Map categoryId → category name for display
   const catMap = new Map(categories.map(c => [c.id, c.name]));
 
+  const handleExportCSV = () => {
+    const listToExport = filteredDrinks || [];
+    if (listToExport.length === 0) {
+      toast({ variant: "destructive", title: "No drinks to export" });
+      return;
+    }
+
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const timestamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
+    const filename = `Drinks_Menu_${timestamp}.csv`;
+
+    const headers = [
+      "ID",
+      "Name",
+      "Description",
+      "Category",
+      "Base Price (EGP)",
+      "Standard Price (EGP)",
+      "Kitchen Station",
+      "Prep Time (s)",
+      "Sort Order",
+      "Status",
+      "Image URL"
+    ];
+
+    const rows = listToExport.map(drink => {
+      const categoryName = (drink as any).categoryId && catMap.has((drink as any).categoryId)
+        ? catMap.get((drink as any).categoryId)
+        : drink.category;
+      const standardPrice = (drink as any).defaultPrice ?? drink.basePrice;
+      const statusStr = drink.isActive ? "Active" : "Inactive";
+      const clean = (val: any) => {
+        if (val === null || val === undefined) return '""';
+        return `"${String(val).replace(/"/g, '""')}"`;
+      };
+
+      return [
+        drink.id,
+        clean(drink.name),
+        clean(drink.description || ""),
+        clean(categoryName),
+        drink.basePrice,
+        standardPrice,
+        clean(drink.kitchenStation || "main-bar"),
+        drink.prepTimeSeconds ?? 120,
+        (drink as any).sortOrder ?? 0,
+        clean(statusStr),
+        clean((drink as any).imageUrl || "")
+      ].join(",");
+    });
+
+    const csvContent = [headers.join(","), ...rows].join("\n");
+    const blob = new Blob(["\ufeff", csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    toast({ title: "Drinks Exported", description: `Exported ${listToExport.length} drinks as ${filename}` });
+  };
+
+  const handleExportJSON = () => {
+    const listToExport = filteredDrinks || [];
+    if (listToExport.length === 0) {
+      toast({ variant: "destructive", title: "No drinks to export" });
+      return;
+    }
+
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const timestamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
+    const filename = `Drinks_Menu_${timestamp}.json`;
+
+    const exportData = listToExport.map(drink => {
+      const categoryName = (drink as any).categoryId && catMap.has((drink as any).categoryId)
+        ? catMap.get((drink as any).categoryId)
+        : drink.category;
+      return {
+        id: drink.id,
+        name: drink.name,
+        description: drink.description || null,
+        category: categoryName,
+        categoryId: (drink as any).categoryId || null,
+        basePrice: drink.basePrice,
+        standardPrice: (drink as any).defaultPrice ?? drink.basePrice,
+        kitchenStation: drink.kitchenStation || "main-bar",
+        prepTimeSeconds: drink.prepTimeSeconds ?? 120,
+        sortOrder: (drink as any).sortOrder ?? 0,
+        isActive: drink.isActive,
+        imageUrl: (drink as any).imageUrl || null
+      };
+    });
+
+    const jsonStr = JSON.stringify(exportData, null, 2);
+    const blob = new Blob([jsonStr], { type: "application/json;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    toast({ title: "Drinks Exported", description: `Exported ${listToExport.length} drinks as ${filename}` });
+  };
+
+  const handleExportRecipesCSV = () => {
+    const listToExport = filteredDrinks || [];
+    if (listToExport.length === 0) {
+      toast({ variant: "destructive", title: "No drinks to export" });
+      return;
+    }
+
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const timestamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
+    const filename = `Drinks_Recipes_${timestamp}.csv`;
+
+    const headers = [
+      "Drink ID",
+      "Drink Name",
+      "Category",
+      "Base Price (EGP)",
+      "Standard Price (EGP)",
+      "Status",
+      "Slot Label",
+      "Required",
+      "Option / Ingredient",
+      "Volume / Portion",
+      "Processed Quantity",
+      "Unit",
+      "Extra Cost (EGP)",
+      "Is Default Option"
+    ];
+
+    const clean = (val: any) => {
+      if (val === null || val === undefined) return '""';
+      return `"${String(val).replace(/"/g, '""')}"`;
+    };
+
+    const rows: string[] = [];
+
+    listToExport.forEach(drink => {
+      const categoryName = (drink as any).categoryId && catMap.has((drink as any).categoryId)
+        ? catMap.get((drink as any).categoryId)
+        : drink.category;
+      const standardPrice = (drink as any).defaultPrice ?? drink.basePrice;
+      const statusStr = drink.isActive ? "Active" : "Inactive";
+      const drinkPrefix = [
+        drink.id,
+        clean(drink.name),
+        clean(categoryName),
+        drink.basePrice,
+        standardPrice,
+        clean(statusStr),
+      ];
+
+      const slots: any[] = (drink as any).slots || [];
+
+      if (slots.length === 0) {
+        rows.push([
+          ...drinkPrefix,
+          clean("(No Recipe Slots)"),
+          clean("-"),
+          clean("-"),
+          clean("-"),
+          0,
+          clean("-"),
+          0,
+          clean("-")
+        ].join(","));
+        return;
+      }
+
+      slots.forEach(slot => {
+        const slotLabel = slot.slotLabel || "Slot";
+        const isReq = slot.isRequired ? "Yes" : "No";
+
+        const typeOptions: any[] = slot.typeOptions || [];
+        const legacyOptions: any[] = slot.options || [];
+
+        if (typeOptions.length > 0) {
+          typeOptions.forEach(to => {
+            const optName = to.typeName || to.categoryName || "Option";
+            const vols: any[] = to.volumes || [];
+            if (vols.length > 0) {
+              vols.forEach(v => {
+                rows.push([
+                  ...drinkPrefix,
+                  clean(slotLabel),
+                  clean(isReq),
+                  clean(optName),
+                  clean(v.volumeName || "Standard"),
+                  v.processedQty ?? 0,
+                  clean(v.unit || "ml"),
+                  v.extraCost ?? 0,
+                  clean(v.isDefault || to.isDefault ? "Yes" : "No")
+                ].join(","));
+              });
+            } else {
+              rows.push([
+                ...drinkPrefix,
+                clean(slotLabel),
+                clean(isReq),
+                clean(optName),
+                clean("Standard"),
+                to.processedQty ?? 0,
+                clean(to.unit || "ml"),
+                to.extraCost ?? 0,
+                clean(to.isDefault ? "Yes" : "No")
+              ].join(","));
+            }
+          });
+        } else if (legacyOptions.length > 0) {
+          legacyOptions.forEach(opt => {
+            rows.push([
+              ...drinkPrefix,
+              clean(slotLabel),
+              clean(isReq),
+              clean(opt.name || opt.ingredientName || "Ingredient"),
+              clean("Standard"),
+              opt.processedQty ?? 0,
+              clean(opt.unit || "ml"),
+              opt.extraCost ?? 0,
+              clean(opt.isDefault ? "Yes" : "No")
+            ].join(","));
+          });
+        } else {
+          const ingName = slot.ingredientName || slot.name || "Ingredient";
+          rows.push([
+            ...drinkPrefix,
+            clean(slotLabel),
+            clean(isReq),
+            clean(ingName),
+            clean("Standard"),
+            slot.processedQty ?? 0,
+            clean(slot.unit || "ml"),
+            slot.extraCost ?? 0,
+            clean(slot.isDefault ? "Yes" : "No")
+          ].join(","));
+        }
+      });
+    });
+
+    const csvContent = [headers.join(","), ...rows].join("\n");
+    const blob = new Blob(["\ufeff", csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    toast({ title: "Recipe Details Exported", description: `Exported recipes for ${listToExport.length} drinks as ${filename}` });
+  };
+
+  const handleExportRecipesJSON = () => {
+    const listToExport = filteredDrinks || [];
+    if (listToExport.length === 0) {
+      toast({ variant: "destructive", title: "No drinks to export" });
+      return;
+    }
+
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const timestamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
+    const filename = `Drinks_Recipes_${timestamp}.json`;
+
+    const exportData = listToExport.map(drink => {
+      const categoryName = (drink as any).categoryId && catMap.has((drink as any).categoryId)
+        ? catMap.get((drink as any).categoryId)
+        : drink.category;
+      const standardPrice = (drink as any).defaultPrice ?? drink.basePrice;
+
+      const rawSlots: any[] = (drink as any).slots || [];
+      const recipeSlots = rawSlots.map(slot => {
+        const typeOptions: any[] = slot.typeOptions || [];
+        const legacyOptions: any[] = slot.options || [];
+
+        let options: any[] = [];
+        if (typeOptions.length > 0) {
+          options = typeOptions.map(to => ({
+            name: to.typeName || to.categoryName || "Option",
+            categoryName: to.categoryName || null,
+            isDefault: !!to.isDefault,
+            processedQty: to.processedQty ?? 0,
+            unit: to.unit || "ml",
+            extraCost: to.extraCost ?? 0,
+            volumes: (to.volumes || []).map((v: any) => ({
+              volumeName: v.volumeName,
+              processedQty: v.processedQty ?? 0,
+              unit: v.unit || "ml",
+              extraCost: v.extraCost ?? 0,
+              isDefault: !!v.isDefault
+            }))
+          }));
+        } else if (legacyOptions.length > 0) {
+          options = legacyOptions.map(opt => ({
+            name: opt.name || opt.ingredientName || "Ingredient",
+            isDefault: !!opt.isDefault,
+            processedQty: opt.processedQty ?? 0,
+            unit: opt.unit || "ml",
+            extraCost: opt.extraCost ?? 0
+          }));
+        } else {
+          options = [{
+            name: slot.ingredientName || slot.name || "Ingredient",
+            isDefault: true,
+            processedQty: slot.processedQty ?? 0,
+            unit: slot.unit || "ml",
+            extraCost: slot.extraCost ?? 0
+          }];
+        }
+
+        return {
+          slotLabel: slot.slotLabel || "Slot",
+          isRequired: !!slot.isRequired,
+          options
+        };
+      });
+
+      return {
+        id: drink.id,
+        name: drink.name,
+        description: drink.description || null,
+        category: categoryName,
+        basePrice: drink.basePrice,
+        standardPrice,
+        isActive: drink.isActive,
+        recipeSlots
+      };
+    });
+
+    const jsonStr = JSON.stringify(exportData, null, 2);
+    const blob = new Blob([jsonStr], { type: "application/json;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    toast({ title: "Recipe Details Exported", description: `Exported recipes for ${listToExport.length} drinks as ${filename}` });
+  };
+
   return (
     <div className="p-8 w-full flex flex-col gap-6 overflow-y-auto h-full">
       <div className="flex items-center justify-between">
@@ -264,6 +620,30 @@ export default function DrinksAdmin() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" className="gap-2 border-purple-200 dark:border-purple-900/50 hover:bg-purple-50 dark:hover:bg-purple-950/30 text-purple-700 dark:text-purple-300" onClick={handleExportRecipesCSV}>
+            <FlaskConical className="h-4 w-4 text-purple-600 dark:text-purple-400" /> Export Recipes
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="gap-2">
+                <Download className="h-4 w-4" /> Export Menu
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuItem onClick={handleExportCSV} className="gap-2 cursor-pointer">
+                <FileSpreadsheet className="h-4 w-4 text-green-600" /> Drinks Catalog (CSV)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportJSON} className="gap-2 cursor-pointer">
+                <FileCode className="h-4 w-4 text-blue-600" /> Drinks Catalog (JSON)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportRecipesCSV} className="gap-2 cursor-pointer">
+                <FlaskConical className="h-4 w-4 text-purple-600" /> Recipe Details (CSV)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportRecipesJSON} className="gap-2 cursor-pointer">
+                <FileCode className="h-4 w-4 text-purple-600" /> Recipe Details (JSON)
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button variant="outline" className="gap-2" asChild>
             <Link href="/admin/categories">
               <Tag className="h-4 w-4" /> Categories
@@ -273,7 +653,8 @@ export default function DrinksAdmin() {
             <Plus className="h-4 w-4" /> New Drink
           </Button>
         </div>
-      
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="bg-primary/5 border-primary/10">
           <CardContent className="pt-6">
@@ -317,7 +698,6 @@ export default function DrinksAdmin() {
           </CardContent>
         </Card>
       </div>
-      </div>
 
       <Card>
         <CardHeader className="pb-4">
@@ -331,15 +711,38 @@ export default function DrinksAdmin() {
                 onChange={e => setSearchTerm(e.target.value)}
               />
             </div>
-            <div className="flex items-center gap-2 px-2 py-1.5 rounded-md border bg-muted/20">
-              <Switch 
-                id="show-inactive-drinks" 
-                checked={showInactive} 
-                onCheckedChange={setShowInactive} 
-              />
-              <Label htmlFor="show-inactive-drinks" className="text-xs font-medium cursor-pointer">
-                Show Inactive
-              </Label>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 px-2 py-1.5 rounded-md border bg-muted/20">
+                <Switch 
+                  id="show-inactive-drinks" 
+                  checked={showInactive} 
+                  onCheckedChange={setShowInactive} 
+                />
+                <Label htmlFor="show-inactive-drinks" className="text-xs font-medium cursor-pointer">
+                  Show Inactive
+                </Label>
+              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-2 h-9">
+                    <Download className="h-4 w-4" /> Export
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuItem onClick={handleExportCSV} className="gap-2 cursor-pointer">
+                    <FileSpreadsheet className="h-4 w-4 text-green-600" /> Drinks Catalog (CSV)
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleExportJSON} className="gap-2 cursor-pointer">
+                    <FileCode className="h-4 w-4 text-blue-600" /> Drinks Catalog (JSON)
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleExportRecipesCSV} className="gap-2 cursor-pointer">
+                    <FlaskConical className="h-4 w-4 text-purple-600" /> Recipe Details (CSV)
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleExportRecipesJSON} className="gap-2 cursor-pointer">
+                    <FileCode className="h-4 w-4 text-purple-600" /> Recipe Details (JSON)
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </CardHeader>
