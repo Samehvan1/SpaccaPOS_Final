@@ -56,6 +56,7 @@ export default function SalesAnalysisPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedDrink, setSelectedDrink] = useState<string>("all");
   const [selectedChannel, setSelectedChannel] = useState<string>("all");
+  const [selectedDiscountFilter, setSelectedDiscountFilter] = useState<string>("all");
   const [loading, setLoading] = useState(true);
   const [rangeSummary, setRangeSummary] = useState<any>(null);
   const [selectedOrderDetails, setSelectedOrderDetails] = useState<any>(null);
@@ -159,8 +160,57 @@ export default function SalesAnalysisPage() {
     return activeDrinks.filter(d => d.category === catObj.name || String(d.categoryId) === selectedCategory);
   }, [catalogDrinks, selectedCategory, categories]);
 
+  const matchesDiscountFilter = (discountAmount: number, offerDiscountAmount: number, isHospitality = false) => {
+    const hasDiscount = discountAmount > 0 || isHospitality;
+    const hasOffer = offerDiscountAmount > 0;
+
+    if (selectedDiscountFilter === "discounts_only") {
+      return hasDiscount && !hasOffer;
+    }
+    if (selectedDiscountFilter === "offers_only") {
+      return hasOffer && !hasDiscount;
+    }
+    if (selectedDiscountFilter === "discounts_and_offers") {
+      return hasDiscount || hasOffer;
+    }
+    return true;
+  };
+
+  const filteredOrders = useMemo(() => {
+    return orders.filter((o: any) => {
+      const discountAmt = Number(o.discount || 0);
+      const offerDiscountAmt = Number(o.offerDiscount || 0);
+      const isHospitality = o.paymentMethod === "hospitality";
+      if (!matchesDiscountFilter(discountAmt, offerDiscountAmt, isHospitality)) return false;
+
+      if (selectedCategory === "all" && selectedDrink === "all") return true;
+      const items = o.items || [];
+      return items.some((item: any) => {
+        const selectedDrinkObj = catalogDrinks.find(d => String(d.id) === selectedDrink);
+        const matchesDrink = selectedDrink === "all" || String(item.drinkId) === selectedDrink || (selectedDrinkObj && item.drinkName === selectedDrinkObj.name);
+        const drinkInCatalog = catalogDrinks.find(d => d.id === item.drinkId);
+        const matchesCategory = selectedCategory === "all" || drinkInCatalog?.category === selectedCategory || String(drinkInCatalog?.categoryId) === selectedCategory;
+        return matchesDrink && matchesCategory;
+      });
+    });
+  }, [orders, selectedCategory, selectedDrink, catalogDrinks, selectedDiscountFilter]);
+
+  const filteredDrinkSales = useMemo(() => {
+    return drinkSales.filter(item => {
+      const discountAmt = Number(item.discountAmount || 0);
+      const offerDiscountAmt = Number(item.offerDiscountAmount || 0);
+      const isHospitality = item.paymentMethod === "hospitality";
+      if (!matchesDiscountFilter(discountAmt, offerDiscountAmt, isHospitality)) return false;
+
+      const matchesCategory = selectedCategory === "all" || item.category === selectedCategory || (categories.find(c => String(c.id) === selectedCategory)?.name === item.category);
+      const selectedDrinkObj = catalogDrinks.find(d => String(d.id) === selectedDrink);
+      const matchesDrink = selectedDrink === "all" || String(item.drinkId) === selectedDrink || (selectedDrinkObj && item.item === selectedDrinkObj.name);
+      return matchesCategory && matchesDrink;
+    });
+  }, [drinkSales, selectedCategory, selectedDrink, categories, catalogDrinks, selectedDiscountFilter]);
+
   const totals = useMemo(() => {
-    if (selectedCategory === "all" && selectedDrink === "all") {
+    if (selectedCategory === "all" && selectedDrink === "all" && selectedDiscountFilter === "all") {
       if (!rangeSummary) {
         return { revenue: 0, count: 0, drinks: 0, discounts: 0, offerDiscounts: 0, netRevenue: 0 };
       }
@@ -178,20 +228,16 @@ export default function SalesAnalysisPage() {
     let totalNet = 0;
     let totalQty = 0;
     let totalDisc = 0;
+    let totalOfferDisc = 0;
     const uniqueOrders = new Set<number>();
 
-    drinkSales.forEach(item => {
-      const matchesCategory = selectedCategory === "all" || item.category === selectedCategory || (categories.find(c => String(c.id) === selectedCategory)?.name === item.category);
-      const selectedDrinkObj = catalogDrinks.find(d => String(d.id) === selectedDrink);
-      const matchesDrink = selectedDrink === "all" || String(item.drinkId) === selectedDrink || (selectedDrinkObj && item.item === selectedDrinkObj.name);
-      
-      if (matchesCategory && matchesDrink) {
-        totalRevenue += item.totalGross;
-        totalNet += item.finalPrice;
-        totalQty += item.quantity;
-        totalDisc += item.discountAmount;
-        uniqueOrders.add(item.invNo);
-      }
+    filteredDrinkSales.forEach(item => {
+      totalRevenue += item.totalGross;
+      totalNet += item.finalPrice;
+      totalQty += item.quantity;
+      totalDisc += item.discountAmount;
+      totalOfferDisc += (item.offerDiscountAmount || 0);
+      uniqueOrders.add(item.invNo);
     });
 
     return {
@@ -200,35 +246,12 @@ export default function SalesAnalysisPage() {
       count: uniqueOrders.size,
       drinks: totalQty,
       discounts: totalDisc,
-      offerDiscounts: 0,
+      offerDiscounts: totalOfferDisc,
     };
-  }, [rangeSummary, selectedCategory, selectedDrink, drinkSales, categories, catalogDrinks]);
-
-  const filteredOrders = useMemo(() => {
-    if (selectedCategory === "all" && selectedDrink === "all") return orders;
-    return orders.filter((o: any) => {
-      const items = o.items || [];
-      return items.some((item: any) => {
-        const selectedDrinkObj = catalogDrinks.find(d => String(d.id) === selectedDrink);
-        const matchesDrink = selectedDrink === "all" || String(item.drinkId) === selectedDrink || (selectedDrinkObj && item.drinkName === selectedDrinkObj.name);
-        const drinkInCatalog = catalogDrinks.find(d => d.id === item.drinkId);
-        const matchesCategory = selectedCategory === "all" || drinkInCatalog?.category === selectedCategory || String(drinkInCatalog?.categoryId) === selectedCategory;
-        return matchesDrink && matchesCategory;
-      });
-    });
-  }, [orders, selectedCategory, selectedDrink, catalogDrinks]);
-
-  const filteredDrinkSales = useMemo(() => {
-    return drinkSales.filter(item => {
-      const matchesCategory = selectedCategory === "all" || item.category === selectedCategory || (categories.find(c => String(c.id) === selectedCategory)?.name === item.category);
-      const selectedDrinkObj = catalogDrinks.find(d => String(d.id) === selectedDrink);
-      const matchesDrink = selectedDrink === "all" || String(item.drinkId) === selectedDrink || (selectedDrinkObj && item.item === selectedDrinkObj.name);
-      return matchesCategory && matchesDrink;
-    });
-  }, [drinkSales, selectedCategory, selectedDrink, categories, catalogDrinks]);
+  }, [rangeSummary, selectedCategory, selectedDrink, selectedDiscountFilter, filteredDrinkSales]);
 
   const filteredDailySummary = useMemo(() => {
-    if (selectedCategory === "all" && selectedDrink === "all") return dailySummary;
+    if (selectedCategory === "all" && selectedDrink === "all" && selectedDiscountFilter === "all") return dailySummary;
     const map = new Map<string, { date: string; uniqueOrders: Set<number>; revenue: number; net: number; tax: number; discount: number }>();
     filteredDrinkSales.forEach(item => {
       const dateKey = format(new Date(item.date), "yyyy-MM-dd");
@@ -252,18 +275,21 @@ export default function SalesAnalysisPage() {
       tax: d.tax,
       discount: d.discount
     })).sort((a, b) => b.date.localeCompare(a.date));
-  }, [dailySummary, filteredDrinkSales, selectedCategory, selectedDrink]);
+  }, [dailySummary, filteredDrinkSales, selectedCategory, selectedDrink, selectedDiscountFilter]);
 
   const filteredCustomizations = useMemo(() => {
     return customizations.filter(c => {
+      const discountAmt = Number(c.discountAmount || 0);
+      const offerDiscountAmt = Number(c.offerDiscountAmount || 0);
+      if (!matchesDiscountFilter(discountAmt, offerDiscountAmt)) return false;
+
       const drinkInCatalog = catalogDrinks.find(d => d.id === c.drinkId || d.name === c.drinkName);
       const matchesCategory = selectedCategory === "all" || drinkInCatalog?.category === selectedCategory || String(drinkInCatalog?.categoryId) === selectedCategory;
       const selectedDrinkObj = catalogDrinks.find(d => String(d.id) === selectedDrink);
       const matchesDrink = selectedDrink === "all" || String(c.drinkId) === selectedDrink || (selectedDrinkObj && c.drinkName === selectedDrinkObj.name);
       return matchesCategory && matchesDrink;
     });
-  }, [customizations, selectedCategory, selectedDrink, catalogDrinks]);
-
+  }, [customizations, selectedCategory, selectedDrink, catalogDrinks, selectedDiscountFilter]);
 
   const handleExportCSV = async () => {
     let headers: string[] = [];
@@ -284,9 +310,13 @@ export default function SalesAnalysisPage() {
         const allOrders = await api(`/api/orders?${params.toString()}`);
         if (!allOrders || allOrders.length === 0) return;
 
-        let filteredAllOrders = allOrders;
-        if (selectedCategory !== "all" || selectedDrink !== "all") {
-          filteredAllOrders = allOrders.filter((o: any) => {
+        let filteredAllOrders = allOrders.filter((o: any) => {
+          const discountAmt = Number(o.discount || 0);
+          const offerDiscountAmt = Number(o.offerDiscount || 0);
+          const isHospitality = o.paymentMethod === "hospitality";
+          if (!matchesDiscountFilter(discountAmt, offerDiscountAmt, isHospitality)) return false;
+
+          if (selectedCategory !== "all" || selectedDrink !== "all") {
             const items = o.items || [];
             return items.some((item: any) => {
               const matchesDrink = selectedDrink === "all" || String(item.drinkId) === selectedDrink;
@@ -294,8 +324,9 @@ export default function SalesAnalysisPage() {
               const matchesCategory = selectedCategory === "all" || drinkInCatalog?.category === selectedCategory || String(drinkInCatalog?.categoryId) === selectedCategory;
               return matchesDrink && matchesCategory;
             });
-          });
-        }
+          }
+          return true;
+        });
 
         headers = ["OrderID", "Date", "Time", "Order Number", "Channel / Partner", "Items Count", "Total Price", "Before Tax", "Tax Value", "Discount Name", "Discount Value", "Discount Amount", "Offer Discount", "Final Price", "Status", "Payment Method"];
         
@@ -431,7 +462,7 @@ export default function SalesAnalysisPage() {
 
       <Card>
         <CardContent className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-8 gap-4 items-end">
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-9 gap-4 items-end">
             <div className="space-y-2">
               <Label>Branch</Label>
               <Select value={selectedBranch} onValueChange={(val) => { setSelectedBranch(val); setReportPage(1); }}>
@@ -460,6 +491,20 @@ export default function SalesAnalysisPage() {
                   {partners.map(p => (
                     <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
                   ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Discount / Offer</Label>
+              <Select value={selectedDiscountFilter} onValueChange={(val) => { setSelectedDiscountFilter(val); setReportPage(1); }}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All Sales" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="discounts_only">Discounts only</SelectItem>
+                  <SelectItem value="offers_only">Offers only</SelectItem>
+                  <SelectItem value="discounts_and_offers">Discounts + offers</SelectItem>
                 </SelectContent>
               </Select>
             </div>
