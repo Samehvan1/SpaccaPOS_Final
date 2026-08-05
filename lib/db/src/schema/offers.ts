@@ -3,6 +3,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { branchesTable } from "./branches";
 import { partnersTable } from "./partners";
+import { drinksTable } from "./drinks";
 
 export const offersTable = pgTable("offers", {
   id: serial("id").primaryKey(),
@@ -31,6 +32,33 @@ export const offersPartnersTable = pgTable("offers_partners", {
 }, (table) => {
   return {
     pk: primaryKey({ columns: [table.offerId, table.partnerId] }),
+  };
+});
+
+export const offersApplicableDrinksTable = pgTable("offers_applicable_drinks", {
+  offerId: integer("offer_id").notNull().references(() => offersTable.id, { onDelete: "cascade" }),
+  drinkId: integer("drink_id").notNull().references(() => drinksTable.id, { onDelete: "cascade" }),
+}, (table) => {
+  return {
+    pk: primaryKey({ columns: [table.offerId, table.drinkId] }),
+  };
+});
+
+export const offersRewardDrinksTable = pgTable("offers_reward_drinks", {
+  offerId: integer("offer_id").notNull().references(() => offersTable.id, { onDelete: "cascade" }),
+  drinkId: integer("drink_id").notNull().references(() => drinksTable.id, { onDelete: "cascade" }),
+}, (table) => {
+  return {
+    pk: primaryKey({ columns: [table.offerId, table.drinkId] }),
+  };
+});
+
+export const offersExcludedDrinksTable = pgTable("offers_excluded_drinks", {
+  offerId: integer("offer_id").notNull().references(() => offersTable.id, { onDelete: "cascade" }),
+  drinkId: integer("drink_id").notNull().references(() => drinksTable.id, { onDelete: "cascade" }),
+}, (table) => {
+  return {
+    pk: primaryKey({ columns: [table.offerId, table.drinkId] }),
   };
 });
 

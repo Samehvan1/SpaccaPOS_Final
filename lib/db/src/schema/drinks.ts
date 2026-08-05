@@ -2,6 +2,7 @@ import { pgTable, serial, text, numeric, boolean, integer, timestamp, index } fr
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { ingredientsTable, ingredientOptionsTable, ingredientTypesTable, ingredientTypeVolumesTable } from "./ingredients";
+import { branchesTable } from "./branches";
 
 export const drinkCategoriesTable = pgTable("drink_categories", {
   id: serial("id").primaryKey(),
@@ -174,3 +175,18 @@ export type DrinkSlotTypeOption = typeof drinkSlotTypeOptionsTable.$inferSelect;
 export type PredefinedSlot = typeof predefinedSlotsTable.$inferSelect;
 export type PredefinedSlotTypeOption = typeof predefinedSlotTypeOptionsTable.$inferSelect;
 export type PredefinedSlotVolume = typeof predefinedSlotVolumesTable.$inferSelect;
+
+export const branchDrinkStatusTable = pgTable("branch_drink_status", {
+  id: serial("id").primaryKey(),
+  branchId: integer("branch_id").notNull().references(() => branchesTable.id, { onDelete: "cascade" }),
+  drinkId: integer("drink_id").notNull().references(() => drinksTable.id, { onDelete: "cascade" }),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
+}, (table) => {
+  return {
+    branchDrinkIdx: index("branch_drink_status_idx").on(table.branchId, table.drinkId),
+  };
+});
+export type BranchDrinkStatus = typeof branchDrinkStatusTable.$inferSelect;
+

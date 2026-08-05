@@ -173,7 +173,10 @@ export const ListOrdersResponse = z.array(ListOrdersResponseItem);
 export type ListOrdersResponse = Infer<typeof ListOrdersResponse>;
 
 export const CreateOrderBody = api.CreateOrderBody.extend({
-  branchId: z.union([z.number(), z.string()]).nullish().transform(v => (v && !isNaN(Number(v))) ? Number(v) : undefined),
+  branchId: z
+    .union([z.number(), z.string()])
+    .nullish()
+    .transform((v) => (v && !isNaN(Number(v)) ? Number(v) : undefined)),
   paymentMethod: z.enum([
     "cash",
     "card",
@@ -193,24 +196,32 @@ export const CreateOrderBody = api.CreateOrderBody.extend({
     )
     .optional(),
   source: z.enum(["pos", "kiosk", "web", "mobile"]).optional(),
-  partnerId: z.union([z.number(), z.string()]).nullish().transform(v => (v && v !== "store" && !isNaN(Number(v))) ? Number(v) : undefined),
+  partnerId: z
+    .union([z.number(), z.string()])
+    .nullish()
+    .transform((v) =>
+      v && v !== "store" && !isNaN(Number(v)) ? Number(v) : undefined,
+    ),
   items: z.array(
     z.object({
       drinkId: z.coerce.number(),
       quantity: z.coerce.number(),
       specialNotes: z.string().nullish(),
-      selections: z.array(
-        z.object({
-          ingredientId: z.coerce.number().nullish(),
-          optionId: z.coerce.number().nullish(),
-          subOptionId: z.coerce.number().nullish(),
-          slotId: z.coerce.number().nullish(),
-          typeVolumeId: z.coerce.number().nullish(),
-          ingredientTypeId: z.coerce.number().nullish(),
-        })
-      ).optional().default([])
-    })
-  )
+      selections: z
+        .array(
+          z.object({
+            ingredientId: z.coerce.number().nullish(),
+            optionId: z.coerce.number().nullish(),
+            subOptionId: z.coerce.number().nullish(),
+            slotId: z.coerce.number().nullish(),
+            typeVolumeId: z.coerce.number().nullish(),
+            ingredientTypeId: z.coerce.number().nullish(),
+          }),
+        )
+        .optional()
+        .default([]),
+    }),
+  ),
 });
 export type CreateOrderBody = Infer<typeof CreateOrderBody>;
 

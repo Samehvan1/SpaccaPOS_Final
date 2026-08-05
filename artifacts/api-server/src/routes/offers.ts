@@ -1,6 +1,14 @@
 import { Router, type IRouter } from "express";
 import { eq, ne, and, inArray } from "drizzle-orm";
-import { db, offersTable, offersBranchesTable, offersPartnersTable } from "@workspace/db";
+import { 
+  db, 
+  offersTable, 
+  offersBranchesTable, 
+  offersPartnersTable,
+  offersApplicableDrinksTable,
+  offersRewardDrinksTable,
+  offersExcludedDrinksTable 
+} from "@workspace/db";
 import { serializeDates } from "../lib/serialize";
 import { requirePermission } from "../middleware/permissions";
 import {
@@ -11,24 +19,38 @@ import {
 
 const router: IRouter = Router();
 
-// Helper to load branchIds and partnerIds for an offer from junction tables
+// Helper to load branchIds, partnerIds, and drink scopes for an offer from junction tables
 async function loadOfferScopes(tx: any, offerId: number) {
   const branches = await tx.select().from(offersBranchesTable).where(eq(offersBranchesTable.offerId, offerId));
   const partners = await tx.select().from(offersPartnersTable).where(eq(offersPartnersTable.offerId, offerId));
+  const applicable = await tx.select().from(offersApplicableDrinksTable).where(eq(offersApplicableDrinksTable.offerId, offerId));
+  const reward = await tx.select().from(offersRewardDrinksTable).where(eq(offersRewardDrinksTable.offerId, offerId));
+  const excluded = await tx.select().from(offersExcludedDrinksTable).where(eq(offersExcludedDrinksTable.offerId, offerId));
   return {
     branchIds: branches.map((b: any) => b.branchId) as number[],
     partnerIds: partners.map((p: any) => p.partnerId) as number[],
+    applicableDrinkIds: applicable.map((a: any) => a.drinkId) as number[],
+    rewardDrinkIds: reward.map((r: any) => r.drinkId) as number[],
+    excludedDrinkIds: excluded.map((e: any) => e.drinkId) as number[],
   };
 }
 
 // Helper to enrich an offer row with junction table arrays
 async function enrichOffer(tx: any, offer: any) {
-  const { branchIds, partnerIds } = await loadOfferScopes(tx, offer.id);
-  return { ...serializeDates(offer), branchIds, partnerIds };
+  const scopes = await loadOfferScopes(tx, offer.id);
+  return { ...serializeDates(offer), ...scopes };
 }
 
 // Helper to sync junction tables for an offer (insert/replace pattern)
-async function syncOfferScopes(tx: any, offerId: number, branchIds: number[] | undefined, partnerIds: number[] | undefined) {
+async function syncOfferScopes(
+  tx: any, 
+  offerId: number, 
+  branchIds?: number[], 
+  partnerIds?: number[],
+  applicableDrinkIds?: number[],
+  rewardDrinkIds?: number[],
+  excludedDrinkIds?: number[]
+) {
   if (branchIds !== undefined) {
     await tx.delete(offersBranchesTable).where(eq(offersBranchesTable.offerId, offerId));
     if (branchIds.length > 0) {
@@ -39,6 +61,24 @@ async function syncOfferScopes(tx: any, offerId: number, branchIds: number[] | u
     await tx.delete(offersPartnersTable).where(eq(offersPartnersTable.offerId, offerId));
     if (partnerIds.length > 0) {
       await tx.insert(offersPartnersTable).values(partnerIds.map(pid => ({ offerId, partnerId: pid })));
+    }
+  }
+  if (applicableDrinkIds !== undefined) {
+    await tx.delete(offersApplicableDrinksTable).where(eq(offersApplicableDrinksTable.offerId, offerId));
+    if (applicableDrinkIds.length > 0) {
+      await tx.insert(offersApplicableDrinksTable).values(applicableDrinkIds.map(did => ({ offerId, drinkId: did })));
+    }
+  }
+  if (rewardDrinkIds !== undefined) {
+    await tx.delete(offersRewardDrinksTable).where(eq(offersRewardDrinksTable.offerId, offerId));
+    if (rewardDrinkIds.length > 0) {
+      await tx.insert(offersRewardDrinksTable).values(rewardDrinkIds.map(did => ({ offerId, drinkId: did })));
+    }
+  }
+  if (excludedDrinkIds !== undefined) {
+    await tx.delete(offersExcludedDrinksTable).where(eq(offersExcludedDrinksTable.offerId, offerId));
+    if (excludedDrinkIds.length > 0) {
+      await tx.insert(offersExcludedDrinksTable).values(excludedDrinkIds.map(did => ({ offerId, drinkId: did })));
     }
   }
 }
@@ -137,8 +177,9 @@ router.get("/offers/active", async (req, res): Promise<void> => {
         if (!(o.applyToStore ?? true)) continue;
       }
 
-      // This offer matches
-      res.json({ ...serializeDates(o), branchIds, partnerIds });
+      // Return enriched offer with all branch, partner, and drink scoping lists
+      const enriched = await enrichOffer(db, o);
+      res.json(enriched);
       return;
     }
 
@@ -162,6 +203,9 @@ router.post("/offers", requirePermission("discounts:manage"), async (req, res): 
       const isAct = parsed.data.isActive ?? true;
       const branchIds: number[] = parsed.data.branchIds ?? [];
       const partnerIds: number[] = parsed.data.partnerIds ?? [];
+      const applicableDrinkIds: number[] = (parsed.data as any).applicableDrinkIds ?? [];
+      const rewardDrinkIds: number[] = (parsed.data as any).rewardDrinkIds ?? [];
+      const excludedDrinkIds: number[] = (parsed.data as any).excludedDrinkIds ?? [];
       const applyToStore = parsed.data.applyToStore ?? true;
       const applyToAllPartners = parsed.data.applyToAllPartners ?? true;
 
@@ -181,9 +225,9 @@ router.post("/offers", requirePermission("discounts:manage"), async (req, res): 
         })
         .returning();
 
-      await syncOfferScopes(tx, newOffer.id, branchIds, partnerIds);
+      await syncOfferScopes(tx, newOffer.id, branchIds, partnerIds, applicableDrinkIds, rewardDrinkIds, excludedDrinkIds);
 
-      return { ...serializeDates(newOffer), branchIds, partnerIds };
+      return { ...serializeDates(newOffer), branchIds, partnerIds, applicableDrinkIds, rewardDrinkIds, excludedDrinkIds };
     });
 
     res.status(201).json(enrichedOffer);
@@ -209,11 +253,20 @@ router.patch("/offers/:id", requirePermission("discounts:manage"), async (req, r
         throw new Error("Offer not found");
       }
 
-      const { branchIds: existingBranchIds, partnerIds: existingPartnerIds } = await loadOfferScopes(tx, id);
+      const { 
+        branchIds: existingBranchIds, 
+        partnerIds: existingPartnerIds,
+        applicableDrinkIds: existingApplicable,
+        rewardDrinkIds: existingReward,
+        excludedDrinkIds: existingExcluded 
+      } = await loadOfferScopes(tx, id);
 
       const isAct = parsed.data.isActive !== undefined ? parsed.data.isActive : existing.isActive;
       const branchIds: number[] = parsed.data.branchIds !== undefined ? parsed.data.branchIds : existingBranchIds;
       const partnerIds: number[] = parsed.data.partnerIds !== undefined ? parsed.data.partnerIds : existingPartnerIds;
+      const applicableDrinkIds: number[] = (parsed.data as any).applicableDrinkIds !== undefined ? (parsed.data as any).applicableDrinkIds : existingApplicable;
+      const rewardDrinkIds: number[] = (parsed.data as any).rewardDrinkIds !== undefined ? (parsed.data as any).rewardDrinkIds : existingReward;
+      const excludedDrinkIds: number[] = (parsed.data as any).excludedDrinkIds !== undefined ? (parsed.data as any).excludedDrinkIds : existingExcluded;
       const applyToStore = parsed.data.applyToStore !== undefined ? parsed.data.applyToStore : existing.applyToStore;
       const applyToAllPartners = parsed.data.applyToAllPartners !== undefined ? parsed.data.applyToAllPartners : existing.applyToAllPartners;
 
@@ -235,9 +288,17 @@ router.patch("/offers/:id", requirePermission("discounts:manage"), async (req, r
         .where(eq(offersTable.id, id))
         .returning();
 
-      await syncOfferScopes(tx, id, parsed.data.branchIds, parsed.data.partnerIds);
+      await syncOfferScopes(
+        tx, 
+        id, 
+        parsed.data.branchIds, 
+        parsed.data.partnerIds,
+        (parsed.data as any).applicableDrinkIds,
+        (parsed.data as any).rewardDrinkIds,
+        (parsed.data as any).excludedDrinkIds
+      );
 
-      return { ...serializeDates(updatedOffer), branchIds, partnerIds };
+      return { ...serializeDates(updatedOffer), branchIds, partnerIds, applicableDrinkIds, rewardDrinkIds, excludedDrinkIds };
     });
 
     res.json(enrichedOffer);

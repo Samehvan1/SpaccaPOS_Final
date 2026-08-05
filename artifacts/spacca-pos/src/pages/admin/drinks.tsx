@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { ArrowLeft, Plus, Search, Edit, FlaskConical, Tag, Upload, X, ImageIcon, Trash2, Download, FileSpreadsheet, FileCode } from "lucide-react";
+import { ArrowLeft, Plus, Search, Edit, FlaskConical, Tag, Upload, X, ImageIcon, Trash2, Download, FileSpreadsheet, FileCode, Building2, Link2 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
@@ -98,6 +98,87 @@ export default function DrinksAdmin() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Availability Modal State
+  const [availabilityDrink, setAvailabilityDrink] = useState<Drink | null>(null);
+  const [availBranches, setAvailBranches] = useState<any[]>([]);
+  const [availPartners, setAvailPartners] = useState<any[]>([]);
+  const [availBranchStatuses, setAvailBranchStatuses] = useState<any[]>([]);
+  const [availPartnerStatuses, setAvailPartnerStatuses] = useState<any[]>([]);
+  const [availLoading, setAvailLoading] = useState(false);
+
+  const openAvailabilityModal = async (d: Drink) => {
+    setAvailabilityDrink(d);
+    setAvailLoading(true);
+    try {
+      const [branchesRes, partnersRes, availRes] = await Promise.all([
+        fetch(`${API_BASE}/admin/branches`),
+        fetch(`${API_BASE}/admin/partners`),
+        fetch(`${API_BASE}/admin/drinks/availability`)
+      ]);
+      const [bData, pData, aData] = await Promise.all([
+        branchesRes.json(),
+        partnersRes.json(),
+        availRes.json()
+      ]);
+      setAvailBranches(bData || []);
+      setAvailPartners(pData || []);
+      setAvailBranchStatuses(aData?.branchStatuses || []);
+      setAvailPartnerStatuses(aData?.partnerStatuses || []);
+    } catch {
+      toast({ variant: "destructive", title: "Failed to load drink availability configuration" });
+    } finally {
+      setAvailLoading(false);
+    }
+  };
+
+  const toggleBranchStatus = async (branchId: number, currentActive: boolean) => {
+    if (!availabilityDrink) return;
+    const newActive = !currentActive;
+    try {
+      const res = await fetch(`${API_BASE}/admin/drinks/branch-status`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ branchId, drinkId: availabilityDrink.id, isActive: newActive })
+      });
+      if (!res.ok) throw new Error("Failed to update branch availability");
+      setAvailBranchStatuses(prev => {
+        const existing = prev.find(s => s.branchId === branchId && s.drinkId === availabilityDrink.id);
+        if (existing) {
+          return prev.map(s => s.id === existing.id ? { ...s, isActive: newActive } : s);
+        }
+        return [...prev, { branchId, drinkId: availabilityDrink.id, isActive: newActive }];
+      });
+      toast({ title: `Updated branch availability to ${newActive ? "Active" : "Inactive"}` });
+      refetch();
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Failed to update branch availability", description: e.message });
+    }
+  };
+
+  const togglePartnerStatus = async (partnerId: number, currentActive: boolean) => {
+    if (!availabilityDrink) return;
+    const newActive = !currentActive;
+    try {
+      const res = await fetch(`${API_BASE}/admin/drinks/partner-status`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ partnerId, drinkId: availabilityDrink.id, isActive: newActive })
+      });
+      if (!res.ok) throw new Error("Failed to update partner availability");
+      setAvailPartnerStatuses(prev => {
+        const existing = prev.find(s => s.partnerId === partnerId && s.drinkId === availabilityDrink.id);
+        if (existing) {
+          return prev.map(s => s.id === existing.id ? { ...s, isActive: newActive } : s);
+        }
+        return [...prev, { partnerId, drinkId: availabilityDrink.id, isActive: newActive }];
+      });
+      toast({ title: `Updated partner availability to ${newActive ? "Active" : "Inactive"}` });
+      refetch();
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Failed to update partner availability", description: e.message });
+    }
+  };
   
   const stats = useMemo(() => {
     if (!drinks) return { total: 0, active: 0, inactive: 0 };
@@ -856,10 +937,12 @@ export default function DrinksAdmin() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
+                          <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground h-8" onClick={() => openAvailabilityModal(drink)}>
+                            <Building2 className="h-4 w-4" /> Availability
+                          </Button>
                           <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground h-8" asChild>
                             <Link href={`/admin/drinks/${drink.id}/recipe`}>
-                              <FlaskConical className="h-3.5 w-3.5" />
-                              Recipe
+                              <FlaskConical className="h-4 w-4" /> Recipe
                             </Link>
                           </Button>
                           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(drink as Drink)}>
@@ -1000,6 +1083,88 @@ export default function DrinksAdmin() {
             <Button onClick={handleSave} disabled={isPending || !name || !basePrice}>
               {isPending ? "Saving..." : mode === "add" ? "Create Drink" : "Save Changes"}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Availability Management Modal */}
+      <Dialog open={!!availabilityDrink} onOpenChange={(open) => { if (!open) setAvailabilityDrink(null); }}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Building2 className="h-5 w-5 text-primary" />
+              Manage Availability for {availabilityDrink?.name}
+            </DialogTitle>
+          </DialogHeader>
+          {availLoading ? (
+            <div className="py-8 text-center text-sm text-muted-foreground">Loading availability configuration...</div>
+          ) : (
+            <div className="space-y-6 py-2">
+              {/* Branch Availability */}
+              <div className="space-y-3">
+                <h4 className="text-sm font-bold flex items-center gap-1.5">
+                  <Building2 className="h-4 w-4 text-muted-foreground" /> Branch Availability
+                </h4>
+                <div className="rounded-lg border bg-muted/10 p-3 space-y-2">
+                  {availBranches.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">No branches found.</p>
+                  ) : (
+                    availBranches.map(b => {
+                      const statusRow = availBranchStatuses.find(s => s.branchId === b.id && s.drinkId === availabilityDrink?.id);
+                      const isBranchActive = statusRow ? statusRow.isActive : true;
+                      return (
+                        <div key={b.id} className="flex items-center justify-between py-1 border-b last:border-0">
+                          <span className="text-sm font-medium">{b.name}</span>
+                          <div className="flex items-center gap-2">
+                            <Badge variant={isBranchActive ? "outline" : "secondary"} className={isBranchActive ? "bg-emerald-500/10 text-emerald-600 border-emerald-200" : ""}>
+                              {isBranchActive ? "Available" : "Disabled"}
+                            </Badge>
+                            <Switch
+                              checked={isBranchActive}
+                              onCheckedChange={() => toggleBranchStatus(b.id, isBranchActive)}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+
+              {/* Partner Availability */}
+              <div className="space-y-3">
+                <h4 className="text-sm font-bold flex items-center gap-1.5">
+                  <Link2 className="h-4 w-4 text-muted-foreground" /> Partner Channel Availability
+                </h4>
+                <div className="rounded-lg border bg-muted/10 p-3 space-y-2">
+                  {availPartners.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">No partner channels found.</p>
+                  ) : (
+                    availPartners.map(p => {
+                      const statusRow = availPartnerStatuses.find(s => s.partnerId === p.id && s.drinkId === availabilityDrink?.id);
+                      const isPartnerActive = statusRow ? statusRow.isActive : true;
+                      return (
+                        <div key={p.id} className="flex items-center justify-between py-1 border-b last:border-0">
+                          <span className="text-sm font-medium">{p.name}</span>
+                          <div className="flex items-center gap-2">
+                            <Badge variant={isPartnerActive ? "outline" : "secondary"} className={isPartnerActive ? "bg-emerald-500/10 text-emerald-600 border-emerald-200" : ""}>
+                              {isPartnerActive ? "Available" : "Disabled"}
+                            </Badge>
+                            <Switch
+                              checked={isPartnerActive}
+                              onCheckedChange={() => togglePartnerStatus(p.id, isPartnerActive)}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button onClick={() => setAvailabilityDrink(null)}>Done</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

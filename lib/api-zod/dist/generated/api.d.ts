@@ -4138,6 +4138,9 @@ export declare const ListOffersResponseItem: zod.ZodObject<{
     partnerIds: zod.ZodArray<zod.ZodNumber, "many">;
     applyToStore: zod.ZodBoolean;
     applyToAllPartners: zod.ZodBoolean;
+    applicableDrinkIds: zod.ZodOptional<zod.ZodArray<zod.ZodNumber, "many">>;
+    rewardDrinkIds: zod.ZodOptional<zod.ZodArray<zod.ZodNumber, "many">>;
+    excludedDrinkIds: zod.ZodOptional<zod.ZodArray<zod.ZodNumber, "many">>;
     createdAt: zod.ZodString;
     updatedAt: zod.ZodString;
 }, "strip", zod.ZodTypeAny, {
@@ -4152,6 +4155,9 @@ export declare const ListOffersResponseItem: zod.ZodObject<{
     partnerIds: number[];
     applyToStore: boolean;
     applyToAllPartners: boolean;
+    applicableDrinkIds?: number[] | undefined;
+    rewardDrinkIds?: number[] | undefined;
+    excludedDrinkIds?: number[] | undefined;
 }, {
     id: number;
     name: string;
@@ -4164,6 +4170,9 @@ export declare const ListOffersResponseItem: zod.ZodObject<{
     partnerIds: number[];
     applyToStore: boolean;
     applyToAllPartners: boolean;
+    applicableDrinkIds?: number[] | undefined;
+    rewardDrinkIds?: number[] | undefined;
+    excludedDrinkIds?: number[] | undefined;
 }>;
 export declare const ListOffersResponse: zod.ZodArray<zod.ZodObject<{
     id: zod.ZodNumber;
@@ -4175,6 +4184,9 @@ export declare const ListOffersResponse: zod.ZodArray<zod.ZodObject<{
     partnerIds: zod.ZodArray<zod.ZodNumber, "many">;
     applyToStore: zod.ZodBoolean;
     applyToAllPartners: zod.ZodBoolean;
+    applicableDrinkIds: zod.ZodOptional<zod.ZodArray<zod.ZodNumber, "many">>;
+    rewardDrinkIds: zod.ZodOptional<zod.ZodArray<zod.ZodNumber, "many">>;
+    excludedDrinkIds: zod.ZodOptional<zod.ZodArray<zod.ZodNumber, "many">>;
     createdAt: zod.ZodString;
     updatedAt: zod.ZodString;
 }, "strip", zod.ZodTypeAny, {
@@ -4189,6 +4201,9 @@ export declare const ListOffersResponse: zod.ZodArray<zod.ZodObject<{
     partnerIds: number[];
     applyToStore: boolean;
     applyToAllPartners: boolean;
+    applicableDrinkIds?: number[] | undefined;
+    rewardDrinkIds?: number[] | undefined;
+    excludedDrinkIds?: number[] | undefined;
 }, {
     id: number;
     name: string;
@@ -4201,6 +4216,9 @@ export declare const ListOffersResponse: zod.ZodArray<zod.ZodObject<{
     partnerIds: number[];
     applyToStore: boolean;
     applyToAllPartners: boolean;
+    applicableDrinkIds?: number[] | undefined;
+    rewardDrinkIds?: number[] | undefined;
+    excludedDrinkIds?: number[] | undefined;
 }>, "many">;
 /**
  * @summary Create a new offer
@@ -4214,6 +4232,9 @@ export declare const CreateOfferBody: zod.ZodObject<{
     partnerIds: zod.ZodOptional<zod.ZodArray<zod.ZodNumber, "many">>;
     applyToStore: zod.ZodOptional<zod.ZodBoolean>;
     applyToAllPartners: zod.ZodOptional<zod.ZodBoolean>;
+    applicableDrinkIds: zod.ZodOptional<zod.ZodArray<zod.ZodNumber, "many">>;
+    rewardDrinkIds: zod.ZodOptional<zod.ZodArray<zod.ZodNumber, "many">>;
+    excludedDrinkIds: zod.ZodOptional<zod.ZodArray<zod.ZodNumber, "many">>;
 }, "strip", zod.ZodTypeAny, {
     name: string;
     buyAmount: number;
@@ -4223,6 +4244,9 @@ export declare const CreateOfferBody: zod.ZodObject<{
     partnerIds?: number[] | undefined;
     applyToStore?: boolean | undefined;
     applyToAllPartners?: boolean | undefined;
+    applicableDrinkIds?: number[] | undefined;
+    rewardDrinkIds?: number[] | undefined;
+    excludedDrinkIds?: number[] | undefined;
 }, {
     name: string;
     buyAmount: number;
@@ -4232,6 +4256,9 @@ export declare const CreateOfferBody: zod.ZodObject<{
     partnerIds?: number[] | undefined;
     applyToStore?: boolean | undefined;
     applyToAllPartners?: boolean | undefined;
+    applicableDrinkIds?: number[] | undefined;
+    rewardDrinkIds?: number[] | undefined;
+    excludedDrinkIds?: number[] | undefined;
 }>;
 /**
  * @summary Get the currently active offer
@@ -4256,6 +4283,9 @@ export declare const GetActiveOfferResponse: zod.ZodNullable<zod.ZodObject<{
     partnerIds: zod.ZodArray<zod.ZodNumber, "many">;
     applyToStore: zod.ZodBoolean;
     applyToAllPartners: zod.ZodBoolean;
+    applicableDrinkIds: zod.ZodOptional<zod.ZodArray<zod.ZodNumber, "many">>;
+    rewardDrinkIds: zod.ZodOptional<zod.ZodArray<zod.ZodNumber, "many">>;
+    excludedDrinkIds: zod.ZodOptional<zod.ZodArray<zod.ZodNumber, "many">>;
     createdAt: zod.ZodString;
     updatedAt: zod.ZodString;
 }, "strip", zod.ZodTypeAny, {
@@ -4270,6 +4300,9 @@ export declare const GetActiveOfferResponse: zod.ZodNullable<zod.ZodObject<{
     partnerIds: number[];
     applyToStore: boolean;
     applyToAllPartners: boolean;
+    applicableDrinkIds?: number[] | undefined;
+    rewardDrinkIds?: number[] | undefined;
+    excludedDrinkIds?: number[] | undefined;
 }, {
     id: number;
     name: string;
@@ -4282,6 +4315,9 @@ export declare const GetActiveOfferResponse: zod.ZodNullable<zod.ZodObject<{
     partnerIds: number[];
     applyToStore: boolean;
     applyToAllPartners: boolean;
+    applicableDrinkIds?: number[] | undefined;
+    rewardDrinkIds?: number[] | undefined;
+    excludedDrinkIds?: number[] | undefined;
 }>>;
 /**
  * @summary Update an offer
@@ -4302,6 +4338,9 @@ export declare const UpdateOfferBody: zod.ZodObject<{
     partnerIds: zod.ZodOptional<zod.ZodArray<zod.ZodNumber, "many">>;
     applyToStore: zod.ZodOptional<zod.ZodBoolean>;
     applyToAllPartners: zod.ZodOptional<zod.ZodBoolean>;
+    applicableDrinkIds: zod.ZodOptional<zod.ZodArray<zod.ZodNumber, "many">>;
+    rewardDrinkIds: zod.ZodOptional<zod.ZodArray<zod.ZodNumber, "many">>;
+    excludedDrinkIds: zod.ZodOptional<zod.ZodArray<zod.ZodNumber, "many">>;
 }, "strip", zod.ZodTypeAny, {
     name?: string | undefined;
     isActive?: boolean | undefined;
@@ -4311,6 +4350,9 @@ export declare const UpdateOfferBody: zod.ZodObject<{
     partnerIds?: number[] | undefined;
     applyToStore?: boolean | undefined;
     applyToAllPartners?: boolean | undefined;
+    applicableDrinkIds?: number[] | undefined;
+    rewardDrinkIds?: number[] | undefined;
+    excludedDrinkIds?: number[] | undefined;
 }, {
     name?: string | undefined;
     isActive?: boolean | undefined;
@@ -4320,6 +4362,9 @@ export declare const UpdateOfferBody: zod.ZodObject<{
     partnerIds?: number[] | undefined;
     applyToStore?: boolean | undefined;
     applyToAllPartners?: boolean | undefined;
+    applicableDrinkIds?: number[] | undefined;
+    rewardDrinkIds?: number[] | undefined;
+    excludedDrinkIds?: number[] | undefined;
 }>;
 export declare const UpdateOfferResponse: zod.ZodObject<{
     id: zod.ZodNumber;
@@ -4331,6 +4376,9 @@ export declare const UpdateOfferResponse: zod.ZodObject<{
     partnerIds: zod.ZodArray<zod.ZodNumber, "many">;
     applyToStore: zod.ZodBoolean;
     applyToAllPartners: zod.ZodBoolean;
+    applicableDrinkIds: zod.ZodOptional<zod.ZodArray<zod.ZodNumber, "many">>;
+    rewardDrinkIds: zod.ZodOptional<zod.ZodArray<zod.ZodNumber, "many">>;
+    excludedDrinkIds: zod.ZodOptional<zod.ZodArray<zod.ZodNumber, "many">>;
     createdAt: zod.ZodString;
     updatedAt: zod.ZodString;
 }, "strip", zod.ZodTypeAny, {
@@ -4345,6 +4393,9 @@ export declare const UpdateOfferResponse: zod.ZodObject<{
     partnerIds: number[];
     applyToStore: boolean;
     applyToAllPartners: boolean;
+    applicableDrinkIds?: number[] | undefined;
+    rewardDrinkIds?: number[] | undefined;
+    excludedDrinkIds?: number[] | undefined;
 }, {
     id: number;
     name: string;
@@ -4357,6 +4408,9 @@ export declare const UpdateOfferResponse: zod.ZodObject<{
     partnerIds: number[];
     applyToStore: boolean;
     applyToAllPartners: boolean;
+    applicableDrinkIds?: number[] | undefined;
+    rewardDrinkIds?: number[] | undefined;
+    excludedDrinkIds?: number[] | undefined;
 }>;
 /**
  * @summary Delete an offer

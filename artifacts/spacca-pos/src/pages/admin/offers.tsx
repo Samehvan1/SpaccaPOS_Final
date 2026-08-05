@@ -20,6 +20,9 @@ type Offer = {
   isActive: boolean;
   branchIds: number[];
   partnerIds: number[];
+  applicableDrinkIds?: number[];
+  rewardDrinkIds?: number[];
+  excludedDrinkIds?: number[];
   applyToStore: boolean;
   applyToAllPartners: boolean;
   createdAt: string;
@@ -38,6 +41,7 @@ export default function OffersAdmin() {
   const [offers, setOffers] = useState<Offer[]>([]);
   const [branches, setBranches] = useState<any[]>([]);
   const [partners, setPartners] = useState<any[]>([]);
+  const [drinksCatalog, setDrinksCatalog] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [showForm, setShowForm] = useState(false);
@@ -56,17 +60,29 @@ export default function OffersAdmin() {
   const [applyToAllPartners, setApplyToAllPartners] = useState(true);
   const [selectedPartnerIds, setSelectedPartnerIds] = useState<number[]>([]);
 
+  // Drink scopes state
+  const [selectedApplicableDrinkIds, setSelectedApplicableDrinkIds] = useState<number[]>([]);
+  const [selectedRewardDrinkIds, setSelectedRewardDrinkIds] = useState<number[]>([]);
+  const [selectedExcludedDrinkIds, setSelectedExcludedDrinkIds] = useState<number[]>([]);
+
+  // Drink search filters
+  const [applicableSearch, setApplicableSearch] = useState("");
+  const [rewardSearch, setRewardSearch] = useState("");
+  const [excludedSearch, setExcludedSearch] = useState("");
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [offersData, branchesData, partnersData] = await Promise.all([
+      const [offersData, branchesData, partnersData, drinksData] = await Promise.all([
         api("/api/offers"),
         api("/api/admin/branches"),
-        api("/api/admin/partners")
+        api("/api/admin/partners"),
+        api("/api/drinks?active=true")
       ]);
       setOffers(offersData || []);
       setBranches(branchesData || []);
       setPartners(partnersData || []);
+      setDrinksCatalog(drinksData || []);
     } catch {
       toast({ variant: "destructive", title: "Failed to load offers configuration" });
     } finally {
@@ -89,6 +105,12 @@ export default function OffersAdmin() {
     setApplyToStore(true);
     setApplyToAllPartners(true);
     setSelectedPartnerIds([]);
+    setSelectedApplicableDrinkIds([]);
+    setSelectedRewardDrinkIds([]);
+    setSelectedExcludedDrinkIds([]);
+    setApplicableSearch("");
+    setRewardSearch("");
+    setExcludedSearch("");
     setShowForm(true);
   };
 
@@ -104,6 +126,12 @@ export default function OffersAdmin() {
     setApplyToStore(o.applyToStore ?? true);
     setApplyToAllPartners(o.applyToAllPartners ?? true);
     setSelectedPartnerIds(o.partnerIds ?? []);
+    setSelectedApplicableDrinkIds(o.applicableDrinkIds ?? []);
+    setSelectedRewardDrinkIds(o.rewardDrinkIds ?? []);
+    setSelectedExcludedDrinkIds(o.excludedDrinkIds ?? []);
+    setApplicableSearch("");
+    setRewardSearch("");
+    setExcludedSearch("");
     setShowForm(true);
   };
 
@@ -116,6 +144,24 @@ export default function OffersAdmin() {
   const togglePartner = (id: number) => {
     setSelectedPartnerIds(prev =>
       prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]
+    );
+  };
+
+  const toggleApplicableDrink = (id: number) => {
+    setSelectedApplicableDrinkIds(prev =>
+      prev.includes(id) ? prev.filter(d => d !== id) : [...prev, id]
+    );
+  };
+
+  const toggleRewardDrink = (id: number) => {
+    setSelectedRewardDrinkIds(prev =>
+      prev.includes(id) ? prev.filter(d => d !== id) : [...prev, id]
+    );
+  };
+
+  const toggleExcludedDrink = (id: number) => {
+    setSelectedExcludedDrinkIds(prev =>
+      prev.includes(id) ? prev.filter(d => d !== id) : [...prev, id]
     );
   };
 
@@ -152,6 +198,9 @@ export default function OffersAdmin() {
         partnerIds: selectedPartnerIds,
         applyToStore,
         applyToAllPartners: selectedPartnerIds.length > 0 ? false : applyToAllPartners,
+        applicableDrinkIds: selectedApplicableDrinkIds,
+        rewardDrinkIds: selectedRewardDrinkIds,
+        excludedDrinkIds: selectedExcludedDrinkIds,
       };
 
       if (editId) {
@@ -517,8 +566,187 @@ export default function OffersAdmin() {
               </div>
             </div>
 
+            {/* Drink Scoping Section */}
+            <div className="grid gap-4 border-t pt-4">
+              <h3 className="text-sm font-bold text-foreground">Drink Rules & Exclusions</h3>
+              
+              {/* Applicable Trigger Drinks */}
+              <div className="grid gap-2">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+                  <Label className="text-xs font-semibold">1. Trigger Drinks (Buy List A)</Label>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] text-muted-foreground">
+                      {selectedApplicableDrinkIds.length === 0 ? "All drinks qualify" : `${selectedApplicableDrinkIds.length} selected`}
+                    </span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-5 px-1.5 text-[10px]"
+                      onClick={() => {
+                        if (selectedApplicableDrinkIds.length === drinksCatalog.length) {
+                          setSelectedApplicableDrinkIds([]);
+                        } else {
+                          setSelectedApplicableDrinkIds(drinksCatalog.map(d => d.id));
+                        }
+                      }}
+                    >
+                      {selectedApplicableDrinkIds.length === drinksCatalog.length ? "Clear All" : "Select All"}
+                    </Button>
+                  </div>
+                </div>
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+                  <Input
+                    placeholder="Search trigger drinks..."
+                    className="pl-8 h-8 text-xs mb-2"
+                    value={applicableSearch}
+                    onChange={(e) => setApplicableSearch(e.target.value)}
+                  />
+                </div>
+                <div className="rounded-lg border bg-muted/10 p-2.5 h-44 overflow-y-auto">
+                  {drinksCatalog.filter(d => d.name.toLowerCase().includes(applicableSearch.toLowerCase())).length === 0 ? (
+                    <p className="text-xs text-muted-foreground text-center py-4">No matching drinks found</p>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {drinksCatalog
+                        .filter(d => d.name.toLowerCase().includes(applicableSearch.toLowerCase()))
+                        .map((d) => (
+                          <div key={d.id} className="flex items-center gap-2 p-1 hover:bg-muted/40 rounded transition-colors">
+                            <Checkbox
+                              id={`app-drink-${d.id}`}
+                              checked={selectedApplicableDrinkIds.includes(d.id)}
+                              onCheckedChange={() => toggleApplicableDrink(d.id)}
+                            />
+                            <label htmlFor={`app-drink-${d.id}`} className="text-xs cursor-pointer select-none truncate font-medium">
+                              {d.name}
+                            </label>
+                          </div>
+                        ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Reward Free Drinks */}
+              <div className="grid gap-2">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+                  <Label className="text-xs font-semibold">2. Reward Drinks (Free List B)</Label>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] text-muted-foreground">
+                      {selectedRewardDrinkIds.length === 0 ? "All drinks eligible" : `${selectedRewardDrinkIds.length} selected`}
+                    </span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-5 px-1.5 text-[10px]"
+                      onClick={() => {
+                        if (selectedRewardDrinkIds.length === drinksCatalog.length) {
+                          setSelectedRewardDrinkIds([]);
+                        } else {
+                          setSelectedRewardDrinkIds(drinksCatalog.map(d => d.id));
+                        }
+                      }}
+                    >
+                      {selectedRewardDrinkIds.length === drinksCatalog.length ? "Clear All" : "Select All"}
+                    </Button>
+                  </div>
+                </div>
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+                  <Input
+                    placeholder="Search reward drinks..."
+                    className="pl-8 h-8 text-xs mb-2"
+                    value={rewardSearch}
+                    onChange={(e) => setRewardSearch(e.target.value)}
+                  />
+                </div>
+                <div className="rounded-lg border bg-muted/10 p-2.5 h-44 overflow-y-auto">
+                  {drinksCatalog.filter(d => d.name.toLowerCase().includes(rewardSearch.toLowerCase())).length === 0 ? (
+                    <p className="text-xs text-muted-foreground text-center py-4">No matching drinks found</p>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {drinksCatalog
+                        .filter(d => d.name.toLowerCase().includes(rewardSearch.toLowerCase()))
+                        .map((d) => (
+                          <div key={d.id} className="flex items-center gap-2 p-1 hover:bg-muted/40 rounded transition-colors">
+                            <Checkbox
+                              id={`reward-drink-${d.id}`}
+                              checked={selectedRewardDrinkIds.includes(d.id)}
+                              onCheckedChange={() => toggleRewardDrink(d.id)}
+                            />
+                            <label htmlFor={`reward-drink-${d.id}`} className="text-xs cursor-pointer select-none truncate font-medium">
+                              {d.name}
+                            </label>
+                          </div>
+                        ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Excluded Drinks */}
+              <div className="grid gap-2">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+                  <Label className="text-xs font-semibold text-destructive">3. Excluded Drinks</Label>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] text-muted-foreground">
+                      {selectedExcludedDrinkIds.length === 0 ? "None excluded" : `${selectedExcludedDrinkIds.length} excluded`}
+                    </span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-5 px-1.5 text-[10px]"
+                      onClick={() => {
+                        if (selectedExcludedDrinkIds.length === drinksCatalog.length) {
+                          setSelectedExcludedDrinkIds([]);
+                        } else {
+                          setSelectedExcludedDrinkIds(drinksCatalog.map(d => d.id));
+                        }
+                      }}
+                    >
+                      {selectedExcludedDrinkIds.length === drinksCatalog.length ? "Clear All" : "Select All"}
+                    </Button>
+                  </div>
+                </div>
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+                  <Input
+                    placeholder="Search excluded drinks..."
+                    className="pl-8 h-8 text-xs mb-2"
+                    value={excludedSearch}
+                    onChange={(e) => setExcludedSearch(e.target.value)}
+                  />
+                </div>
+                <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-2.5 h-44 overflow-y-auto">
+                  {drinksCatalog.filter(d => d.name.toLowerCase().includes(excludedSearch.toLowerCase())).length === 0 ? (
+                    <p className="text-xs text-muted-foreground text-center py-4">No matching drinks found</p>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {drinksCatalog
+                        .filter(d => d.name.toLowerCase().includes(excludedSearch.toLowerCase()))
+                        .map((d) => (
+                          <div key={d.id} className="flex items-center gap-2 p-1 hover:bg-muted/40 rounded transition-colors">
+                            <Checkbox
+                              id={`ex-drink-${d.id}`}
+                              checked={selectedExcludedDrinkIds.includes(d.id)}
+                              onCheckedChange={() => toggleExcludedDrink(d.id)}
+                            />
+                            <label htmlFor={`ex-drink-${d.id}`} className="text-xs cursor-pointer select-none truncate font-medium">
+                              {d.name}
+                            </label>
+                          </div>
+                        ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
             {/* Active toggle */}
-            <div className="flex items-center justify-between pt-1">
+            <div className="flex items-center justify-between pt-1 border-t">
               <div className="space-y-0.5">
                 <Label>Mark Active</Label>
                 <p className="text-[10px] text-muted-foreground">Activating this will automatically deactivate overlapping offers.</p>

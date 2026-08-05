@@ -1518,6 +1518,20 @@ export const ListOffersResponseItem = zod.object({
     ),
   applyToStore: zod.boolean(),
   applyToAllPartners: zod.boolean(),
+  applicableDrinkIds: zod
+    .array(zod.number())
+    .optional()
+    .describe("Drinks that trigger the offer (empty = all drinks)."),
+  rewardDrinkIds: zod
+    .array(zod.number())
+    .optional()
+    .describe(
+      "Drinks eligible to be awarded as free discount (empty = all drinks).",
+    ),
+  excludedDrinkIds: zod
+    .array(zod.number())
+    .optional()
+    .describe("Drinks excluded from offer logic."),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
@@ -1543,6 +1557,9 @@ export const CreateOfferBody = zod.object({
     ),
   applyToStore: zod.boolean().optional(),
   applyToAllPartners: zod.boolean().optional(),
+  applicableDrinkIds: zod.array(zod.number()).optional(),
+  rewardDrinkIds: zod.array(zod.number()).optional(),
+  excludedDrinkIds: zod.array(zod.number()).optional(),
 });
 
 /**
@@ -1572,6 +1589,20 @@ export const GetActiveOfferResponse = zod
       ),
     applyToStore: zod.boolean(),
     applyToAllPartners: zod.boolean(),
+    applicableDrinkIds: zod
+      .array(zod.number())
+      .optional()
+      .describe("Drinks that trigger the offer (empty = all drinks)."),
+    rewardDrinkIds: zod
+      .array(zod.number())
+      .optional()
+      .describe(
+        "Drinks eligible to be awarded as free discount (empty = all drinks).",
+      ),
+    excludedDrinkIds: zod
+      .array(zod.number())
+      .optional()
+      .describe("Drinks excluded from offer logic."),
     createdAt: zod.string(),
     updatedAt: zod.string(),
   })
@@ -1601,6 +1632,9 @@ export const UpdateOfferBody = zod.object({
     ),
   applyToStore: zod.boolean().optional(),
   applyToAllPartners: zod.boolean().optional(),
+  applicableDrinkIds: zod.array(zod.number()).optional(),
+  rewardDrinkIds: zod.array(zod.number()).optional(),
+  excludedDrinkIds: zod.array(zod.number()).optional(),
 });
 
 export const UpdateOfferResponse = zod.object({
@@ -1619,6 +1653,20 @@ export const UpdateOfferResponse = zod.object({
     ),
   applyToStore: zod.boolean(),
   applyToAllPartners: zod.boolean(),
+  applicableDrinkIds: zod
+    .array(zod.number())
+    .optional()
+    .describe("Drinks that trigger the offer (empty = all drinks)."),
+  rewardDrinkIds: zod
+    .array(zod.number())
+    .optional()
+    .describe(
+      "Drinks eligible to be awarded as free discount (empty = all drinks).",
+    ),
+  excludedDrinkIds: zod
+    .array(zod.number())
+    .optional()
+    .describe("Drinks excluded from offer logic."),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });

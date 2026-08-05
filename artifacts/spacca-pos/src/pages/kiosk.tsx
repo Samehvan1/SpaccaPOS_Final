@@ -230,27 +230,67 @@ export default function KioskPage() {
     }
     const N = activeOffer.buyAmount;
     const X = activeOffer.freeAmount;
+    const applicableDrinkIds: number[] = (activeOffer as any).applicableDrinkIds || [];
+    const rewardDrinkIds: number[] = (activeOffer as any).rewardDrinkIds || [];
+    const excludedDrinkIds: number[] = (activeOffer as any).excludedDrinkIds || [];
 
-    // Flatten all items in cart to their prices
-    const flatItems = cart.flatMap(item => 
+    // Filter out excluded drinks
+    const validCart = cart.filter(item => !excludedDrinkIds.includes((item as any).drinkId || (item as any).drink?.id));
+
+    if (validCart.length === 0) {
+      return { discount: 0, extraFreeCount: 0, isOfferApplied: false };
+    }
+
+    const triggerItems = validCart.filter(item => 
+      applicableDrinkIds.length === 0 || applicableDrinkIds.includes((item as any).drinkId || (item as any).drink?.id)
+    );
+
+    const rewardItems = validCart.filter(item => 
+      rewardDrinkIds.length === 0 || rewardDrinkIds.includes((item as any).drinkId || (item as any).drink?.id)
+    );
+
+    const triggerQty = triggerItems.reduce((sum, item) => sum + item.quantity, 0);
+
+    const isCrossList = applicableDrinkIds.length > 0 && rewardDrinkIds.length > 0 && 
+      !applicableDrinkIds.some(id => rewardDrinkIds.includes(id));
+
+    let F = 0;
+    let extraFreeCount = 0;
+
+    if (isCrossList) {
+      const maxEarned = Math.floor(triggerQty / N) * X;
+      const rewardQty = rewardItems.reduce((sum, item) => sum + item.quantity, 0);
+      F = Math.min(maxEarned, rewardQty);
+    } else {
+      const flatTriggerPrices = triggerItems.flatMap(item => 
+        Array.from({ length: item.quantity }).map(() => item.totalPrice)
+      ).sort((a, b) => a - b);
+
+      const M = flatTriggerPrices.length;
+      F = Math.floor(M / (N + X)) * X + Math.min(X, Math.max(0, (M % (N + X)) - N));
+      const P = M - F;
+      const E = Math.floor(P / N) * X;
+      extraFreeCount = E - F;
+    }
+
+    if (F <= 0 || rewardItems.length === 0) {
+      return { discount: 0, extraFreeCount: 0, isOfferApplied: false };
+    }
+
+    const flatRewardPrices = rewardItems.flatMap(item => 
       Array.from({ length: item.quantity }).map(() => item.totalPrice)
     ).sort((a, b) => a - b);
 
-    const M = flatItems.length;
-    const F = Math.floor(M / (N + X)) * X + Math.min(X, Math.max(0, (M % (N + X)) - N));
-    const P = M - F;
-    const E = Math.floor(P / N) * X;
-    const extraFreeCount = E - F;
-
+    const discountCount = Math.min(F, flatRewardPrices.length);
     let discount = 0;
-    for (let i = 0; i < F; i++) {
-      discount += flatItems[i];
+    for (let i = 0; i < discountCount; i++) {
+      discount += flatRewardPrices[i];
     }
 
     return {
       discount,
       extraFreeCount,
-      isOfferApplied: F > 0,
+      isOfferApplied: discount > 0,
     };
   }, [cart, activeOffer]);
 

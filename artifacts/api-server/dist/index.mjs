@@ -56013,13 +56013,14 @@ var init_ingredients = __esm({
 });
 
 // ../../lib/db/src/schema/drinks.ts
-var drinkCategoriesTable, kitchenStationsTable, drinksTable, drinkIngredientSlotsTable, drinkSlotTypeOptionsTable, drinkSlotVolumesTable, predefinedSlotsTable, predefinedSlotTypeOptionsTable, predefinedSlotVolumesTable, insertDrinkSchema, insertDrinkCategorySchema, insertKitchenStationSchema, insertDrinkSlotSchema, insertDrinkSlotVolumeSchema, insertDrinkSlotTypeOptionSchema, insertPredefinedSlotSchema;
+var drinkCategoriesTable, kitchenStationsTable, drinksTable, drinkIngredientSlotsTable, drinkSlotTypeOptionsTable, drinkSlotVolumesTable, predefinedSlotsTable, predefinedSlotTypeOptionsTable, predefinedSlotVolumesTable, insertDrinkSchema, insertDrinkCategorySchema, insertKitchenStationSchema, insertDrinkSlotSchema, insertDrinkSlotVolumeSchema, insertDrinkSlotTypeOptionSchema, insertPredefinedSlotSchema, branchDrinkStatusTable;
 var init_drinks = __esm({
   "../../lib/db/src/schema/drinks.ts"() {
     "use strict";
     init_pg_core();
     init_drizzle_zod();
     init_ingredients();
+    init_branches();
     drinkCategoriesTable = pgTable("drink_categories", {
       id: serial("id").primaryKey(),
       name: text("name").notNull().unique(),
@@ -56162,6 +56163,18 @@ var init_drinks = __esm({
     insertDrinkSlotVolumeSchema = createInsertSchema(drinkSlotVolumesTable).omit({ id: true });
     insertDrinkSlotTypeOptionSchema = createInsertSchema(drinkSlotTypeOptionsTable).omit({ id: true });
     insertPredefinedSlotSchema = createInsertSchema(predefinedSlotsTable).omit({ id: true, createdAt: true, updatedAt: true });
+    branchDrinkStatusTable = pgTable("branch_drink_status", {
+      id: serial("id").primaryKey(),
+      branchId: integer("branch_id").notNull().references(() => branchesTable.id, { onDelete: "cascade" }),
+      drinkId: integer("drink_id").notNull().references(() => drinksTable.id, { onDelete: "cascade" }),
+      isActive: boolean("is_active").notNull().default(true),
+      createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+      updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => /* @__PURE__ */ new Date())
+    }, (table) => {
+      return {
+        branchDrinkIdx: index("branch_drink_status_idx").on(table.branchId, table.drinkId)
+      };
+    });
   }
 });
 
@@ -56187,7 +56200,7 @@ var init_discounts = __esm({
 });
 
 // ../../lib/db/src/schema/partners.ts
-var partnersTable, partnerDrinkPricesTable, insertPartnerSchema, insertPartnerDrinkPriceSchema;
+var partnersTable, partnerDrinkPricesTable, insertPartnerSchema, insertPartnerDrinkPriceSchema, partnerDrinkStatusTable;
 var init_partners = __esm({
   "../../lib/db/src/schema/partners.ts"() {
     "use strict";
@@ -56222,11 +56235,25 @@ var init_partners = __esm({
     });
     insertPartnerSchema = createInsertSchema(partnersTable).omit({ id: true, createdAt: true, updatedAt: true });
     insertPartnerDrinkPriceSchema = createInsertSchema(partnerDrinkPricesTable).omit({ id: true, createdAt: true, updatedAt: true });
+    partnerDrinkStatusTable = pgTable("partner_drink_status", {
+      id: serial("id").primaryKey(),
+      partnerId: integer("partner_id").notNull().references(() => partnersTable.id, { onDelete: "cascade" }),
+      drinkId: integer("drink_id").notNull().references(() => drinksTable.id, { onDelete: "cascade" }),
+      branchId: integer("branch_id").references(() => branchesTable.id, { onDelete: "cascade" }),
+      // Nullable: if null, applies across all branches
+      isActive: boolean("is_active").notNull().default(true),
+      createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+      updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => /* @__PURE__ */ new Date())
+    }, (table) => {
+      return {
+        partnerDrinkBranchStatusIdx: index("partner_drink_status_idx").on(table.partnerId, table.drinkId, table.branchId)
+      };
+    });
   }
 });
 
 // ../../lib/db/src/schema/offers.ts
-var offersTable, offersBranchesTable, offersPartnersTable, insertOfferSchema;
+var offersTable, offersBranchesTable, offersPartnersTable, offersApplicableDrinksTable, offersRewardDrinksTable, offersExcludedDrinksTable, insertOfferSchema;
 var init_offers = __esm({
   "../../lib/db/src/schema/offers.ts"() {
     "use strict";
@@ -56234,6 +56261,7 @@ var init_offers = __esm({
     init_drizzle_zod();
     init_branches();
     init_partners();
+    init_drinks();
     offersTable = pgTable("offers", {
       id: serial("id").primaryKey(),
       name: text("name").notNull(),
@@ -56261,6 +56289,30 @@ var init_offers = __esm({
     }, (table) => {
       return {
         pk: primaryKey({ columns: [table.offerId, table.partnerId] })
+      };
+    });
+    offersApplicableDrinksTable = pgTable("offers_applicable_drinks", {
+      offerId: integer("offer_id").notNull().references(() => offersTable.id, { onDelete: "cascade" }),
+      drinkId: integer("drink_id").notNull().references(() => drinksTable.id, { onDelete: "cascade" })
+    }, (table) => {
+      return {
+        pk: primaryKey({ columns: [table.offerId, table.drinkId] })
+      };
+    });
+    offersRewardDrinksTable = pgTable("offers_reward_drinks", {
+      offerId: integer("offer_id").notNull().references(() => offersTable.id, { onDelete: "cascade" }),
+      drinkId: integer("drink_id").notNull().references(() => drinksTable.id, { onDelete: "cascade" })
+    }, (table) => {
+      return {
+        pk: primaryKey({ columns: [table.offerId, table.drinkId] })
+      };
+    });
+    offersExcludedDrinksTable = pgTable("offers_excluded_drinks", {
+      offerId: integer("offer_id").notNull().references(() => offersTable.id, { onDelete: "cascade" }),
+      drinkId: integer("drink_id").notNull().references(() => drinksTable.id, { onDelete: "cascade" })
+    }, (table) => {
+      return {
+        pk: primaryKey({ columns: [table.offerId, table.drinkId] })
       };
     });
     insertOfferSchema = createInsertSchema(offersTable).omit({ id: true, createdAt: true, updatedAt: true });
@@ -56789,6 +56841,7 @@ var schema_exports = {};
 __export(schema_exports, {
   activityLogsTable: () => activityLogsTable,
   branchDrinkPricesTable: () => branchDrinkPricesTable,
+  branchDrinkStatusTable: () => branchDrinkStatusTable,
   branchInventoryBatchesTable: () => branchInventoryBatchesTable,
   branchStockTable: () => branchStockTable,
   branchesTable: () => branchesTable,
@@ -56845,14 +56898,18 @@ __export(schema_exports, {
   insertUserPermissionSchema: () => insertUserPermissionSchema,
   insertUserSchema: () => insertUserSchema,
   kitchenStationsTable: () => kitchenStationsTable,
+  offersApplicableDrinksTable: () => offersApplicableDrinksTable,
   offersBranchesTable: () => offersBranchesTable,
+  offersExcludedDrinksTable: () => offersExcludedDrinksTable,
   offersPartnersTable: () => offersPartnersTable,
+  offersRewardDrinksTable: () => offersRewardDrinksTable,
   offersTable: () => offersTable,
   orderItemCustomizationsTable: () => orderItemCustomizationsTable,
   orderItemsTable: () => orderItemsTable,
   orderPaymentsTable: () => orderPaymentsTable,
   ordersTable: () => ordersTable,
   partnerDrinkPricesTable: () => partnerDrinkPricesTable,
+  partnerDrinkStatusTable: () => partnerDrinkStatusTable,
   partnersTable: () => partnersTable,
   permissionsTable: () => permissionsTable,
   predefinedSlotTypeOptionsTable: () => predefinedSlotTypeOptionsTable,
@@ -56955,6 +57012,7 @@ var src_exports = {};
 __export(src_exports, {
   activityLogsTable: () => activityLogsTable,
   branchDrinkPricesTable: () => branchDrinkPricesTable,
+  branchDrinkStatusTable: () => branchDrinkStatusTable,
   branchInventoryBatchesTable: () => branchInventoryBatchesTable,
   branchStockTable: () => branchStockTable,
   branchesTable: () => branchesTable,
@@ -57012,14 +57070,18 @@ __export(src_exports, {
   insertUserPermissionSchema: () => insertUserPermissionSchema,
   insertUserSchema: () => insertUserSchema,
   kitchenStationsTable: () => kitchenStationsTable,
+  offersApplicableDrinksTable: () => offersApplicableDrinksTable,
   offersBranchesTable: () => offersBranchesTable,
+  offersExcludedDrinksTable: () => offersExcludedDrinksTable,
   offersPartnersTable: () => offersPartnersTable,
+  offersRewardDrinksTable: () => offersRewardDrinksTable,
   offersTable: () => offersTable,
   orderItemCustomizationsTable: () => orderItemCustomizationsTable,
   orderItemsTable: () => orderItemsTable,
   orderPaymentsTable: () => orderPaymentsTable,
   ordersTable: () => ordersTable,
   partnerDrinkPricesTable: () => partnerDrinkPricesTable,
+  partnerDrinkStatusTable: () => partnerDrinkStatusTable,
   partnersTable: () => partnersTable,
   permissionsTable: () => permissionsTable,
   pool: () => pool,
@@ -79293,6 +79355,11 @@ var ListOffersResponseItem = objectType({
   ),
   applyToStore: booleanType(),
   applyToAllPartners: booleanType(),
+  applicableDrinkIds: arrayType(numberType()).optional().describe("Drinks that trigger the offer (empty = all drinks)."),
+  rewardDrinkIds: arrayType(numberType()).optional().describe(
+    "Drinks eligible to be awarded as free discount (empty = all drinks)."
+  ),
+  excludedDrinkIds: arrayType(numberType()).optional().describe("Drinks excluded from offer logic."),
   createdAt: stringType(),
   updatedAt: stringType()
 });
@@ -79307,7 +79374,10 @@ var CreateOfferBody = objectType({
     "Specific partner IDs. Empty array = all partners (when applyToAllPartners=true)."
   ),
   applyToStore: booleanType().optional(),
-  applyToAllPartners: booleanType().optional()
+  applyToAllPartners: booleanType().optional(),
+  applicableDrinkIds: arrayType(numberType()).optional(),
+  rewardDrinkIds: arrayType(numberType()).optional(),
+  excludedDrinkIds: arrayType(numberType()).optional()
 });
 var GetActiveOfferQueryParams = objectType({
   branchId: coerce.number().optional().describe("Branch ID to filter by"),
@@ -79327,6 +79397,11 @@ var GetActiveOfferResponse = objectType({
   ),
   applyToStore: booleanType(),
   applyToAllPartners: booleanType(),
+  applicableDrinkIds: arrayType(numberType()).optional().describe("Drinks that trigger the offer (empty = all drinks)."),
+  rewardDrinkIds: arrayType(numberType()).optional().describe(
+    "Drinks eligible to be awarded as free discount (empty = all drinks)."
+  ),
+  excludedDrinkIds: arrayType(numberType()).optional().describe("Drinks excluded from offer logic."),
   createdAt: stringType(),
   updatedAt: stringType()
 }).nullable();
@@ -79343,7 +79418,10 @@ var UpdateOfferBody = objectType({
     "Specific partner IDs. Empty array = all partners (when applyToAllPartners=true)."
   ),
   applyToStore: booleanType().optional(),
-  applyToAllPartners: booleanType().optional()
+  applyToAllPartners: booleanType().optional(),
+  applicableDrinkIds: arrayType(numberType()).optional(),
+  rewardDrinkIds: arrayType(numberType()).optional(),
+  excludedDrinkIds: arrayType(numberType()).optional()
 });
 var UpdateOfferResponse = objectType({
   id: numberType(),
@@ -79357,6 +79435,11 @@ var UpdateOfferResponse = objectType({
   ),
   applyToStore: booleanType(),
   applyToAllPartners: booleanType(),
+  applicableDrinkIds: arrayType(numberType()).optional().describe("Drinks that trigger the offer (empty = all drinks)."),
+  rewardDrinkIds: arrayType(numberType()).optional().describe(
+    "Drinks eligible to be awarded as free discount (empty = all drinks)."
+  ),
+  excludedDrinkIds: arrayType(numberType()).optional().describe("Drinks excluded from offer logic."),
   createdAt: stringType(),
   updatedAt: stringType()
 });
@@ -79504,7 +79587,9 @@ var CreateOrderBody2 = CreateOrderBody.extend({
     })
   ).optional(),
   source: external_exports2.enum(["pos", "kiosk", "web", "mobile"]).optional(),
-  partnerId: external_exports2.union([external_exports2.number(), external_exports2.string()]).nullish().transform((v) => v && v !== "store" && !isNaN(Number(v)) ? Number(v) : void 0),
+  partnerId: external_exports2.union([external_exports2.number(), external_exports2.string()]).nullish().transform(
+    (v) => v && v !== "store" && !isNaN(Number(v)) ? Number(v) : void 0
+  ),
   items: external_exports2.array(
     external_exports2.object({
       drinkId: external_exports2.coerce.number(),
@@ -82560,9 +82645,24 @@ router3.get("/drinks", async (req, res) => {
     conditions.push(eq(drinksTable.isActive, params.data.active));
   }
   const drinks = conditions.length ? await db.select().from(drinksTable).where(and(...conditions)) : await db.select().from(drinksTable);
-  let filtered = drinks;
+  let disabledDrinkIds = /* @__PURE__ */ new Set();
+  if (targetBranchId) {
+    const branchStatusRows = await db.select().from(branchDrinkStatusTable).where(and(eq(branchDrinkStatusTable.branchId, targetBranchId), eq(branchDrinkStatusTable.isActive, false)));
+    for (const r of branchStatusRows) {
+      disabledDrinkIds.add(r.drinkId);
+    }
+  }
+  if (queryPartnerId) {
+    const partnerStatusRows = await db.select().from(partnerDrinkStatusTable).where(and(eq(partnerDrinkStatusTable.partnerId, queryPartnerId), eq(partnerDrinkStatusTable.isActive, false)));
+    for (const r of partnerStatusRows) {
+      if (!r.branchId || r.branchId === targetBranchId) {
+        disabledDrinkIds.add(r.drinkId);
+      }
+    }
+  }
+  let filtered = drinks.filter((d) => !disabledDrinkIds.has(d.id));
   if (params.success && params.data.category) {
-    filtered = drinks.filter((d) => d.category === params.data.category);
+    filtered = filtered.filter((d) => d.category === params.data.category);
   }
   filtered = [...filtered].sort((a, b) => {
     const sortA = a.sortOrder ?? 0;
@@ -83229,6 +83329,60 @@ router3.get("/drinks/:id/stock-usage", requirePermission("catalog:view"), async 
     }
   }
   res.json(usage);
+});
+router3.get("/admin/drinks/availability", requirePermission("drinks:manage"), async (req, res) => {
+  const branchStatuses = await db.select().from(branchDrinkStatusTable);
+  const partnerStatuses = await db.select().from(partnerDrinkStatusTable);
+  res.json({ branchStatuses, partnerStatuses });
+});
+router3.post("/admin/drinks/branch-status", requirePermission("drinks:manage"), async (req, res) => {
+  const { branchId, drinkId, isActive } = req.body;
+  if (!branchId || !drinkId || isActive === void 0) {
+    res.status(400).json({ error: "Invalid branchId, drinkId, or isActive value" });
+    return;
+  }
+  const [existing] = await db.select().from(branchDrinkStatusTable).where(and(eq(branchDrinkStatusTable.branchId, branchId), eq(branchDrinkStatusTable.drinkId, drinkId))).limit(1);
+  if (existing) {
+    await db.update(branchDrinkStatusTable).set({ isActive: Boolean(isActive), updatedAt: /* @__PURE__ */ new Date() }).where(eq(branchDrinkStatusTable.id, existing.id));
+  } else {
+    await db.insert(branchDrinkStatusTable).values({
+      branchId,
+      drinkId,
+      isActive: Boolean(isActive)
+    });
+  }
+  globalCache.clear();
+  res.json({ success: true });
+});
+router3.post("/admin/drinks/partner-status", requirePermission("drinks:manage"), async (req, res) => {
+  const { partnerId, drinkId, branchId, isActive } = req.body;
+  if (!partnerId || !drinkId || isActive === void 0) {
+    res.status(400).json({ error: "Invalid partnerId, drinkId, or isActive value" });
+    return;
+  }
+  const targetBranchId = branchId || null;
+  const conditions = [
+    eq(partnerDrinkStatusTable.partnerId, partnerId),
+    eq(partnerDrinkStatusTable.drinkId, drinkId)
+  ];
+  if (targetBranchId) {
+    conditions.push(eq(partnerDrinkStatusTable.branchId, targetBranchId));
+  } else {
+    conditions.push(isNull(partnerDrinkStatusTable.branchId));
+  }
+  const [existing] = await db.select().from(partnerDrinkStatusTable).where(and(...conditions)).limit(1);
+  if (existing) {
+    await db.update(partnerDrinkStatusTable).set({ isActive: Boolean(isActive), updatedAt: /* @__PURE__ */ new Date() }).where(eq(partnerDrinkStatusTable.id, existing.id));
+  } else {
+    await db.insert(partnerDrinkStatusTable).values({
+      partnerId,
+      drinkId,
+      branchId: targetBranchId,
+      isActive: Boolean(isActive)
+    });
+  }
+  globalCache.clear();
+  res.json({ success: true });
 });
 var drinks_default = router3;
 
@@ -84366,15 +84520,30 @@ router5.post("/orders", async (req, res) => {
   if (activeOffer) {
     const N = activeOffer.buyAmount;
     const X = activeOffer.freeAmount;
-    const flatItems = itemDetails.flatMap(
-      (item) => Array.from({ length: item.quantity }).map(() => item.unitPrice)
-    ).sort((a, b) => a - b);
-    const M = flatItems.length;
+    const applicableRows = await db.select().from(offersApplicableDrinksTable).where(eq(offersApplicableDrinksTable.offerId, activeOffer.id));
+    const rewardRows = await db.select().from(offersRewardDrinksTable).where(eq(offersRewardDrinksTable.offerId, activeOffer.id));
+    const excludedRows = await db.select().from(offersExcludedDrinksTable).where(eq(offersExcludedDrinksTable.offerId, activeOffer.id));
+    const applicableDrinkIds = applicableRows.map((r) => r.drinkId);
+    const rewardDrinkIds = rewardRows.map((r) => r.drinkId);
+    const excludedDrinkIds = excludedRows.map((r) => r.drinkId);
+    const triggerItems = itemDetails.filter(
+      (item) => !excludedDrinkIds.includes(item.drinkId) && (applicableDrinkIds.length === 0 || applicableDrinkIds.includes(item.drinkId))
+    );
+    const rewardItems = itemDetails.filter(
+      (item) => !excludedDrinkIds.includes(item.drinkId) && (rewardDrinkIds.length === 0 || rewardDrinkIds.includes(item.drinkId))
+    );
+    const M = triggerItems.reduce((sum2, item) => sum2 + item.quantity, 0);
     const F = Math.floor(M / (N + X)) * X + Math.min(X, Math.max(0, M % (N + X) - N));
-    if (F > 0) {
-      offerIdToSave = activeOffer.id;
-      for (let i = 0; i < F; i++) {
-        offerDiscountAmount += flatItems[i];
+    if (F > 0 && rewardItems.length > 0) {
+      const flatRewardPrices = rewardItems.flatMap(
+        (item) => Array.from({ length: item.quantity }).map(() => item.unitPrice)
+      ).sort((a, b) => a - b);
+      const itemsToDiscountCount = Math.min(F, flatRewardPrices.length);
+      if (itemsToDiscountCount > 0) {
+        offerIdToSave = activeOffer.id;
+        for (let i = 0; i < itemsToDiscountCount; i++) {
+          offerDiscountAmount += flatRewardPrices[i];
+        }
       }
     }
   }
@@ -86865,16 +87034,22 @@ var router14 = (0, import_express15.Router)();
 async function loadOfferScopes(tx, offerId) {
   const branches = await tx.select().from(offersBranchesTable).where(eq(offersBranchesTable.offerId, offerId));
   const partners = await tx.select().from(offersPartnersTable).where(eq(offersPartnersTable.offerId, offerId));
+  const applicable = await tx.select().from(offersApplicableDrinksTable).where(eq(offersApplicableDrinksTable.offerId, offerId));
+  const reward = await tx.select().from(offersRewardDrinksTable).where(eq(offersRewardDrinksTable.offerId, offerId));
+  const excluded = await tx.select().from(offersExcludedDrinksTable).where(eq(offersExcludedDrinksTable.offerId, offerId));
   return {
     branchIds: branches.map((b) => b.branchId),
-    partnerIds: partners.map((p) => p.partnerId)
+    partnerIds: partners.map((p) => p.partnerId),
+    applicableDrinkIds: applicable.map((a) => a.drinkId),
+    rewardDrinkIds: reward.map((r) => r.drinkId),
+    excludedDrinkIds: excluded.map((e) => e.drinkId)
   };
 }
 async function enrichOffer(tx, offer) {
-  const { branchIds, partnerIds } = await loadOfferScopes(tx, offer.id);
-  return { ...serializeDates(offer), branchIds, partnerIds };
+  const scopes = await loadOfferScopes(tx, offer.id);
+  return { ...serializeDates(offer), ...scopes };
 }
-async function syncOfferScopes(tx, offerId, branchIds, partnerIds) {
+async function syncOfferScopes(tx, offerId, branchIds, partnerIds, applicableDrinkIds, rewardDrinkIds, excludedDrinkIds) {
   if (branchIds !== void 0) {
     await tx.delete(offersBranchesTable).where(eq(offersBranchesTable.offerId, offerId));
     if (branchIds.length > 0) {
@@ -86885,6 +87060,24 @@ async function syncOfferScopes(tx, offerId, branchIds, partnerIds) {
     await tx.delete(offersPartnersTable).where(eq(offersPartnersTable.offerId, offerId));
     if (partnerIds.length > 0) {
       await tx.insert(offersPartnersTable).values(partnerIds.map((pid) => ({ offerId, partnerId: pid })));
+    }
+  }
+  if (applicableDrinkIds !== void 0) {
+    await tx.delete(offersApplicableDrinksTable).where(eq(offersApplicableDrinksTable.offerId, offerId));
+    if (applicableDrinkIds.length > 0) {
+      await tx.insert(offersApplicableDrinksTable).values(applicableDrinkIds.map((did) => ({ offerId, drinkId: did })));
+    }
+  }
+  if (rewardDrinkIds !== void 0) {
+    await tx.delete(offersRewardDrinksTable).where(eq(offersRewardDrinksTable.offerId, offerId));
+    if (rewardDrinkIds.length > 0) {
+      await tx.insert(offersRewardDrinksTable).values(rewardDrinkIds.map((did) => ({ offerId, drinkId: did })));
+    }
+  }
+  if (excludedDrinkIds !== void 0) {
+    await tx.delete(offersExcludedDrinksTable).where(eq(offersExcludedDrinksTable.offerId, offerId));
+    if (excludedDrinkIds.length > 0) {
+      await tx.insert(offersExcludedDrinksTable).values(excludedDrinkIds.map((did) => ({ offerId, drinkId: did })));
     }
   }
 }
@@ -86938,7 +87131,8 @@ router14.get("/offers/active", async (req, res) => {
       } else {
         if (!(o.applyToStore ?? true)) continue;
       }
-      res.json({ ...serializeDates(o), branchIds, partnerIds });
+      const enriched = await enrichOffer(db, o);
+      res.json(enriched);
       return;
     }
     res.json(null);
@@ -86958,6 +87152,9 @@ router14.post("/offers", requirePermission("discounts:manage"), async (req, res)
       const isAct = parsed.data.isActive ?? true;
       const branchIds = parsed.data.branchIds ?? [];
       const partnerIds = parsed.data.partnerIds ?? [];
+      const applicableDrinkIds = parsed.data.applicableDrinkIds ?? [];
+      const rewardDrinkIds = parsed.data.rewardDrinkIds ?? [];
+      const excludedDrinkIds = parsed.data.excludedDrinkIds ?? [];
       const applyToStore = parsed.data.applyToStore ?? true;
       const applyToAllPartners = parsed.data.applyToAllPartners ?? true;
       if (isAct) {
@@ -86971,8 +87168,8 @@ router14.post("/offers", requirePermission("discounts:manage"), async (req, res)
         applyToStore,
         applyToAllPartners
       }).returning();
-      await syncOfferScopes(tx, newOffer.id, branchIds, partnerIds);
-      return { ...serializeDates(newOffer), branchIds, partnerIds };
+      await syncOfferScopes(tx, newOffer.id, branchIds, partnerIds, applicableDrinkIds, rewardDrinkIds, excludedDrinkIds);
+      return { ...serializeDates(newOffer), branchIds, partnerIds, applicableDrinkIds, rewardDrinkIds, excludedDrinkIds };
     });
     res.status(201).json(enrichedOffer);
   } catch (error40) {
@@ -86993,10 +87190,19 @@ router14.patch("/offers/:id", requirePermission("discounts:manage"), async (req,
       if (!existing) {
         throw new Error("Offer not found");
       }
-      const { branchIds: existingBranchIds, partnerIds: existingPartnerIds } = await loadOfferScopes(tx, id);
+      const {
+        branchIds: existingBranchIds,
+        partnerIds: existingPartnerIds,
+        applicableDrinkIds: existingApplicable,
+        rewardDrinkIds: existingReward,
+        excludedDrinkIds: existingExcluded
+      } = await loadOfferScopes(tx, id);
       const isAct = parsed.data.isActive !== void 0 ? parsed.data.isActive : existing.isActive;
       const branchIds = parsed.data.branchIds !== void 0 ? parsed.data.branchIds : existingBranchIds;
       const partnerIds = parsed.data.partnerIds !== void 0 ? parsed.data.partnerIds : existingPartnerIds;
+      const applicableDrinkIds = parsed.data.applicableDrinkIds !== void 0 ? parsed.data.applicableDrinkIds : existingApplicable;
+      const rewardDrinkIds = parsed.data.rewardDrinkIds !== void 0 ? parsed.data.rewardDrinkIds : existingReward;
+      const excludedDrinkIds = parsed.data.excludedDrinkIds !== void 0 ? parsed.data.excludedDrinkIds : existingExcluded;
       const applyToStore = parsed.data.applyToStore !== void 0 ? parsed.data.applyToStore : existing.applyToStore;
       const applyToAllPartners = parsed.data.applyToAllPartners !== void 0 ? parsed.data.applyToAllPartners : existing.applyToAllPartners;
       if (isAct) {
@@ -87010,8 +87216,16 @@ router14.patch("/offers/:id", requirePermission("discounts:manage"), async (req,
       if (parsed.data.applyToStore !== void 0) updateData.applyToStore = parsed.data.applyToStore;
       if (parsed.data.applyToAllPartners !== void 0) updateData.applyToAllPartners = parsed.data.applyToAllPartners;
       const [updatedOffer] = await tx.update(offersTable).set(updateData).where(eq(offersTable.id, id)).returning();
-      await syncOfferScopes(tx, id, parsed.data.branchIds, parsed.data.partnerIds);
-      return { ...serializeDates(updatedOffer), branchIds, partnerIds };
+      await syncOfferScopes(
+        tx,
+        id,
+        parsed.data.branchIds,
+        parsed.data.partnerIds,
+        parsed.data.applicableDrinkIds,
+        parsed.data.rewardDrinkIds,
+        parsed.data.excludedDrinkIds
+      );
+      return { ...serializeDates(updatedOffer), branchIds, partnerIds, applicableDrinkIds, rewardDrinkIds, excludedDrinkIds };
     });
     res.json(enrichedOffer);
   } catch (error40) {
@@ -89467,6 +89681,7 @@ router20.get("/finance/sales-items", requirePermission("reports:view"), async (r
     discount: ordersTable.discount,
     discountName: ordersTable.discountCode,
     discountValue: ordersTable.discountValue,
+    offerDiscount: ordersTable.offerDiscount,
     total: ordersTable.total,
     paymentMethod: ordersTable.paymentMethod,
     category: drinksTable.category
@@ -89513,6 +89728,7 @@ router20.get("/finance/sales-items", requirePermission("reports:view"), async (r
       discountName: item.discountName || "None",
       discountValue: discountVal,
       discountAmount: itemDiscountAmt,
+      offerDiscountAmount: item.offerDiscount ? parseFloat(item.offerDiscount) : 0,
       subtotalPrice: beforeTax,
       finalPrice,
       paymentMethod: item.paymentMethod,

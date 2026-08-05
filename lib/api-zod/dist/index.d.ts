@@ -1667,12 +1667,12 @@ export declare const CreateOrderBody: z.ZodObject<{
     amountTendered?: number | undefined;
     notes?: string | undefined;
     discountCode?: string | undefined;
+    adminPin?: string | undefined;
     payments?: {
         paymentMethod: string;
         amount: number;
         transactionId?: string | null | undefined;
     }[] | undefined;
-    adminPin?: string | undefined;
 }, {
     paymentMethod: "cash" | "card" | "wallet" | "hospitality" | "split" | "refund" | "points";
     items: {
@@ -1697,12 +1697,12 @@ export declare const CreateOrderBody: z.ZodObject<{
     amountTendered?: number | undefined;
     notes?: string | undefined;
     discountCode?: string | undefined;
+    adminPin?: string | undefined;
     payments?: {
         paymentMethod: string;
         amount: number;
         transactionId?: string | null | undefined;
     }[] | undefined;
-    adminPin?: string | undefined;
 }>;
 export type CreateOrderBody = Infer<typeof CreateOrderBody>;
 export declare const GetOrderParams: z.ZodObject<{
@@ -1795,23 +1795,23 @@ export declare const UpdateOrderStatusBody: z.ZodObject<{
 }, "strip", z.ZodTypeAny, {
     status: "pending" | "paid" | "in_progress" | "ready" | "completed" | "cancelled" | "refunded";
     paymentMethod?: "cash" | "card" | "wallet" | "hospitality" | "split" | "refund" | undefined;
+    adminPin?: string | undefined;
+    cashierId?: number | undefined;
     payments?: {
         paymentMethod: "cash" | "card" | "wallet" | "hospitality" | "refund";
         amount: number;
         transactionId?: string | undefined;
     }[] | undefined;
-    adminPin?: string | undefined;
-    cashierId?: number | undefined;
 }, {
     status: "pending" | "paid" | "in_progress" | "ready" | "completed" | "cancelled" | "refunded";
     paymentMethod?: "cash" | "card" | "wallet" | "hospitality" | "split" | "refund" | undefined;
+    adminPin?: string | undefined;
+    cashierId?: number | undefined;
     payments?: {
         paymentMethod: "cash" | "card" | "wallet" | "hospitality" | "refund";
         amount: number;
         transactionId?: string | undefined;
     }[] | undefined;
-    adminPin?: string | undefined;
-    cashierId?: number | undefined;
 }>;
 export type UpdateOrderStatusBody = Infer<typeof UpdateOrderStatusBody>;
 export declare const UpdateOrderStatusResponse: z.ZodIntersection<z.ZodObject<{
@@ -3014,9 +3014,9 @@ export declare const UserDetail: z.ZodObject<{
     role: string;
     isActive: boolean;
     branchId?: number | null | undefined;
-    permissions?: string[] | undefined;
     createdAt?: Date | undefined;
     pin?: string | null | undefined;
+    permissions?: string[] | undefined;
 }, {
     username: string;
     id: number;
@@ -3024,9 +3024,9 @@ export declare const UserDetail: z.ZodObject<{
     role: string;
     isActive: boolean;
     branchId?: number | null | undefined;
-    permissions?: string[] | undefined;
     createdAt?: Date | undefined;
     pin?: string | null | undefined;
+    permissions?: string[] | undefined;
 }>;
 export type UserDetail = Infer<typeof UserDetail>;
 export declare const ListActivityLogsQueryParams: z.ZodObject<{
@@ -3075,18 +3075,18 @@ export declare const ActivityLog: z.ZodObject<{
     userId: number;
     action: string;
     entityType?: string | null | undefined;
-    userName?: string | null | undefined;
     entityId?: number | null | undefined;
     details?: z.objectOutputType<{}, z.ZodTypeAny, "passthrough"> | null | undefined;
+    userName?: string | null | undefined;
 }, {
     id: number;
     createdAt: string;
     userId: number;
     action: string;
     entityType?: string | null | undefined;
-    userName?: string | null | undefined;
     entityId?: number | null | undefined;
     details?: z.objectInputType<{}, z.ZodTypeAny, "passthrough"> | null | undefined;
+    userName?: string | null | undefined;
 }>;
 export type ActivityLog = Infer<typeof ActivityLog>;
 export declare const ListActivityLogsResponse: z.ZodObject<{
@@ -3106,18 +3106,18 @@ export declare const ListActivityLogsResponse: z.ZodObject<{
         userId: number;
         action: string;
         entityType?: string | null | undefined;
-        userName?: string | null | undefined;
         entityId?: number | null | undefined;
         details?: z.objectOutputType<{}, z.ZodTypeAny, "passthrough"> | null | undefined;
+        userName?: string | null | undefined;
     }, {
         id: number;
         createdAt: string;
         userId: number;
         action: string;
         entityType?: string | null | undefined;
-        userName?: string | null | undefined;
         entityId?: number | null | undefined;
         details?: z.objectInputType<{}, z.ZodTypeAny, "passthrough"> | null | undefined;
+        userName?: string | null | undefined;
     }>, "many">;
     total: z.ZodNumber;
     limit: z.ZodNumber;
@@ -3132,9 +3132,9 @@ export declare const ListActivityLogsResponse: z.ZodObject<{
         userId: number;
         action: string;
         entityType?: string | null | undefined;
-        userName?: string | null | undefined;
         entityId?: number | null | undefined;
         details?: z.objectOutputType<{}, z.ZodTypeAny, "passthrough"> | null | undefined;
+        userName?: string | null | undefined;
     }[];
 }, {
     total: number;
@@ -3146,9 +3146,9 @@ export declare const ListActivityLogsResponse: z.ZodObject<{
         userId: number;
         action: string;
         entityType?: string | null | undefined;
-        userName?: string | null | undefined;
         entityId?: number | null | undefined;
         details?: z.objectInputType<{}, z.ZodTypeAny, "passthrough"> | null | undefined;
+        userName?: string | null | undefined;
     }[];
 }>;
 export type ListActivityLogsResponse = Infer<typeof ListActivityLogsResponse>;
@@ -3177,6 +3177,9 @@ export declare const Offer: z.ZodObject<{
     partnerIds: z.ZodArray<z.ZodNumber, "many">;
     applyToStore: z.ZodBoolean;
     applyToAllPartners: z.ZodBoolean;
+    applicableDrinkIds: z.ZodOptional<z.ZodArray<z.ZodNumber, "many">>;
+    rewardDrinkIds: z.ZodOptional<z.ZodArray<z.ZodNumber, "many">>;
+    excludedDrinkIds: z.ZodOptional<z.ZodArray<z.ZodNumber, "many">>;
     createdAt: z.ZodString;
     updatedAt: z.ZodString;
 }, "strip", z.ZodTypeAny, {
@@ -3191,6 +3194,9 @@ export declare const Offer: z.ZodObject<{
     partnerIds: number[];
     applyToStore: boolean;
     applyToAllPartners: boolean;
+    applicableDrinkIds?: number[] | undefined;
+    rewardDrinkIds?: number[] | undefined;
+    excludedDrinkIds?: number[] | undefined;
 }, {
     id: number;
     name: string;
@@ -3203,6 +3209,9 @@ export declare const Offer: z.ZodObject<{
     partnerIds: number[];
     applyToStore: boolean;
     applyToAllPartners: boolean;
+    applicableDrinkIds?: number[] | undefined;
+    rewardDrinkIds?: number[] | undefined;
+    excludedDrinkIds?: number[] | undefined;
 }>;
 export type Offer = Infer<typeof api.ListOffersResponseItem>;
 export declare const CreateOfferBody: z.ZodObject<{
@@ -3214,6 +3223,9 @@ export declare const CreateOfferBody: z.ZodObject<{
     partnerIds: z.ZodOptional<z.ZodArray<z.ZodNumber, "many">>;
     applyToStore: z.ZodOptional<z.ZodBoolean>;
     applyToAllPartners: z.ZodOptional<z.ZodBoolean>;
+    applicableDrinkIds: z.ZodOptional<z.ZodArray<z.ZodNumber, "many">>;
+    rewardDrinkIds: z.ZodOptional<z.ZodArray<z.ZodNumber, "many">>;
+    excludedDrinkIds: z.ZodOptional<z.ZodArray<z.ZodNumber, "many">>;
 }, "strip", z.ZodTypeAny, {
     name: string;
     buyAmount: number;
@@ -3223,6 +3235,9 @@ export declare const CreateOfferBody: z.ZodObject<{
     partnerIds?: number[] | undefined;
     applyToStore?: boolean | undefined;
     applyToAllPartners?: boolean | undefined;
+    applicableDrinkIds?: number[] | undefined;
+    rewardDrinkIds?: number[] | undefined;
+    excludedDrinkIds?: number[] | undefined;
 }, {
     name: string;
     buyAmount: number;
@@ -3232,6 +3247,9 @@ export declare const CreateOfferBody: z.ZodObject<{
     partnerIds?: number[] | undefined;
     applyToStore?: boolean | undefined;
     applyToAllPartners?: boolean | undefined;
+    applicableDrinkIds?: number[] | undefined;
+    rewardDrinkIds?: number[] | undefined;
+    excludedDrinkIds?: number[] | undefined;
 }>;
 export type CreateOfferBody = Infer<typeof api.CreateOfferBody>;
 export declare const UpdateOfferBody: z.ZodObject<{
@@ -3243,6 +3261,9 @@ export declare const UpdateOfferBody: z.ZodObject<{
     partnerIds: z.ZodOptional<z.ZodArray<z.ZodNumber, "many">>;
     applyToStore: z.ZodOptional<z.ZodBoolean>;
     applyToAllPartners: z.ZodOptional<z.ZodBoolean>;
+    applicableDrinkIds: z.ZodOptional<z.ZodArray<z.ZodNumber, "many">>;
+    rewardDrinkIds: z.ZodOptional<z.ZodArray<z.ZodNumber, "many">>;
+    excludedDrinkIds: z.ZodOptional<z.ZodArray<z.ZodNumber, "many">>;
 }, "strip", z.ZodTypeAny, {
     name?: string | undefined;
     isActive?: boolean | undefined;
@@ -3252,6 +3273,9 @@ export declare const UpdateOfferBody: z.ZodObject<{
     partnerIds?: number[] | undefined;
     applyToStore?: boolean | undefined;
     applyToAllPartners?: boolean | undefined;
+    applicableDrinkIds?: number[] | undefined;
+    rewardDrinkIds?: number[] | undefined;
+    excludedDrinkIds?: number[] | undefined;
 }, {
     name?: string | undefined;
     isActive?: boolean | undefined;
@@ -3261,6 +3285,9 @@ export declare const UpdateOfferBody: z.ZodObject<{
     partnerIds?: number[] | undefined;
     applyToStore?: boolean | undefined;
     applyToAllPartners?: boolean | undefined;
+    applicableDrinkIds?: number[] | undefined;
+    rewardDrinkIds?: number[] | undefined;
+    excludedDrinkIds?: number[] | undefined;
 }>;
 export type UpdateOfferBody = Infer<typeof api.UpdateOfferBody>;
 //# sourceMappingURL=index.d.ts.map

@@ -2485,6 +2485,21 @@ components:
           type: boolean
         applyToAllPartners:
           type: boolean
+        applicableDrinkIds:
+          type: array
+          items:
+            type: integer
+          description: Drinks that trigger the offer (empty = all drinks).
+        rewardDrinkIds:
+          type: array
+          items:
+            type: integer
+          description: Drinks eligible to be awarded as free discount (empty = all drinks).
+        excludedDrinkIds:
+          type: array
+          items:
+            type: integer
+          description: Drinks excluded from offer logic.
         createdAt:
           type: string
         updatedAt:
@@ -2527,6 +2542,18 @@ components:
           type: boolean
         applyToAllPartners:
           type: boolean
+        applicableDrinkIds:
+          type: array
+          items:
+            type: integer
+        rewardDrinkIds:
+          type: array
+          items:
+            type: integer
+        excludedDrinkIds:
+          type: array
+          items:
+            type: integer
       required:
         - name
         - buyAmount
@@ -2557,4 +2584,16 @@ components:
           type: boolean
         applyToAllPartners:
           type: boolean
+        applicableDrinkIds:
+          type: array
+          items:
+            type: integer
+        rewardDrinkIds:
+          type: array
+          items:
+            type: integer
+        excludedDrinkIds:
+          type: array
+          items:
+            type: integer
 

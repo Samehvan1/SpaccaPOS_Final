@@ -22,6 +22,8 @@ import {
   branchStockTable,
   branchDrinkPricesTable,
   partnerDrinkPricesTable,
+  branchDrinkStatusTable,
+  partnerDrinkStatusTable,
 } from "@workspace/db";
 import { serializeDates } from "../lib/serialize";
 import { globalCache } from "../lib/cache";
@@ -480,9 +482,33 @@ router.get("/drinks", async (req, res): Promise<void> => {
     ? await db.select().from(drinksTable).where(and(...conditions))
     : await db.select().from(drinksTable);
 
-  let filtered = drinks;
+  // Check per-branch and per-partner active/inactive status overrides
+  let disabledDrinkIds = new Set<number>();
+  if (targetBranchId) {
+    const branchStatusRows = await db
+      .select()
+      .from(branchDrinkStatusTable)
+      .where(and(eq(branchDrinkStatusTable.branchId, targetBranchId), eq(branchDrinkStatusTable.isActive, false)));
+    for (const r of branchStatusRows) {
+      disabledDrinkIds.add(r.drinkId);
+    }
+  }
+
+  if (queryPartnerId) {
+    const partnerStatusRows = await db
+      .select()
+      .from(partnerDrinkStatusTable)
+      .where(and(eq(partnerDrinkStatusTable.partnerId, queryPartnerId), eq(partnerDrinkStatusTable.isActive, false)));
+    for (const r of partnerStatusRows) {
+      if (!r.branchId || r.branchId === targetBranchId) {
+        disabledDrinkIds.add(r.drinkId);
+      }
+    }
+  }
+
+  let filtered = drinks.filter(d => !disabledDrinkIds.has(d.id));
   if (params.success && params.data.category) {
-    filtered = drinks.filter((d) => d.category === params.data.category);
+    filtered = filtered.filter((d) => d.category === params.data.category);
   }
 
   filtered = [...filtered].sort((a, b) => {
@@ -1317,6 +1343,77 @@ router.get("/drinks/:id/stock-usage", requirePermission("catalog:view"), async (
   }
 
   res.json(usage);
+});
+
+// ── Branch & Partner Drink Availability Admin Endpoints ──────────────────────
+router.get("/admin/drinks/availability", requirePermission("drinks:manage"), async (req, res) => {
+  const branchStatuses = await db.select().from(branchDrinkStatusTable);
+  const partnerStatuses = await db.select().from(partnerDrinkStatusTable);
+  res.json({ branchStatuses, partnerStatuses });
+});
+
+router.post("/admin/drinks/branch-status", requirePermission("drinks:manage"), async (req, res) => {
+  const { branchId, drinkId, isActive } = req.body;
+  if (!branchId || !drinkId || isActive === undefined) {
+    res.status(400).json({ error: "Invalid branchId, drinkId, or isActive value" });
+    return;
+  }
+  const [existing] = await db
+    .select()
+    .from(branchDrinkStatusTable)
+    .where(and(eq(branchDrinkStatusTable.branchId, branchId), eq(branchDrinkStatusTable.drinkId, drinkId)))
+    .limit(1);
+
+  if (existing) {
+    await db
+      .update(branchDrinkStatusTable)
+      .set({ isActive: Boolean(isActive), updatedAt: new Date() })
+      .where(eq(branchDrinkStatusTable.id, existing.id));
+  } else {
+    await db.insert(branchDrinkStatusTable).values({
+      branchId,
+      drinkId,
+      isActive: Boolean(isActive),
+    });
+  }
+  globalCache.clear();
+  res.json({ success: true });
+});
+
+router.post("/admin/drinks/partner-status", requirePermission("drinks:manage"), async (req, res) => {
+  const { partnerId, drinkId, branchId, isActive } = req.body;
+  if (!partnerId || !drinkId || isActive === undefined) {
+    res.status(400).json({ error: "Invalid partnerId, drinkId, or isActive value" });
+    return;
+  }
+  const targetBranchId = branchId || null;
+  const conditions = [
+    eq(partnerDrinkStatusTable.partnerId, partnerId),
+    eq(partnerDrinkStatusTable.drinkId, drinkId),
+  ];
+  if (targetBranchId) {
+    conditions.push(eq(partnerDrinkStatusTable.branchId, targetBranchId));
+  } else {
+    conditions.push(isNull(partnerDrinkStatusTable.branchId));
+  }
+
+  const [existing] = await db.select().from(partnerDrinkStatusTable).where(and(...conditions)).limit(1);
+
+  if (existing) {
+    await db
+      .update(partnerDrinkStatusTable)
+      .set({ isActive: Boolean(isActive), updatedAt: new Date() })
+      .where(eq(partnerDrinkStatusTable.id, existing.id));
+  } else {
+    await db.insert(partnerDrinkStatusTable).values({
+      partnerId,
+      drinkId,
+      branchId: targetBranchId,
+      isActive: Boolean(isActive),
+    });
+  }
+  globalCache.clear();
+  res.json({ success: true });
 });
 
 export default router;

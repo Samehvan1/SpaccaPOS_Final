@@ -17,4 +17,7 @@ export interface UpdateOfferBody {
   partnerIds?: number[];
   applyToStore?: boolean;
   applyToAllPartners?: boolean;
+  applicableDrinkIds?: number[];
+  rewardDrinkIds?: number[];
+  excludedDrinkIds?: number[];
 }

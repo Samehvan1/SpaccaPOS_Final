@@ -36,3 +36,19 @@ export type Partner = typeof partnersTable.$inferSelect;
 export type InsertPartner = z.infer<typeof insertPartnerSchema>;
 export type PartnerDrinkPrice = typeof partnerDrinkPricesTable.$inferSelect;
 export type InsertPartnerDrinkPrice = z.infer<typeof insertPartnerDrinkPriceSchema>;
+
+export const partnerDrinkStatusTable = pgTable("partner_drink_status", {
+  id: serial("id").primaryKey(),
+  partnerId: integer("partner_id").notNull().references(() => partnersTable.id, { onDelete: "cascade" }),
+  drinkId: integer("drink_id").notNull().references(() => drinksTable.id, { onDelete: "cascade" }),
+  branchId: integer("branch_id").references(() => branchesTable.id, { onDelete: "cascade" }), // Nullable: if null, applies across all branches
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
+}, (table) => {
+  return {
+    partnerDrinkBranchStatusIdx: index("partner_drink_status_idx").on(table.partnerId, table.drinkId, table.branchId),
+  };
+});
+
+export type PartnerDrinkStatus = typeof partnerDrinkStatusTable.$inferSelect;

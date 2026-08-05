@@ -690,6 +690,12 @@ export interface Offer {
     partnerIds: number[];
     applyToStore: boolean;
     applyToAllPartners: boolean;
+    /** Drinks that trigger the offer (empty = all drinks). */
+    applicableDrinkIds?: number[];
+    /** Drinks eligible to be awarded as free discount (empty = all drinks). */
+    rewardDrinkIds?: number[];
+    /** Drinks excluded from offer logic. */
+    excludedDrinkIds?: number[];
     createdAt: string;
     updatedAt: string;
 }
@@ -704,6 +710,9 @@ export interface CreateOfferBody {
     partnerIds?: number[];
     applyToStore?: boolean;
     applyToAllPartners?: boolean;
+    applicableDrinkIds?: number[];
+    rewardDrinkIds?: number[];
+    excludedDrinkIds?: number[];
 }
 export interface UpdateOfferBody {
     name?: string;
@@ -716,6 +725,9 @@ export interface UpdateOfferBody {
     partnerIds?: number[];
     applyToStore?: boolean;
     applyToAllPartners?: boolean;
+    applicableDrinkIds?: number[];
+    rewardDrinkIds?: number[];
+    excludedDrinkIds?: number[];
 }
 export type ListDrinksParams = {
     category?: string;

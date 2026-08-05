@@ -96,6 +96,9 @@ import {
   offersTable,
   offersBranchesTable,
   offersPartnersTable,
+  offersApplicableDrinksTable,
+  offersRewardDrinksTable,
+  offersExcludedDrinksTable,
   partnersTable,
 } from "@workspace/db";
 import {
@@ -629,19 +632,43 @@ router.post("/orders", async (req, res): Promise<void> => {
     const N = activeOffer.buyAmount;
     const X = activeOffer.freeAmount;
 
-    // Flatten all items in itemDetails to their prices
-    const flatItems = itemDetails.flatMap(item => 
-      Array.from({ length: item.quantity }).map(() => item.unitPrice)
-    ).sort((a, b) => a - b);
+    // Load drink scopes for active offer
+    const applicableRows = await db.select().from(offersApplicableDrinksTable).where(eq(offersApplicableDrinksTable.offerId, activeOffer.id));
+    const rewardRows = await db.select().from(offersRewardDrinksTable).where(eq(offersRewardDrinksTable.offerId, activeOffer.id));
+    const excludedRows = await db.select().from(offersExcludedDrinksTable).where(eq(offersExcludedDrinksTable.offerId, activeOffer.id));
 
-    const M = flatItems.length;
+    const applicableDrinkIds = applicableRows.map(r => r.drinkId);
+    const rewardDrinkIds = rewardRows.map(r => r.drinkId);
+    const excludedDrinkIds = excludedRows.map(r => r.drinkId);
+
+    // 1. Trigger items: items that count towards "Buy N"
+    const triggerItems = itemDetails.filter(item => 
+      !excludedDrinkIds.includes(item.drinkId) &&
+      (applicableDrinkIds.length === 0 || applicableDrinkIds.includes(item.drinkId))
+    );
+
+    // 2. Reward items: items eligible for "Get X Free" discount
+    const rewardItems = itemDetails.filter(item =>
+      !excludedDrinkIds.includes(item.drinkId) &&
+      (rewardDrinkIds.length === 0 || rewardDrinkIds.includes(item.drinkId))
+    );
+
+    // Count qualifying buy units
+    const M = triggerItems.reduce((sum, item) => sum + item.quantity, 0);
     const F = Math.floor(M / (N + X)) * X + Math.min(X, Math.max(0, (M % (N + X)) - N));
 
-    if (F > 0) {
-      offerIdToSave = activeOffer.id;
-      // Sum the cheapest F items
-      for (let i = 0; i < F; i++) {
-        offerDiscountAmount += flatItems[i];
+    if (F > 0 && rewardItems.length > 0) {
+      // Flatten unit prices of reward items and sort cheapest first
+      const flatRewardPrices = rewardItems.flatMap(item => 
+        Array.from({ length: item.quantity }).map(() => item.unitPrice)
+      ).sort((a, b) => a - b);
+
+      const itemsToDiscountCount = Math.min(F, flatRewardPrices.length);
+      if (itemsToDiscountCount > 0) {
+        offerIdToSave = activeOffer.id;
+        for (let i = 0; i < itemsToDiscountCount; i++) {
+          offerDiscountAmount += flatRewardPrices[i];
+        }
       }
     }
   }
