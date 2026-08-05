@@ -5,6 +5,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { Search, Download, Filter, Package, ShoppingCart, ChevronDown } from "lucide-react";
@@ -62,13 +64,14 @@ export default function InventoryUsagePage() {
   const [startDate, setStartDate] = useState(format(new Date().setDate(new Date().getDate() - 30), "yyyy-MM-dd"));
   const [endDate, setEndDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [searchTerm, setSearchTerm] = useState("");
+  const [hideZeroConsumed, setHideZeroConsumed] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 50;
 
   // Reset page when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, usageMode, selectedBranch, startDate, endDate]);
+  }, [searchTerm, usageMode, selectedBranch, startDate, endDate, hideZeroConsumed]);
 
   const loadData = async () => {
     setLoading(true);
@@ -135,13 +138,14 @@ export default function InventoryUsagePage() {
   const sortedReport = useMemo(() => {
     return [...report]
       .filter(r => r.name.toLowerCase().includes(searchTerm.toLowerCase()))
+      .filter(r => !hideZeroConsumed || (r.totalConsumed || 0) !== 0)
       .sort((a, b) => {
         const typeA = a.type || "";
         const typeB = b.type || "";
         if (typeA !== typeB) return typeA.localeCompare(typeB);
         return a.name.localeCompare(b.name);
       });
-  }, [report, searchTerm]);
+  }, [report, searchTerm, hideZeroConsumed]);
 
   const sortedCatalog = useMemo(() => {
     return [...catalogReport]
@@ -232,9 +236,23 @@ export default function InventoryUsagePage() {
           </TabsList>
         </Tabs>
 
-        <Button variant="outline" className="gap-2" onClick={exportCsv}>
-          <Download className="h-4 w-4" /> Export CSV
-        </Button>
+        <div className="flex items-center gap-4">
+          {usageMode === "actual" && (
+            <div className="flex items-center gap-2">
+              <Switch
+                id="hide-zero-consumed"
+                checked={hideZeroConsumed}
+                onCheckedChange={setHideZeroConsumed}
+              />
+              <Label htmlFor="hide-zero-consumed" className="text-sm font-medium cursor-pointer whitespace-nowrap">
+                Hide Zero Consumed
+              </Label>
+            </div>
+          )}
+          <Button variant="outline" className="gap-2" onClick={exportCsv}>
+            <Download className="h-4 w-4" /> Export CSV
+          </Button>
+        </div>
       </div>
 
       <div className="rounded-md border bg-card">
