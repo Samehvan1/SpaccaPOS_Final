@@ -285,7 +285,7 @@ export default function InventoryUsagePage() {
                 </TableRow>
               ) : (
                 paginatedCatalog.map((ing) => (
-                  <TableRow key={ing.id}>
+                  <TableRow key={ing.id} className={ing.drinks.length === 0 ? "bg-amber-50 dark:bg-amber-950/30" : ""}>
                     <TableCell className="font-medium align-top py-4">{ing.name}</TableCell>
                     <TableCell className="align-top py-4">
                       <Badge variant="outline" className="w-fit text-[10px] font-normal capitalize">
