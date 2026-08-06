@@ -134,6 +134,13 @@
       "when": 1785852638001,
       "tag": "0018_wise_toro",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1785930000000,
+      "tag": "0019_shift_close",
+      "breakpoints": true
     }
   ]
 }

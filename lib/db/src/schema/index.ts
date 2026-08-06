@@ -19,6 +19,7 @@ export * from "./stock-batches";
 export * from "./offers";
 export * from "./branch-drink-prices";
 export * from "./partners";
+export * from "./shift-close";
 
 
 

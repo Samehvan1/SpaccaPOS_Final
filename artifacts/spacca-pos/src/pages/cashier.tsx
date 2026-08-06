@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/componen
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Check, X, Loader2, Calculator, ClipboardList, User, ListChecks, CreditCard, Banknote, Wallet, Receipt, Printer, FileText, LogOut, Clock, ShoppingBag, TrendingUp, Lock, RotateCcw, Search, History, Gift, Tag, Plus, Trash2, LayoutGrid } from "lucide-react";
+import { Check, X, Loader2, Calculator, ClipboardList, User, ListChecks, CreditCard, Banknote, Wallet, Receipt, Printer, FileText, LogOut, Clock, ShoppingBag, TrendingUp, Lock, RotateCcw, Search, History, Gift, Tag, Plus, Trash2, LayoutGrid, Store } from "lucide-react";
 import { fmt } from "@/lib/currency";
 import { printCustomerReceipt, printAgentReceipts, printSimpleDrinksReceipt } from "@/components/receipt-printer";
 import { useSettings } from "@/hooks/use-settings";
@@ -168,6 +168,16 @@ export default function CashierPage() {
   const [multiPaymentEntries, setMultiPaymentEntries] = useState<{method: string, amount: number}[]>([]);
   const [refundItemSelection, setRefundItemSelection] = useState<Set<number>>(new Set());
   const [returnToStockSelection, setReturnToStockSelection] = useState<Set<number>>(new Set());
+
+  // End Shift Reconciliation states
+  const [shiftStep, setShiftStep] = useState<'count' | 'result'>('count');
+  const [cashCountedInput, setCashCountedInput] = useState<string>('');
+  const [cardCountedInput, setCardCountedInput] = useState<string>('');
+  const [partnerCardCountedInput, setPartnerCardCountedInput] = useState<string>('');
+  const [shiftNotesInput, setShiftNotesInput] = useState<string>('');
+  const [closeResultData, setCloseResultData] = useState<any>(null);
+  const [isSubmittingClose, setIsSubmittingClose] = useState<boolean>(false);
+
   const { session, loading: sessionLoading, endSession, refetch } = useCashierSession();
   const [now, setNow] = useState(Date.now());
 
@@ -403,17 +413,50 @@ export default function CashierPage() {
       const res = await fetch(`${API_BASE}/cashier/sessions/${session.sessionId}/performance`, { credentials: "include" });
       const data = await res.json();
       setShiftSummary(data);
+      setShiftStep('count');
+      setCashCountedInput('');
+      setCardCountedInput('');
+      setPartnerCardCountedInput('');
+      setShiftNotesInput('');
+      setCloseResultData(null);
       setIsSummaryOpen(true);
     } catch {
       toast({ variant: "destructive", title: "Error", description: "Could not load shift summary." });
     }
   };
 
-  const confirmEndSession = async () => {
+  const submitEndSessionReconciliation = async () => {
+    if (!session) return;
+    setIsSubmittingClose(true);
+    try {
+      const res = await fetch(`${API_BASE}/cashier/end-session`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          cashCounted: parseFloat(cashCountedInput) || 0,
+          cardCounted: parseFloat(cardCountedInput) || 0,
+          partnerCardCounted: parseFloat(partnerCardCountedInput) || 0,
+          notes: shiftNotesInput,
+        }),
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to submit reconciliation");
+      const data = await res.json();
+      setCloseResultData(data.summary || data.closeRecord);
+      setShiftStep('result');
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Error", description: e.message || "Failed to submit reconciliation" });
+    } finally {
+      setIsSubmittingClose(false);
+    }
+  };
+
+  const finishLogout = async () => {
     await endSession();
     setIsSummaryOpen(false);
     setShiftSummary(null);
-    toast({ title: "Shift Ended", description: "Your session has been closed." });
+    setCloseResultData(null);
+    toast({ title: "Shift Closed", description: "Your session has been closed and recorded." });
   };
 
   if (sessionLoading) {
@@ -537,6 +580,7 @@ export default function CashierPage() {
                                     {[
                                       { id: "cash", icon: Banknote, color: "text-amber-500" },
                                       { id: "card", icon: CreditCard, color: "text-purple-500" },
+                                      { id: "partner_card", icon: Store, color: "text-indigo-400" },
                                       { id: "wallet", icon: Wallet, color: "text-neon-cyan" },
                                       { id: "hospitality", icon: Gift, color: "text-pink-500" }
                                     ].map((m) => {
@@ -578,12 +622,20 @@ export default function CashierPage() {
                                 <div className="flex-1">
                                   <label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-3 block">Items</label>
                                   <div className="flex flex-wrap gap-2">
-                                    {heroOrder.items.map((item: any) => (
-                                      <div key={item.id} className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-xl border border-white/5">
-                                        <span className="w-5 h-5 rounded-full bg-neon-cyan/20 text-neon-cyan flex items-center justify-center text-[10px] font-black">{item.quantity}</span>
-                                        <span className="text-xs font-bold">{item.drinkName}</span>
-                                      </div>
-                                    ))}
+                                    {heroOrder.items.map((item: any) => {
+                                      const isFree = Number(item.lineTotal) === 0 || Number(item.unitPrice) === 0;
+                                      return (
+                                        <div key={item.id} className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-xl border border-white/5">
+                                          <span className="w-5 h-5 rounded-full bg-neon-cyan/20 text-neon-cyan flex items-center justify-center text-[10px] font-black">{item.quantity}</span>
+                                          <span className="text-xs font-bold">{item.drinkName}</span>
+                                          {isFree ? (
+                                            <Badge className="bg-emerald-500/20 text-emerald-400 text-[10px] font-black border border-emerald-500/40">FREE</Badge>
+                                          ) : (
+                                            <span className="text-[10px] text-muted-foreground font-semibold">{fmt(Number(item.lineTotal))}</span>
+                                          )}
+                                        </div>
+                                      );
+                                    })}
                                   </div>
                                 </div>
                               </div>
@@ -641,7 +693,7 @@ export default function CashierPage() {
                                     </div>
                                   )}
                                   <div className="flex flex-wrap gap-1 justify-end mt-1">
-                                    {["cash", "card", "wallet", "hospitality"].map(m => {
+                                    {["cash", "card", "partner_card", "wallet", "hospitality"].map(m => {
                                       const rawLocal = localPaymentMethods.get(order.id);
                                       const effectiveMethod = rawLocal?.startsWith('hospitality:') ? 'hospitality' : (rawLocal ?? order.paymentMethod);
                                       const isActive = effectiveMethod === m && !multiPayments.has(order.id);
@@ -679,12 +731,19 @@ export default function CashierPage() {
                             <CardContent className="p-6 h-[180px] overflow-hidden relative">
                               <ScrollArea className="h-full pr-2">
                                 <div className="space-y-2">
-                                  {order.items.map((item: any) => (
-                                    <div key={item.id} className="flex justify-between text-sm items-center bg-white/5 p-2.5 rounded-xl border border-transparent hover:border-white/10 transition-all">
-                                      <span className="font-bold"><span className="text-neon-cyan mr-2">{item.quantity}x</span>{item.drinkName}</span>
-                                      <span className="text-muted-foreground font-medium text-xs">{fmt(parseFloat(item.lineTotal as any))}</span>
-                                    </div>
-                                  ))}
+                                  {order.items.map((item: any) => {
+                                    const isFree = Number(item.lineTotal) === 0 || Number(item.unitPrice) === 0;
+                                    return (
+                                      <div key={item.id} className="flex justify-between text-sm items-center bg-white/5 p-2.5 rounded-xl border border-transparent hover:border-white/10 transition-all">
+                                        <span className="font-bold"><span className="text-neon-cyan mr-2">{item.quantity}x</span>{item.drinkName}</span>
+                                        {isFree ? (
+                                          <Badge className="bg-emerald-500/20 text-emerald-400 text-[10px] font-black border border-emerald-500/40">FREE</Badge>
+                                        ) : (
+                                          <span className="text-muted-foreground font-medium text-xs">{fmt(parseFloat(item.lineTotal as any))}</span>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
                                 </div>
                               </ScrollArea>
                               <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-card to-transparent pointer-events-none" />
@@ -831,104 +890,179 @@ export default function CashierPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Shift Summary Dialog */}
-      <Dialog open={isSummaryOpen} onOpenChange={setIsSummaryOpen}>
-        <DialogContent className="sm:max-w-[450px] bg-[#0A0A0B] border-white/10 text-white">
+      {/* Shift Summary & Reconciliation Dialog */}
+      <Dialog open={isSummaryOpen} onOpenChange={(open) => {
+          if (!open) {
+            if (shiftStep === 'result') {
+              // Session already ended on server — force proper logout
+              finishLogout();
+            } else if (!isSubmittingClose) {
+              setIsSummaryOpen(false);
+            }
+          }
+        }}>
+        <DialogContent className="sm:max-w-[500px] bg-[#0A0A0B] border-white/10 text-white" onPointerDownOutside={(e) => { if (shiftStep === 'result' || isSubmittingClose) e.preventDefault(); }} onEscapeKeyDown={(e) => { if (shiftStep === 'result' || isSubmittingClose) e.preventDefault(); }}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-xl font-black uppercase tracking-tighter">
               <TrendingUp className="h-6 w-6 text-neon-green" />
-              Shift Summary
+              {shiftStep === 'count' ? 'End Shift Reconciliation' : 'Reconciliation Results'}
             </DialogTitle>
           </DialogHeader>
           
-          {shiftSummary && (
-            <div className="space-y-6 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
+          {shiftSummary && shiftStep === 'count' && (
+            <div className="space-y-5 py-2">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 rounded-2xl bg-white/5 border border-white/10">
                   <div className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Total Revenue</div>
-                  <div className="text-2xl font-black text-neon-green">{fmt(shiftSummary.totalRevenue)}</div>
+                  <div className="text-xl font-black text-neon-green">{session.cashier.role === 'admin' ? fmt(shiftSummary.totalRevenue) : '•••••'}</div>
                 </div>
-                <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
+                <div className="p-3 rounded-2xl bg-white/5 border border-white/10">
                   <div className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Total Orders</div>
-                  <div className="text-2xl font-black text-neon-cyan">{shiftSummary.totalOrders}</div>
+                  <div className="text-xl font-black text-neon-cyan">{shiftSummary.totalOrders}</div>
                 </div>
               </div>
 
               <div className="space-y-3">
-                <div className="flex justify-between items-center p-3 rounded-xl bg-white/[0.02] border border-white/5">
-                  <div className="flex items-center gap-3 text-sm font-bold">
-                    <Banknote className="h-4 w-4 text-amber-500" /> Cash
+                <div className="space-y-1">
+                  <div className="flex justify-between items-center text-xs font-bold">
+                    <span className="flex items-center gap-1.5 text-amber-400"><Banknote className="h-3.5 w-3.5" /> Cash Counted</span>
+                    <span className="text-[10px] text-muted-foreground">System: {fmt(shiftSummary.cashRevenue)}</span>
                   </div>
-                  <div className="text-right">
-                    <div className="font-black">{fmt(shiftSummary.cashRevenue)}</div>
-                    <div className="text-[10px] text-muted-foreground font-bold">{shiftSummary.cashOrders || 0} orders</div>
-                  </div>
+                  <Input 
+                    type="number"
+                    placeholder={`Expected ${fmt(shiftSummary.cashRevenue)}`}
+                    value={cashCountedInput}
+                    onChange={(e) => setCashCountedInput(e.target.value)}
+                    className="bg-white/5 border-white/10 h-11 text-right font-bold text-base rounded-xl"
+                  />
                 </div>
-                <div className="flex justify-between items-center p-3 rounded-xl bg-white/[0.02] border border-white/5">
-                  <div className="flex items-center gap-3 text-sm font-bold">
-                    <CreditCard className="h-4 w-4 text-purple-500" /> Card
+
+                <div className="space-y-1">
+                  <div className="flex justify-between items-center text-xs font-bold">
+                    <span className="flex items-center gap-1.5 text-purple-400"><CreditCard className="h-3.5 w-3.5" /> Card Counted</span>
+                    <span className="text-[10px] text-muted-foreground">System: {fmt(shiftSummary.cardRevenue)}</span>
                   </div>
-                  <div className="text-right">
-                    <div className="font-black">{fmt(shiftSummary.cardRevenue)}</div>
-                    <div className="text-[10px] text-muted-foreground font-bold">{shiftSummary.cardOrders || 0} orders</div>
-                  </div>
+                  <Input 
+                    type="number"
+                    placeholder={`Expected ${fmt(shiftSummary.cardRevenue)}`}
+                    value={cardCountedInput}
+                    onChange={(e) => setCardCountedInput(e.target.value)}
+                    className="bg-white/5 border-white/10 h-11 text-right font-bold text-base rounded-xl"
+                  />
                 </div>
-                <div className="flex justify-between items-center p-3 rounded-xl bg-white/[0.02] border border-white/5">
-                  <div className="flex items-center gap-3 text-sm font-bold">
-                    <Wallet className="h-4 w-4 text-neon-cyan" /> Wallet
+
+                <div className="space-y-1">
+                  <div className="flex justify-between items-center text-xs font-bold">
+                    <span className="flex items-center gap-1.5 text-indigo-400"><Store className="h-3.5 w-3.5" /> Partner Card Counted</span>
+                    <span className="text-[10px] text-muted-foreground">System: {fmt(shiftSummary.partnerCardRevenue || 0)}</span>
                   </div>
-                  <div className="text-right">
-                    <div className="font-black">{fmt(shiftSummary.walletRevenue)}</div>
-                    <div className="text-[10px] text-muted-foreground font-bold">{shiftSummary.walletOrders || 0} orders</div>
-                  </div>
+                  <Input 
+                    type="number"
+                    placeholder={`Expected ${fmt(shiftSummary.partnerCardRevenue || 0)}`}
+                    value={partnerCardCountedInput}
+                    onChange={(e) => setPartnerCardCountedInput(e.target.value)}
+                    className="bg-white/5 border-white/10 h-11 text-right font-bold text-base rounded-xl"
+                  />
                 </div>
-                <div className="flex justify-between items-center p-3 rounded-xl bg-white/[0.02] border border-white/5">
-                  <div className="flex items-center gap-3 text-sm font-bold">
-                    <Gift className="h-4 w-4 text-pink-500" /> Hospitality
-                  </div>
-                  <div className="text-right">
-                    <div className="font-black text-pink-400">{fmt(shiftSummary.hospitalityRevenue)}</div>
-                    <div className="text-[10px] text-muted-foreground font-bold">{shiftSummary.hospitalityOrders || 0} orders</div>
-                  </div>
+
+                <div className="flex justify-between items-center p-3 rounded-xl bg-white/[0.02] border border-white/5 text-xs font-bold">
+                  <span className="text-muted-foreground">Points Redeemed (System)</span>
+                  <span className="font-mono text-neon-cyan">{fmt(shiftSummary.pointsRevenue || 0)}</span>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Shift Notes (Optional)</label>
+                  <Input 
+                    placeholder="Any comments or shift notes..."
+                    value={shiftNotesInput}
+                    onChange={(e) => setShiftNotesInput(e.target.value)}
+                    className="bg-white/5 border-white/10 h-10 text-xs rounded-xl"
+                  />
                 </div>
               </div>
 
-              <div className="p-4 rounded-2xl bg-neon-cyan/5 border border-neon-cyan/20">
-                <div className="flex items-center gap-2 text-xs font-bold text-neon-cyan uppercase tracking-widest mb-2">
-                  <Clock className="h-3.5 w-3.5" /> Shift Timing
-                </div>
-                <div className="grid grid-cols-2 text-xs gap-4">
-                  <div>
-                    <div className="opacity-50">Started At</div>
-                    <div className="font-bold">{new Date(shiftSummary.startedAt).toLocaleTimeString()}</div>
-                  </div>
-                  <div>
-                    <div className="opacity-50">Duration</div>
-                    <div className="font-bold">{formatDuration(shiftSummary.startedAt)}</div>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="text-center text-[10px] font-bold text-muted-foreground uppercase tracking-widest px-4">
-                Please verify the drawer amount matches the cash revenue before ending the shift.
+              <div className="p-3 rounded-xl bg-neon-cyan/5 border border-neon-cyan/20 grid grid-cols-2 text-xs gap-2">
+                <div><span className="opacity-50">Started:</span> <span className="font-bold">{new Date(shiftSummary.startedAt).toLocaleTimeString()}</span></div>
+                <div><span className="opacity-50">Duration:</span> <span className="font-bold">{formatDuration(shiftSummary.startedAt)}</span></div>
               </div>
             </div>
           )}
 
-          <DialogFooter className="flex-col gap-3 sm:flex-col">
-            <Button 
-              className="w-full h-14 text-base font-black uppercase tracking-widest rounded-2xl bg-red-500/20 hover:bg-red-500 text-red-500 hover:text-white border border-red-500/40 transition-all duration-300"
-              onClick={confirmEndSession}
-            >
-              Close Shift & Logout
-            </Button>
-            <Button 
-              variant="ghost" 
-              className="w-full h-10 font-bold uppercase text-xs tracking-widest" 
-              onClick={() => setIsSummaryOpen(false)}
-            >
-              Continue Working
-            </Button>
+          {shiftStep === 'result' && closeResultData && (
+            <div className="space-y-4 py-2">
+              <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold text-center">
+                ✓ Shift Reconciliation Recorded Successfully
+              </div>
+
+              <div className="space-y-2">
+                {[
+                  { key: 'cash', label: 'Cash', data: closeResultData.cash, icon: Banknote, color: 'text-amber-500' },
+                  { key: 'card', label: 'Card', data: closeResultData.card, icon: CreditCard, color: 'text-purple-500' },
+                  { key: 'partnerCard', label: 'Partner Card', data: closeResultData.partnerCard, icon: Store, color: 'text-indigo-400' },
+                ].map(item => {
+                  if (!item.data) return null;
+                  const isOk = item.data.status === 'ok';
+                  const isOver = item.data.status === 'over';
+                  return (
+                    <div key={item.key} className="p-3 rounded-xl bg-white/5 border border-white/10 space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs font-bold flex items-center gap-1.5">
+                          <item.icon className={`h-4 w-4 ${item.color}`} /> {item.label}
+                        </span>
+                        <Badge 
+                          variant="outline" 
+                          className={`text-[10px] font-black uppercase ${
+                            isOk ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-400" : 
+                            isOver ? "border-blue-500/40 bg-blue-500/10 text-blue-400" : 
+                            "border-red-500/40 bg-red-500/10 text-red-400"
+                          }`}
+                        >
+                          {isOk ? "✓ MATCHED (OK)" : isOver ? `▲ OVER (+${fmt(item.data.variance)})` : `▼ SHORT (${fmt(item.data.variance)})`}
+                        </Badge>
+                      </div>
+                      <div className="grid grid-cols-3 text-xs gap-2 pt-1 border-t border-white/5">
+                        <div><div className="text-[9px] text-muted-foreground">SYSTEM</div><div className="font-bold">{fmt(item.data.system)}</div></div>
+                        <div><div className="text-[9px] text-muted-foreground">COUNTED</div><div className="font-bold">{fmt(item.data.counted)}</div></div>
+                        <div><div className="text-[9px] text-muted-foreground">VARIANCE</div><div className={`font-bold ${isOk ? 'text-emerald-400' : isOver ? 'text-blue-400' : 'text-red-400'}`}>{fmt(item.data.variance)}</div></div>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                <div className="p-3 rounded-xl bg-white/5 border border-white/10 flex justify-between items-center text-xs">
+                  <span className="text-muted-foreground font-bold">Points Redeemed</span>
+                  <span className="font-mono font-bold text-neon-cyan">{fmt(closeResultData.pointsRedeemed || 0)}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="flex-col gap-2 sm:flex-col mt-2">
+            {shiftStep === 'count' ? (
+              <>
+                <Button 
+                  className="w-full h-12 text-sm font-black uppercase tracking-widest rounded-xl bg-neon-cyan hover:bg-neon-cyan/80 text-background border-none transition-all"
+                  onClick={submitEndSessionReconciliation}
+                  disabled={isSubmittingClose}
+                >
+                  {isSubmittingClose ? <Loader2 className="h-5 w-5 animate-spin" /> : "Submit Reconciliation & End Shift"}
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  className="w-full h-9 font-bold uppercase text-xs tracking-widest text-muted-foreground" 
+                  onClick={() => setIsSummaryOpen(false)}
+                >
+                  Cancel
+                </Button>
+              </>
+            ) : (
+              <Button 
+                className="w-full h-12 text-sm font-black uppercase tracking-widest rounded-xl bg-red-500 hover:bg-red-600 text-white border-none shadow-lg transition-all"
+                onClick={finishLogout}
+              >
+                Confirm & Logout
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -972,6 +1106,7 @@ export default function CashierPage() {
                       <SelectContent className="bg-[#0A0A0B] border-white/10">
                         <SelectItem value="cash">Cash</SelectItem>
                         <SelectItem value="card">Card</SelectItem>
+                        <SelectItem value="partner_card">Partner Card</SelectItem>
                         <SelectItem value="wallet">Wallet</SelectItem>
                         <SelectItem value="hospitality">Hospitality</SelectItem>
                       </SelectContent>

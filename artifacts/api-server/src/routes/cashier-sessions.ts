@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq, and, gte, lte, isNull, desc, sql, inArray, or } from "drizzle-orm";
-import { db, cashierSessionsTable, usersTable, ordersTable, orderItemsTable, drinksTable, drinkCategoriesTable, orderPaymentsTable, branchesTable, orderItemCustomizationsTable } from "@workspace/db";
+import { db, cashierSessionsTable, usersTable, ordersTable, orderItemsTable, drinksTable, drinkCategoriesTable, orderPaymentsTable, branchesTable, orderItemCustomizationsTable, shiftCloseRecordsTable } from "@workspace/db";
 import { z } from "zod";
 import { startOfDay, endOfDay } from "date-fns";
 import { serializeDates } from "../lib/serialize";
@@ -116,7 +116,7 @@ router.post("/cashier/login", async (req, res): Promise<void> => {
   });
 });
 
-// POST /cashier/end-session — end the current shift
+// POST /cashier/end-session — end the current shift & record cash reconciliation
 router.post("/cashier/end-session", requirePermission("cashier:close_session"), async (req, res): Promise<void> => {
   const sessionId = (req.session as any).cashierSessionId as number | undefined;
   if (!sessionId) {
@@ -124,16 +124,98 @@ router.post("/cashier/end-session", requirePermission("cashier:close_session"), 
     return;
   }
 
+  const [session] = await db.select().from(cashierSessionsTable).where(eq(cashierSessionsTable.id, sessionId)).limit(1);
+  if (!session) {
+    res.status(404).json({ error: "Session not found" });
+    return;
+  }
+
+  const { cashCounted = 0, cardCounted = 0, partnerCardCounted = 0, notes } = req.body || {};
+
+  const now = new Date();
+  const start = session.startedAt;
+
+  // Calculate system payment totals for this session
+  const ordersResult = await db
+    .select({ id: ordersTable.id })
+    .from(ordersTable)
+    .where(and(
+      eq(ordersTable.cashierId, session.cashierId),
+      gte(sql`COALESCE(${ordersTable.paidAt}, ${ordersTable.createdAt})`, start),
+      lte(sql`COALESCE(${ordersTable.paidAt}, ${ordersTable.createdAt})`, now),
+      inArray(ordersTable.status, ["completed", "paid", "ready", "in_progress"])
+    ));
+
+  const orderIds = ordersResult.map(o => o.id);
+  let cashSystem = 0;
+  let cardSystem = 0;
+  let partnerCardSystem = 0;
+  let pointsRedeemed = 0;
+
+  if (orderIds.length > 0) {
+    const payments = await db
+      .select({ method: orderPaymentsTable.paymentMethod, amount: orderPaymentsTable.amount })
+      .from(orderPaymentsTable)
+      .where(inArray(orderPaymentsTable.orderId, orderIds));
+
+    for (const p of payments) {
+      const amt = parseFloat(p.amount) || 0;
+      if (p.method === "cash") cashSystem += amt;
+      else if (p.method === "card") cardSystem += amt;
+      else if (p.method === "partner_card") partnerCardSystem += amt;
+      else if (p.method === "points") pointsRedeemed += amt;
+    }
+  }
+
+  const cashVar = Number((Number(cashCounted) - cashSystem).toFixed(2));
+  const cardVar = Number((Number(cardCounted) - cardSystem).toFixed(2));
+  const partnerCardVar = Number((Number(partnerCardCounted) - partnerCardSystem).toFixed(2));
+
+  const cashStat = Math.abs(cashVar) < 0.01 ? "ok" : (cashVar > 0 ? "over" : "short");
+  const cardStat = Math.abs(cardVar) < 0.01 ? "ok" : (cardVar > 0 ? "over" : "short");
+  const partnerCardStat = Math.abs(partnerCardVar) < 0.01 ? "ok" : (partnerCardVar > 0 ? "over" : "short");
+
+  const [closeRecord] = await db.insert(shiftCloseRecordsTable).values({
+    sessionId,
+    cashierId: session.cashierId,
+    cashSystem: String(cashSystem.toFixed(2)),
+    cashCounted: String(Number(cashCounted).toFixed(2)),
+    cashVariance: String(cashVar.toFixed(2)),
+    cashStatus: cashStat,
+
+    cardSystem: String(cardSystem.toFixed(2)),
+    cardCounted: String(Number(cardCounted).toFixed(2)),
+    cardVariance: String(cardVar.toFixed(2)),
+    cardStatus: cardStat,
+
+    partnerCardSystem: String(partnerCardSystem.toFixed(2)),
+    partnerCardCounted: String(Number(partnerCardCounted).toFixed(2)),
+    partnerCardVariance: String(partnerCardVar.toFixed(2)),
+    partnerCardStatus: partnerCardStat,
+
+    pointsRedeemed: String(pointsRedeemed.toFixed(2)),
+    notes: notes || null,
+  }).returning();
+
   await db
     .update(cashierSessionsTable)
-    .set({ endedAt: new Date() })
+    .set({ endedAt: now })
     .where(eq(cashierSessionsTable.id, sessionId));
 
   delete (req.session as any).cashierSessionId;
   delete (req.session as any).cashierId;
 
   req.session.save(() => {
-    res.json({ ok: true });
+    res.json({
+      ok: true,
+      closeRecord,
+      summary: {
+        cash: { system: cashSystem, counted: Number(cashCounted), variance: cashVar, status: cashStat },
+        card: { system: cardSystem, counted: Number(cardCounted), variance: cardVar, status: cardStat },
+        partnerCard: { system: partnerCardSystem, counted: Number(partnerCardCounted), variance: partnerCardVar, status: partnerCardStat },
+        pointsRedeemed,
+      }
+    });
   });
 });
 
@@ -229,8 +311,8 @@ router.get("/cashier/performance/:cashierId", requirePermission("cashier:view_re
   const completedOrders = orders.filter(o => o.status === "completed" || o.status === "paid" || o.status === "ready" || o.status === "in_progress");
   const totalRevenue = completedOrders.reduce((sum, o) => sum + parseFloat(o.total as any), 0);
   const orderIds = completedOrders.map(o => o.id);
-  let cashRevenue = 0, cardRevenue = 0, walletRevenue = 0, hospitalityRevenue = 0;
-  let cashOrders = 0, cardOrders = 0, walletOrders = 0, hospitalityOrders = 0;
+  let cashRevenue = 0, cardRevenue = 0, partnerCardRevenue = 0, walletRevenue = 0, hospitalityRevenue = 0, pointsRevenue = 0;
+  let cashOrders = 0, cardOrders = 0, partnerCardOrders = 0, walletOrders = 0, hospitalityOrders = 0, pointsOrders = 0;
 
   if (orderIds.length > 0) {
     const payments = await db
@@ -240,8 +322,10 @@ router.get("/cashier/performance/:cashierId", requirePermission("cashier:view_re
     
     const cashOrderIds = new Set<number>();
     const cardOrderIds = new Set<number>();
+    const partnerCardOrderIds = new Set<number>();
     const walletOrderIds = new Set<number>();
     const hospitalityOrderIds = new Set<number>();
+    const pointsOrderIds = new Set<number>();
 
     for (const p of payments) {
       const amt = parseFloat(p.amount);
@@ -251,19 +335,27 @@ router.get("/cashier/performance/:cashierId", requirePermission("cashier:view_re
       } else if (p.paymentMethod === "card") {
         cardRevenue += amt;
         cardOrderIds.add(p.orderId);
+      } else if (p.paymentMethod === "partner_card") {
+        partnerCardRevenue += amt;
+        partnerCardOrderIds.add(p.orderId);
       } else if (p.paymentMethod === "wallet") {
         walletRevenue += amt;
         walletOrderIds.add(p.orderId);
       } else if (p.paymentMethod === "hospitality") {
         hospitalityRevenue += amt;
         hospitalityOrderIds.add(p.orderId);
+      } else if (p.paymentMethod === "points") {
+        pointsRevenue += amt;
+        pointsOrderIds.add(p.orderId);
       }
     }
 
     cashOrders = cashOrderIds.size;
     cardOrders = cardOrderIds.size;
+    partnerCardOrders = partnerCardOrderIds.size;
     walletOrders = walletOrderIds.size;
     hospitalityOrders = hospitalityOrderIds.size;
+    pointsOrders = pointsOrderIds.size;
   }
 
   const [cashier] = await db
@@ -279,10 +371,14 @@ router.get("/cashier/performance/:cashierId", requirePermission("cashier:view_re
     cashOrders,
     cardRevenue,
     cardOrders,
+    partnerCardRevenue,
+    partnerCardOrders,
     walletRevenue,
     walletOrders,
     hospitalityRevenue,
     hospitalityOrders,
+    pointsRevenue,
+    pointsOrders,
     avgOrderValue: completedOrders.length > 0 ? totalRevenue / completedOrders.length : 0,
   });
 });
@@ -352,6 +448,13 @@ router.get("/cashier/sessions", requirePermission("cashier:view_reports"), async
     }
   }
 
+    // Fetch shift close records for these sessions
+    const sessionIds = sessions.map(s => s.id);
+    const closeRecords = sessionIds.length > 0
+      ? await db.select().from(shiftCloseRecordsTable).where(inArray(shiftCloseRecordsTable.sessionId, sessionIds))
+      : [];
+    const closeRecordsMap = new Map(closeRecords.map(cr => [cr.sessionId, cr]));
+
   const responseSessions = sessions.map(s => {
     const start = new Date(s.startedAt).getTime();
     const end = s.endedAt ? new Date(s.endedAt).getTime() : Date.now();
@@ -360,8 +463,10 @@ router.get("/cashier/sessions", requirePermission("cashier:view_reports"), async
     let totalOrders = 0;
     let cashRevenue = 0;
     let cardRevenue = 0;
+    let partnerCardRevenue = 0;
     let walletRevenue = 0;
     let hospitalityRevenue = 0;
+    let pointsRevenue = 0;
 
     for (const o of orders) {
       if (o.cashierId !== s.cashierId) continue;
@@ -374,8 +479,10 @@ router.get("/cashier/sessions", requirePermission("cashier:view_reports"), async
         for (const p of payments) {
           if (p.method === "cash") cashRevenue += p.amount;
           else if (p.method === "card") cardRevenue += p.amount;
+          else if (p.method === "partner_card") partnerCardRevenue += p.amount;
           else if (p.method === "wallet") walletRevenue += p.amount;
           else if (p.method === "hospitality") hospitalityRevenue += p.amount;
+          else if (p.method === "points") pointsRevenue += p.amount;
         }
       }
     }
@@ -387,8 +494,11 @@ router.get("/cashier/sessions", requirePermission("cashier:view_reports"), async
       totalRevenue,
       cashRevenue,
       cardRevenue,
+      partnerCardRevenue,
       walletRevenue,
       hospitalityRevenue,
+      pointsRevenue,
+      closeRecord: closeRecordsMap.get(s.id) ?? null,
     };
   });
 
@@ -442,8 +552,8 @@ router.get("/cashier/sessions/:id/performance", requirePermission("cashier:view_
     const orderIds = completedOrders.map(o => o.id);
     const totalRevenue = completedOrders.reduce((sum, o) => sum + parseFloat(o.total as any), 0);
 
-    let cashRevenue = 0, cardRevenue = 0, walletRevenue = 0, hospitalityRevenue = 0;
-    let cashOrders = 0, cardOrders = 0, walletOrders = 0, hospitalityOrders = 0;
+    let cashRevenue = 0, cardRevenue = 0, partnerCardRevenue = 0, walletRevenue = 0, hospitalityRevenue = 0, pointsRevenue = 0;
+    let cashOrders = 0, cardOrders = 0, partnerCardOrders = 0, walletOrders = 0, hospitalityOrders = 0, pointsOrders = 0;
     if (orderIds.length > 0) {
       const payments = await db
         .select({ orderId: orderPaymentsTable.orderId, method: orderPaymentsTable.paymentMethod, amount: orderPaymentsTable.amount })
@@ -452,8 +562,10 @@ router.get("/cashier/sessions/:id/performance", requirePermission("cashier:view_
       
       const cashOrderIds = new Set<number>();
       const cardOrderIds = new Set<number>();
+      const partnerCardOrderIds = new Set<number>();
       const walletOrderIds = new Set<number>();
       const hospitalityOrderIds = new Set<number>();
+      const pointsOrderIds = new Set<number>();
 
       for (const p of payments) {
         const amt = parseFloat(p.amount);
@@ -463,25 +575,39 @@ router.get("/cashier/sessions/:id/performance", requirePermission("cashier:view_
         } else if (p.method === "card") {
           cardRevenue += amt;
           cardOrderIds.add(p.orderId);
+        } else if (p.method === "partner_card") {
+          partnerCardRevenue += amt;
+          partnerCardOrderIds.add(p.orderId);
         } else if (p.method === "wallet") {
           walletRevenue += amt;
           walletOrderIds.add(p.orderId);
         } else if (p.method === "hospitality") {
           hospitalityRevenue += amt;
           hospitalityOrderIds.add(p.orderId);
+        } else if (p.method === "points") {
+          pointsRevenue += amt;
+          pointsOrderIds.add(p.orderId);
         }
       }
 
       cashOrders = cashOrderIds.size;
       cardOrders = cardOrderIds.size;
+      partnerCardOrders = partnerCardOrderIds.size;
       walletOrders = walletOrderIds.size;
       hospitalityOrders = hospitalityOrderIds.size;
+      pointsOrders = pointsOrderIds.size;
     }
 
   const [cashier] = await db
     .select({ name: usersTable.name })
     .from(usersTable)
     .where(eq(usersTable.id, session.cashierId));
+
+  const [closeRecord] = await db
+    .select()
+    .from(shiftCloseRecordsTable)
+    .where(eq(shiftCloseRecordsTable.sessionId, sessionId))
+    .limit(1);
 
   res.json({
     cashierName: cashier?.name ?? "Unknown",
@@ -493,10 +619,15 @@ router.get("/cashier/sessions/:id/performance", requirePermission("cashier:view_
     cashOrders,
     cardRevenue,
     cardOrders,
+    partnerCardRevenue,
+    partnerCardOrders,
     walletRevenue,
     walletOrders,
     hospitalityRevenue,
     hospitalityOrders,
+    pointsRevenue,
+    pointsOrders,
+    closeRecord: closeRecord ?? null,
   });
 });
 
@@ -546,8 +677,8 @@ router.get("/cashier/sessions/:id/report", requirePermission("cashier:view_repor
   // Main Totals
   const totalRevenue = completedOrders.reduce((sum, o) => sum + parseFloat(o.total as any), 0);
   
-  let cashRevenue = 0, cardRevenue = 0, walletRevenue = 0, hospitalityRevenue = 0;
-  let cashOrders = 0, cardOrders = 0, walletOrders = 0, hospitalityOrders = 0;
+  let cashRevenue = 0, cardRevenue = 0, partnerCardRevenue = 0, walletRevenue = 0, hospitalityRevenue = 0, pointsRevenue = 0;
+  let cashOrders = 0, cardOrders = 0, partnerCardOrders = 0, walletOrders = 0, hospitalityOrders = 0, pointsOrders = 0;
   if (orderIds.length > 0) {
     const payments = await db
       .select({ orderId: orderPaymentsTable.orderId, method: orderPaymentsTable.paymentMethod, amount: orderPaymentsTable.amount })
@@ -556,8 +687,10 @@ router.get("/cashier/sessions/:id/report", requirePermission("cashier:view_repor
     
     const cashOrderIds = new Set<number>();
     const cardOrderIds = new Set<number>();
+    const partnerCardOrderIds = new Set<number>();
     const walletOrderIds = new Set<number>();
     const hospitalityOrderIds = new Set<number>();
+    const pointsOrderIds = new Set<number>();
 
     for (const p of payments) {
       const amt = parseFloat(p.amount);
@@ -567,19 +700,27 @@ router.get("/cashier/sessions/:id/report", requirePermission("cashier:view_repor
       } else if (p.method === "card") {
         cardRevenue += amt;
         cardOrderIds.add(p.orderId);
+      } else if (p.method === "partner_card") {
+        partnerCardRevenue += amt;
+        partnerCardOrderIds.add(p.orderId);
       } else if (p.method === "wallet") {
         walletRevenue += amt;
         walletOrderIds.add(p.orderId);
       } else if (p.method === "hospitality") {
         hospitalityRevenue += amt;
         hospitalityOrderIds.add(p.orderId);
+      } else if (p.method === "points") {
+        pointsRevenue += amt;
+        pointsOrderIds.add(p.orderId);
       }
     }
 
     cashOrders = cashOrderIds.size;
     cardOrders = cardOrderIds.size;
+    partnerCardOrders = partnerCardOrderIds.size;
     walletOrders = walletOrderIds.size;
     hospitalityOrders = hospitalityOrderIds.size;
+    pointsOrders = pointsOrderIds.size;
   }
 
   // Statistics: Top 5 Orders by Price
@@ -665,6 +806,12 @@ router.get("/cashier/sessions/:id/report", requirePermission("cashier:view_repor
     .from(usersTable)
     .where(eq(usersTable.id, session.cashierId));
 
+  const [closeRecord] = await db
+    .select()
+    .from(shiftCloseRecordsTable)
+    .where(eq(shiftCloseRecordsTable.sessionId, sessionId))
+    .limit(1);
+
   res.json({
     session: {
       id: session.id,
@@ -678,12 +825,17 @@ router.get("/cashier/sessions/:id/report", requirePermission("cashier:view_repor
       cashOrders,
       cardRevenue,
       cardOrders,
+      partnerCardRevenue,
+      partnerCardOrders,
       walletRevenue,
       walletOrders,
       hospitalityRevenue,
       hospitalityOrders,
+      pointsRevenue,
+      pointsOrders,
       orderCount: completedOrders.length,
     },
+    closeRecord: closeRecord ?? null,
     statistics,
     orders: completedOrders.map(o => ({
       ...o,

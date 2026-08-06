@@ -129,7 +129,7 @@ export default function ShiftReportPage() {
       {report ? (
         <>
           {/* Main Totals Card */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
             <Card className="bg-primary/5 border-primary/20">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium flex items-center gap-2">
@@ -167,6 +167,17 @@ export default function ShiftReportPage() {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  <CreditCard className="h-4 w-4 text-indigo-500" /> Partner Card
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">EGP {(report.totals.partnerCardRevenue || 0).toFixed(2)}</div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
                   <Wallet className="h-4 w-4 text-orange-500" /> Wallet
                 </CardTitle>
               </CardHeader>
@@ -186,6 +197,64 @@ export default function ShiftReportPage() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Shift Close Reconciliation Record if available */}
+          {report.closeRecord && (
+            <Card className="border-cyan-500/30 bg-cyan-500/5">
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Clock className="h-5 w-5 text-cyan-500" /> End-Shift Reconciliation Audit
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div className="p-3 bg-background/60 rounded-xl border border-border space-y-1">
+                    <div className="text-xs font-semibold text-muted-foreground uppercase">Cash</div>
+                    <div className="flex justify-between text-sm"><span>System:</span> <span className="font-bold">EGP {parseFloat(report.closeRecord.cashSystem).toFixed(2)}</span></div>
+                    <div className="flex justify-between text-sm"><span>Counted:</span> <span className="font-bold">EGP {parseFloat(report.closeRecord.cashCounted).toFixed(2)}</span></div>
+                    <div className="flex justify-between text-sm items-center pt-1 border-t">
+                      <span>Variance:</span>
+                      <Badge variant="outline" className={report.closeRecord.cashStatus === 'ok' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30' : report.closeRecord.cashStatus === 'over' ? 'bg-blue-500/10 text-blue-500 border-blue-500/30' : 'bg-red-500/10 text-red-500 border-red-500/30'}>
+                        {report.closeRecord.cashStatus === 'ok' ? '✓ OK' : report.closeRecord.cashStatus === 'over' ? `+${report.closeRecord.cashVariance} OVER` : `${report.closeRecord.cashVariance} SHORT`}
+                      </Badge>
+                    </div>
+                  </div>
+
+                  <div className="p-3 bg-background/60 rounded-xl border border-border space-y-1">
+                    <div className="text-xs font-semibold text-muted-foreground uppercase">Card</div>
+                    <div className="flex justify-between text-sm"><span>System:</span> <span className="font-bold">EGP {parseFloat(report.closeRecord.cardSystem).toFixed(2)}</span></div>
+                    <div className="flex justify-between text-sm"><span>Counted:</span> <span className="font-bold">EGP {parseFloat(report.closeRecord.cardCounted).toFixed(2)}</span></div>
+                    <div className="flex justify-between text-sm items-center pt-1 border-t">
+                      <span>Variance:</span>
+                      <Badge variant="outline" className={report.closeRecord.cardStatus === 'ok' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30' : report.closeRecord.cardStatus === 'over' ? 'bg-blue-500/10 text-blue-500 border-blue-500/30' : 'bg-red-500/10 text-red-500 border-red-500/30'}>
+                        {report.closeRecord.cardStatus === 'ok' ? '✓ OK' : report.closeRecord.cardStatus === 'over' ? `+${report.closeRecord.cardVariance} OVER` : `${report.closeRecord.cardVariance} SHORT`}
+                      </Badge>
+                    </div>
+                  </div>
+
+                  <div className="p-3 bg-background/60 rounded-xl border border-border space-y-1">
+                    <div className="text-xs font-semibold text-muted-foreground uppercase">Partner Card</div>
+                    <div className="flex justify-between text-sm"><span>System:</span> <span className="font-bold">EGP {parseFloat(report.closeRecord.partnerCardSystem).toFixed(2)}</span></div>
+                    <div className="flex justify-between text-sm"><span>Counted:</span> <span className="font-bold">EGP {parseFloat(report.closeRecord.partnerCardCounted).toFixed(2)}</span></div>
+                    <div className="flex justify-between text-sm items-center pt-1 border-t">
+                      <span>Variance:</span>
+                      <Badge variant="outline" className={report.closeRecord.partnerCardStatus === 'ok' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30' : report.closeRecord.partnerCardStatus === 'over' ? 'bg-blue-500/10 text-blue-500 border-blue-500/30' : 'bg-red-500/10 text-red-500 border-red-500/30'}>
+                        {report.closeRecord.partnerCardStatus === 'ok' ? '✓ OK' : report.closeRecord.partnerCardStatus === 'over' ? `+${report.closeRecord.partnerCardVariance} OVER` : `${report.closeRecord.partnerCardVariance} SHORT`}
+                      </Badge>
+                    </div>
+                  </div>
+
+                  <div className="p-3 bg-background/60 rounded-xl border border-border space-y-1">
+                    <div className="text-xs font-semibold text-muted-foreground uppercase">Points Redeemed</div>
+                    <div className="text-2xl font-bold text-cyan-500 mt-2">EGP {parseFloat(report.closeRecord.pointsRedeemed).toFixed(2)}</div>
+                    {report.closeRecord.notes && (
+                      <p className="text-xs text-muted-foreground italic pt-1 border-t truncate">Notes: {report.closeRecord.notes}</p>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Statistics Section */}
