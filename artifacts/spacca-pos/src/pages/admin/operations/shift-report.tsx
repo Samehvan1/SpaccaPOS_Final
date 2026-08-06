@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,24 +6,48 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { format } from "date-fns";
-import { TrendingUp, Clock, Users, Coffee, CreditCard, Wallet, Banknote, Handshake, Eye, Search, Download } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { format, subDays } from "date-fns";
+import { 
+  TrendingUp, Clock, Users, CreditCard, Wallet, Banknote, 
+  Handshake, Eye, Search, Download, Store, AlertCircle, 
+  CheckCircle2, AlertTriangle, ArrowRight, ShieldCheck, Filter
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 
 export default function ShiftReportPage() {
   const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState("single");
   const [selectedSessionId, setSelectedSessionId] = useState<number | null>(null);
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [orderSearch, setOrderSearch] = useState("");
 
+  // Reconciliation List tab filter states
+  const [reconStartDate, setReconStartDate] = useState(format(subDays(new Date(), 30), "yyyy-MM-dd"));
+  const [reconEndDate, setReconEndDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [reconCashier, setReconCashier] = useState("all");
+  const [reconBranch, setReconBranch] = useState("all");
+  const [reconStatus, setReconStatus] = useState("all");
+  const [reconSearch, setReconSearch] = useState("");
+
   // Fetch all sessions
-  const { data: sessions = [] } = useQuery({
+  const { data: sessions = [], isLoading: isLoadingSessions } = useQuery({
     queryKey: ["/api/cashier/sessions"],
     queryFn: async () => {
       const res = await fetch("/api/cashier/sessions");
       if (!res.ok) throw new Error("Failed to fetch sessions");
+      return res.json();
+    },
+  });
+
+  // Fetch branches list
+  const { data: branches = [] } = useQuery({
+    queryKey: ["/api/admin/branches"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/branches");
+      if (!res.ok) return [];
       return res.json();
     },
   });
@@ -42,6 +66,85 @@ export default function ShiftReportPage() {
     },
     enabled: !!activeSessionId,
   });
+
+  // Unique Cashiers list for filters
+  const uniqueCashiers = useMemo(() => {
+    const map = new Map<number, string>();
+    sessions.forEach((s: any) => {
+      if (s.cashierId && s.cashierName) {
+        map.set(s.cashierId, s.cashierName);
+      }
+    });
+    return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
+  }, [sessions]);
+
+  // Filtered Sessions for Reconciliation List tab
+  const filteredReconSessions = useMemo(() => {
+    return sessions.filter((s: any) => {
+      const sDate = format(new Date(s.startedAt), "yyyy-MM-dd");
+      if (reconStartDate && sDate < reconStartDate) return false;
+      if (reconEndDate && sDate > reconEndDate) return false;
+      if (reconCashier !== "all" && String(s.cashierId) !== reconCashier) return false;
+      if (reconBranch !== "all" && String(s.branchId) !== reconBranch) return false;
+
+      const cr = s.closeRecord;
+      if (reconStatus === "unreconciled") {
+        if (cr) return false;
+      } else if (reconStatus === "ok") {
+        if (!cr || cr.cashStatus !== "ok" || cr.cardStatus !== "ok" || cr.partnerCardStatus !== "ok") return false;
+      } else if (reconStatus === "short") {
+        if (!cr || (cr.cashStatus !== "short" && cr.cardStatus !== "short" && cr.partnerCardStatus !== "short")) return false;
+      } else if (reconStatus === "over") {
+        if (!cr || (cr.cashStatus !== "over" && cr.cardStatus !== "over" && cr.partnerCardStatus !== "over")) return false;
+      }
+
+      if (reconSearch) {
+        const q = reconSearch.toLowerCase();
+        const matchName = (s.cashierName || "").toLowerCase().includes(q);
+        const matchNotes = (cr?.notes || "").toLowerCase().includes(q);
+        const matchId = String(s.id).includes(q);
+        if (!matchName && !matchNotes && !matchId) return false;
+      }
+
+      return true;
+    });
+  }, [sessions, reconStartDate, reconEndDate, reconCashier, reconBranch, reconStatus, reconSearch]);
+
+  // Summary Metrics for Reconciliation List
+  const reconMetrics = useMemo(() => {
+    let totalRevenue = 0;
+    let reconciledCount = 0;
+    let matchedCount = 0;
+    let shortCount = 0;
+    let overCount = 0;
+    let netCashVariance = 0;
+
+    filteredReconSessions.forEach((s: any) => {
+      totalRevenue += s.totalRevenue || 0;
+      const cr = s.closeRecord;
+      if (cr) {
+        reconciledCount++;
+        const isOk = cr.cashStatus === "ok" && cr.cardStatus === "ok" && cr.partnerCardStatus === "ok";
+        const hasShort = cr.cashStatus === "short" || cr.cardStatus === "short" || cr.partnerCardStatus === "short";
+        const hasOver = cr.cashStatus === "over" || cr.cardStatus === "over" || cr.partnerCardStatus === "over";
+
+        if (isOk) matchedCount++;
+        if (hasShort) shortCount++;
+        if (hasOver) overCount++;
+
+        netCashVariance += parseFloat(cr.cashVariance || "0");
+      }
+    });
+
+    return {
+      totalShifts: filteredReconSessions.length,
+      reconciledCount,
+      matchedCount,
+      discrepanciesCount: shortCount + overCount,
+      netCashVariance,
+      totalRevenue
+    };
+  }, [filteredReconSessions]);
 
   // Fetch order details when clicked
   const handleOrderClick = async (orderId: number) => {
@@ -91,307 +194,633 @@ export default function ShiftReportPage() {
     toast({ title: "Export successful", description: "CSV file has been downloaded." });
   };
 
+  const viewShiftDetail = (sessionId: number) => {
+    setSelectedSessionId(sessionId);
+    setActiveTab("single");
+  };
+
   if (isLoading && !report) return <div className="p-8">Loading report...</div>;
 
   return (
     <div className="p-8 w-full flex flex-col gap-6 overflow-y-auto">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Shift Sales Report</h1>
-          <p className="text-muted-foreground">Detailed performance analysis for cashier shifts.</p>
+          <h1 className="text-3xl font-bold tracking-tight">Shift Sales & Reconciliation Report</h1>
+          <p className="text-muted-foreground">Detailed performance analysis and end-shift cash reconciliation audits.</p>
         </div>
 
-        <div className="flex items-center gap-3 min-w-[400px]">
-          <Button variant="outline" size="sm" onClick={handleExport} className="gap-2 shrink-0">
-            <Download className="h-4 w-4" /> Download CSV
-          </Button>
-          <div className="flex items-center gap-2 flex-1">
-            <span className="text-sm font-medium whitespace-nowrap">Select Session:</span>
-            <Select 
-              value={String(activeSessionId || "")} 
-              onValueChange={(v) => setSelectedSessionId(parseInt(v))}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select a session" />
-              </SelectTrigger>
-              <SelectContent>
-                {sessions.map((s: any) => (
-                  <SelectItem key={s.id} value={String(s.id)}>
-                    {format(new Date(s.startedAt), "MMM d, HH:mm")} - {s.cashierName} {s.endedAt ? "" : "(Active)"}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full md:w-auto">
+          <TabsList className="grid w-full md:w-auto grid-cols-2">
+            <TabsTrigger value="single" className="gap-2">
+              <TrendingUp className="h-4 w-4" /> Single Shift Detail
+            </TabsTrigger>
+            <TabsTrigger value="all_reconciliations" className="gap-2">
+              <ShieldCheck className="h-4 w-4" /> All Shifts Reconciliation
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
       </div>
 
-      {report ? (
-        <>
-          {/* Main Totals Card */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
-            <Card className="bg-primary/5 border-primary/20">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <TrendingUp className="h-4 w-4 text-primary" /> Total Revenue
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">EGP {report.totals.totalRevenue.toFixed(2)}</div>
-                <p className="text-xs text-muted-foreground">{report.totals.orderCount} Orders</p>
-              </CardContent>
-            </Card>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-6">
+        <TabsContent value="single" className="space-y-6 m-0">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-card p-4 rounded-xl border">
+            <div className="flex items-center gap-3 flex-1 max-w-xl">
+              <span className="text-sm font-medium whitespace-nowrap">Select Session:</span>
+              <Select 
+                value={String(activeSessionId || "")} 
+                onValueChange={(v) => setSelectedSessionId(parseInt(v))}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select a session" />
+                </SelectTrigger>
+                <SelectContent>
+                  {sessions.map((s: any) => (
+                    <SelectItem key={s.id} value={String(s.id)}>
+                      {format(new Date(s.startedAt), "MMM d, HH:mm")} - {s.cashierName} {s.branchName ? `(${s.branchName})` : ''} {s.endedAt ? "" : "(Active)"} {s.closeRecord ? "✓ Reconciled" : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <Banknote className="h-4 w-4 text-green-500" /> Cash
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">EGP {report.totals.cashRevenue.toFixed(2)}</div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <CreditCard className="h-4 w-4 text-blue-500" /> Credit/Card
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">EGP {report.totals.cardRevenue.toFixed(2)}</div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <CreditCard className="h-4 w-4 text-indigo-500" /> Partner Card
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">EGP {(report.totals.partnerCardRevenue || 0).toFixed(2)}</div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <Wallet className="h-4 w-4 text-orange-500" /> Wallet
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">EGP {report.totals.walletRevenue.toFixed(2)}</div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <Handshake className="h-4 w-4 text-pink-500" /> Hospitality
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">EGP {report.totals.hospitalityRevenue.toFixed(2)}</div>
-              </CardContent>
-            </Card>
+            <Button variant="outline" size="sm" onClick={handleExport} className="gap-2 shrink-0">
+              <Download className="h-4 w-4" /> Download CSV
+            </Button>
           </div>
 
-          {/* Shift Close Reconciliation Record if available */}
-          {report.closeRecord && (
-            <Card className="border-cyan-500/30 bg-cyan-500/5">
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Clock className="h-5 w-5 text-cyan-500" /> End-Shift Reconciliation Audit
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <div className="p-3 bg-background/60 rounded-xl border border-border space-y-1">
-                    <div className="text-xs font-semibold text-muted-foreground uppercase">Cash</div>
-                    <div className="flex justify-between text-sm"><span>System:</span> <span className="font-bold">EGP {parseFloat(report.closeRecord.cashSystem).toFixed(2)}</span></div>
-                    <div className="flex justify-between text-sm"><span>Counted:</span> <span className="font-bold">EGP {parseFloat(report.closeRecord.cashCounted).toFixed(2)}</span></div>
-                    <div className="flex justify-between text-sm items-center pt-1 border-t">
-                      <span>Variance:</span>
-                      <Badge variant="outline" className={report.closeRecord.cashStatus === 'ok' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30' : report.closeRecord.cashStatus === 'over' ? 'bg-blue-500/10 text-blue-500 border-blue-500/30' : 'bg-red-500/10 text-red-500 border-red-500/30'}>
-                        {report.closeRecord.cashStatus === 'ok' ? '✓ OK' : report.closeRecord.cashStatus === 'over' ? `+${report.closeRecord.cashVariance} OVER` : `${report.closeRecord.cashVariance} SHORT`}
-                      </Badge>
-                    </div>
-                  </div>
+          {report ? (
+            <>
+              {/* Main Revenue Breakdown Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+                <Card className="bg-primary/5 border-primary/20">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium flex items-center gap-2">
+                      <TrendingUp className="h-4 w-4 text-primary" /> Total Revenue
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">EGP {report.totals.totalRevenue.toFixed(2)}</div>
+                    <p className="text-xs text-muted-foreground">{report.totals.orderCount} Orders</p>
+                  </CardContent>
+                </Card>
 
-                  <div className="p-3 bg-background/60 rounded-xl border border-border space-y-1">
-                    <div className="text-xs font-semibold text-muted-foreground uppercase">Card</div>
-                    <div className="flex justify-between text-sm"><span>System:</span> <span className="font-bold">EGP {parseFloat(report.closeRecord.cardSystem).toFixed(2)}</span></div>
-                    <div className="flex justify-between text-sm"><span>Counted:</span> <span className="font-bold">EGP {parseFloat(report.closeRecord.cardCounted).toFixed(2)}</span></div>
-                    <div className="flex justify-between text-sm items-center pt-1 border-t">
-                      <span>Variance:</span>
-                      <Badge variant="outline" className={report.closeRecord.cardStatus === 'ok' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30' : report.closeRecord.cardStatus === 'over' ? 'bg-blue-500/10 text-blue-500 border-blue-500/30' : 'bg-red-500/10 text-red-500 border-red-500/30'}>
-                        {report.closeRecord.cardStatus === 'ok' ? '✓ OK' : report.closeRecord.cardStatus === 'over' ? `+${report.closeRecord.cardVariance} OVER` : `${report.closeRecord.cardVariance} SHORT`}
-                      </Badge>
-                    </div>
-                  </div>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium flex items-center gap-2">
+                      <Banknote className="h-4 w-4 text-green-500" /> Cash
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">EGP {report.totals.cashRevenue.toFixed(2)}</div>
+                    <p className="text-xs text-muted-foreground">{report.totals.cashOrders || 0} Orders</p>
+                  </CardContent>
+                </Card>
 
-                  <div className="p-3 bg-background/60 rounded-xl border border-border space-y-1">
-                    <div className="text-xs font-semibold text-muted-foreground uppercase">Partner Card</div>
-                    <div className="flex justify-between text-sm"><span>System:</span> <span className="font-bold">EGP {parseFloat(report.closeRecord.partnerCardSystem).toFixed(2)}</span></div>
-                    <div className="flex justify-between text-sm"><span>Counted:</span> <span className="font-bold">EGP {parseFloat(report.closeRecord.partnerCardCounted).toFixed(2)}</span></div>
-                    <div className="flex justify-between text-sm items-center pt-1 border-t">
-                      <span>Variance:</span>
-                      <Badge variant="outline" className={report.closeRecord.partnerCardStatus === 'ok' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30' : report.closeRecord.partnerCardStatus === 'over' ? 'bg-blue-500/10 text-blue-500 border-blue-500/30' : 'bg-red-500/10 text-red-500 border-red-500/30'}>
-                        {report.closeRecord.partnerCardStatus === 'ok' ? '✓ OK' : report.closeRecord.partnerCardStatus === 'over' ? `+${report.closeRecord.partnerCardVariance} OVER` : `${report.closeRecord.partnerCardVariance} SHORT`}
-                      </Badge>
-                    </div>
-                  </div>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium flex items-center gap-2">
+                      <CreditCard className="h-4 w-4 text-blue-500" /> Credit/Card
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">EGP {report.totals.cardRevenue.toFixed(2)}</div>
+                    <p className="text-xs text-muted-foreground">{report.totals.cardOrders || 0} Orders</p>
+                  </CardContent>
+                </Card>
 
-                  <div className="p-3 bg-background/60 rounded-xl border border-border space-y-1">
-                    <div className="text-xs font-semibold text-muted-foreground uppercase">Points Redeemed</div>
-                    <div className="text-2xl font-bold text-cyan-500 mt-2">EGP {parseFloat(report.closeRecord.pointsRedeemed).toFixed(2)}</div>
-                    {report.closeRecord.notes && (
-                      <p className="text-xs text-muted-foreground italic pt-1 border-t truncate">Notes: {report.closeRecord.notes}</p>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium flex items-center gap-2">
+                      <Store className="h-4 w-4 text-indigo-500" /> Partner Card
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">EGP {(report.totals.partnerCardRevenue || 0).toFixed(2)}</div>
+                    <p className="text-xs text-muted-foreground">{report.totals.partnerCardOrders || 0} Orders</p>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium flex items-center gap-2">
+                      <Wallet className="h-4 w-4 text-orange-500" /> Wallet
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">EGP {report.totals.walletRevenue.toFixed(2)}</div>
+                    <p className="text-xs text-muted-foreground">{report.totals.walletOrders || 0} Orders</p>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium flex items-center gap-2">
+                      <Handshake className="h-4 w-4 text-pink-500" /> Hospitality
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">EGP {report.totals.hospitalityRevenue.toFixed(2)}</div>
+                    <p className="text-xs text-muted-foreground">{report.totals.hospitalityOrders || 0} Orders</p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* End-Shift Reconciliation Audit Section */}
+              {report.closeRecord ? (
+                <Card className="border-emerald-500/30 bg-emerald-500/5">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg flex items-center justify-between">
+                      <span className="flex items-center gap-2">
+                        <ShieldCheck className="h-5 w-5 text-emerald-500" /> End-Shift Reconciliation Audit Record
+                      </span>
+                      <Badge className="bg-emerald-500/20 text-emerald-500 border-emerald-500/40">
+                        Submitted & Saved
+                      </Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                      <div className="p-3 bg-background/60 rounded-xl border border-border space-y-1">
+                        <div className="text-xs font-semibold text-muted-foreground uppercase flex items-center gap-1">
+                          <Banknote className="h-3.5 w-3.5 text-green-500" /> Cash
+                        </div>
+                        <div className="flex justify-between text-xs"><span>System:</span> <span className="font-bold">EGP {parseFloat(report.closeRecord.cashSystem).toFixed(2)}</span></div>
+                        <div className="flex justify-between text-xs"><span>Counted:</span> <span className="font-bold">EGP {parseFloat(report.closeRecord.cashCounted).toFixed(2)}</span></div>
+                        <div className="flex justify-between text-xs items-center pt-1 border-t">
+                          <span>Variance:</span>
+                          <Badge variant="outline" className={report.closeRecord.cashStatus === 'ok' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30' : report.closeRecord.cashStatus === 'over' ? 'bg-blue-500/10 text-blue-500 border-blue-500/30' : 'bg-red-500/10 text-red-500 border-red-500/30'}>
+                            {report.closeRecord.cashStatus === 'ok' ? '✓ OK' : report.closeRecord.cashStatus === 'over' ? `+${report.closeRecord.cashVariance} OVER` : `${report.closeRecord.cashVariance} SHORT`}
+                          </Badge>
+                        </div>
+                      </div>
+
+                      <div className="p-3 bg-background/60 rounded-xl border border-border space-y-1">
+                        <div className="text-xs font-semibold text-muted-foreground uppercase flex items-center gap-1">
+                          <CreditCard className="h-3.5 w-3.5 text-blue-500" /> Card
+                        </div>
+                        <div className="flex justify-between text-xs"><span>System:</span> <span className="font-bold">EGP {parseFloat(report.closeRecord.cardSystem).toFixed(2)}</span></div>
+                        <div className="flex justify-between text-xs"><span>Counted:</span> <span className="font-bold">EGP {parseFloat(report.closeRecord.cardCounted).toFixed(2)}</span></div>
+                        <div className="flex justify-between text-xs items-center pt-1 border-t">
+                          <span>Variance:</span>
+                          <Badge variant="outline" className={report.closeRecord.cardStatus === 'ok' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30' : report.closeRecord.cardStatus === 'over' ? 'bg-blue-500/10 text-blue-500 border-blue-500/30' : 'bg-red-500/10 text-red-500 border-red-500/30'}>
+                            {report.closeRecord.cardStatus === 'ok' ? '✓ OK' : report.closeRecord.cardStatus === 'over' ? `+${report.closeRecord.cardVariance} OVER` : `${report.closeRecord.cardVariance} SHORT`}
+                          </Badge>
+                        </div>
+                      </div>
+
+                      <div className="p-3 bg-background/60 rounded-xl border border-border space-y-1">
+                        <div className="text-xs font-semibold text-muted-foreground uppercase flex items-center gap-1">
+                          <Store className="h-3.5 w-3.5 text-indigo-500" /> Partner Card
+                        </div>
+                        <div className="flex justify-between text-xs"><span>System:</span> <span className="font-bold">EGP {parseFloat(report.closeRecord.partnerCardSystem).toFixed(2)}</span></div>
+                        <div className="flex justify-between text-xs"><span>Counted:</span> <span className="font-bold">EGP {parseFloat(report.closeRecord.partnerCardCounted).toFixed(2)}</span></div>
+                        <div className="flex justify-between text-xs items-center pt-1 border-t">
+                          <span>Variance:</span>
+                          <Badge variant="outline" className={report.closeRecord.partnerCardStatus === 'ok' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30' : report.closeRecord.partnerCardStatus === 'over' ? 'bg-blue-500/10 text-blue-500 border-blue-500/30' : 'bg-red-500/10 text-red-500 border-red-500/30'}>
+                            {report.closeRecord.partnerCardStatus === 'ok' ? '✓ OK' : report.closeRecord.partnerCardStatus === 'over' ? `+${report.closeRecord.partnerCardVariance} OVER` : `${report.closeRecord.partnerCardVariance} SHORT`}
+                          </Badge>
+                        </div>
+                      </div>
+
+                      <div className="p-3 bg-background/60 rounded-xl border border-border space-y-1">
+                        <div className="text-xs font-semibold text-muted-foreground uppercase">Points Redeemed</div>
+                        <div className="text-xl font-bold text-primary mt-1">EGP {parseFloat(report.closeRecord.pointsRedeemed).toFixed(2)}</div>
+                        {report.closeRecord.notes && (
+                          <p className="text-xs text-muted-foreground italic pt-1 border-t truncate" title={report.closeRecord.notes}>
+                            Notes: {report.closeRecord.notes}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card className="border-amber-500/30 bg-amber-500/5">
+                  <CardContent className="p-4 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <AlertCircle className="h-5 w-5 text-amber-500 shrink-0" />
+                      <div>
+                        <div className="font-bold text-sm">Unreconciled Shift (No Close Count Record)</div>
+                        <div className="text-xs text-muted-foreground">
+                          This shift session was closed without entering counted cash/card amounts (or prior to reconciliation tracking).
+                        </div>
+                      </div>
+                    </div>
+                    <Badge variant="outline" className="border-amber-500/40 text-amber-500 bg-amber-500/10">
+                      Unreconciled
+                    </Badge>
+                  </CardContent>
+                </Card>
+              )}
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Statistics Section */}
+                <Card className="lg:col-span-1">
+                  <CardHeader>
+                    <CardTitle className="text-lg">Shift Statistics</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div>
+                      <h4 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-3">Top 5 Drinks</h4>
+                      <div className="space-y-2">
+                        {report.statistics.topDrinks.map((d: any) => (
+                          <div key={d.id} className="flex justify-between items-center text-sm">
+                            <span>{d.name}</span>
+                            <Badge variant="secondary">{d.count} sold</Badge>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <h4 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-3">Peak Hours</h4>
+                      <div className="space-y-2">
+                        {report.statistics.rushByHour.map((h: any) => (
+                          <div key={h.hour} className="flex items-center gap-2">
+                            <span className="text-xs w-10">{h.hour}:00</span>
+                            <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                              <div 
+                                className="h-full bg-primary" 
+                                style={{ width: `${(h.count / Math.max(...report.statistics.rushByHour.map((x: any) => x.count))) * 100}%` }}
+                              />
+                            </div>
+                            <span className="text-xs w-6 text-right font-bold">{h.count}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Orders Section */}
+                <Card className="lg:col-span-2">
+                  <CardHeader className="flex flex-row items-center justify-between">
+                    <CardTitle className="text-lg">Session Orders</CardTitle>
+                    <div className="relative w-48">
+                      <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                      <Input 
+                        placeholder="Search orders..." 
+                        className="pl-8 h-9" 
+                        value={orderSearch}
+                        onChange={(e) => setOrderSearch(e.target.value)}
+                      />
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="rounded-md border overflow-hidden">
+                      <Table>
+                        <TableHeader className="bg-muted/50">
+                          <TableRow>
+                            <TableHead>Time</TableHead>
+                            <TableHead>Order #</TableHead>
+                            <TableHead>Customer</TableHead>
+                            <TableHead>Method</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead className="text-right">Total</TableHead>
+                            <TableHead className="w-10"></TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {filteredOrders.length === 0 ? (
+                            <TableRow>
+                              <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                                No orders found.
+                              </TableCell>
+                            </TableRow>
+                          ) : (
+                            filteredOrders.map((o: any) => (
+                              <TableRow 
+                                key={o.id} 
+                                className="cursor-pointer hover:bg-muted/30"
+                                onClick={() => handleOrderClick(o.id)}
+                              >
+                                <TableCell className="text-xs">{format(new Date(o.createdAt), "HH:mm")}</TableCell>
+                                <TableCell className="font-bold">{o.orderNumber}</TableCell>
+                                <TableCell className="max-w-[120px] truncate">{o.customerName || "-"}</TableCell>
+                                <TableCell>
+                                  <Badge variant="outline" className="capitalize text-[10px]">
+                                    {o.paymentMethod}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge 
+                                    variant={o.status === 'completed' || o.status === 'paid' ? 'default' : 'secondary'} 
+                                    className="capitalize text-[10px]"
+                                  >
+                                    {o.status}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="text-right font-bold">EGP {o.total.toFixed(2)}</TableCell>
+                                <TableCell>
+                                  <Eye className="h-4 w-4 text-muted-foreground" />
+                                </TableCell>
+                              </TableRow>
+                            ))
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+              <Users className="h-12 w-12 mb-4 opacity-20" />
+              <p>No session data available.</p>
+            </div>
           )}
+        </TabsContent>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Statistics Section */}
-            <Card className="lg:col-span-1">
-              <CardHeader>
-                <CardTitle className="text-lg">Shift Statistics</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div>
-                  <h4 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-3">Top 5 Drinks</h4>
-                  <div className="space-y-2">
-                    {report.statistics.topDrinks.map((d: any) => (
-                      <div key={d.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/50 border">
-                        <div className="flex items-center gap-2">
-                          <Coffee className="h-4 w-4 text-primary" />
-                          <span className="text-sm font-medium">{d.name}</span>
-                        </div>
-                        <Badge variant="secondary">{d.count} sold</Badge>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <h4 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-3">Top 5 Orders by Price</h4>
-                  <div className="space-y-2">
-                    {report.statistics.topOrdersByPrice.map((o: any) => (
-                      <div 
-                        key={o.id} 
-                        className="flex items-center justify-between p-2 rounded-lg bg-muted/50 border cursor-pointer hover:bg-muted transition-colors"
-                        onClick={() => handleOrderClick(o.id)}
-                      >
-                        <span className="text-sm font-medium">{o.orderNumber}</span>
-                        <span className="font-bold">EGP {parseFloat(o.total).toFixed(2)}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <h4 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-3">Rush by Hour</h4>
-                  <div className="space-y-1">
-                    {report.statistics.rushByHour.map((h: any) => (
-                      <div key={h.hour} className="flex items-center gap-2">
-                        <span className="text-xs w-10">{h.hour}:00</span>
-                        <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-                          <div 
-                            className="h-full bg-primary" 
-                            style={{ width: `${(h.count / Math.max(...report.statistics.rushByHour.map((x: any) => x.count))) * 100}%` }}
-                          />
-                        </div>
-                        <span className="text-xs w-6 text-right font-bold">{h.count}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Orders Section */}
-            <Card className="lg:col-span-2">
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-lg">Session Orders</CardTitle>
-                <div className="relative w-48">
-                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+        {/* Tab 2: All Shifts Reconciliation List */}
+        <TabsContent value="all_reconciliations" className="space-y-6 m-0">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Filter className="h-4 w-4" /> Shift Reconciliation Filters
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-medium">From Date</label>
                   <Input 
-                    placeholder="Search orders..." 
-                    className="pl-8 h-9" 
-                    value={orderSearch}
-                    onChange={(e) => setOrderSearch(e.target.value)}
+                    type="date" 
+                    value={reconStartDate} 
+                    onChange={e => setReconStartDate(e.target.value)} 
                   />
                 </div>
-              </CardHeader>
-              <CardContent>
-                <div className="rounded-md border overflow-hidden">
-                  <Table>
-                    <TableHeader className="bg-muted/50">
-                      <TableRow>
-                        <TableHead>Time</TableHead>
-                        <TableHead>Order #</TableHead>
-                        <TableHead>Customer</TableHead>
-                        <TableHead>Method</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Total</TableHead>
-                        <TableHead className="w-10"></TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredOrders.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                            No orders found.
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        filteredOrders.map((o: any) => (
-                          <TableRow 
-                            key={o.id} 
-                            className="cursor-pointer hover:bg-muted/30"
-                            onClick={() => handleOrderClick(o.id)}
-                          >
-                            <TableCell className="text-xs">{format(new Date(o.createdAt), "HH:mm")}</TableCell>
-                            <TableCell className="font-bold">{o.orderNumber}</TableCell>
-                            <TableCell className="max-w-[120px] truncate">{o.customerName || "-"}</TableCell>
-                            <TableCell>
-                              <Badge variant="outline" className="capitalize text-[10px]">
-                                {o.paymentMethod}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <Badge 
-                                variant={o.status === 'completed' || o.status === 'paid' ? 'default' : 'secondary'} 
-                                className="capitalize text-[10px]"
-                              >
-                                {o.status}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-right font-bold">EGP {o.total.toFixed(2)}</TableCell>
-                            <TableCell>
-                              <Eye className="h-4 w-4 text-muted-foreground" />
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-medium">To Date</label>
+                  <Input 
+                    type="date" 
+                    value={reconEndDate} 
+                    onChange={e => setReconEndDate(e.target.value)} 
+                  />
                 </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-medium">Cashier</label>
+                  <Select value={reconCashier} onValueChange={setReconCashier}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="All Cashiers" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Cashiers</SelectItem>
+                      {uniqueCashiers.map(c => (
+                        <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-medium">Branch</label>
+                  <Select value={reconBranch} onValueChange={setReconBranch}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="All Branches" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Branches</SelectItem>
+                      {branches.map((b: any) => (
+                        <SelectItem key={b.id} value={String(b.id)}>{b.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-medium">Status Filter</label>
+                  <Select value={reconStatus} onValueChange={setReconStatus}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="All Statuses" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Statuses</SelectItem>
+                      <SelectItem value="ok">✓ Matched (OK)</SelectItem>
+                      <SelectItem value="short">▼ Shortage</SelectItem>
+                      <SelectItem value="over">▲ Surplus (Over)</SelectItem>
+                      <SelectItem value="unreconciled">Unreconciled</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-medium">Search</label>
+                  <div className="relative">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input 
+                      placeholder="Name, notes..." 
+                      className="pl-9"
+                      value={reconSearch}
+                      onChange={e => setReconSearch(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Metrics Summary Row */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            <Card>
+              <CardContent className="p-4">
+                <div className="text-xs font-medium text-muted-foreground uppercase">Filtered Shifts</div>
+                <div className="text-2xl font-bold mt-1">{reconMetrics.totalShifts}</div>
+                <div className="text-[10px] text-muted-foreground">EGP {reconMetrics.totalRevenue.toFixed(2)} total sales</div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-4">
+                <div className="text-xs font-medium text-muted-foreground uppercase">Reconciled</div>
+                <div className="text-2xl font-bold text-emerald-500 mt-1">{reconMetrics.reconciledCount}</div>
+                <div className="text-[10px] text-muted-foreground">Close records submitted</div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-4">
+                <div className="text-xs font-medium text-muted-foreground uppercase">Matched (OK)</div>
+                <div className="text-2xl font-bold text-emerald-600 mt-1">{reconMetrics.matchedCount}</div>
+                <div className="text-[10px] text-muted-foreground">Zero variance shifts</div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-4">
+                <div className="text-xs font-medium text-muted-foreground uppercase">Discrepancies</div>
+                <div className="text-2xl font-bold text-amber-500 mt-1">{reconMetrics.discrepanciesCount}</div>
+                <div className="text-[10px] text-muted-foreground">Shortages or surpluses</div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-4">
+                <div className="text-xs font-medium text-muted-foreground uppercase">Net Cash Variance</div>
+                <div className={`text-2xl font-bold mt-1 ${reconMetrics.netCashVariance === 0 ? 'text-foreground' : reconMetrics.netCashVariance > 0 ? 'text-blue-500' : 'text-red-500'}`}>
+                  {reconMetrics.netCashVariance >= 0 ? `+${reconMetrics.netCashVariance.toFixed(2)}` : reconMetrics.netCashVariance.toFixed(2)}
+                </div>
+                <div className="text-[10px] text-muted-foreground">Total cash count diff</div>
               </CardContent>
             </Card>
           </div>
-        </>
-      ) : (
-        <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
-          <Users className="h-12 w-12 mb-4 opacity-20" />
-          <p>No session data available.</p>
-        </div>
-      )}
+
+          {/* Table of all Shifts Reconciliations */}
+          <Card>
+            <CardHeader className="pb-3 flex flex-row items-center justify-between">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <ShieldCheck className="h-5 w-5 text-primary" /> Shifts Reconciliation List ({filteredReconSessions.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="rounded-md border overflow-hidden">
+                <Table>
+                  <TableHeader className="bg-muted/50">
+                    <TableRow>
+                      <TableHead>Shift Period</TableHead>
+                      <TableHead>Cashier & Branch</TableHead>
+                      <TableHead className="text-right">Sales Revenue</TableHead>
+                      <TableHead>Cash (System vs Counted)</TableHead>
+                      <TableHead>Card (System vs Counted)</TableHead>
+                      <TableHead>Partner Card</TableHead>
+                      <TableHead>Notes / Status</TableHead>
+                      <TableHead className="text-right">Action</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredReconSessions.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
+                          No shift sessions found matching criteria.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredReconSessions.map((s: any) => {
+                        const cr = s.closeRecord;
+                        return (
+                          <TableRow key={s.id} className="hover:bg-muted/30">
+                            <TableCell className="py-3">
+                              <div className="font-bold text-sm">
+                                {format(new Date(s.startedAt), "MMM d, yyyy")}
+                              </div>
+                              <div className="text-xs text-muted-foreground flex items-center gap-1">
+                                <Clock className="h-3 w-3" />
+                                {format(new Date(s.startedAt), "HH:mm")} - {s.endedAt ? format(new Date(s.endedAt), "HH:mm") : "Active"}
+                              </div>
+                            </TableCell>
+
+                            <TableCell className="py-3">
+                              <div className="font-bold">{s.cashierName || "Unknown"}</div>
+                              <Badge variant="outline" className="text-[10px] font-normal">
+                                {s.branchName || "Main"}
+                              </Badge>
+                            </TableCell>
+
+                            <TableCell className="text-right py-3">
+                              <div className="font-bold text-primary">EGP {(s.totalRevenue || 0).toFixed(2)}</div>
+                              <div className="text-[10px] text-muted-foreground">{s.totalOrders || 0} orders</div>
+                            </TableCell>
+
+                            <TableCell className="py-3">
+                              {cr ? (
+                                <div className="space-y-1">
+                                  <div className="text-xs font-mono">
+                                    {parseFloat(cr.cashCounted).toFixed(2)} / <span className="text-muted-foreground">{parseFloat(cr.cashSystem).toFixed(2)}</span>
+                                  </div>
+                                  <Badge 
+                                    variant="outline" 
+                                    className={`text-[10px] ${
+                                      cr.cashStatus === 'ok' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30' :
+                                      cr.cashStatus === 'over' ? 'bg-blue-500/10 text-blue-500 border-blue-500/30' :
+                                      'bg-red-500/10 text-red-500 border-red-500/30'
+                                    }`}
+                                  >
+                                    {cr.cashStatus === 'ok' ? '✓ OK' : cr.cashStatus === 'over' ? `+${cr.cashVariance} OVER` : `${cr.cashVariance} SHORT`}
+                                  </Badge>
+                                </div>
+                              ) : (
+                                <span className="text-xs text-muted-foreground italic">EGP {(s.cashRevenue || 0).toFixed(2)} (Uncounted)</span>
+                              )}
+                            </TableCell>
+
+                            <TableCell className="py-3">
+                              {cr ? (
+                                <div className="space-y-1">
+                                  <div className="text-xs font-mono">
+                                    {parseFloat(cr.cardCounted).toFixed(2)} / <span className="text-muted-foreground">{parseFloat(cr.cardSystem).toFixed(2)}</span>
+                                  </div>
+                                  <Badge 
+                                    variant="outline" 
+                                    className={`text-[10px] ${
+                                      cr.cardStatus === 'ok' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30' :
+                                      cr.cardStatus === 'over' ? 'bg-blue-500/10 text-blue-500 border-blue-500/30' :
+                                      'bg-red-500/10 text-red-500 border-red-500/30'
+                                    }`}
+                                  >
+                                    {cr.cardStatus === 'ok' ? '✓ OK' : cr.cardStatus === 'over' ? `+${cr.cardVariance} OVER` : `${cr.cardVariance} SHORT`}
+                                  </Badge>
+                                </div>
+                              ) : (
+                                <span className="text-xs text-muted-foreground italic">EGP {(s.cardRevenue || 0).toFixed(2)} (Uncounted)</span>
+                              )}
+                            </TableCell>
+
+                            <TableCell className="py-3">
+                              {cr ? (
+                                <div className="space-y-1">
+                                  <div className="text-xs font-mono">
+                                    {parseFloat(cr.partnerCardCounted).toFixed(2)} / <span className="text-muted-foreground">{parseFloat(cr.partnerCardSystem).toFixed(2)}</span>
+                                  </div>
+                                  <Badge 
+                                    variant="outline" 
+                                    className={`text-[10px] ${
+                                      cr.partnerCardStatus === 'ok' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30' :
+                                      cr.partnerCardStatus === 'over' ? 'bg-blue-500/10 text-blue-500 border-blue-500/30' :
+                                      'bg-red-500/10 text-red-500 border-red-500/30'
+                                    }`}
+                                  >
+                                    {cr.partnerCardStatus === 'ok' ? '✓ OK' : cr.partnerCardStatus === 'over' ? `+${cr.partnerCardVariance} OVER` : `${cr.partnerCardVariance} SHORT`}
+                                  </Badge>
+                                </div>
+                              ) : (
+                                <span className="text-xs text-muted-foreground italic">EGP {(s.partnerCardRevenue || 0).toFixed(2)} (Uncounted)</span>
+                              )}
+                            </TableCell>
+
+                            <TableCell className="py-3 max-w-[150px]">
+                              {cr ? (
+                                <div className="space-y-1">
+                                  <Badge className="bg-emerald-500/20 text-emerald-500 border-emerald-500/40 text-[10px]">Reconciled</Badge>
+                                  {cr.notes && <p className="text-[10px] text-muted-foreground truncate" title={cr.notes}>{cr.notes}</p>}
+                                </div>
+                              ) : (
+                                <Badge variant="secondary" className="text-[10px] text-muted-foreground">No Close Record</Badge>
+                              )}
+                            </TableCell>
+
+                            <TableCell className="text-right py-3">
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="h-8 px-2 gap-1 text-xs"
+                                onClick={() => viewShiftDetail(s.id)}
+                              >
+                                View Report <ArrowRight className="h-3 w-3" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       {/* Order Details Modal */}
       <Dialog open={isOrderModalOpen} onOpenChange={setIsOrderModalOpen}>

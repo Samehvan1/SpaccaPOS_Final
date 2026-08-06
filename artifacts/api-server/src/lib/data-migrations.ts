@@ -1,9 +1,33 @@
 import { db, ordersTable, orderPaymentsTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { logger } from "./logger.js";
 
 export async function runDataMigrations() {
   try {
+    logger.info("[migration] Ensuring shift_close_records table exists...");
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS "shift_close_records" (
+        "id" serial PRIMARY KEY NOT NULL,
+        "session_id" integer NOT NULL REFERENCES "cashier_sessions"("id") ON DELETE CASCADE,
+        "cashier_id" integer NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,
+        "cash_system" numeric(10, 2) DEFAULT '0.00' NOT NULL,
+        "cash_counted" numeric(10, 2) DEFAULT '0.00' NOT NULL,
+        "cash_variance" numeric(10, 2) DEFAULT '0.00' NOT NULL,
+        "cash_status" text DEFAULT 'ok' NOT NULL,
+        "card_system" numeric(10, 2) DEFAULT '0.00' NOT NULL,
+        "card_counted" numeric(10, 2) DEFAULT '0.00' NOT NULL,
+        "card_variance" numeric(10, 2) DEFAULT '0.00' NOT NULL,
+        "card_status" text DEFAULT 'ok' NOT NULL,
+        "partner_card_system" numeric(10, 2) DEFAULT '0.00' NOT NULL,
+        "partner_card_counted" numeric(10, 2) DEFAULT '0.00' NOT NULL,
+        "partner_card_variance" numeric(10, 2) DEFAULT '0.00' NOT NULL,
+        "partner_card_status" text DEFAULT 'ok' NOT NULL,
+        "points_redeemed" numeric(10, 2) DEFAULT '0.00' NOT NULL,
+        "notes" text,
+        "created_at" timestamp with time zone DEFAULT now() NOT NULL
+      );
+    `);
+
     logger.info("[migration] Checking for legacy hospitality order payments...");
     const hospitalityOrders = await db
       .select({

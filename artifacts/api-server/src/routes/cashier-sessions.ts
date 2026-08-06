@@ -404,12 +404,20 @@ router.get("/cashier/sessions", requirePermission("cashier:view_reports"), async
     .where(conditions.length > 0 ? and(...conditions) : undefined)
     .orderBy(desc(cashierSessionsTable.startedAt));
 
-  // Get unique cashier IDs and fetch names
+  // Get unique cashier IDs and fetch names & branches
   const cashierIds = [...new Set(sessions.map(s => s.cashierId))];
   const cashiers = cashierIds.length > 0
-    ? await db.select({ id: usersTable.id, name: usersTable.name }).from(usersTable)
+    ? await db
+        .select({
+          id: usersTable.id,
+          name: usersTable.name,
+          branchId: usersTable.branchId,
+          branchName: branchesTable.name,
+        })
+        .from(usersTable)
+        .leftJoin(branchesTable, eq(usersTable.branchId, branchesTable.id))
     : [];
-  const cashierMap = new Map(cashiers.map(c => [c.id, c.name]));
+  const cashierMap = new Map(cashiers.map(c => [c.id, c]));
 
   // Fetch all completed orders for these cashiers to match them to sessions in memory
   let orders: any[] = [];
@@ -487,9 +495,12 @@ router.get("/cashier/sessions", requirePermission("cashier:view_reports"), async
       }
     }
 
+    const cashierInfo = cashierMap.get(s.cashierId);
     return {
       ...s,
-      cashierName: cashierMap.get(s.cashierId) ?? "Unknown",
+      cashierName: cashierInfo?.name ?? "Unknown",
+      branchId: cashierInfo?.branchId ?? null,
+      branchName: cashierInfo?.branchName ?? "Main Branch",
       totalOrders,
       totalRevenue,
       cashRevenue,
