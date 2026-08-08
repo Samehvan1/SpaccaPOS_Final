@@ -88145,8 +88145,13 @@ router17.get("/cashier/sessions", requirePermission("cashier:view_reports"), asy
   }
   const sessions = await db.select().from(cashierSessionsTable).where(conditions.length > 0 ? and(...conditions) : void 0).orderBy(desc(cashierSessionsTable.startedAt));
   const cashierIds = [...new Set(sessions.map((s) => s.cashierId))];
-  const cashiers = cashierIds.length > 0 ? await db.select({ id: usersTable.id, name: usersTable.name }).from(usersTable) : [];
-  const cashierMap = new Map(cashiers.map((c) => [c.id, c.name]));
+  const cashiers = cashierIds.length > 0 ? await db.select({
+    id: usersTable.id,
+    name: usersTable.name,
+    branchId: usersTable.branchId,
+    branchName: branchesTable.name
+  }).from(usersTable).leftJoin(branchesTable, eq(usersTable.branchId, branchesTable.id)) : [];
+  const cashierMap = new Map(cashiers.map((c) => [c.id, c]));
   let orders = [];
   const paymentsMap = /* @__PURE__ */ new Map();
   if (cashierIds.length > 0) {
@@ -88204,9 +88209,12 @@ router17.get("/cashier/sessions", requirePermission("cashier:view_reports"), asy
         }
       }
     }
+    const cashierInfo = cashierMap.get(s.cashierId);
     return {
       ...s,
-      cashierName: cashierMap.get(s.cashierId) ?? "Unknown",
+      cashierName: cashierInfo?.name ?? "Unknown",
+      branchId: cashierInfo?.branchId ?? null,
+      branchName: cashierInfo?.branchName ?? "Main Branch",
       totalOrders,
       totalRevenue,
       cashRevenue,
@@ -91157,6 +91165,29 @@ init_src();
 init_drizzle_orm();
 async function runDataMigrations() {
   try {
+    logger.info("[migration] Ensuring shift_close_records table exists...");
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS "shift_close_records" (
+        "id" serial PRIMARY KEY NOT NULL,
+        "session_id" integer NOT NULL REFERENCES "cashier_sessions"("id") ON DELETE CASCADE,
+        "cashier_id" integer NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,
+        "cash_system" numeric(10, 2) DEFAULT '0.00' NOT NULL,
+        "cash_counted" numeric(10, 2) DEFAULT '0.00' NOT NULL,
+        "cash_variance" numeric(10, 2) DEFAULT '0.00' NOT NULL,
+        "cash_status" text DEFAULT 'ok' NOT NULL,
+        "card_system" numeric(10, 2) DEFAULT '0.00' NOT NULL,
+        "card_counted" numeric(10, 2) DEFAULT '0.00' NOT NULL,
+        "card_variance" numeric(10, 2) DEFAULT '0.00' NOT NULL,
+        "card_status" text DEFAULT 'ok' NOT NULL,
+        "partner_card_system" numeric(10, 2) DEFAULT '0.00' NOT NULL,
+        "partner_card_counted" numeric(10, 2) DEFAULT '0.00' NOT NULL,
+        "partner_card_variance" numeric(10, 2) DEFAULT '0.00' NOT NULL,
+        "partner_card_status" text DEFAULT 'ok' NOT NULL,
+        "points_redeemed" numeric(10, 2) DEFAULT '0.00' NOT NULL,
+        "notes" text,
+        "created_at" timestamp with time zone DEFAULT now() NOT NULL
+      );
+    `);
     logger.info("[migration] Checking for legacy hospitality order payments...");
     const hospitalityOrders = await db.select({
       id: ordersTable.id,

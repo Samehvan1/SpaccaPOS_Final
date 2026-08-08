@@ -926,11 +926,11 @@ export default function CashierPage() {
                 <div className="space-y-1">
                   <div className="flex justify-between items-center text-xs font-bold">
                     <span className="flex items-center gap-1.5 text-amber-400"><Banknote className="h-3.5 w-3.5" /> Cash Counted</span>
-                    <span className="text-[10px] text-muted-foreground">System: {fmt(shiftSummary.cashRevenue)}</span>
+                    {session.cashier.role === 'admin' && <span className="text-[10px] text-muted-foreground">System: {fmt(shiftSummary.cashRevenue)}</span>}
                   </div>
                   <Input 
                     type="number"
-                    placeholder={`Expected ${fmt(shiftSummary.cashRevenue)}`}
+                    placeholder={session.cashier.role === 'admin' ? `Expected ${fmt(shiftSummary.cashRevenue)}` : 'Enter cash counted'}
                     value={cashCountedInput}
                     onChange={(e) => setCashCountedInput(e.target.value)}
                     className="bg-white/5 border-white/10 h-11 text-right font-bold text-base rounded-xl"
@@ -940,11 +940,11 @@ export default function CashierPage() {
                 <div className="space-y-1">
                   <div className="flex justify-between items-center text-xs font-bold">
                     <span className="flex items-center gap-1.5 text-purple-400"><CreditCard className="h-3.5 w-3.5" /> Card Counted</span>
-                    <span className="text-[10px] text-muted-foreground">System: {fmt(shiftSummary.cardRevenue)}</span>
+                    {session.cashier.role === 'admin' && <span className="text-[10px] text-muted-foreground">System: {fmt(shiftSummary.cardRevenue)}</span>}
                   </div>
                   <Input 
                     type="number"
-                    placeholder={`Expected ${fmt(shiftSummary.cardRevenue)}`}
+                    placeholder={session.cashier.role === 'admin' ? `Expected ${fmt(shiftSummary.cardRevenue)}` : 'Enter card counted'}
                     value={cardCountedInput}
                     onChange={(e) => setCardCountedInput(e.target.value)}
                     className="bg-white/5 border-white/10 h-11 text-right font-bold text-base rounded-xl"
@@ -954,21 +954,23 @@ export default function CashierPage() {
                 <div className="space-y-1">
                   <div className="flex justify-between items-center text-xs font-bold">
                     <span className="flex items-center gap-1.5 text-indigo-400"><Store className="h-3.5 w-3.5" /> Partner Card Counted</span>
-                    <span className="text-[10px] text-muted-foreground">System: {fmt(shiftSummary.partnerCardRevenue || 0)}</span>
+                    {session.cashier.role === 'admin' && <span className="text-[10px] text-muted-foreground">System: {fmt(shiftSummary.partnerCardRevenue || 0)}</span>}
                   </div>
                   <Input 
                     type="number"
-                    placeholder={`Expected ${fmt(shiftSummary.partnerCardRevenue || 0)}`}
+                    placeholder={session.cashier.role === 'admin' ? `Expected ${fmt(shiftSummary.partnerCardRevenue || 0)}` : 'Enter partner card counted'}
                     value={partnerCardCountedInput}
                     onChange={(e) => setPartnerCardCountedInput(e.target.value)}
                     className="bg-white/5 border-white/10 h-11 text-right font-bold text-base rounded-xl"
                   />
                 </div>
 
+                {session.cashier.role === 'admin' && (
                 <div className="flex justify-between items-center p-3 rounded-xl bg-white/[0.02] border border-white/5 text-xs font-bold">
                   <span className="text-muted-foreground">Points Redeemed (System)</span>
                   <span className="font-mono text-neon-cyan">{fmt(shiftSummary.pointsRevenue || 0)}</span>
                 </div>
+                )}
 
                 <div className="space-y-1">
                   <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Shift Notes (Optional)</label>

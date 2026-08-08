@@ -25,7 +25,7 @@ export default function ShiftReportPage() {
   const [orderSearch, setOrderSearch] = useState("");
 
   // Reconciliation List tab filter states
-  const [reconStartDate, setReconStartDate] = useState(format(subDays(new Date(), 30), "yyyy-MM-dd"));
+  const [reconStartDate, setReconStartDate] = useState(format(subDays(new Date(), 7), "yyyy-MM-dd"));
   const [reconEndDate, setReconEndDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [reconCashier, setReconCashier] = useState("all");
   const [reconBranch, setReconBranch] = useState("all");
