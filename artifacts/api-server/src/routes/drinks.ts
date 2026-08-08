@@ -24,6 +24,8 @@ import {
   partnerDrinkPricesTable,
   branchDrinkStatusTable,
   partnerDrinkStatusTable,
+  orderItemsTable,
+  orderItemCustomizationsTable,
 } from "@workspace/db";
 import { serializeDates } from "../lib/serialize";
 import { globalCache } from "../lib/cache";
@@ -445,18 +447,19 @@ async function buildDrinkDetail(drinkId: number, branchId?: number) {
   return result;
 }
 
-async function computeDefaultPrice(drinkId: number, branchId?: number, partnerId?: number): Promise<number> {
-  const cacheKey = `drink_default_price_${drinkId}_${branchId ?? "global"}_${partnerId ?? "global"}`;
-  const cached = globalCache.get<number>(cacheKey);
+async function computeDefaultPrice(drinkId: number, branchId?: number, partnerId?: number): Promise<{ defaultPrice: number; cost: number }> {
+  const cacheKey = `drink_default_price_cost_${drinkId}_${branchId ?? "global"}_${partnerId ?? "global"}`;
+  const cached = globalCache.get<{ defaultPrice: number; cost: number }>(cacheKey);
   if (cached !== null) return cached;
 
   try {
     const data = await calculateDrinkData(drinkId, [], branchId, partnerId);
-    globalCache.set(cacheKey, data.totalPrice);
-    return data.totalPrice;
+    const res = { defaultPrice: data.totalPrice, cost: data.totalCost ?? 0 };
+    globalCache.set(cacheKey, res);
+    return res;
   } catch (error) {
     console.error(`Error computing default price for drink ${drinkId}:`, error);
-    return 0;
+    return { defaultPrice: 0, cost: 0 };
   }
 }
 
@@ -518,13 +521,38 @@ router.get("/drinks", async (req, res): Promise<void> => {
     return a.name.localeCompare(b.name);
   });
 
+  // Fetch historical average customization cost per drink item as fallback when drink has no recipe slots
+  const historicalCosts = await db
+    .select({
+      drinkId: orderItemsTable.drinkId,
+      totalCost: sql<number>`coalesce(sum(${orderItemCustomizationsTable.consumedQty} * ${orderItemCustomizationsTable.costPerUnit}), 0)`,
+      totalQty: sql<number>`coalesce(sum(${orderItemsTable.quantity}), 1)`,
+    })
+    .from(orderItemCustomizationsTable)
+    .innerJoin(orderItemsTable, eq(orderItemCustomizationsTable.orderItemId, orderItemsTable.id))
+    .groupBy(orderItemsTable.drinkId);
+
+  const historicalCostMap = new Map<number, number>();
+  historicalCosts.forEach(row => {
+    const qty = Number(row.totalQty) || 1;
+    const totalC = Number(row.totalCost) || 0;
+    if (qty > 0 && totalC > 0) {
+      historicalCostMap.set(row.drinkId, totalC / qty);
+    }
+  });
+
   const drinksWithDetails = await Promise.all(
     filtered.map(async (d) => {
       // Always calculate detail (availability) to ensure the POS shows accurate Out of Stock badges.
       // Caching ensures this remains performant even for large lists.
       const detail = await buildDrinkDetail(d.id, targetBranchId);
       
-      const defaultPrice = await computeDefaultPrice(d.id, targetBranchId, queryPartnerId);
+      const computed = await computeDefaultPrice(d.id, targetBranchId, queryPartnerId);
+      let cost = computed.cost;
+      if (!cost || cost === 0) {
+        cost = historicalCostMap.get(d.id) || 0;
+      }
+      const defaultPrice = computed.defaultPrice;
 
       let basePrice = Number(d.basePrice);
       if (queryPartnerId) {
@@ -575,6 +603,7 @@ router.get("/drinks", async (req, res): Promise<void> => {
         ...d, 
         basePrice, 
         defaultPrice,
+        cost,
         isAvailable: detail ? detail.isAvailable : true,
         unavailableReasons: detail ? detail.unavailableReasons : [],
         slots: (req.query.includeSlots === "true" || req.query.includeSlots === "1" || (params.success && !!params.data.includeSlots)) ? detail?.slots : undefined,

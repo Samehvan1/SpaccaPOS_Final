@@ -82334,6 +82334,15 @@ async function calculateDrinkData(drinkId, selections, branchId = null, partnerI
     }
   }
   const basePrice = parseFloat(drink.basePrice);
+  let totalCost = 0;
+  for (const cust of customizations) {
+    if (cust.ingredientId) {
+      const ing = ingredientsMap.get(cust.ingredientId);
+      if (ing && ing.costPerUnit) {
+        totalCost += (cust.consumedQty || 0) * (parseFloat(ing.costPerUnit) || 0);
+      }
+    }
+  }
   return {
     drink,
     basePrice,
@@ -82341,7 +82350,8 @@ async function calculateDrinkData(drinkId, selections, branchId = null, partnerI
     totalPrice: basePrice + totalExtras,
     usedVolumeMl,
     customizations,
-    dynamicInfo
+    dynamicInfo,
+    totalCost
   };
 }
 
@@ -82655,16 +82665,17 @@ async function buildDrinkDetail(drinkId, branchId) {
   return result;
 }
 async function computeDefaultPrice(drinkId, branchId, partnerId) {
-  const cacheKey = `drink_default_price_${drinkId}_${branchId ?? "global"}_${partnerId ?? "global"}`;
+  const cacheKey = `drink_default_price_cost_${drinkId}_${branchId ?? "global"}_${partnerId ?? "global"}`;
   const cached2 = globalCache.get(cacheKey);
   if (cached2 !== null) return cached2;
   try {
     const data = await calculateDrinkData(drinkId, [], branchId, partnerId);
-    globalCache.set(cacheKey, data.totalPrice);
-    return data.totalPrice;
+    const res = { defaultPrice: data.totalPrice, cost: data.totalCost ?? 0 };
+    globalCache.set(cacheKey, res);
+    return res;
   } catch (error40) {
     console.error(`Error computing default price for drink ${drinkId}:`, error40);
-    return 0;
+    return { defaultPrice: 0, cost: 0 };
   }
 }
 router3.get("/drinks", async (req, res) => {
@@ -82704,10 +82715,28 @@ router3.get("/drinks", async (req, res) => {
     if (sortA !== sortB) return sortA - sortB;
     return a.name.localeCompare(b.name);
   });
+  const historicalCosts = await db.select({
+    drinkId: orderItemsTable.drinkId,
+    totalCost: sql`coalesce(sum(${orderItemCustomizationsTable.consumedQty} * ${orderItemCustomizationsTable.costPerUnit}), 0)`,
+    totalQty: sql`coalesce(sum(${orderItemsTable.quantity}), 1)`
+  }).from(orderItemCustomizationsTable).innerJoin(orderItemsTable, eq(orderItemCustomizationsTable.orderItemId, orderItemsTable.id)).groupBy(orderItemsTable.drinkId);
+  const historicalCostMap = /* @__PURE__ */ new Map();
+  historicalCosts.forEach((row) => {
+    const qty = Number(row.totalQty) || 1;
+    const totalC = Number(row.totalCost) || 0;
+    if (qty > 0 && totalC > 0) {
+      historicalCostMap.set(row.drinkId, totalC / qty);
+    }
+  });
   const drinksWithDetails = await Promise.all(
     filtered.map(async (d) => {
       const detail = await buildDrinkDetail(d.id, targetBranchId);
-      const defaultPrice = await computeDefaultPrice(d.id, targetBranchId, queryPartnerId);
+      const computed = await computeDefaultPrice(d.id, targetBranchId, queryPartnerId);
+      let cost = computed.cost;
+      if (!cost || cost === 0) {
+        cost = historicalCostMap.get(d.id) || 0;
+      }
+      const defaultPrice = computed.defaultPrice;
       let basePrice = Number(d.basePrice);
       if (queryPartnerId) {
         if (targetBranchId) {
@@ -82744,6 +82773,7 @@ router3.get("/drinks", async (req, res) => {
         ...d,
         basePrice,
         defaultPrice,
+        cost,
         isAvailable: detail ? detail.isAvailable : true,
         unavailableReasons: detail ? detail.unavailableReasons : [],
         slots: req.query.includeSlots === "true" || req.query.includeSlots === "1" || params.success && !!params.data.includeSlots ? detail?.slots : void 0

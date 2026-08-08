@@ -352,6 +352,8 @@ export default function DrinksAdmin() {
       "Category",
       "Base Price (EGP)",
       "Standard Price (EGP)",
+      "Cost (EGP)",
+      "Profit Margin (%)",
       "Kitchen Station",
       "Prep Time (s)",
       "Sort Order",
@@ -364,6 +366,8 @@ export default function DrinksAdmin() {
         ? catMap.get((drink as any).categoryId)
         : drink.category;
       const standardPrice = (drink as any).defaultPrice ?? drink.basePrice;
+      const cost = (drink as any).cost ?? 0;
+      const profitMargin = standardPrice > 0 ? Number((((standardPrice - cost) / standardPrice) * 100).toFixed(2)) : 0;
       const statusStr = drink.isActive ? "Active" : "Inactive";
       const clean = (val: any) => {
         if (val === null || val === undefined) return '""';
@@ -377,6 +381,8 @@ export default function DrinksAdmin() {
         clean(categoryName),
         drink.basePrice,
         standardPrice,
+        cost,
+        profitMargin,
         clean(drink.kitchenStation || "main-bar"),
         drink.prepTimeSeconds ?? 120,
         (drink as any).sortOrder ?? 0,
@@ -415,6 +421,9 @@ export default function DrinksAdmin() {
       const categoryName = (drink as any).categoryId && catMap.has((drink as any).categoryId)
         ? catMap.get((drink as any).categoryId)
         : drink.category;
+      const standardPrice = (drink as any).defaultPrice ?? drink.basePrice;
+      const cost = (drink as any).cost ?? 0;
+      const profitMargin = standardPrice > 0 ? Number((((standardPrice - cost) / standardPrice) * 100).toFixed(2)) : 0;
       return {
         id: drink.id,
         name: drink.name,
@@ -422,7 +431,9 @@ export default function DrinksAdmin() {
         category: categoryName,
         categoryId: (drink as any).categoryId || null,
         basePrice: drink.basePrice,
-        standardPrice: (drink as any).defaultPrice ?? drink.basePrice,
+        standardPrice,
+        cost,
+        profitMargin,
         kitchenStation: drink.kitchenStation || "main-bar",
         prepTimeSeconds: drink.prepTimeSeconds ?? 120,
         sortOrder: (drink as any).sortOrder ?? 0,
@@ -886,75 +897,98 @@ export default function DrinksAdmin() {
                   <TableHead>Base Price</TableHead>
                   <TableHead>Sort</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Profit %</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8">Loading...</TableCell>
+                    <TableCell colSpan={7} className="text-center py-8">Loading...</TableCell>
                   </TableRow>
                 ) : filteredDrinks?.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">No drinks found.</TableCell>
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">No drinks found.</TableCell>
                   </TableRow>
                 ) : (
-                  filteredDrinks?.map(drink => (
-                    <TableRow key={drink.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          {(drink as any).imageUrl ? (
-                            <img
-                              src={(drink as any).imageUrl}
-                              alt={drink.name}
-                              className="h-8 w-8 rounded object-cover shrink-0 border"
-                              onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
-                            />
-                          ) : (
-                            <div className="h-8 w-8 rounded bg-muted flex items-center justify-center shrink-0 border">
-                              <ImageIcon className="h-4 w-4 text-muted-foreground/50" />
-                            </div>
-                          )}
-                          <div>
-                            <div className="font-medium">{drink.name}</div>
-                            {drink.description && (
-                              <div className="text-xs text-muted-foreground truncate max-w-[180px]">{drink.description}</div>
+                  filteredDrinks?.map(drink => {
+                    const standardPrice = (drink as any).defaultPrice ?? drink.basePrice;
+                    const cost = (drink as any).cost ?? 0;
+                    const hasCost = cost > 0;
+                    const profit = standardPrice - cost;
+                    const profitMargin = (hasCost && standardPrice > 0) ? (profit / standardPrice) * 100 : 0;
+
+                    let badgeClass = "border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold";
+                    if (!hasCost) {
+                      badgeClass = "border-muted bg-muted/20 text-muted-foreground font-normal";
+                    } else if (profitMargin < 20) {
+                      badgeClass = "border-red-500/40 bg-red-500/10 text-red-600 dark:text-red-400 font-bold";
+                    } else if (profitMargin < 50) {
+                      badgeClass = "border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400 font-bold";
+                    }
+
+                    return (
+                      <TableRow key={drink.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            {(drink as any).imageUrl ? (
+                              <img
+                                src={(drink as any).imageUrl}
+                                alt={drink.name}
+                                className="h-8 w-8 rounded object-cover shrink-0 border"
+                                onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
+                              />
+                            ) : (
+                              <div className="h-8 w-8 rounded bg-muted flex items-center justify-center shrink-0 border">
+                                <ImageIcon className="h-4 w-4 text-muted-foreground/50" />
+                              </div>
                             )}
+                            <div>
+                              <div className="font-medium">{drink.name}</div>
+                              {drink.description && (
+                                <div className="text-xs text-muted-foreground truncate max-w-[180px]">{drink.description}</div>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="capitalize">
-                        {(drink as any).categoryId && catMap.has((drink as any).categoryId)
-                          ? catMap.get((drink as any).categoryId)
-                          : drink.category}
-                      </TableCell>
-                      <TableCell>{fmt(drink.basePrice)}</TableCell>
-                      <TableCell className="text-muted-foreground">{(drink as any).sortOrder ?? 0}</TableCell>
-                      <TableCell>
-                        <Badge variant={drink.isActive ? "default" : "secondary"}>
-                          {drink.isActive ? "Active" : "Inactive"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground h-8" onClick={() => openAvailabilityModal(drink)}>
-                            <Building2 className="h-4 w-4" /> Availability
-                          </Button>
-                          <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground h-8" asChild>
-                            <Link href={`/admin/drinks/${drink.id}/recipe`}>
-                              <FlaskConical className="h-4 w-4" /> Recipe
-                            </Link>
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(drink as Drink)}>
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDelete(drink.id)}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
+                        </TableCell>
+                        <TableCell className="capitalize">
+                          {(drink as any).categoryId && catMap.has((drink as any).categoryId)
+                            ? catMap.get((drink as any).categoryId)
+                            : drink.category}
+                        </TableCell>
+                        <TableCell>{fmt(drink.basePrice)}</TableCell>
+                        <TableCell className="text-muted-foreground">{(drink as any).sortOrder ?? 0}</TableCell>
+                        <TableCell>
+                          <Badge variant={drink.isActive ? "default" : "secondary"}>
+                            {drink.isActive ? "Active" : "Inactive"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className={badgeClass}>
+                            {hasCost ? `${profitMargin.toFixed(1)}%` : "N/A"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground h-8" onClick={() => openAvailabilityModal(drink)}>
+                              <Building2 className="h-4 w-4" /> Availability
+                            </Button>
+                            <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground h-8" asChild>
+                              <Link href={`/admin/drinks/${drink.id}/recipe`}>
+                                <FlaskConical className="h-4 w-4" /> Recipe
+                              </Link>
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(drink as Drink)}>
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDelete(drink.id)}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
                 )}
               </TableBody>
             </Table>

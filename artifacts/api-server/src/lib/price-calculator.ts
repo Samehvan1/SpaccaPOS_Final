@@ -731,6 +731,17 @@ export async function calculateDrinkData(
   }
 
   const basePrice = parseFloat(drink.basePrice);
+
+  let totalCost = 0;
+  for (const cust of customizations) {
+    if (cust.ingredientId) {
+      const ing = ingredientsMap.get(cust.ingredientId);
+      if (ing && ing.costPerUnit) {
+        totalCost += (cust.consumedQty || 0) * (parseFloat(ing.costPerUnit) || 0);
+      }
+    }
+  }
+
   return {
     drink,
     basePrice,
@@ -739,5 +750,7 @@ export async function calculateDrinkData(
     usedVolumeMl,
     customizations,
     dynamicInfo,
+    totalCost,
   };
 }
+
