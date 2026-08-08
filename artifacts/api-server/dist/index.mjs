@@ -86442,9 +86442,117 @@ init_drizzle_orm();
 init_src();
 init_src();
 var router9 = (0, import_express9.Router)();
+function parseLocalDate2(dateStr) {
+  const parts = dateStr.split("-");
+  if (parts.length !== 3) return new Date(dateStr);
+  return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+}
+function toCairoMidnight2(localDate, isEnd) {
+  const year = localDate.getFullYear();
+  const month = localDate.getMonth();
+  const day = localDate.getDate();
+  const approxUtc = isEnd ? new Date(Date.UTC(year, month, day, 23, 59, 59, 999)) : new Date(Date.UTC(year, month, day, 0, 0, 0, 0));
+  try {
+    const formatter = new Intl.DateTimeFormat("en-US", {
+      timeZone: "Africa/Cairo",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false
+    });
+    const parts = formatter.formatToParts(approxUtc);
+    const g = (t) => parseInt(parts.find((p) => p.type === t).value, 10);
+    const formattedUtc = Date.UTC(g("year"), g("month") - 1, g("day"), g("hour"), g("minute"), g("second"));
+    return new Date(approxUtc.getTime() + (approxUtc.getTime() - formattedUtc));
+  } catch {
+    return localDate;
+  }
+}
 router9.get("/drink-categories", async (_req, res) => {
   const categories = await db.select().from(drinkCategoriesTable).orderBy(asc(drinkCategoriesTable.sortOrder), asc(drinkCategoriesTable.name));
   res.json(categories);
+});
+router9.get("/drink-categories/performance", requirePermission("reports:view"), async (req, res) => {
+  try {
+    const { from, to, branchId } = req.query;
+    const now = /* @__PURE__ */ new Date();
+    const fromDate = from ? toCairoMidnight2(parseLocalDate2(from), false) : toCairoMidnight2(new Date(now.getFullYear(), now.getMonth(), 1), false);
+    const toDate2 = to ? toCairoMidnight2(parseLocalDate2(to), true) : toCairoMidnight2(now, true);
+    const orderConditions = [
+      gte(ordersTable.createdAt, fromDate),
+      lte(ordersTable.createdAt, toDate2),
+      inArray(ordersTable.status, ["paid", "completed", "ready", "in_progress"])
+    ];
+    if (branchId) {
+      const bid = parseInt(branchId);
+      if (!isNaN(bid)) orderConditions.push(eq(ordersTable.branchId, bid));
+    }
+    const matchingOrders = await db.select({ id: ordersTable.id }).from(ordersTable).where(and(...orderConditions));
+    const orderIds = matchingOrders.map((o) => o.id);
+    if (orderIds.length === 0) {
+      const allCats = await db.select({ id: drinkCategoriesTable.id, name: drinkCategoriesTable.name, isActive: drinkCategoriesTable.isActive }).from(drinkCategoriesTable);
+      res.json({
+        categories: allCats.filter((c) => c.isActive).map((c) => ({ id: c.id, name: c.name, quantity: 0, totalSales: 0, orderCount: 0 })),
+        totalRevenue: 0,
+        totalQuantity: 0,
+        totalOrders: 0,
+        from: fromDate.toISOString(),
+        to: toDate2.toISOString()
+      });
+      return;
+    }
+    const categoryStats = await db.select({
+      categoryId: drinkCategoriesTable.id,
+      categoryName: drinkCategoriesTable.name,
+      isActive: drinkCategoriesTable.isActive,
+      quantity: sql`coalesce(sum(${orderItemsTable.quantity}), 0)`,
+      totalSales: sql`coalesce(sum(${orderItemsTable.lineTotal}), 0)`,
+      orderCount: sql`count(distinct ${orderItemsTable.orderId})`
+    }).from(drinkCategoriesTable).leftJoin(drinksTable, eq(drinksTable.categoryId, drinkCategoriesTable.id)).leftJoin(
+      orderItemsTable,
+      and(
+        eq(orderItemsTable.drinkId, drinksTable.id),
+        inArray(orderItemsTable.orderId, orderIds)
+      )
+    ).groupBy(drinkCategoriesTable.id, drinkCategoriesTable.name, drinkCategoriesTable.isActive).orderBy(desc(sql`coalesce(sum(${orderItemsTable.lineTotal}), 0)`));
+    const categories = categoryStats.filter((c) => c.isActive || Number(c.totalSales) > 0).map((c) => ({
+      id: c.categoryId,
+      name: c.categoryName,
+      quantity: Number(c.quantity),
+      totalSales: Number(c.totalSales),
+      orderCount: Number(c.orderCount)
+    }));
+    const totalRevenue = categories.reduce((s, c) => s + c.totalSales, 0);
+    const totalQuantity = categories.reduce((s, c) => s + c.quantity, 0);
+    const topDrinks = orderIds.length > 0 ? await db.select({
+      drinkId: orderItemsTable.drinkId,
+      drinkName: orderItemsTable.drinkName,
+      categoryName: drinkCategoriesTable.name,
+      quantity: sql`sum(${orderItemsTable.quantity})`,
+      totalSales: sql`sum(${orderItemsTable.lineTotal})`
+    }).from(orderItemsTable).innerJoin(drinksTable, eq(orderItemsTable.drinkId, drinksTable.id)).leftJoin(drinkCategoriesTable, eq(drinksTable.categoryId, drinkCategoriesTable.id)).where(inArray(orderItemsTable.orderId, orderIds)).groupBy(orderItemsTable.drinkId, orderItemsTable.drinkName, drinkCategoriesTable.name).orderBy(desc(sql`sum(${orderItemsTable.lineTotal})`)).limit(10) : [];
+    res.json({
+      categories,
+      topDrinks: topDrinks.map((d) => ({
+        drinkId: d.drinkId,
+        drinkName: d.drinkName,
+        categoryName: d.categoryName,
+        quantity: Number(d.quantity),
+        totalSales: Number(d.totalSales)
+      })),
+      totalRevenue,
+      totalQuantity,
+      totalOrders: orderIds.length,
+      from: fromDate.toISOString(),
+      to: toDate2.toISOString()
+    });
+  } catch (err) {
+    console.error("Category performance error:", err);
+    res.status(500).json({ error: "Failed to load category performance" });
+  }
 });
 router9.post("/drink-categories", requirePermission("catalog:manage"), async (req, res) => {
   const parsed = insertDrinkCategorySchema.safeParse(req.body);
@@ -89446,7 +89554,7 @@ function analyzeCustomization(cust, context) {
 }
 
 // src/routes/finance.ts
-function parseLocalDate2(dateStr) {
+function parseLocalDate3(dateStr) {
   if (!dateStr) return /* @__PURE__ */ new Date();
   if (dateStr instanceof Date) {
     if (dateStr.getUTCHours() === 0 && dateStr.getUTCMinutes() === 0 && dateStr.getUTCSeconds() === 0 && dateStr.getUTCMilliseconds() === 0) {
@@ -89463,7 +89571,7 @@ function parseLocalDate2(dateStr) {
   const date6 = new Date(year, month, day);
   return isNaN(date6.getTime()) ? new Date(dateStr) : date6;
 }
-function toCairoMidnight2(localDate, isEnd) {
+function toCairoMidnight3(localDate, isEnd) {
   const year = localDate.getFullYear();
   const month = localDate.getMonth();
   const day = localDate.getDate();
@@ -89494,17 +89602,17 @@ function toCairoMidnight2(localDate, isEnd) {
   }
 }
 function startOfDay3(d) {
-  return toCairoMidnight2(d, false);
+  return toCairoMidnight3(d, false);
 }
 function endOfDay3(d) {
-  return toCairoMidnight2(d, true);
+  return toCairoMidnight3(d, true);
 }
 var router20 = (0, import_express23.Router)();
 router20.get("/finance/inventory-usage", requirePermission("reports:view"), async (req, res) => {
   const { startDate, endDate, branchId } = req.query;
   const targetBranchId = branchId && branchId !== "all" ? parseInt(branchId) : null;
-  const start = startDate ? startOfDay3(parseLocalDate2(startDate)) : startOfDay3(subDays(/* @__PURE__ */ new Date(), 30));
-  const end = endDate ? endOfDay3(parseLocalDate2(endDate)) : endOfDay3(/* @__PURE__ */ new Date());
+  const start = startDate ? startOfDay3(parseLocalDate3(startDate)) : startOfDay3(subDays(/* @__PURE__ */ new Date(), 30));
+  const end = endDate ? endOfDay3(parseLocalDate3(endDate)) : endOfDay3(/* @__PURE__ */ new Date());
   if (isNaN(start.getTime()) || isNaN(end.getTime())) {
     res.status(400).json({ error: "Invalid date format" });
     return;
@@ -89549,8 +89657,8 @@ router20.get("/finance/inventory-usage", requirePermission("reports:view"), asyn
 router20.get("/finance/pl-report", requirePermission("reports:view"), async (req, res) => {
   const { startDate, endDate, branchId } = req.query;
   const targetBranchId = branchId && branchId !== "all" ? parseInt(branchId) : null;
-  const start = startDate ? startOfDay3(parseLocalDate2(startDate)) : startOfDay3(subDays(/* @__PURE__ */ new Date(), 30));
-  const end = endDate ? endOfDay3(parseLocalDate2(endDate)) : endOfDay3(/* @__PURE__ */ new Date());
+  const start = startDate ? startOfDay3(parseLocalDate3(startDate)) : startOfDay3(subDays(/* @__PURE__ */ new Date(), 30));
+  const end = endDate ? endOfDay3(parseLocalDate3(endDate)) : endOfDay3(/* @__PURE__ */ new Date());
   if (isNaN(start.getTime()) || isNaN(end.getTime())) {
     res.status(400).json({ error: "Invalid date format" });
     return;
@@ -89621,8 +89729,8 @@ router20.get("/finance/pl-report", requirePermission("reports:view"), async (req
 router20.get("/finance/pl-by-day", requirePermission("reports:view"), async (req, res) => {
   const { startDate, endDate, branchId } = req.query;
   const targetBranchId = branchId && branchId !== "all" ? parseInt(branchId) : null;
-  const start = startDate ? startOfDay3(parseLocalDate2(startDate)) : startOfDay3(subDays(/* @__PURE__ */ new Date(), 30));
-  const end = endDate ? endOfDay3(parseLocalDate2(endDate)) : endOfDay3(/* @__PURE__ */ new Date());
+  const start = startDate ? startOfDay3(parseLocalDate3(startDate)) : startOfDay3(subDays(/* @__PURE__ */ new Date(), 30));
+  const end = endDate ? endOfDay3(parseLocalDate3(endDate)) : endOfDay3(/* @__PURE__ */ new Date());
   if (isNaN(start.getTime()) || isNaN(end.getTime())) {
     res.status(400).json({ error: "Invalid date format" });
     return;
@@ -89819,8 +89927,8 @@ router20.get("/finance/ingredient-recipes", requirePermission("reports:view"), a
 router20.get("/finance/sales-items", requirePermission("reports:view"), async (req, res) => {
   const { startDate, endDate, branchId } = req.query;
   const targetBranchId = branchId && branchId !== "all" ? parseInt(branchId) : null;
-  const start = startDate ? startOfDay3(parseLocalDate2(startDate)) : startOfDay3(subDays(/* @__PURE__ */ new Date(), 30));
-  const end = endDate ? endOfDay3(parseLocalDate2(endDate)) : endOfDay3(/* @__PURE__ */ new Date());
+  const start = startDate ? startOfDay3(parseLocalDate3(startDate)) : startOfDay3(subDays(/* @__PURE__ */ new Date(), 30));
+  const end = endDate ? endOfDay3(parseLocalDate3(endDate)) : endOfDay3(/* @__PURE__ */ new Date());
   if (isNaN(start.getTime()) || isNaN(end.getTime())) {
     res.status(400).json({ error: "Invalid date format" });
     return;
@@ -89900,8 +90008,8 @@ router20.get("/finance/sales-items", requirePermission("reports:view"), async (r
 router20.get("/finance/sales-summary", requirePermission("reports:view"), async (req, res) => {
   const { startDate, endDate, branchId, partnerId, source } = req.query;
   const targetBranchId = branchId && branchId !== "all" ? parseInt(branchId) : null;
-  const start = startDate ? startOfDay3(parseLocalDate2(startDate)) : startOfDay3(subDays(/* @__PURE__ */ new Date(), 30));
-  const end = endDate ? endOfDay3(parseLocalDate2(endDate)) : endOfDay3(/* @__PURE__ */ new Date());
+  const start = startDate ? startOfDay3(parseLocalDate3(startDate)) : startOfDay3(subDays(/* @__PURE__ */ new Date(), 30));
+  const end = endDate ? endOfDay3(parseLocalDate3(endDate)) : endOfDay3(/* @__PURE__ */ new Date());
   if (isNaN(start.getTime()) || isNaN(end.getTime())) {
     res.status(400).json({ error: "Invalid date format" });
     return;
@@ -89962,8 +90070,8 @@ router20.get("/finance/sales-summary", requirePermission("reports:view"), async 
 router20.get("/finance/customizations-report", requirePermission("reports:view"), async (req, res) => {
   const { startDate, endDate, branchId } = req.query;
   const targetBranchId = branchId && branchId !== "all" ? parseInt(branchId) : null;
-  const start = startDate ? startOfDay3(parseLocalDate2(startDate)) : startOfDay3(subDays(/* @__PURE__ */ new Date(), 30));
-  const end = endDate ? endOfDay3(parseLocalDate2(endDate)) : endOfDay3(/* @__PURE__ */ new Date());
+  const start = startDate ? startOfDay3(parseLocalDate3(startDate)) : startOfDay3(subDays(/* @__PURE__ */ new Date(), 30));
+  const end = endDate ? endOfDay3(parseLocalDate3(endDate)) : endOfDay3(/* @__PURE__ */ new Date());
   if (isNaN(start.getTime()) || isNaN(end.getTime())) {
     res.status(400).json({ error: "Invalid date format" });
     return;
@@ -89998,8 +90106,8 @@ router20.get("/finance/customizations-report", requirePermission("reports:view")
 router20.get("/finance/customization-analytics", requirePermission("reports:view"), async (req, res) => {
   const { startDate, endDate, branchId } = req.query;
   const targetBranchId = branchId && branchId !== "all" ? parseInt(branchId) : null;
-  const start = startDate ? startOfDay3(parseLocalDate2(startDate)) : startOfDay3(subDays(/* @__PURE__ */ new Date(), 30));
-  const end = endDate ? endOfDay3(parseLocalDate2(endDate)) : endOfDay3(/* @__PURE__ */ new Date());
+  const start = startDate ? startOfDay3(parseLocalDate3(startDate)) : startOfDay3(subDays(/* @__PURE__ */ new Date(), 30));
+  const end = endDate ? endOfDay3(parseLocalDate3(endDate)) : endOfDay3(/* @__PURE__ */ new Date());
   if (isNaN(start.getTime()) || isNaN(end.getTime())) {
     res.status(400).json({ error: "Invalid date format" });
     return;
@@ -90078,8 +90186,8 @@ router20.get("/finance/customization-analytics", requirePermission("reports:view
 });
 router20.get("/finance/order-stats", requirePermission("reports:view"), async (req, res) => {
   const { startDate, endDate, branchId } = req.query;
-  const start = startDate ? startOfDay3(parseLocalDate2(startDate)) : startOfDay3(subDays(/* @__PURE__ */ new Date(), 30));
-  const end = endDate ? endOfDay3(parseLocalDate2(endDate)) : endOfDay3(/* @__PURE__ */ new Date());
+  const start = startDate ? startOfDay3(parseLocalDate3(startDate)) : startOfDay3(subDays(/* @__PURE__ */ new Date(), 30));
+  const end = endDate ? endOfDay3(parseLocalDate3(endDate)) : endOfDay3(/* @__PURE__ */ new Date());
   const bId = String(branchId);
   const targetBranchId = branchId && bId !== "all" && bId !== "undefined" ? parseInt(bId) : null;
   const conditions = [
