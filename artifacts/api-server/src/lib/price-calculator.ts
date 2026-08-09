@@ -843,6 +843,7 @@ export async function getProductCost(
   const totalCost = Number((data.totalCost || 0).toFixed(2));
   const profitAmount = Number((standardPrice - totalCost).toFixed(2));
   const profitMargin = standardPrice > 0 ? Number(((profitAmount / standardPrice) * 100).toFixed(2)) : 0;
+  const priceToCost = totalCost > 0 ? Number((standardPrice / totalCost).toFixed(2)) : 0;
 
   return {
     drinkId,
@@ -851,6 +852,7 @@ export async function getProductCost(
     totalCost,
     profitAmount,
     profitMargin,
+    priceToCost,
     costBreakdown: data.costBreakdown.map(item => ({
       ...item,
       lineCost: Number(item.lineCost.toFixed(2)),

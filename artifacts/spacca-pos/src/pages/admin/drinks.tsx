@@ -1263,7 +1263,7 @@ export default function DrinksAdmin() {
 
       {/* Recipe Cost & Profit Breakdown Modal */}
       <Dialog open={!!costBreakdownDrink} onOpenChange={(open) => { if (!open) setCostBreakdownDrink(null); }}>
-        <DialogContent className="sm:max-w-[650px]">
+        <DialogContent className="sm:max-w-[720px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-xl font-bold">
               <Calculator className="h-5 w-5 text-emerald-500" />
@@ -1278,21 +1278,21 @@ export default function DrinksAdmin() {
           ) : costBreakdownData ? (
             <div className="space-y-6 py-2">
               {/* Summary Totals Cards */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
                 <div className="p-3 rounded-xl border bg-muted/20 space-y-1">
-                  <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Standard Price</div>
+                  <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest truncate">Standard Price</div>
                   <div className="text-base font-black text-foreground">{fmt(costBreakdownData.standardPrice)}</div>
                 </div>
                 <div className="p-3 rounded-xl border bg-muted/20 space-y-1">
-                  <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Recipe Cost</div>
+                  <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest truncate">Recipe Cost</div>
                   <div className="text-base font-black text-foreground">{fmt(costBreakdownData.totalCost)}</div>
                 </div>
                 <div className="p-3 rounded-xl border bg-muted/20 space-y-1">
-                  <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Final Profit</div>
+                  <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest truncate">Final Profit</div>
                   <div className="text-base font-black text-emerald-600 dark:text-emerald-400">{fmt(costBreakdownData.profitAmount)}</div>
                 </div>
                 <div className="p-3 rounded-xl border bg-muted/20 space-y-1">
-                  <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Profit Margin</div>
+                  <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest truncate">Profit Margin</div>
                   <Badge 
                     variant="outline" 
                     className={`text-sm font-bold ${
@@ -1305,6 +1305,14 @@ export default function DrinksAdmin() {
                   >
                     {costBreakdownData.profitMargin.toFixed(2)}%
                   </Badge>
+                </div>
+                <div className="p-3 rounded-xl border bg-muted/20 space-y-1">
+                  <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest truncate">Price to Cost</div>
+                  <div className="text-base font-black text-blue-600 dark:text-blue-400">
+                    {costBreakdownData.totalCost > 0
+                      ? `${(costBreakdownData.standardPrice / costBreakdownData.totalCost).toFixed(2)}x`
+                      : "N/A"}
+                  </div>
                 </div>
               </div>
 
