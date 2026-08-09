@@ -1096,7 +1096,9 @@ router.patch("/orders/:id/status", async (req, res, next): Promise<void> => {
   }
 
   if (parsed.data.status === "paid") {
-    const cashierId = (req.body as any).cashierId ?? (req.session as any).cashierId ?? null;
+    // Prefer authenticated session cashierId/userId over body payload to prevent stale frontend session bugs
+    const sessionCashierId = (req.session as any).cashierId ?? (req.session as any).userId;
+    const cashierId = sessionCashierId ?? (req.body as any).cashierId ?? null;
     if (cashierId) updateData.cashierId = cashierId;
     updateData.paidAt = now;
   } else if (parsed.data.status === "ready") {

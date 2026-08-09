@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
-import { db, usersTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { db, usersTable, userPermissionsTable } from "@workspace/db";
+import { eq, and } from "drizzle-orm";
 import { resolveUserPermissions } from "../lib/permissions";
 
 export function requirePermission(permissionKey: string) {
@@ -13,20 +13,36 @@ export function requirePermission(permissionKey: string) {
       return;
     }
 
+    if (!(req as any).user) {
+      const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+      if (!user) {
+        res.status(401).json({ error: "User not found" });
+        return;
+      }
+      (req as any).user = user;
+    }
+    const user = (req as any).user;
+    const userRole = (session.role || user?.role)?.toLowerCase();
+
+    // Special case: admin gets full access to all permissions unless explicitly denied in user_permissions
+    if (userRole === "admin") {
+      const userOverrides = await db
+        .select()
+        .from(userPermissionsTable)
+        .where(and(eq(userPermissionsTable.userId, userId), eq(userPermissionsTable.permissionKey, permissionKey)));
+      const explicitDeny = userOverrides.find(o => !o.granted);
+      if (!explicitDeny) {
+        console.log(`[Permission] GRANTED (Admin Full Access): User ${userId} for '${permissionKey}'`);
+        next();
+        return;
+      }
+    }
+
     let permissions = session.permissions;
 
     if (!permissions) {
       // Lazy load permissions from DB and cache them in the session
       try {
-        if (!(req as any).user) {
-          const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
-          if (!user) {
-            res.status(401).json({ error: "User not found" });
-            return;
-          }
-          (req as any).user = user;
-        }
-        const user = (req as any).user;
         permissions = await resolveUserPermissions(user.id, user.role);
         session.permissions = permissions;
 
@@ -45,16 +61,16 @@ export function requirePermission(permissionKey: string) {
     }
 
     if (!permissions.includes(permissionKey)) {
-      console.log(`[Permission] DENIED: User ${userId} (Role: ${session.role}) lacks '${permissionKey}'`);
+      console.log(`[Permission] DENIED: User ${userId} (Role: ${userRole}) lacks '${permissionKey}'`);
       res.status(403).json({ 
         error: `Insufficient permissions: '${permissionKey}' required`,
-        role: session.role,
+        role: userRole,
         permission: permissionKey
       });
       return;
     }
 
-    console.log(`[Permission] GRANTED: User ${userId} (Role: ${session.role}) for '${permissionKey}'`);
+    console.log(`[Permission] GRANTED: User ${userId} (Role: ${userRole}) for '${permissionKey}'`);
     next();
   };
 }

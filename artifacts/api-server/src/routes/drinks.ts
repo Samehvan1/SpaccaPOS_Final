@@ -1387,10 +1387,17 @@ router.post("/admin/drinks/branch-status", requirePermission("drinks:manage"), a
     res.status(400).json({ error: "Invalid branchId, drinkId, or isActive value" });
     return;
   }
+  const targetBranchId = Number(branchId);
+  const targetDrinkId = Number(drinkId);
+  if (isNaN(targetBranchId) || isNaN(targetDrinkId)) {
+    res.status(400).json({ error: "Invalid branchId or drinkId" });
+    return;
+  }
+
   const [existing] = await db
     .select()
     .from(branchDrinkStatusTable)
-    .where(and(eq(branchDrinkStatusTable.branchId, branchId), eq(branchDrinkStatusTable.drinkId, drinkId)))
+    .where(and(eq(branchDrinkStatusTable.branchId, targetBranchId), eq(branchDrinkStatusTable.drinkId, targetDrinkId)))
     .limit(1);
 
   if (existing) {
@@ -1400,8 +1407,8 @@ router.post("/admin/drinks/branch-status", requirePermission("drinks:manage"), a
       .where(eq(branchDrinkStatusTable.id, existing.id));
   } else {
     await db.insert(branchDrinkStatusTable).values({
-      branchId,
-      drinkId,
+      branchId: targetBranchId,
+      drinkId: targetDrinkId,
       isActive: Boolean(isActive),
     });
   }
@@ -1415,10 +1422,17 @@ router.post("/admin/drinks/partner-status", requirePermission("drinks:manage"), 
     res.status(400).json({ error: "Invalid partnerId, drinkId, or isActive value" });
     return;
   }
-  const targetBranchId = branchId || null;
+  const targetPartnerId = Number(partnerId);
+  const targetDrinkId = Number(drinkId);
+  if (isNaN(targetPartnerId) || isNaN(targetDrinkId)) {
+    res.status(400).json({ error: "Invalid partnerId or drinkId" });
+    return;
+  }
+
+  const targetBranchId = branchId ? Number(branchId) : null;
   const conditions = [
-    eq(partnerDrinkStatusTable.partnerId, partnerId),
-    eq(partnerDrinkStatusTable.drinkId, drinkId),
+    eq(partnerDrinkStatusTable.partnerId, targetPartnerId),
+    eq(partnerDrinkStatusTable.drinkId, targetDrinkId),
   ];
   if (targetBranchId) {
     conditions.push(eq(partnerDrinkStatusTable.branchId, targetBranchId));
@@ -1435,8 +1449,8 @@ router.post("/admin/drinks/partner-status", requirePermission("drinks:manage"), 
       .where(eq(partnerDrinkStatusTable.id, existing.id));
   } else {
     await db.insert(partnerDrinkStatusTable).values({
-      partnerId,
-      drinkId,
+      partnerId: targetPartnerId,
+      drinkId: targetDrinkId,
       branchId: targetBranchId,
       isActive: Boolean(isActive),
     });

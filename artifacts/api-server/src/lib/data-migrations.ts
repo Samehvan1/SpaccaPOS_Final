@@ -28,6 +28,24 @@ export async function runDataMigrations() {
       );
     `);
 
+    logger.info("[migration] Ensuring drinks:manage permission exists...");
+    await db.execute(sql`
+      INSERT INTO "permissions" ("key", "description")
+      VALUES ('drinks:manage', 'Manage branch and partner drink availability')
+      ON CONFLICT ("key") DO NOTHING;
+
+      INSERT INTO "role_permissions" ("role_key", "permission_key")
+      VALUES ('admin', 'drinks:manage')
+      ON CONFLICT DO NOTHING;
+    `);
+
+    logger.info("[migration] Reassigning orders 1-221001 and 1-221002 to cashier Menna Gamal (ID 25)...");
+    await db.execute(sql`
+      UPDATE "orders"
+      SET "cashier_id" = 25
+      WHERE "order_number" IN ('1-221001', '1-221002') AND "cashier_id" = 24;
+    `);
+
     logger.info("[migration] Checking for legacy hospitality order payments...");
     const hospitalityOrders = await db
       .select({

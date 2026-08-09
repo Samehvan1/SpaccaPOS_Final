@@ -15,6 +15,7 @@ vi.mock("@workspace/db", () => {
   return {
     db: mockDb,
     usersTable: { id: "id" },
+    userPermissionsTable: { userId: "userId", permissionKey: "permissionKey" },
   };
 });
 

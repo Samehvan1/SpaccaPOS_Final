@@ -33,6 +33,7 @@ export const APP_PERMISSIONS = [
   // Catalog & Inventory
   { key: "catalog:view", name: "View Catalog", description: "Browse drinks and categories" },
   { key: "catalog:manage", name: "Manage Catalog", description: "Create and edit drinks and categories" },
+  { key: "drinks:manage", name: "Manage Drink Availability", description: "Manage branch and partner drink availability" },
   
   { key: "inventory:view", name: "View Inventory", description: "Check stock levels and ingredients" },
   { key: "inventory:manage", name: "Manage Inventory", description: "Update stock levels, conversions and ingredient options" },
@@ -75,11 +76,12 @@ export async function syncPermissions() {
 
   // 2. Sync Permissions list
   for (const perm of APP_PERMISSIONS) {
+    const payload = { key: perm.key, description: perm.description };
     const [existing] = await db.select().from(permissionsTable).where(eq(permissionsTable.key, perm.key)).limit(1);
     if (existing) {
-      await db.update(permissionsTable).set(perm).where(eq(permissionsTable.key, perm.key));
+      await db.update(permissionsTable).set(payload).where(eq(permissionsTable.key, perm.key));
     } else {
-      await db.insert(permissionsTable).values(perm);
+      await db.insert(permissionsTable).values(payload);
     }
   }
 

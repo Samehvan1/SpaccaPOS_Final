@@ -81765,18 +81765,28 @@ function requirePermission(permissionKey) {
       res.status(401).json({ error: "Not authenticated" });
       return;
     }
+    if (!req.user) {
+      const [user2] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+      if (!user2) {
+        res.status(401).json({ error: "User not found" });
+        return;
+      }
+      req.user = user2;
+    }
+    const user = req.user;
+    const userRole = (session2.role || user?.role)?.toLowerCase();
+    if (userRole === "admin") {
+      const userOverrides = await db.select().from(userPermissionsTable).where(and(eq(userPermissionsTable.userId, userId), eq(userPermissionsTable.permissionKey, permissionKey)));
+      const explicitDeny = userOverrides.find((o) => !o.granted);
+      if (!explicitDeny) {
+        console.log(`[Permission] GRANTED (Admin Full Access): User ${userId} for '${permissionKey}'`);
+        next();
+        return;
+      }
+    }
     let permissions = session2.permissions;
     if (!permissions) {
       try {
-        if (!req.user) {
-          const [user2] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
-          if (!user2) {
-            res.status(401).json({ error: "User not found" });
-            return;
-          }
-          req.user = user2;
-        }
-        const user = req.user;
         permissions = await resolveUserPermissions(user.id, user.role);
         session2.permissions = permissions;
         await new Promise((resolve2, reject) => {
@@ -81792,15 +81802,15 @@ function requirePermission(permissionKey) {
       }
     }
     if (!permissions.includes(permissionKey)) {
-      console.log(`[Permission] DENIED: User ${userId} (Role: ${session2.role}) lacks '${permissionKey}'`);
+      console.log(`[Permission] DENIED: User ${userId} (Role: ${userRole}) lacks '${permissionKey}'`);
       res.status(403).json({
         error: `Insufficient permissions: '${permissionKey}' required`,
-        role: session2.role,
+        role: userRole,
         permission: permissionKey
       });
       return;
     }
-    console.log(`[Permission] GRANTED: User ${userId} (Role: ${session2.role}) for '${permissionKey}'`);
+    console.log(`[Permission] GRANTED: User ${userId} (Role: ${userRole}) for '${permissionKey}'`);
     next();
   };
 }
@@ -83405,13 +83415,19 @@ router3.post("/admin/drinks/branch-status", requirePermission("drinks:manage"), 
     res.status(400).json({ error: "Invalid branchId, drinkId, or isActive value" });
     return;
   }
-  const [existing] = await db.select().from(branchDrinkStatusTable).where(and(eq(branchDrinkStatusTable.branchId, branchId), eq(branchDrinkStatusTable.drinkId, drinkId))).limit(1);
+  const targetBranchId = Number(branchId);
+  const targetDrinkId = Number(drinkId);
+  if (isNaN(targetBranchId) || isNaN(targetDrinkId)) {
+    res.status(400).json({ error: "Invalid branchId or drinkId" });
+    return;
+  }
+  const [existing] = await db.select().from(branchDrinkStatusTable).where(and(eq(branchDrinkStatusTable.branchId, targetBranchId), eq(branchDrinkStatusTable.drinkId, targetDrinkId))).limit(1);
   if (existing) {
     await db.update(branchDrinkStatusTable).set({ isActive: Boolean(isActive), updatedAt: /* @__PURE__ */ new Date() }).where(eq(branchDrinkStatusTable.id, existing.id));
   } else {
     await db.insert(branchDrinkStatusTable).values({
-      branchId,
-      drinkId,
+      branchId: targetBranchId,
+      drinkId: targetDrinkId,
       isActive: Boolean(isActive)
     });
   }
@@ -83424,10 +83440,16 @@ router3.post("/admin/drinks/partner-status", requirePermission("drinks:manage"),
     res.status(400).json({ error: "Invalid partnerId, drinkId, or isActive value" });
     return;
   }
-  const targetBranchId = branchId || null;
+  const targetPartnerId = Number(partnerId);
+  const targetDrinkId = Number(drinkId);
+  if (isNaN(targetPartnerId) || isNaN(targetDrinkId)) {
+    res.status(400).json({ error: "Invalid partnerId or drinkId" });
+    return;
+  }
+  const targetBranchId = branchId ? Number(branchId) : null;
   const conditions = [
-    eq(partnerDrinkStatusTable.partnerId, partnerId),
-    eq(partnerDrinkStatusTable.drinkId, drinkId)
+    eq(partnerDrinkStatusTable.partnerId, targetPartnerId),
+    eq(partnerDrinkStatusTable.drinkId, targetDrinkId)
   ];
   if (targetBranchId) {
     conditions.push(eq(partnerDrinkStatusTable.branchId, targetBranchId));
@@ -83439,8 +83461,8 @@ router3.post("/admin/drinks/partner-status", requirePermission("drinks:manage"),
     await db.update(partnerDrinkStatusTable).set({ isActive: Boolean(isActive), updatedAt: /* @__PURE__ */ new Date() }).where(eq(partnerDrinkStatusTable.id, existing.id));
   } else {
     await db.insert(partnerDrinkStatusTable).values({
-      partnerId,
-      drinkId,
+      partnerId: targetPartnerId,
+      drinkId: targetDrinkId,
       branchId: targetBranchId,
       isActive: Boolean(isActive)
     });
@@ -91211,6 +91233,7 @@ var APP_PERMISSIONS = [
   // Catalog & Inventory
   { key: "catalog:view", name: "View Catalog", description: "Browse drinks and categories" },
   { key: "catalog:manage", name: "Manage Catalog", description: "Create and edit drinks and categories" },
+  { key: "drinks:manage", name: "Manage Drink Availability", description: "Manage branch and partner drink availability" },
   { key: "inventory:view", name: "View Inventory", description: "Check stock levels and ingredients" },
   { key: "inventory:manage", name: "Manage Inventory", description: "Update stock levels, conversions and ingredient options" },
   { key: "inventory:adjust", name: "Adjust Stock", description: "Restock and adjust inventory quantities" },
@@ -91243,11 +91266,12 @@ async function syncPermissions() {
     }
   }
   for (const perm of APP_PERMISSIONS) {
+    const payload = { key: perm.key, description: perm.description };
     const [existing] = await db.select().from(permissionsTable).where(eq(permissionsTable.key, perm.key)).limit(1);
     if (existing) {
-      await db.update(permissionsTable).set(perm).where(eq(permissionsTable.key, perm.key));
+      await db.update(permissionsTable).set(payload).where(eq(permissionsTable.key, perm.key));
     } else {
-      await db.insert(permissionsTable).values(perm);
+      await db.insert(permissionsTable).values(payload);
     }
   }
   const assignPermissions = async (roleKey, pKeys) => {
@@ -91325,6 +91349,16 @@ async function runDataMigrations() {
         "notes" text,
         "created_at" timestamp with time zone DEFAULT now() NOT NULL
       );
+    `);
+    logger.info("[migration] Ensuring drinks:manage permission exists...");
+    await db.execute(sql`
+      INSERT INTO "permissions" ("key", "description")
+      VALUES ('drinks:manage', 'Manage branch and partner drink availability')
+      ON CONFLICT ("key") DO NOTHING;
+
+      INSERT INTO "role_permissions" ("role_key", "permission_key")
+      VALUES ('admin', 'drinks:manage')
+      ON CONFLICT DO NOTHING;
     `);
     logger.info("[migration] Checking for legacy hospitality order payments...");
     const hospitalityOrders = await db.select({

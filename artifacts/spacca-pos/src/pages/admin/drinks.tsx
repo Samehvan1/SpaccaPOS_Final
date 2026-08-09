@@ -112,9 +112,9 @@ export default function DrinksAdmin() {
     setAvailLoading(true);
     try {
       const [branchesRes, partnersRes, availRes] = await Promise.all([
-        fetch(`${API_BASE}/admin/branches`),
-        fetch(`${API_BASE}/admin/partners`),
-        fetch(`${API_BASE}/admin/drinks/availability`)
+        fetch(`${API_BASE}/admin/branches`, { credentials: "include" }),
+        fetch(`${API_BASE}/admin/partners`, { credentials: "include" }),
+        fetch(`${API_BASE}/admin/drinks/availability`, { credentials: "include" })
       ]);
       const [bData, pData, aData] = await Promise.all([
         branchesRes.json(),
@@ -139,9 +139,13 @@ export default function DrinksAdmin() {
       const res = await fetch(`${API_BASE}/admin/drinks/branch-status`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ branchId, drinkId: availabilityDrink.id, isActive: newActive })
       });
-      if (!res.ok) throw new Error("Failed to update branch availability");
+      if (!res.ok) {
+        const errData = await res.json().catch(() => null);
+        throw new Error(errData?.error || "Failed to update branch availability");
+      }
       setAvailBranchStatuses(prev => {
         const existing = prev.find(s => s.branchId === branchId && s.drinkId === availabilityDrink.id);
         if (existing) {
@@ -163,9 +167,13 @@ export default function DrinksAdmin() {
       const res = await fetch(`${API_BASE}/admin/drinks/partner-status`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ partnerId, drinkId: availabilityDrink.id, isActive: newActive })
       });
-      if (!res.ok) throw new Error("Failed to update partner availability");
+      if (!res.ok) {
+        const errData = await res.json().catch(() => null);
+        throw new Error(errData?.error || "Failed to update partner availability");
+      }
       setAvailPartnerStatuses(prev => {
         const existing = prev.find(s => s.partnerId === partnerId && s.drinkId === availabilityDrink.id);
         if (existing) {

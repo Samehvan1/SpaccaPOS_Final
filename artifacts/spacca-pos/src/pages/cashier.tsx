@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -24,19 +24,16 @@ type CashierUser = { id: number; name: string; role: string };
 type ActiveSession = { sessionId: number; cashier: CashierUser; startedAt: string } | null;
 
 function useCashierSession() {
-  const [session, setSession] = useState<ActiveSession>(null);
-  const [loading, setLoading] = useState(true);
-
-  const fetchActive = async () => {
-    try {
+  const queryClient = useQueryClient();
+  const { data: session = null, isLoading: loading, refetch: fetchActive } = useQuery<ActiveSession>({
+    queryKey: ["/api/cashier/active"],
+    queryFn: async () => {
       const res = await fetch(`${API_BASE}/cashier/active`, { credentials: "include" });
-      const data = await res.json();
-      setSession(data);
-    } catch { setSession(null); }
-    finally { setLoading(false); }
-  };
-
-  useEffect(() => { fetchActive(); }, []);
+      if (!res.ok) return null;
+      return res.json();
+    },
+    staleTime: 5000,
+  });
 
   const login = async (username: string, password: string) => {
     const res = await fetch(`${API_BASE}/cashier/login`, {
@@ -47,13 +44,15 @@ function useCashierSession() {
     });
     if (!res.ok) throw new Error((await res.json()).error ?? "Login failed");
     const data = await res.json();
-    setSession(data);
+    queryClient.setQueryData(["/api/cashier/active"], data);
+    queryClient.invalidateQueries();
     return data;
   };
 
   const endSession = async () => {
     await fetch(`${API_BASE}/cashier/end-session`, { method: "POST", credentials: "include" });
-    setSession(null);
+    queryClient.setQueryData(["/api/cashier/active"], null);
+    queryClient.invalidateQueries();
   };
 
   return { session, loading, login, endSession, refetch: fetchActive };
