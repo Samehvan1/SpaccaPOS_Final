@@ -214,9 +214,10 @@ export default function DrinksAdmin() {
 
   const { mutate: updateDrink, isPending: isUpdating } = useUpdateDrink({
     mutation: {
-      onSuccess: async () => {
-        if (imageFile && editId !== null) {
-          await uploadImage(editId);
+      onSuccess: async (_data: any, variables: any) => {
+        const idToUpload = editId ?? variables?.id;
+        if (imageFile && idToUpload) {
+          await uploadImage(idToUpload);
         }
         toast({ title: "Drink updated" });
         setMode(null);
@@ -249,10 +250,14 @@ export default function DrinksAdmin() {
       const res = await fetch(`${API_BASE}/drinks/${drinkId}/image`, {
         method: "POST",
         body: formData,
+        credentials: "include",
       });
-      if (!res.ok) throw new Error("Image upload failed");
-    } catch {
-      toast({ variant: "destructive", title: "Image upload failed" });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => null);
+        throw new Error(errData?.error || "Image upload failed");
+      }
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Image upload failed", description: e.message });
     } finally {
       setIsUploadingImage(false);
     }
@@ -366,7 +371,8 @@ export default function DrinksAdmin() {
       "Prep Time (s)",
       "Sort Order",
       "Status",
-      "Image URL"
+      "Image Path",
+      "Full Image URL"
     ];
 
     const rows = listToExport.map(drink => {
@@ -382,6 +388,13 @@ export default function DrinksAdmin() {
         return `"${String(val).replace(/"/g, '""')}"`;
       };
 
+      const imageUrlPath = (drink as any).imageUrl || "";
+      const fullImageUrl = imageUrlPath
+        ? (imageUrlPath.startsWith("http://") || imageUrlPath.startsWith("https://")
+            ? imageUrlPath
+            : `${window.location.origin}${imageUrlPath.startsWith("/") ? "" : "/"}${imageUrlPath}`)
+        : "";
+
       return [
         drink.id,
         clean(drink.name),
@@ -395,7 +408,8 @@ export default function DrinksAdmin() {
         drink.prepTimeSeconds ?? 120,
         (drink as any).sortOrder ?? 0,
         clean(statusStr),
-        clean((drink as any).imageUrl || "")
+        clean(imageUrlPath),
+        clean(fullImageUrl)
       ].join(",");
     });
 
@@ -432,6 +446,13 @@ export default function DrinksAdmin() {
       const standardPrice = (drink as any).defaultPrice ?? drink.basePrice;
       const cost = (drink as any).cost ?? 0;
       const profitMargin = standardPrice > 0 ? Number((((standardPrice - cost) / standardPrice) * 100).toFixed(2)) : 0;
+      const imageUrlPath = (drink as any).imageUrl || null;
+      const fullImageUrl = imageUrlPath
+        ? (imageUrlPath.startsWith("http://") || imageUrlPath.startsWith("https://")
+            ? imageUrlPath
+            : `${window.location.origin}${imageUrlPath.startsWith("/") ? "" : "/"}${imageUrlPath}`)
+        : null;
+
       return {
         id: drink.id,
         name: drink.name,
@@ -446,7 +467,8 @@ export default function DrinksAdmin() {
         prepTimeSeconds: drink.prepTimeSeconds ?? 120,
         sortOrder: (drink as any).sortOrder ?? 0,
         isActive: drink.isActive,
-        imageUrl: (drink as any).imageUrl || null
+        imageUrl: imageUrlPath,
+        fullImageUrl: fullImageUrl
       };
     });
 
