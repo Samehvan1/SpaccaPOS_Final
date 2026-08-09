@@ -3,6 +3,7 @@ import cors from "cors";
 import pinoHttp from "pino-http";
 import session from "express-session";
 import path from "path";
+import fs from "fs";
 import { fileURLToPath } from "url";
 import connectPgSimple from "connect-pg-simple";
 import { pool } from "@workspace/db";
@@ -67,7 +68,12 @@ app.use(
 );
 
 // Serve uploaded images (drink photos, etc.)
-app.use("/uploads", express.static("uploads"));
+const uploadsDir = path.resolve(process.cwd(), "uploads");
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+app.use("/uploads", express.static(uploadsDir, { maxAge: "1d" }));
+app.use("/api/uploads", express.static(uploadsDir, { maxAge: "1d" }));
 
 // Disable browser caching for all dynamic API endpoints to prevent stale data in browsers like Chrome
 app.use("/api", (req, res, next) => {

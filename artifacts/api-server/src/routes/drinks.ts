@@ -32,7 +32,7 @@ import { globalCache } from "../lib/cache";
 import { requirePermission } from "../middleware/permissions";
 
 // ── Image upload: store in <cwd>/uploads/ ────────────────────────────────────
-const uploadsDir = path.join(process.cwd(), "uploads");
+const uploadsDir = path.resolve(process.cwd(), "uploads");
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 
 const storage = multer.diskStorage({
