@@ -546,8 +546,8 @@ export default function DrinkRecipe() {
       });
 
       const qsParams = new URLSearchParams();
-      if (cupSizeMl) qsParams.append("cupSizeMl", String(parseInt(cupSizeMl)));
-      if (cupIngredientId !== "none") qsParams.append("cupIngredientId", cupIngredientId);
+      qsParams.append("cupSizeMl", cupSizeMl ? String(parseInt(cupSizeMl)) : "none");
+      qsParams.append("cupIngredientId", cupIngredientId || "none");
       qsParams.append("isCustomizable", String(isCustomizable));
 
       const resp = await fetch(`/api/drinks/${drinkId}/slots?${qsParams.toString()}`, {

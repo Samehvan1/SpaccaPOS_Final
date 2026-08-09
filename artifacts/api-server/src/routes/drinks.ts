@@ -32,7 +32,9 @@ import { globalCache } from "../lib/cache";
 import { requirePermission } from "../middleware/permissions";
 
 // ── Image upload: store in <cwd>/uploads/ ────────────────────────────────────
-const uploadsDir = path.resolve(process.cwd(), "uploads");
+const uploadsDir = process.env.UPLOADS_DIR
+  ? path.resolve(process.env.UPLOADS_DIR)
+  : path.resolve(process.cwd(), "uploads");
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 
 const storage = multer.diskStorage({
@@ -816,8 +818,17 @@ router.put("/drinks/:id/slots", requirePermission("catalog:manage"), async (req,
     }
   }
 
-  const cupSizeMl = req.query.cupSizeMl ? parseInt(req.query.cupSizeMl as string) : undefined;
-  const cupIngredientId = req.query.cupIngredientId ? parseInt(req.query.cupIngredientId as string) : undefined;
+  const rawCupSizeMl = req.query.cupSizeMl as string | undefined;
+  const rawCupIngId = req.query.cupIngredientId as string | undefined;
+
+  const cupSizeMl = rawCupSizeMl !== undefined
+    ? (rawCupSizeMl === "none" || rawCupSizeMl === "null" || rawCupSizeMl === "" ? null : parseInt(rawCupSizeMl))
+    : undefined;
+
+  const cupIngredientId = rawCupIngId !== undefined
+    ? (rawCupIngId === "none" || rawCupIngId === "null" || rawCupIngId === "" ? null : parseInt(rawCupIngId))
+    : undefined;
+
   const isCustomizable = req.query.isCustomizable !== undefined ? req.query.isCustomizable === "true" : undefined;
 
   if (cupSizeMl !== undefined || cupIngredientId !== undefined || isCustomizable !== undefined) {

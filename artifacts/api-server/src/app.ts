@@ -68,7 +68,10 @@ app.use(
 );
 
 // Serve uploaded images (drink photos, etc.)
-const uploadsDir = path.resolve(process.cwd(), "uploads");
+const uploadsDir = process.env.UPLOADS_DIR
+  ? path.resolve(process.env.UPLOADS_DIR)
+  : path.resolve(process.cwd(), "uploads");
+
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
