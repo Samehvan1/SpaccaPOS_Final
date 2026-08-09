@@ -48,7 +48,7 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 // ../../node_modules/.pnpm/dotenv@17.4.2/node_modules/dotenv/lib/main.js
 var require_main = __commonJS({
   "../../node_modules/.pnpm/dotenv@17.4.2/node_modules/dotenv/lib/main.js"(exports, module) {
-    var fs7 = __require("fs");
+    var fs8 = __require("fs");
     var path7 = __require("path");
     var os = __require("os");
     var crypto3 = __require("crypto");
@@ -180,7 +180,7 @@ var require_main = __commonJS({
       if (options && options.path && options.path.length > 0) {
         if (Array.isArray(options.path)) {
           for (const filepath of options.path) {
-            if (fs7.existsSync(filepath)) {
+            if (fs8.existsSync(filepath)) {
               possibleVaultPath = filepath.endsWith(".vault") ? filepath : `${filepath}.vault`;
             }
           }
@@ -190,7 +190,7 @@ var require_main = __commonJS({
       } else {
         possibleVaultPath = path7.resolve(process.cwd(), ".env.vault");
       }
-      if (fs7.existsSync(possibleVaultPath)) {
+      if (fs8.existsSync(possibleVaultPath)) {
         return possibleVaultPath;
       }
       return null;
@@ -243,7 +243,7 @@ var require_main = __commonJS({
       const parsedAll = {};
       for (const path8 of optionPaths) {
         try {
-          const parsed = DotenvModule.parse(fs7.readFileSync(path8, { encoding }));
+          const parsed = DotenvModule.parse(fs8.readFileSync(path8, { encoding }));
           DotenvModule.populate(parsedAll, parsed, options);
         } catch (e) {
           if (debug) {
@@ -18998,7 +18998,7 @@ var require_view = __commonJS({
     "use strict";
     var debug = require_src()("express:view");
     var path7 = __require("node:path");
-    var fs7 = __require("node:fs");
+    var fs8 = __require("node:fs");
     var dirname2 = path7.dirname;
     var basename = path7.basename;
     var extname = path7.extname;
@@ -19078,7 +19078,7 @@ var require_view = __commonJS({
     function tryStat(path8) {
       debug('stat "%s"', path8);
       try {
-        return fs7.statSync(path8);
+        return fs8.statSync(path8);
       } catch (e) {
         return void 0;
       }
@@ -22704,7 +22704,7 @@ var require_send = __commonJS({
     var escapeHtml = require_escape_html();
     var etag = require_etag();
     var fresh = require_fresh();
-    var fs7 = __require("fs");
+    var fs8 = __require("fs");
     var mime = require_mime_types();
     var ms = require_ms();
     var onFinished = require_on_finished();
@@ -22986,7 +22986,7 @@ var require_send = __commonJS({
       var i = 0;
       var self2 = this;
       debug('stat "%s"', path8);
-      fs7.stat(path8, function onstat(err, stat) {
+      fs8.stat(path8, function onstat(err, stat) {
         var pathEndsWithSep = path8[path8.length - 1] === sep;
         if (err && err.code === "ENOENT" && !extname(path8) && !pathEndsWithSep) {
           return next(err);
@@ -23003,7 +23003,7 @@ var require_send = __commonJS({
         }
         var p = path8 + "." + self2._extensions[i++];
         debug('stat "%s"', p);
-        fs7.stat(p, function(err2, stat) {
+        fs8.stat(p, function(err2, stat) {
           if (err2) return next(err2);
           if (stat.isDirectory()) return next();
           self2.emit("file", p, stat);
@@ -23021,7 +23021,7 @@ var require_send = __commonJS({
         }
         var p = join(path8, self2._index[i]);
         debug('stat "%s"', p);
-        fs7.stat(p, function(err2, stat) {
+        fs8.stat(p, function(err2, stat) {
           if (err2) return next(err2);
           if (stat.isDirectory()) return next();
           self2.emit("file", p, stat);
@@ -23033,7 +23033,7 @@ var require_send = __commonJS({
     SendStream.prototype.stream = function stream(path8, options) {
       var self2 = this;
       var res = this.res;
-      var stream2 = fs7.createReadStream(path8, options);
+      var stream2 = fs8.createReadStream(path8, options);
       this.emit("stream", stream2);
       stream2.pipe(res);
       function cleanup() {
@@ -25325,7 +25325,7 @@ var require_atomic_sleep = __commonJS({
 var require_sonic_boom = __commonJS({
   "../../node_modules/.pnpm/sonic-boom@4.2.1/node_modules/sonic-boom/index.js"(exports, module) {
     "use strict";
-    var fs7 = __require("fs");
+    var fs8 = __require("fs");
     var EventEmitter = __require("events");
     var inherits = __require("util").inherits;
     var path7 = __require("path");
@@ -25382,20 +25382,20 @@ var require_sonic_boom = __commonJS({
       const mode = sonic.mode;
       if (sonic.sync) {
         try {
-          if (sonic.mkdir) fs7.mkdirSync(path7.dirname(file2), { recursive: true });
-          const fd = fs7.openSync(file2, flags, mode);
+          if (sonic.mkdir) fs8.mkdirSync(path7.dirname(file2), { recursive: true });
+          const fd = fs8.openSync(file2, flags, mode);
           fileOpened(null, fd);
         } catch (err) {
           fileOpened(err);
           throw err;
         }
       } else if (sonic.mkdir) {
-        fs7.mkdir(path7.dirname(file2), { recursive: true }, (err) => {
+        fs8.mkdir(path7.dirname(file2), { recursive: true }, (err) => {
           if (err) return fileOpened(err);
-          fs7.open(file2, flags, mode, fileOpened);
+          fs8.open(file2, flags, mode, fileOpened);
         });
       } else {
-        fs7.open(file2, flags, mode, fileOpened);
+        fs8.open(file2, flags, mode, fileOpened);
       }
     }
     function SonicBoom(opts) {
@@ -25436,8 +25436,8 @@ var require_sonic_boom = __commonJS({
         this.flush = flushBuffer;
         this.flushSync = flushBufferSync;
         this._actualWrite = actualWriteBuffer;
-        fsWriteSync = () => fs7.writeSync(this.fd, this._writingBuf);
-        fsWrite = () => fs7.write(this.fd, this._writingBuf, this.release);
+        fsWriteSync = () => fs8.writeSync(this.fd, this._writingBuf);
+        fsWrite = () => fs8.write(this.fd, this._writingBuf, this.release);
       } else if (contentMode === void 0 || contentMode === kContentModeUtf8) {
         this._writingBuf = "";
         this.write = write;
@@ -25446,15 +25446,15 @@ var require_sonic_boom = __commonJS({
         this._actualWrite = actualWrite;
         fsWriteSync = () => {
           if (Buffer.isBuffer(this._writingBuf)) {
-            return fs7.writeSync(this.fd, this._writingBuf);
+            return fs8.writeSync(this.fd, this._writingBuf);
           }
-          return fs7.writeSync(this.fd, this._writingBuf, "utf8");
+          return fs8.writeSync(this.fd, this._writingBuf, "utf8");
         };
         fsWrite = () => {
           if (Buffer.isBuffer(this._writingBuf)) {
-            return fs7.write(this.fd, this._writingBuf, this.release);
+            return fs8.write(this.fd, this._writingBuf, this.release);
           }
-          return fs7.write(this.fd, this._writingBuf, "utf8", this.release);
+          return fs8.write(this.fd, this._writingBuf, "utf8", this.release);
         };
       } else {
         throw new Error(`SonicBoom supports "${kContentModeUtf8}" and "${kContentModeBuffer}", but passed ${contentMode}`);
@@ -25511,7 +25511,7 @@ var require_sonic_boom = __commonJS({
           }
         }
         if (this._fsync) {
-          fs7.fsyncSync(this.fd);
+          fs8.fsyncSync(this.fd);
         }
         const len = this._len;
         if (this._reopening) {
@@ -25625,7 +25625,7 @@ var require_sonic_boom = __commonJS({
       const onDrain = () => {
         if (!this._fsync) {
           try {
-            fs7.fsync(this.fd, (err) => {
+            fs8.fsync(this.fd, (err) => {
               this._flushPending = false;
               cb(err);
             });
@@ -25727,7 +25727,7 @@ var require_sonic_boom = __commonJS({
       const fd = this.fd;
       this.once("ready", () => {
         if (fd !== this.fd) {
-          fs7.close(fd, (err) => {
+          fs8.close(fd, (err) => {
             if (err) {
               return this.emit("error", err);
             }
@@ -25776,7 +25776,7 @@ var require_sonic_boom = __commonJS({
           buf = this._bufs[0];
         }
         try {
-          const n = Buffer.isBuffer(buf) ? fs7.writeSync(this.fd, buf) : fs7.writeSync(this.fd, buf, "utf8");
+          const n = Buffer.isBuffer(buf) ? fs8.writeSync(this.fd, buf) : fs8.writeSync(this.fd, buf, "utf8");
           const releasedBufObj = releaseWritingBuf(buf, this._len, n);
           buf = releasedBufObj.writingBuf;
           this._len = releasedBufObj.len;
@@ -25792,7 +25792,7 @@ var require_sonic_boom = __commonJS({
         }
       }
       try {
-        fs7.fsyncSync(this.fd);
+        fs8.fsyncSync(this.fd);
       } catch {
       }
     }
@@ -25813,7 +25813,7 @@ var require_sonic_boom = __commonJS({
           buf = mergeBuf(this._bufs[0], this._lens[0]);
         }
         try {
-          const n = fs7.writeSync(this.fd, buf);
+          const n = fs8.writeSync(this.fd, buf);
           buf = buf.subarray(n);
           this._len = Math.max(this._len - n, 0);
           if (buf.length <= 0) {
@@ -25841,13 +25841,13 @@ var require_sonic_boom = __commonJS({
       this._writingBuf = this._writingBuf.length ? this._writingBuf : this._bufs.shift() || "";
       if (this.sync) {
         try {
-          const written = Buffer.isBuffer(this._writingBuf) ? fs7.writeSync(this.fd, this._writingBuf) : fs7.writeSync(this.fd, this._writingBuf, "utf8");
+          const written = Buffer.isBuffer(this._writingBuf) ? fs8.writeSync(this.fd, this._writingBuf) : fs8.writeSync(this.fd, this._writingBuf, "utf8");
           release(null, written);
         } catch (err) {
           release(err);
         }
       } else {
-        fs7.write(this.fd, this._writingBuf, release);
+        fs8.write(this.fd, this._writingBuf, release);
       }
     }
     function actualWriteBuffer() {
@@ -25856,7 +25856,7 @@ var require_sonic_boom = __commonJS({
       this._writingBuf = this._writingBuf.length ? this._writingBuf : mergeBuf(this._bufs.shift(), this._lens.shift());
       if (this.sync) {
         try {
-          const written = fs7.writeSync(this.fd, this._writingBuf);
+          const written = fs8.writeSync(this.fd, this._writingBuf);
           release(null, written);
         } catch (err) {
           release(err);
@@ -25865,7 +25865,7 @@ var require_sonic_boom = __commonJS({
         if (kCopyBuffer) {
           this._writingBuf = Buffer.from(this._writingBuf);
         }
-        fs7.write(this.fd, this._writingBuf, release);
+        fs8.write(this.fd, this._writingBuf, release);
       }
     }
     function actualClose(sonic) {
@@ -25881,12 +25881,12 @@ var require_sonic_boom = __commonJS({
       sonic._lens = [];
       assert2(typeof sonic.fd === "number", `sonic.fd must be a number, got ${typeof sonic.fd}`);
       try {
-        fs7.fsync(sonic.fd, closeWrapped);
+        fs8.fsync(sonic.fd, closeWrapped);
       } catch {
       }
       function closeWrapped() {
         if (sonic.fd !== 1 && sonic.fd !== 2) {
-          fs7.close(sonic.fd, done);
+          fs8.close(sonic.fd, done);
         } else {
           done();
         }
@@ -29147,8 +29147,8 @@ var require_node2 = __commonJS({
           }
           break;
         case "FILE":
-          var fs7 = __require("fs");
-          stream2 = new fs7.SyncWriteStream(fd2, { autoClose: false });
+          var fs8 = __require("fs");
+          stream2 = new fs8.SyncWriteStream(fd2, { autoClose: false });
           stream2._type = "fs";
           break;
         case "PIPE":
@@ -31734,15 +31734,15 @@ var require_pg_connection_string = __commonJS({
       if (config3.sslcert || config3.sslkey || config3.sslrootcert || config3.sslmode) {
         config3.ssl = {};
       }
-      const fs7 = config3.sslcert || config3.sslkey || config3.sslrootcert ? __require("fs") : null;
+      const fs8 = config3.sslcert || config3.sslkey || config3.sslrootcert ? __require("fs") : null;
       if (config3.sslcert) {
-        config3.ssl.cert = fs7.readFileSync(config3.sslcert).toString();
+        config3.ssl.cert = fs8.readFileSync(config3.sslcert).toString();
       }
       if (config3.sslkey) {
-        config3.ssl.key = fs7.readFileSync(config3.sslkey).toString();
+        config3.ssl.key = fs8.readFileSync(config3.sslkey).toString();
       }
       if (config3.sslrootcert) {
-        config3.ssl.ca = fs7.readFileSync(config3.sslrootcert).toString();
+        config3.ssl.ca = fs8.readFileSync(config3.sslrootcert).toString();
       }
       if (options.useLibpqCompat && config3.uselibpqcompat) {
         throw new Error("Both useLibpqCompat and uselibpqcompat are set. Please use only one of them.");
@@ -33679,15 +33679,15 @@ var require_lib4 = __commonJS({
   "../../node_modules/.pnpm/pgpass@1.0.5/node_modules/pgpass/lib/index.js"(exports, module) {
     "use strict";
     var path7 = __require("path");
-    var fs7 = __require("fs");
+    var fs8 = __require("fs");
     var helper = require_helper();
     module.exports = function(connInfo, cb) {
       var file2 = helper.getFileName();
-      fs7.stat(file2, function(err, stat) {
+      fs8.stat(file2, function(err, stat) {
         if (err || !helper.usePgPass(stat, file2)) {
           return cb(void 0);
         }
-        var st = fs7.createReadStream(file2);
+        var st = fs8.createReadStream(file2);
         helper.getPassword(connInfo, st, cb);
       });
     };
@@ -35312,8 +35312,8 @@ var require_connect_pg_simple = __commonJS({
           const res = await this._asyncQuery("SELECT to_regclass($1::text)", [quotedTable], true);
           if (res && res["to_regclass"] === null) {
             const pathModule = __require("node:path");
-            const fs7 = __require("node:fs").promises;
-            const tableDefString = await fs7.readFile(pathModule.resolve(__dirname, "./table.sql"), "utf8");
+            const fs8 = __require("node:fs").promises;
+            const tableDefString = await fs8.readFile(pathModule.resolve(__dirname, "./table.sql"), "utf8");
             const tableDefModified = tableDefString.replaceAll('"session"', quotedTable);
             await this._asyncQuery(tableDefModified, [], true);
           }
@@ -70257,7 +70257,7 @@ var require_make_middleware = __commonJS({
 // ../../node_modules/.pnpm/multer@2.1.1/node_modules/multer/storage/disk.js
 var require_disk = __commonJS({
   "../../node_modules/.pnpm/multer@2.1.1/node_modules/multer/storage/disk.js"(exports, module) {
-    var fs7 = __require("fs");
+    var fs8 = __require("fs");
     var os = __require("os");
     var path7 = __require("path");
     var crypto3 = __require("crypto");
@@ -70272,7 +70272,7 @@ var require_disk = __commonJS({
     function DiskStorage(opts) {
       this.getFilename = opts.filename || getFilename;
       if (typeof opts.destination === "string") {
-        fs7.mkdirSync(opts.destination, { recursive: true });
+        fs8.mkdirSync(opts.destination, { recursive: true });
         this.getDestination = function($0, $1, cb) {
           cb(null, opts.destination);
         };
@@ -70287,7 +70287,7 @@ var require_disk = __commonJS({
         that.getFilename(req, file2, function(err2, filename) {
           if (err2) return cb(err2);
           var finalPath = path7.join(destination, filename);
-          var outStream = fs7.createWriteStream(finalPath);
+          var outStream = fs8.createWriteStream(finalPath);
           file2.stream.pipe(outStream);
           outStream.on("error", cb);
           outStream.on("finish", function() {
@@ -70306,7 +70306,7 @@ var require_disk = __commonJS({
       delete file2.destination;
       delete file2.filename;
       delete file2.path;
-      fs7.unlink(path8, cb);
+      fs8.unlink(path8, cb);
     };
     module.exports = function(opts) {
       return new DiskStorage(opts);
@@ -74097,7 +74097,7 @@ var __dirname2 = dirname(__filename);
 
 // src/index.ts
 import path6 from "path";
-import fs6 from "fs";
+import fs7 from "fs";
 import { exec as exec2 } from "child_process";
 
 // src/app.ts
@@ -74108,6 +74108,7 @@ var import_express_session = __toESM(require_express_session(), 1);
 var import_connect_pg_simple = __toESM(require_connect_pg_simple(), 1);
 init_src();
 import path5 from "path";
+import fs6 from "fs";
 import { fileURLToPath as fileURLToPath3 } from "url";
 
 // src/routes/index.ts
@@ -82222,33 +82223,45 @@ async function calculateDrinkData(drinkId, selections, branchId = null, partnerI
           const defVol = typeVolumes.find((tv) => tv.isDefault) ?? typeVolumes[0];
           typeVolumeId = defVol?.id ?? null;
         }
-        const slotVol = drinkSlotVolumesMap.get(`${dynamicSlot.id}:${typeVolumeId}`);
-        const templateDef = dynamicSlot.predefinedSlotId ? predefinedSlotVolumesMap.get(`${dynamicSlot.predefinedSlotId}:${typeVolumeId}`) : null;
-        let conversionRate = 1;
-        let unit = "ml";
-        if (typeVolumeId) {
-          const typeVolume = typeVolumeMap.get(typeVolumeId);
-          const volDef = typeVolume?.volumeId ? baseVolumesMap.get(typeVolume.volumeId) : null;
-          if (typeVolume) {
-            const processedQty = parseFloat(slotVol?.processedQty ?? templateDef?.processedQty ?? typeVolume.processedQty ?? volDef?.processedQty ?? "0") || 0;
-            const producedQty = parseFloat(slotVol?.producedQty ?? templateDef?.producedQty ?? typeVolume.producedQty ?? volDef?.producedQty ?? "0") || 0;
-            conversionRate = producedQty > 0 ? processedQty / producedQty : 1;
-            unit = slotVol?.unit ?? templateDef?.unit ?? typeVolume.unit ?? volDef?.unit ?? "ml";
-          }
-        }
-        const consumedQty = filledMl * conversionRate;
-        let cost = 0;
-        let inventoryId = null;
         const slotTypeOpt = typeOptions.find((to) => to.ingredientTypeId === effectiveTypeId);
+        let templateTypeOpt = null;
+        if (dynamicSlot.predefinedSlotId) {
+          const templateTypeOptions2 = templateTypeOptionsMap.get(dynamicSlot.predefinedSlotId) ?? [];
+          templateTypeOpt = templateTypeOptions2.find((pto) => pto.ingredientTypeId === effectiveTypeId);
+        }
+        const slotVol = typeVolumeId ? drinkSlotVolumesMap.get(`${dynamicSlot.id}:${typeVolumeId}`) : null;
+        const templateDef = dynamicSlot.predefinedSlotId && typeVolumeId ? predefinedSlotVolumesMap.get(`${dynamicSlot.predefinedSlotId}:${typeVolumeId}`) : null;
+        let typeVolume = typeVolumeId ? typeVolumeMap.get(typeVolumeId) : null;
+        let volDef = typeVolume?.volumeId ? baseVolumesMap.get(typeVolume.volumeId) : null;
+        let inventoryId = ingredientType?.inventoryIngredientId ?? null;
+        const linkedIngredient = inventoryId ? ingredientsMap.get(inventoryId) : null;
+        const isPieceUnit = linkedIngredient && (linkedIngredient.unit === "pcs" || linkedIngredient.unit === "item" || linkedIngredient.unit === "items" || linkedIngredient.unit === "count" || linkedIngredient.unit === "unit" || linkedIngredient.unit === "piece" || linkedIngredient.unit === "pieces");
+        const processedQty = parseFloat(
+          slotVol?.processedQty ?? templateDef?.processedQty ?? typeVolume?.processedQty ?? volDef?.processedQty ?? slotTypeOpt?.processedQty ?? templateTypeOpt?.processedQty ?? ingredientType?.processedQty ?? "0"
+        ) || 0;
+        const producedQty = parseFloat(
+          slotVol?.producedQty ?? templateDef?.producedQty ?? typeVolume?.producedQty ?? volDef?.producedQty ?? slotTypeOpt?.producedQty ?? templateTypeOpt?.producedQty ?? ingredientType?.producedQty ?? "0"
+        ) || 0;
+        let conversionRate = 1;
+        let unit = slotVol?.unit ?? templateDef?.unit ?? typeVolume?.unit ?? volDef?.unit ?? slotTypeOpt?.unit ?? templateTypeOpt?.unit ?? ingredientType?.unit ?? linkedIngredient?.unit ?? "ml";
+        let consumedQty = 0;
+        if (processedQty > 0) {
+          consumedQty = processedQty;
+        } else if (isPieceUnit) {
+          consumedQty = 1;
+        } else if (producedQty > 0) {
+          conversionRate = processedQty / producedQty;
+          consumedQty = filledMl * conversionRate;
+        } else {
+          consumedQty = filledMl;
+        }
+        let cost = 0;
         const pricingMode = slotTypeOpt?.pricingMode ?? ingredientType?.pricingMode ?? "volume";
         const extraCostBase = parseFloat(slotTypeOpt?.extraCost ?? ingredientType?.extraCost ?? "0") || 0;
         if (pricingMode === "unit") {
           cost = extraCostBase;
         } else {
-          cost = filledMl * extraCostBase;
-        }
-        if (ingredientType?.inventoryIngredientId) {
-          inventoryId = ingredientType.inventoryIngredientId;
+          cost = (consumedQty || filledMl) * extraCostBase;
         }
         totalExtras += cost;
         const ingredientName = ingredientType?.name ?? "Dynamic";
@@ -82270,7 +82283,7 @@ async function calculateDrinkData(drinkId, selections, branchId = null, partnerI
           color: ingredientType?.color ?? null,
           addedCost: cost,
           slotLabel: dynamicSlot.slotLabel,
-          optionLabel: ingredientType?.name ? `${ingredientType.name} (${Math.round(filledMl)}${unit})` : `Dynamic (${Math.round(filledMl)}${unit})`,
+          optionLabel: ingredientType?.name ? `${ingredientType.name} (${Math.round(consumedQty || filledMl)}${unit})` : `Dynamic (${Math.round(consumedQty || filledMl)}${unit})`,
           baristaSortOrder: dynamicSlot.baristaSortOrder ?? 1,
           customerSortOrder: dynamicSlot.customerSortOrder ?? 1
         });
@@ -82284,16 +82297,25 @@ async function calculateDrinkData(drinkId, selections, branchId = null, partnerI
         let optionLabel = `Dynamic (${Math.round(filledMl)}ml)`;
         let ingredientName = "Dynamic";
         const option = ingredientOptionsMap.get(optionId);
+        const ingredient = ingredientsMap.get(dynamicSlot.ingredientId);
+        const isPieceUnit = ingredient && (ingredient.unit === "pcs" || ingredient.unit === "item" || ingredient.unit === "items" || ingredient.unit === "count" || ingredient.unit === "unit" || ingredient.unit === "piece" || ingredient.unit === "pieces");
         if (option) {
           const processedQty = parseFloat(option.processedQty) || 0;
           const producedQty = parseFloat(option.producedQty) || 0;
-          const conversionRate = producedQty > 0 ? processedQty / producedQty : 1;
-          consumedQty = filledMl * conversionRate;
-          const ingredient = ingredientsMap.get(dynamicSlot.ingredientId);
+          if (processedQty > 0) {
+            consumedQty = processedQty;
+          } else if (isPieceUnit) {
+            consumedQty = 1;
+          } else if (producedQty > 0) {
+            const conversionRate = processedQty / producedQty;
+            consumedQty = filledMl * conversionRate;
+          } else {
+            consumedQty = filledMl;
+          }
           if (ingredient) {
-            cost = consumedQty * parseFloat(ingredient.costPerUnit);
+            cost = consumedQty * parseFloat(ingredient.costPerUnit || "0");
             ingredientName = ingredient.name;
-            optionLabel = `${ingredientName} (${Math.round(filledMl)}ml)`;
+            optionLabel = `${ingredientName} (${Math.round(consumedQty || filledMl)}${ingredient.unit || "ml"})`;
           }
         }
         totalExtras += cost;
@@ -82315,7 +82337,7 @@ async function calculateDrinkData(drinkId, selections, branchId = null, partnerI
           color: null,
           addedCost: cost,
           slotLabel: dynamicSlot.slotLabel,
-          optionLabel: `Dynamic (${Math.round(filledMl)}ml)`,
+          optionLabel: `Dynamic (${Math.round(consumedQty || filledMl)}${ingredient?.unit || "ml"})`,
           baristaSortOrder: dynamicSlot.baristaSortOrder ?? 1,
           customerSortOrder: dynamicSlot.customerSortOrder ?? 1
         });
@@ -82344,13 +82366,25 @@ async function calculateDrinkData(drinkId, selections, branchId = null, partnerI
     }
   }
   const basePrice = parseFloat(drink.basePrice);
+  const costBreakdown = [];
   let totalCost = 0;
   for (const cust of customizations) {
     if (cust.ingredientId) {
       const ing = ingredientsMap.get(cust.ingredientId);
-      if (ing && ing.costPerUnit) {
-        totalCost += (cust.consumedQty || 0) * (parseFloat(ing.costPerUnit) || 0);
-      }
+      const costPerUnit = ing && ing.costPerUnit ? parseFloat(ing.costPerUnit) || 0 : 0;
+      const consumedQty = cust.consumedQty || 0;
+      const lineCost = consumedQty * costPerUnit;
+      totalCost += lineCost;
+      costBreakdown.push({
+        ingredientId: cust.ingredientId,
+        name: ing?.name ?? cust.optionLabel,
+        slotLabel: cust.slotLabel,
+        optionLabel: cust.optionLabel,
+        consumedQty,
+        unit: ing?.unit ?? "units",
+        costPerUnit,
+        lineCost
+      });
     }
   }
   return {
@@ -82361,12 +82395,33 @@ async function calculateDrinkData(drinkId, selections, branchId = null, partnerI
     usedVolumeMl,
     customizations,
     dynamicInfo,
-    totalCost
+    totalCost,
+    costBreakdown
+  };
+}
+async function getProductCost(drinkId, branchId = null, partnerId = null) {
+  const data = await calculateDrinkData(drinkId, [], branchId, partnerId);
+  const standardPrice = Number((data.totalPrice || 0).toFixed(2));
+  const totalCost = Number((data.totalCost || 0).toFixed(2));
+  const profitAmount = Number((standardPrice - totalCost).toFixed(2));
+  const profitMargin = standardPrice > 0 ? Number((profitAmount / standardPrice * 100).toFixed(2)) : 0;
+  return {
+    drinkId,
+    drinkName: data.drink.name,
+    standardPrice,
+    totalCost,
+    profitAmount,
+    profitMargin,
+    costBreakdown: data.costBreakdown.map((item) => ({
+      ...item,
+      lineCost: Number(item.lineCost.toFixed(2)),
+      costPerUnit: Number(item.costPerUnit.toFixed(4))
+    }))
   };
 }
 
 // src/routes/drinks.ts
-var uploadsDir = path2.join(process.cwd(), "uploads");
+var uploadsDir = process.env.UPLOADS_DIR ? path2.resolve(process.env.UPLOADS_DIR) : path2.resolve(process.cwd(), "uploads");
 if (!fs3.existsSync(uploadsDir)) fs3.mkdirSync(uploadsDir, { recursive: true });
 var storage = import_multer.default.diskStorage({
   destination: (_req, _file2, cb) => cb(null, uploadsDir),
@@ -82725,28 +82780,10 @@ router3.get("/drinks", async (req, res) => {
     if (sortA !== sortB) return sortA - sortB;
     return a.name.localeCompare(b.name);
   });
-  const historicalCosts = await db.select({
-    drinkId: orderItemsTable.drinkId,
-    totalCost: sql`coalesce(sum(${orderItemCustomizationsTable.consumedQty} * ${orderItemCustomizationsTable.costPerUnit}), 0)`,
-    totalQty: sql`coalesce(sum(${orderItemsTable.quantity}), 1)`
-  }).from(orderItemCustomizationsTable).innerJoin(orderItemsTable, eq(orderItemCustomizationsTable.orderItemId, orderItemsTable.id)).groupBy(orderItemsTable.drinkId);
-  const historicalCostMap = /* @__PURE__ */ new Map();
-  historicalCosts.forEach((row) => {
-    const qty = Number(row.totalQty) || 1;
-    const totalC = Number(row.totalCost) || 0;
-    if (qty > 0 && totalC > 0) {
-      historicalCostMap.set(row.drinkId, totalC / qty);
-    }
-  });
   const drinksWithDetails = await Promise.all(
     filtered.map(async (d) => {
       const detail = await buildDrinkDetail(d.id, targetBranchId);
-      const computed = await computeDefaultPrice(d.id, targetBranchId, queryPartnerId);
-      let cost = computed.cost;
-      if (!cost || cost === 0) {
-        cost = historicalCostMap.get(d.id) || 0;
-      }
-      const defaultPrice = computed.defaultPrice;
+      const { defaultPrice, cost } = await computeDefaultPrice(d.id, targetBranchId, queryPartnerId);
       let basePrice = Number(d.basePrice);
       if (queryPartnerId) {
         if (targetBranchId) {
@@ -82791,6 +82828,22 @@ router3.get("/drinks", async (req, res) => {
     })
   );
   res.json(serializeDates(drinksWithDetails));
+});
+router3.get("/drinks/:id/recipe-cost", async (req, res) => {
+  const id = parseInt(req.params.id);
+  if (isNaN(id)) {
+    res.status(400).json({ error: "Invalid drink ID" });
+    return;
+  }
+  const branchId = req.query.branchId ? parseInt(req.query.branchId) : null;
+  const partnerId = req.query.partnerId ? parseInt(req.query.partnerId) : null;
+  try {
+    globalCache.clear();
+    const costDetails = await getProductCost(id, branchId, partnerId);
+    res.json(costDetails);
+  } catch (err) {
+    res.status(500).json({ error: err?.message || "Failed to calculate drink recipe cost" });
+  }
 });
 router3.post("/drinks", requirePermission("catalog:manage"), async (req, res) => {
   const parsed = CreateDrinkBody2.safeParse(req.body);
@@ -82960,8 +83013,10 @@ router3.put("/drinks/:id/slots", requirePermission("catalog:manage"), async (req
       return;
     }
   }
-  const cupSizeMl = req.query.cupSizeMl ? parseInt(req.query.cupSizeMl) : void 0;
-  const cupIngredientId = req.query.cupIngredientId ? parseInt(req.query.cupIngredientId) : void 0;
+  const rawCupSizeMl = req.query.cupSizeMl;
+  const rawCupIngId = req.query.cupIngredientId;
+  const cupSizeMl = rawCupSizeMl !== void 0 ? rawCupSizeMl === "none" || rawCupSizeMl === "null" || rawCupSizeMl === "" ? null : parseInt(rawCupSizeMl) : void 0;
+  const cupIngredientId = rawCupIngId !== void 0 ? rawCupIngId === "none" || rawCupIngId === "null" || rawCupIngId === "" ? null : parseInt(rawCupIngId) : void 0;
   const isCustomizable = req.query.isCustomizable !== void 0 ? req.query.isCustomizable === "true" : void 0;
   if (cupSizeMl !== void 0 || cupIngredientId !== void 0 || isCustomizable !== void 0) {
     await db.update(drinksTable).set({
@@ -84965,7 +85020,8 @@ router5.patch("/orders/:id/status", async (req, res, next) => {
     updateData.paymentMethod = parsed.data.paymentMethod;
   }
   if (parsed.data.status === "paid") {
-    const cashierId = req.body.cashierId ?? req.session.cashierId ?? null;
+    const sessionCashierId = req.session.cashierId ?? req.session.userId;
+    const cashierId = sessionCashierId ?? req.body.cashierId ?? null;
     if (cashierId) updateData.cashierId = cashierId;
     updateData.paidAt = now;
   } else if (parsed.data.status === "ready") {
@@ -90891,7 +90947,12 @@ app.use(
     }
   })
 );
-app.use("/uploads", import_express27.default.static("uploads"));
+var uploadsDir2 = process.env.UPLOADS_DIR ? path5.resolve(process.env.UPLOADS_DIR) : path5.resolve(process.cwd(), "uploads");
+if (!fs6.existsSync(uploadsDir2)) {
+  fs6.mkdirSync(uploadsDir2, { recursive: true });
+}
+app.use("/uploads", import_express27.default.static(uploadsDir2, { maxAge: "1d" }));
+app.use("/api/uploads", import_express27.default.static(uploadsDir2, { maxAge: "1d" }));
 app.use("/api", (req, res, next) => {
   res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
   res.setHeader("Pragma", "no-cache");
@@ -91360,6 +91421,12 @@ async function runDataMigrations() {
       VALUES ('admin', 'drinks:manage')
       ON CONFLICT DO NOTHING;
     `);
+    logger.info("[migration] Reassigning orders 1-221001 and 1-221002 to cashier Menna Gamal (ID 25)...");
+    await db.execute(sql`
+      UPDATE "orders"
+      SET "cashier_id" = 25
+      WHERE "order_number" IN ('1-221001', '1-221002') AND "cashier_id" = 24;
+    `);
     logger.info("[migration] Checking for legacy hospitality order payments...");
     const hospitalityOrders = await db.select({
       id: ordersTable.id,
@@ -91438,7 +91505,7 @@ function setupAutoBackup() {
     const dbUrl = process.env.DATABASE_URL;
     if (!dbUrl) return;
     const backupsDir = path6.join(process.cwd(), "backups");
-    if (!fs6.existsSync(backupsDir)) fs6.mkdirSync(backupsDir);
+    if (!fs7.existsSync(backupsDir)) fs7.mkdirSync(backupsDir);
     const filename = `autobackup_${(/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-")}.sql`;
     const filePath = path6.join(backupsDir, filename);
     const cmd = `pg_dump "${dbUrl}" -f "${filePath}"`;
@@ -91447,13 +91514,13 @@ function setupAutoBackup() {
         logger.error({ err: error40 }, "Auto-backup failed");
       } else {
         logger.info({ filename }, "Auto-backup created");
-        const files = fs6.readdirSync(backupsDir);
+        const files = fs7.readdirSync(backupsDir);
         const now = Date.now();
         const maxAge = 7 * 24 * 60 * 60 * 1e3;
         files.forEach((file2) => {
-          const stats = fs6.statSync(path6.join(backupsDir, file2));
+          const stats = fs7.statSync(path6.join(backupsDir, file2));
           if (now - stats.mtimeMs > maxAge) {
-            fs6.unlinkSync(path6.join(backupsDir, file2));
+            fs7.unlinkSync(path6.join(backupsDir, file2));
           }
         });
       }

@@ -590,51 +590,73 @@ export async function calculateDrinkData(
           typeVolumeId = defVol?.id ?? null;
         }
 
-        const slotVol = drinkSlotVolumesMap.get(`${dynamicSlot.id}:${typeVolumeId}`);
-        const templateDef = dynamicSlot.predefinedSlotId 
-          ? predefinedSlotVolumesMap.get(`${dynamicSlot.predefinedSlotId}:${typeVolumeId}`)
-          : null;
-
-        let conversionRate = 1;
-        let unit = "ml";
-        if (typeVolumeId) {
-          const typeVolume = typeVolumeMap.get(typeVolumeId);
-          const volDef = typeVolume?.volumeId ? baseVolumesMap.get(typeVolume.volumeId) : null;
-          
-          if (typeVolume) {
-            const processedQty = parseFloat(slotVol?.processedQty ?? templateDef?.processedQty ?? typeVolume.processedQty ?? volDef?.processedQty ?? "0") || 0;
-            const producedQty = parseFloat(slotVol?.producedQty ?? templateDef?.producedQty ?? typeVolume.producedQty ?? volDef?.producedQty ?? "0") || 0;
-            conversionRate = producedQty > 0 ? processedQty / producedQty : 1;
-            unit = slotVol?.unit ?? templateDef?.unit ?? typeVolume.unit ?? volDef?.unit ?? "ml";
-          }
+        const slotTypeOpt = typeOptions.find(to => to.ingredientTypeId === effectiveTypeId);
+        let templateTypeOpt = null;
+        if (dynamicSlot.predefinedSlotId) {
+          const templateTypeOptions = templateTypeOptionsMap.get(dynamicSlot.predefinedSlotId) ?? [];
+          templateTypeOpt = templateTypeOptions.find(pto => pto.ingredientTypeId === effectiveTypeId);
         }
 
-        const consumedQty = filledMl * conversionRate;
+        const slotVol = typeVolumeId ? drinkSlotVolumesMap.get(`${dynamicSlot.id}:${typeVolumeId}`) : null;
+        const templateDef = (dynamicSlot.predefinedSlotId && typeVolumeId) 
+          ? predefinedSlotVolumesMap.get(`${dynamicSlot.predefinedSlotId}:${typeVolumeId}`) 
+          : null;
+
+        let typeVolume = typeVolumeId ? typeVolumeMap.get(typeVolumeId) : null;
+        let volDef = typeVolume?.volumeId ? baseVolumesMap.get(typeVolume.volumeId) : null;
+
+        let inventoryId = ingredientType?.inventoryIngredientId ?? null;
+        const linkedIngredient = inventoryId ? ingredientsMap.get(inventoryId) : null;
+        const isPieceUnit = linkedIngredient && (
+          linkedIngredient.unit === "pcs" ||
+          linkedIngredient.unit === "item" ||
+          linkedIngredient.unit === "items" ||
+          linkedIngredient.unit === "count" ||
+          linkedIngredient.unit === "unit" ||
+          linkedIngredient.unit === "piece" ||
+          linkedIngredient.unit === "pieces"
+        );
+
+        const processedQty = parseFloat(
+          slotVol?.processedQty ?? templateDef?.processedQty ?? typeVolume?.processedQty ?? volDef?.processedQty ?? slotTypeOpt?.processedQty ?? templateTypeOpt?.processedQty ?? ingredientType?.processedQty ?? "0"
+        ) || 0;
         
-        let cost = 0;
-        let inventoryId = null;
-        
-        const slotTypeOpt = typeOptions.find(to => to.ingredientTypeId === effectiveTypeId);
+        const producedQty = parseFloat(
+          slotVol?.producedQty ?? templateDef?.producedQty ?? typeVolume?.producedQty ?? volDef?.producedQty ?? slotTypeOpt?.producedQty ?? templateTypeOpt?.producedQty ?? ingredientType?.producedQty ?? "0"
+        ) || 0;
+
+        let conversionRate = 1;
+        let unit = slotVol?.unit ?? templateDef?.unit ?? typeVolume?.unit ?? volDef?.unit ?? slotTypeOpt?.unit ?? templateTypeOpt?.unit ?? ingredientType?.unit ?? linkedIngredient?.unit ?? "ml";
+        let consumedQty = 0;
+
+        if (processedQty > 0) {
+          consumedQty = processedQty;
+        } else if (isPieceUnit) {
+          consumedQty = 1;
+        } else if (producedQty > 0) {
+          conversionRate = processedQty / producedQty;
+          consumedQty = filledMl * conversionRate;
+        } else {
+          consumedQty = filledMl;
+        }
+
+        let customerExtraCost = 0;
         const pricingMode = slotTypeOpt?.pricingMode ?? ingredientType?.pricingMode ?? "volume";
         const extraCostBase = parseFloat(slotTypeOpt?.extraCost ?? ingredientType?.extraCost ?? "0") || 0;
         
         if (pricingMode === "unit") {
-          cost = extraCostBase;
+          customerExtraCost = extraCostBase;
         } else {
-          cost = filledMl * extraCostBase;
+          customerExtraCost = filledMl * extraCostBase;
         }
 
-        if (ingredientType?.inventoryIngredientId) {
-          inventoryId = ingredientType.inventoryIngredientId;
-        }
-
-        totalExtras += cost;
+        totalExtras += customerExtraCost;
         const ingredientName = ingredientType?.name ?? "Dynamic";
         dynamicInfo = { 
           slotLabel: dynamicSlot.slotLabel, 
           ingredientName, 
           filledMl, 
-          cost, 
+          cost: customerExtraCost, 
           ingredientId: inventoryId ? Number(inventoryId) : null, 
           consumedQty 
         };
@@ -647,7 +669,7 @@ export async function calculateDrinkData(
           consumedQty,
           producedQty: filledMl,
           color: ingredientType?.color ?? null,
-          addedCost: cost,
+          addedCost: customerExtraCost,
           slotLabel: dynamicSlot.slotLabel,
           optionLabel: ingredientType?.name ? `${ingredientType.name} (${Math.round(filledMl)}${unit})` : `Dynamic (${Math.round(filledMl)}${unit})`,
           baristaSortOrder: dynamicSlot.baristaSortOrder ?? 1,
@@ -660,33 +682,52 @@ export async function calculateDrinkData(
       const dynamicSelection = selections.find((s: any) => s.ingredientId === dynamicSlot.ingredientId);
       const optionId = dynamicSelection?.optionId ?? dynamicSlot.defaultOptionId;
       if (optionId) {
-        let cost = 0;
+        let customerExtraCost = 0;
         let consumedQty = 0;
         let optionLabel = `Dynamic (${Math.round(filledMl)}ml)`;
         let ingredientName = "Dynamic";
 
         const option = ingredientOptionsMap.get(optionId);
+        const ingredient = ingredientsMap.get(dynamicSlot.ingredientId);
+        
+        const isPieceUnit = ingredient && (
+          ingredient.unit === "pcs" ||
+          ingredient.unit === "item" ||
+          ingredient.unit === "items" ||
+          ingredient.unit === "count" ||
+          ingredient.unit === "unit" ||
+          ingredient.unit === "piece" ||
+          ingredient.unit === "pieces"
+        );
         
         if (option) {
           const processedQty = parseFloat(option.processedQty) || 0;
           const producedQty = parseFloat(option.producedQty) || 0;
-          const conversionRate = producedQty > 0 ? processedQty / producedQty : 1;
-          consumedQty = filledMl * conversionRate;
           
-          const ingredient = ingredientsMap.get(dynamicSlot.ingredientId);
+          if (processedQty > 0) {
+            consumedQty = processedQty;
+          } else if (isPieceUnit) {
+            consumedQty = 1;
+          } else if (producedQty > 0) {
+            const conversionRate = processedQty / producedQty;
+            consumedQty = filledMl * conversionRate;
+          } else {
+            consumedQty = filledMl;
+          }
+          
           if (ingredient) {
-            cost = consumedQty * parseFloat(ingredient.costPerUnit);
+            customerExtraCost = parseFloat(option.extraCost || "0");
             ingredientName = ingredient.name;
             optionLabel = `${ingredientName} (${Math.round(filledMl)}ml)`;
           }
         }
 
-        totalExtras += cost;
+        totalExtras += customerExtraCost;
         dynamicInfo = { 
           slotLabel: dynamicSlot.slotLabel, 
           ingredientName, 
           filledMl, 
-          cost, 
+          cost: customerExtraCost, 
           ingredientId: dynamicSlot.ingredientId, 
           consumedQty 
         };
@@ -699,9 +740,9 @@ export async function calculateDrinkData(
           consumedQty,
           producedQty: filledMl,
           color: null,
-          addedCost: cost,
+          addedCost: customerExtraCost,
           slotLabel: dynamicSlot.slotLabel,
-          optionLabel: `Dynamic (${Math.round(filledMl)}ml)`,
+          optionLabel,
           baristaSortOrder: dynamicSlot.baristaSortOrder ?? 1,
           customerSortOrder: dynamicSlot.customerSortOrder ?? 1,
         });
@@ -732,13 +773,35 @@ export async function calculateDrinkData(
 
   const basePrice = parseFloat(drink.basePrice);
 
+  const costBreakdown: Array<{
+    ingredientId: number | null;
+    name: string;
+    slotLabel: string;
+    optionLabel: string;
+    consumedQty: number;
+    unit: string;
+    costPerUnit: number;
+    lineCost: number;
+  }> = [];
+
   let totalCost = 0;
   for (const cust of customizations) {
     if (cust.ingredientId) {
       const ing = ingredientsMap.get(cust.ingredientId);
-      if (ing && ing.costPerUnit) {
-        totalCost += (cust.consumedQty || 0) * (parseFloat(ing.costPerUnit) || 0);
-      }
+      const costPerUnit = ing && ing.costPerUnit ? parseFloat(ing.costPerUnit) || 0 : 0;
+      const consumedQty = cust.consumedQty || 0;
+      const lineCost = consumedQty * costPerUnit;
+      totalCost += lineCost;
+      costBreakdown.push({
+        ingredientId: cust.ingredientId,
+        name: ing?.name ?? cust.optionLabel,
+        slotLabel: cust.slotLabel,
+        optionLabel: cust.optionLabel,
+        consumedQty,
+        unit: ing?.unit ?? "units",
+        costPerUnit,
+        lineCost,
+      });
     }
   }
 
@@ -751,6 +814,49 @@ export async function calculateDrinkData(
     customizations,
     dynamicInfo,
     totalCost,
+    costBreakdown,
   };
 }
+
+/**
+ * Utility function to get standard product price (POS standard price for a drink).
+ */
+export async function getStandardProductPrice(
+  drinkId: number,
+  branchId: number | null = null,
+  partnerId: number | null = null
+): Promise<number> {
+  const data = await calculateDrinkData(drinkId, [], branchId, partnerId);
+  return Number((data.totalPrice || 0).toFixed(2));
+}
+
+/**
+ * Utility function to get product recipe cost details for any product.
+ */
+export async function getProductCost(
+  drinkId: number,
+  branchId: number | null = null,
+  partnerId: number | null = null
+) {
+  const data = await calculateDrinkData(drinkId, [], branchId, partnerId);
+  const standardPrice = Number((data.totalPrice || 0).toFixed(2));
+  const totalCost = Number((data.totalCost || 0).toFixed(2));
+  const profitAmount = Number((standardPrice - totalCost).toFixed(2));
+  const profitMargin = standardPrice > 0 ? Number(((profitAmount / standardPrice) * 100).toFixed(2)) : 0;
+
+  return {
+    drinkId,
+    drinkName: data.drink.name,
+    standardPrice,
+    totalCost,
+    profitAmount,
+    profitMargin,
+    costBreakdown: data.costBreakdown.map(item => ({
+      ...item,
+      lineCost: Number(item.lineCost.toFixed(2)),
+      costPerUnit: Number(item.costPerUnit.toFixed(4)),
+    })),
+  };
+}
+
 

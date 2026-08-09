@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { ArrowLeft, Plus, Search, Edit, FlaskConical, Tag, Upload, X, ImageIcon, Trash2, Download, FileSpreadsheet, FileCode, Building2, Link2 } from "lucide-react";
+import { ArrowLeft, Plus, Search, Edit, FlaskConical, Tag, Upload, X, ImageIcon, Trash2, Download, FileSpreadsheet, FileCode, Building2, Link2, Calculator, Loader2 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
@@ -41,6 +41,8 @@ type Drink = {
   category: string;
   categoryId?: number | null;
   basePrice: number;
+  defaultPrice?: number;
+  cost?: number;
   isActive: boolean;
   prepTimeSeconds: number;
   kitchenStation?: string;
@@ -98,6 +100,28 @@ export default function DrinksAdmin() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Cost & Profit Breakdown Modal State
+  const [costBreakdownDrink, setCostBreakdownDrink] = useState<Drink | null>(null);
+  const [costBreakdownData, setCostBreakdownData] = useState<any | null>(null);
+  const [costBreakdownLoading, setCostBreakdownLoading] = useState(false);
+
+  const openCostModal = async (d: Drink) => {
+    setCostBreakdownDrink(d);
+    setCostBreakdownData(null);
+    setCostBreakdownLoading(true);
+    try {
+      const query = selectedBranchId ? `?branchId=${selectedBranchId}` : "";
+      const res = await fetch(`${API_BASE}/drinks/${d.id}/recipe-cost${query}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to load recipe cost breakdown");
+      const data = await res.json();
+      setCostBreakdownData(data);
+    } catch {
+      toast({ variant: "destructive", title: "Failed to load cost breakdown" });
+    } finally {
+      setCostBreakdownLoading(false);
+    }
+  };
 
   // Availability Modal State
   const [availabilityDrink, setAvailabilityDrink] = useState<Drink | null>(null);
@@ -994,7 +1018,11 @@ export default function DrinksAdmin() {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <Badge variant="outline" className={badgeClass}>
+                          <Badge
+                            variant="outline"
+                            className={`${badgeClass} cursor-pointer hover:opacity-80 hover:scale-105 transition-all title="Click to view recipe cost breakdown"`}
+                            onClick={() => openCostModal(drink as Drink)}
+                          >
                             {hasCost ? `${profitMargin.toFixed(1)}%` : "N/A"}
                           </Badge>
                         </TableCell>
@@ -1229,6 +1257,113 @@ export default function DrinksAdmin() {
           )}
           <DialogFooter>
             <Button onClick={() => setAvailabilityDrink(null)}>Done</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Recipe Cost & Profit Breakdown Modal */}
+      <Dialog open={!!costBreakdownDrink} onOpenChange={(open) => { if (!open) setCostBreakdownDrink(null); }}>
+        <DialogContent className="sm:max-w-[650px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-xl font-bold">
+              <Calculator className="h-5 w-5 text-emerald-500" />
+              {costBreakdownDrink?.name} — Recipe Cost & Profit
+            </DialogTitle>
+          </DialogHeader>
+
+          {costBreakdownLoading ? (
+            <div className="py-12 flex items-center justify-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-5 w-5 animate-spin text-primary" /> Calculating recipe cost...
+            </div>
+          ) : costBreakdownData ? (
+            <div className="space-y-6 py-2">
+              {/* Summary Totals Cards */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="p-3 rounded-xl border bg-muted/20 space-y-1">
+                  <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Standard Price</div>
+                  <div className="text-base font-black text-foreground">{fmt(costBreakdownData.standardPrice)}</div>
+                </div>
+                <div className="p-3 rounded-xl border bg-muted/20 space-y-1">
+                  <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Recipe Cost</div>
+                  <div className="text-base font-black text-foreground">{fmt(costBreakdownData.totalCost)}</div>
+                </div>
+                <div className="p-3 rounded-xl border bg-muted/20 space-y-1">
+                  <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Final Profit</div>
+                  <div className="text-base font-black text-emerald-600 dark:text-emerald-400">{fmt(costBreakdownData.profitAmount)}</div>
+                </div>
+                <div className="p-3 rounded-xl border bg-muted/20 space-y-1">
+                  <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Profit Margin</div>
+                  <Badge 
+                    variant="outline" 
+                    className={`text-sm font-bold ${
+                      costBreakdownData.profitMargin < 20
+                        ? "border-red-500/40 bg-red-500/10 text-red-600 dark:text-red-400"
+                        : costBreakdownData.profitMargin < 50
+                        ? "border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                        : "border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                    }`}
+                  >
+                    {costBreakdownData.profitMargin.toFixed(2)}%
+                  </Badge>
+                </div>
+              </div>
+
+              {/* Ingredient Breakdown Table */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  <span>Ingredient Breakdown</span>
+                  <span>{costBreakdownData.costBreakdown?.length || 0} Items</span>
+                </div>
+                <div className="rounded-lg border overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/40">
+                        <TableHead className="text-xs">Ingredient</TableHead>
+                        <TableHead className="text-xs">Slot / Option</TableHead>
+                        <TableHead className="text-xs text-right">Qty / Portion</TableHead>
+                        <TableHead className="text-xs text-right">Unit Cost</TableHead>
+                        <TableHead className="text-xs text-right font-bold">Line Cost</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {costBreakdownData.costBreakdown?.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center py-6 text-xs text-muted-foreground">
+                            No recipe slots or ingredients configured for this drink.
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        costBreakdownData.costBreakdown?.map((item: any, idx: number) => (
+                          <TableRow key={idx}>
+                            <TableCell className="font-medium text-xs">
+                              {item.name}
+                            </TableCell>
+                            <TableCell className="text-xs text-muted-foreground">
+                              {item.slotLabel} {item.optionLabel && item.optionLabel !== item.name ? `(${item.optionLabel})` : ""}
+                            </TableCell>
+                            <TableCell className="text-xs text-right tabular-nums">
+                              {item.consumedQty} {item.unit}
+                            </TableCell>
+                            <TableCell className="text-xs text-right tabular-nums text-muted-foreground">
+                              {fmt(item.costPerUnit, 4)}
+                            </TableCell>
+                            <TableCell className="text-xs text-right tabular-nums font-bold">
+                              {fmt(item.lineCost, 2)}
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="py-8 text-center text-xs text-muted-foreground">Failed to load cost breakdown.</div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCostBreakdownDrink(null)}>Close</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

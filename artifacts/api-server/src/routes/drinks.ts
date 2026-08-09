@@ -30,6 +30,7 @@ import {
 import { serializeDates } from "../lib/serialize";
 import { globalCache } from "../lib/cache";
 import { requirePermission } from "../middleware/permissions";
+import { calculateDrinkData, getProductCost, getStandardProductPrice } from "../lib/price-calculator";
 
 // ── Image upload: store in <cwd>/uploads/ ────────────────────────────────────
 const uploadsDir = process.env.UPLOADS_DIR
@@ -523,38 +524,13 @@ router.get("/drinks", async (req, res): Promise<void> => {
     return a.name.localeCompare(b.name);
   });
 
-  // Fetch historical average customization cost per drink item as fallback when drink has no recipe slots
-  const historicalCosts = await db
-    .select({
-      drinkId: orderItemsTable.drinkId,
-      totalCost: sql<number>`coalesce(sum(${orderItemCustomizationsTable.consumedQty} * ${orderItemCustomizationsTable.costPerUnit}), 0)`,
-      totalQty: sql<number>`coalesce(sum(${orderItemsTable.quantity}), 1)`,
-    })
-    .from(orderItemCustomizationsTable)
-    .innerJoin(orderItemsTable, eq(orderItemCustomizationsTable.orderItemId, orderItemsTable.id))
-    .groupBy(orderItemsTable.drinkId);
-
-  const historicalCostMap = new Map<number, number>();
-  historicalCosts.forEach(row => {
-    const qty = Number(row.totalQty) || 1;
-    const totalC = Number(row.totalCost) || 0;
-    if (qty > 0 && totalC > 0) {
-      historicalCostMap.set(row.drinkId, totalC / qty);
-    }
-  });
-
   const drinksWithDetails = await Promise.all(
     filtered.map(async (d) => {
       // Always calculate detail (availability) to ensure the POS shows accurate Out of Stock badges.
       // Caching ensures this remains performant even for large lists.
       const detail = await buildDrinkDetail(d.id, targetBranchId);
       
-      const computed = await computeDefaultPrice(d.id, targetBranchId, queryPartnerId);
-      let cost = computed.cost;
-      if (!cost || cost === 0) {
-        cost = historicalCostMap.get(d.id) || 0;
-      }
-      const defaultPrice = computed.defaultPrice;
+      const { defaultPrice, cost } = await computeDefaultPrice(d.id, targetBranchId, queryPartnerId);
 
       let basePrice = Number(d.basePrice);
       if (queryPartnerId) {
@@ -614,6 +590,25 @@ router.get("/drinks", async (req, res): Promise<void> => {
   );
 
   res.json(serializeDates(drinksWithDetails));
+});
+
+// GET /drinks/:id/recipe-cost — return detailed recipe ingredient cost breakdown
+router.get("/drinks/:id/recipe-cost", async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id as string);
+  if (isNaN(id)) {
+    res.status(400).json({ error: "Invalid drink ID" });
+    return;
+  }
+  const branchId = req.query.branchId ? parseInt(req.query.branchId as string) : null;
+  const partnerId = req.query.partnerId ? parseInt(req.query.partnerId as string) : null;
+
+  try {
+    globalCache.clear();
+    const costDetails = await getProductCost(id, branchId, partnerId);
+    res.json(costDetails);
+  } catch (err: any) {
+    res.status(500).json({ error: err?.message || "Failed to calculate drink recipe cost" });
+  }
 });
 
 router.post("/drinks", requirePermission("catalog:manage"), async (req, res): Promise<void> => {
@@ -1035,8 +1030,6 @@ router.delete("/drinks/:id", requirePermission("catalog:manage"), async (req, re
     }
   }
 });
-
-import { calculateDrinkData } from "../lib/price-calculator";
 
 router.post("/drinks/:id/price", async (req, res): Promise<void> => {
   const params = CalculateDrinkPriceParams.safeParse(req.params);
