@@ -42,6 +42,8 @@ export default function SalesAnalysisPage() {
   const [reportPage, setReportPage] = useState(1);
   const [isDailyGrouped, setIsDailyGrouped] = useState(false);
   const [isDrinkGroupedByItem, setIsDrinkGroupedByItem] = useState(false);
+  const [drinkSalesPage, setDrinkSalesPage] = useState(1);
+  const [customsPage, setCustomsPage] = useState(1);
   const [selectedBranch, setSelectedBranch] = useState(selectedBranchId ? String(selectedBranchId) : "all");
   const [activeTab, setActiveTab] = useState("orders");
   
@@ -153,6 +155,11 @@ export default function SalesAnalysisPage() {
     loadData();
   }, [reportStartDate, reportEndDate, reportPage, isDailyGrouped, selectedBranch, selectedChannel, activeTab]);
 
+  useEffect(() => {
+    setDrinkSalesPage(1);
+    setCustomsPage(1);
+  }, [reportStartDate, reportEndDate, selectedBranch, selectedChannel, selectedDiscountFilter, selectedCategory, selectedDrink, isDrinkGroupedByItem]);
+
   const filteredCatalogDrinks = useMemo(() => {
     const activeDrinks = catalogDrinks.filter(d => d.isActive !== false);
     if (selectedCategory === "all") return activeDrinks;
@@ -251,6 +258,16 @@ export default function SalesAnalysisPage() {
     return Array.from(map.values()).sort((a, b) => b.quantity - a.quantity);
   }, [filteredDrinkSales]);
 
+  const paginatedGroupedDrinkSales = useMemo(() => {
+    const start = (drinkSalesPage - 1) * rowsPerPage;
+    return groupedDrinkSales.slice(start, start + rowsPerPage);
+  }, [groupedDrinkSales, drinkSalesPage]);
+
+  const paginatedFilteredDrinkSales = useMemo(() => {
+    const start = (drinkSalesPage - 1) * rowsPerPage;
+    return filteredDrinkSales.slice(start, start + rowsPerPage);
+  }, [filteredDrinkSales, drinkSalesPage]);
+
   const totals = useMemo(() => {
     if (selectedCategory === "all" && selectedDrink === "all" && selectedDiscountFilter === "all") {
       if (!rangeSummary) {
@@ -332,6 +349,11 @@ export default function SalesAnalysisPage() {
       return matchesCategory && matchesDrink;
     });
   }, [customizations, selectedCategory, selectedDrink, catalogDrinks, selectedDiscountFilter]);
+
+  const paginatedCustomizations = useMemo(() => {
+    const start = (customsPage - 1) * rowsPerPage;
+    return filteredCustomizations.slice(start, start + rowsPerPage);
+  }, [filteredCustomizations, customsPage]);
 
   const handleExportCSV = async () => {
     let headers: string[] = [];
@@ -799,79 +821,111 @@ export default function SalesAnalysisPage() {
         <TabsContent value="drinks">
           <div className="rounded-md border bg-card">
             {isDrinkGroupedByItem ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Item Name</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead className="text-right">Qty Sold</TableHead>
-                    <TableHead className="text-right">Unit Price</TableHead>
-                    <TableHead className="text-right">Total Gross</TableHead>
-                    <TableHead className="text-right">Total Net</TableHead>
-                    <TableHead className="text-right">Orders Count</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {loading ? (
-                    <TableRow><TableCell colSpan={7} className="text-center py-10">Loading drink sales...</TableCell></TableRow>
-                  ) : groupedDrinkSales.length === 0 ? (
-                    <TableRow><TableCell colSpan={7} className="text-center py-10 text-muted-foreground">No data found for this range.</TableCell></TableRow>
-                  ) : groupedDrinkSales.map((row, i) => (
-                    <TableRow key={i}>
-                      <TableCell className="font-bold text-foreground">{row.item}</TableCell>
-                      <TableCell><Badge variant="secondary" className="capitalize text-[10px]">{row.category}</Badge></TableCell>
-                      <TableCell className="text-right font-bold font-mono text-primary">{row.quantity}</TableCell>
-                      <TableCell className="text-right font-mono">{fmt(row.unitPrice)}</TableCell>
-                      <TableCell className="text-right font-bold font-mono">{fmt(row.totalGross)}</TableCell>
-                      <TableCell className="text-right font-bold font-mono text-emerald-600">{fmt(row.finalPrice)}</TableCell>
-                      <TableCell className="text-right font-mono text-xs text-muted-foreground">{row.orderCount}</TableCell>
+              <>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Item Name</TableHead>
+                      <TableHead>Category</TableHead>
+                      <TableHead className="text-right">Qty Sold</TableHead>
+                      <TableHead className="text-right">Unit Price</TableHead>
+                      <TableHead className="text-right">Total Gross</TableHead>
+                      <TableHead className="text-right">Total Net</TableHead>
+                      <TableHead className="text-right">Orders Count</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {loading ? (
+                      <TableRow><TableCell colSpan={7} className="text-center py-10">Loading drink sales...</TableCell></TableRow>
+                    ) : groupedDrinkSales.length === 0 ? (
+                      <TableRow><TableCell colSpan={7} className="text-center py-10 text-muted-foreground">No data found for this range.</TableCell></TableRow>
+                    ) : paginatedGroupedDrinkSales.map((row, i) => (
+                      <TableRow key={i}>
+                        <TableCell className="font-bold text-foreground">{row.item}</TableCell>
+                        <TableCell><Badge variant="secondary" className="capitalize text-[10px]">{row.category}</Badge></TableCell>
+                        <TableCell className="text-right font-bold font-mono text-primary">{row.quantity}</TableCell>
+                        <TableCell className="text-right font-mono">{fmt(row.unitPrice)}</TableCell>
+                        <TableCell className="text-right font-bold font-mono">{fmt(row.totalGross)}</TableCell>
+                        <TableCell className="text-right font-bold font-mono text-emerald-600">{fmt(row.finalPrice)}</TableCell>
+                        <TableCell className="text-right font-mono text-xs text-muted-foreground">{row.orderCount}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+                {(() => {
+                  const totalPages = Math.ceil(groupedDrinkSales.length / rowsPerPage) || 1;
+                  return (
+                    <div className="flex justify-between items-center p-4 border-t">
+                      <p className="text-xs text-muted-foreground font-semibold">
+                        Page {drinkSalesPage} of {totalPages} ({groupedDrinkSales.length} items)
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <Button variant="outline" size="sm" onClick={() => setDrinkSalesPage(p => Math.max(1, p - 1))} disabled={drinkSalesPage === 1}>Previous</Button>
+                        <Button variant="outline" size="sm" onClick={() => setDrinkSalesPage(p => p + 1)} disabled={drinkSalesPage >= totalPages}>Next</Button>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Item</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead className="text-right">Qty</TableHead>
-                    <TableHead className="text-right">Price</TableHead>
-                    <TableHead className="text-right">Total</TableHead>
-                    <TableHead>Order #</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {loading ? (
-                    <TableRow><TableCell colSpan={7} className="text-center py-10">Loading drink sales...</TableCell></TableRow>
-                  ) : filteredDrinkSales.length === 0 ? (
-                    <TableRow><TableCell colSpan={7} className="text-center py-10 text-muted-foreground">No data found for this range.</TableCell></TableRow>
-                  ) : filteredDrinkSales.map((item, i) => (
-                    <TableRow key={i}>
-                      <TableCell className="text-sm">{format(new Date(item.date), "MMM dd")}</TableCell>
-                      <TableCell className="font-medium">
-                        <div className="flex items-center gap-2">
-                          {item.item}
-                          {item.isCustomized === "Customize" && <Badge variant="outline" className="text-[9px] h-4">Custom</Badge>}
-                        </div>
-                      </TableCell>
-                      <TableCell><Badge variant="secondary" className="capitalize text-[10px]">{item.category}</Badge></TableCell>
-                      <TableCell className="text-right">{item.quantity}</TableCell>
-                      <TableCell className="text-right">{fmt(item.salePrice)}</TableCell>
-                      <TableCell className="text-right font-bold">{fmt(item.totalGross)}</TableCell>
-                      <TableCell>
-                        <button 
-                          onClick={() => fetchOrderDetails(item.invNo)}
-                          className="font-mono text-xs text-primary hover:underline"
-                        >
-                          #{item.orderNo}
-                        </button>
-                      </TableCell>
+              <>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Item</TableHead>
+                      <TableHead>Category</TableHead>
+                      <TableHead className="text-right">Qty</TableHead>
+                      <TableHead className="text-right">Price</TableHead>
+                      <TableHead className="text-right">Total</TableHead>
+                      <TableHead>Order #</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {loading ? (
+                      <TableRow><TableCell colSpan={7} className="text-center py-10">Loading drink sales...</TableCell></TableRow>
+                    ) : filteredDrinkSales.length === 0 ? (
+                      <TableRow><TableCell colSpan={7} className="text-center py-10 text-muted-foreground">No data found for this range.</TableCell></TableRow>
+                    ) : paginatedFilteredDrinkSales.map((item, i) => (
+                      <TableRow key={i}>
+                        <TableCell className="text-sm">{format(new Date(item.date), "MMM dd")}</TableCell>
+                        <TableCell className="font-medium">
+                          <div className="flex items-center gap-2">
+                            {item.item}
+                            {item.isCustomized === "Customize" && <Badge variant="outline" className="text-[9px] h-4">Custom</Badge>}
+                          </div>
+                        </TableCell>
+                        <TableCell><Badge variant="secondary" className="capitalize text-[10px]">{item.category}</Badge></TableCell>
+                        <TableCell className="text-right">{item.quantity}</TableCell>
+                        <TableCell className="text-right">{fmt(item.salePrice)}</TableCell>
+                        <TableCell className="text-right font-bold">{fmt(item.totalGross)}</TableCell>
+                        <TableCell>
+                          <button 
+                            onClick={() => fetchOrderDetails(item.invNo)}
+                            className="font-mono text-xs text-primary hover:underline"
+                          >
+                            #{item.orderNo}
+                          </button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+                {(() => {
+                  const totalPages = Math.ceil(filteredDrinkSales.length / rowsPerPage) || 1;
+                  return (
+                    <div className="flex justify-between items-center p-4 border-t">
+                      <p className="text-xs text-muted-foreground font-semibold">
+                        Page {drinkSalesPage} of {totalPages} ({filteredDrinkSales.length} items)
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <Button variant="outline" size="sm" onClick={() => setDrinkSalesPage(p => Math.max(1, p - 1))} disabled={drinkSalesPage === 1}>Previous</Button>
+                        <Button variant="outline" size="sm" onClick={() => setDrinkSalesPage(p => p + 1)} disabled={drinkSalesPage >= totalPages}>Next</Button>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </>
             )}
           </div>
         </TabsContent>
@@ -895,7 +949,7 @@ export default function SalesAnalysisPage() {
                   <TableRow><TableCell colSpan={7} className="text-center py-10">Loading customizations...</TableCell></TableRow>
                 ) : filteredCustomizations.length === 0 ? (
                   <TableRow><TableCell colSpan={7} className="text-center py-10 text-muted-foreground">No customizations found.</TableCell></TableRow>
-                ) : filteredCustomizations.map((c, i) => (
+                ) : paginatedCustomizations.map((c, i) => (
                   <TableRow key={i}>
                     <TableCell className="text-sm">{format(new Date(c.date), "MMM dd")}</TableCell>
                     <TableCell className="font-medium">{c.drinkName}</TableCell>
@@ -912,6 +966,20 @@ export default function SalesAnalysisPage() {
                 ))}
               </TableBody>
             </Table>
+            {(() => {
+              const totalPages = Math.ceil(filteredCustomizations.length / rowsPerPage) || 1;
+              return (
+                <div className="flex justify-between items-center p-4 border-t">
+                  <p className="text-xs text-muted-foreground font-semibold">
+                    Page {customsPage} of {totalPages} ({filteredCustomizations.length} items)
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm" onClick={() => setCustomsPage(p => Math.max(1, p - 1))} disabled={customsPage === 1}>Previous</Button>
+                    <Button variant="outline" size="sm" onClick={() => setCustomsPage(p => p + 1)} disabled={customsPage >= totalPages}>Next</Button>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         </TabsContent>
       </Tabs>

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useGetDashboardSummary, useGetSalesByCategory, useGetTopDrinks, useListOrders, useGetDrink, useListDrinks, listOrders } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -331,6 +331,22 @@ export default function ReportsPage() {
     });
     return Object.values(groups).sort((a, b) => b.revenue - a.revenue);
   }, [drinkItems]);
+
+  const [drinksReportPage, setDrinksReportPage] = useState(1);
+
+  useEffect(() => {
+    setDrinksReportPage(1);
+  }, [reportStartDate, reportEndDate, selectedBranchId, reportChannel, drinksView, showCustomizedOnly]);
+
+  const paginatedGroupedDrinkItems = useMemo(() => {
+    const start = (drinksReportPage - 1) * rowsPerPage;
+    return groupedDrinkItems.slice(start, start + rowsPerPage);
+  }, [groupedDrinkItems, drinksReportPage, rowsPerPage]);
+
+  const paginatedDrinkItems = useMemo(() => {
+    const start = (drinksReportPage - 1) * rowsPerPage;
+    return drinkItems.slice(start, start + rowsPerPage);
+  }, [drinkItems, drinksReportPage, rowsPerPage]);
 
   const handleExportSalesCSV = async () => {
     setIsExportingSales(true);
@@ -1476,7 +1492,7 @@ export default function ReportsPage() {
                           </TableCell>
                         </TableRow>
                       ) : (
-                        groupedDrinkItems.map((item, idx) => (
+                        paginatedGroupedDrinkItems.map((item, idx) => (
                           <TableRow key={idx} className="hover:bg-muted/30 transition-colors">
                             <TableCell className="font-semibold text-foreground">{item.drinkName}</TableCell>
                             <TableCell>
@@ -1496,21 +1512,18 @@ export default function ReportsPage() {
                     ) : (
                       drinkItems.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={5} className="h-32 text-center text-muted-foreground">
+                          <TableCell colSpan={9} className="h-32 text-center text-muted-foreground">
                             No individual drink items available.
                           </TableCell>
                         </TableRow>
                       ) : (
-                        drinkItems.map((item: any, idx: number) => {
+                        paginatedDrinkItems.map((item: any, idx: number) => {
                         const itemGross = item.lineTotal;
-                        const itemNet = itemGross / 1.14;
-                        const itemTax = itemGross - itemNet;
-                        
-                        const orderBeforeTax = item.orderSubtotal / 1.14;
-                        const discountRatio = orderBeforeTax > 0 ? item.orderDiscount / orderBeforeTax : 0;
-                        const itemDiscountAmt = itemNet * discountRatio;
-                        const itemAfterDiscount = itemNet - itemDiscountAmt;
-                        const itemFinalPrice = itemAfterDiscount + itemTax;
+                        const itemNet = item.netBeforeTax || (itemGross / 1.14);
+                        const itemTax = item.taxAmount || (itemGross - itemNet);
+                        const itemDiscountAmt = item.discountAmount || 0;
+                        const itemAfterDiscount = item.subtotalPrice || (itemNet - itemDiscountAmt);
+                        const itemFinalPrice = item.finalPrice || (itemAfterDiscount + itemTax);
 
                         return (
                           <TableRow key={idx} className="hover:bg-muted/30 transition-colors">
@@ -1554,6 +1567,36 @@ export default function ReportsPage() {
                   </TableBody>
                 </Table>
               </div>
+
+              {(() => {
+                const totalItems = drinksView === "grouped" ? groupedDrinkItems.length : drinkItems.length;
+                const totalPages = Math.ceil(totalItems / rowsPerPage) || 1;
+                return (
+                  <div className="flex flex-col sm:flex-row justify-between items-center p-4 border-t gap-4">
+                    <p className="text-xs text-muted-foreground font-semibold">
+                      Page {drinksReportPage} of {totalPages} ({totalItems} total items)
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => setDrinksReportPage(p => Math.max(1, p - 1))}
+                        disabled={drinksReportPage === 1}
+                      >
+                        Previous
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => setDrinksReportPage(p => p + 1)}
+                        disabled={drinksReportPage >= totalPages}
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })()}
             </CardContent>
           </Card>
         </TabsContent>
