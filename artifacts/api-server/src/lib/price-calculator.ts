@@ -25,8 +25,8 @@ export type CustomizationData = {
   typeVolumeId: number | null;
   ingredientTypeId: number | null;
   consumedQty: number; // The qty to deduct from stock
-  producedQty: number; // New: qty added to cup (in ml)
-  color: string | null; // New: visual color for simulator
+  producedQty: number; // qty added to cup (in ml)
+  color: string | null; // visual color for simulator
   addedCost: number; // The extra money to charge
   slotLabel: string;
   optionLabel: string;

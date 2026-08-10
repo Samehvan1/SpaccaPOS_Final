@@ -28,15 +28,20 @@ export async function runDataMigrations() {
       );
     `);
 
-    logger.info("[migration] Ensuring drinks:manage permission exists...");
+    logger.info("[migration] Ensuring catalog:manage & drinks:manage permissions exist for admin role...");
     await db.execute(sql`
       INSERT INTO "permissions" ("key", "description")
       VALUES ('drinks:manage', 'Manage branch and partner drink availability')
       ON CONFLICT ("key") DO NOTHING;
 
       INSERT INTO "role_permissions" ("role_key", "permission_key")
-      VALUES ('admin', 'drinks:manage')
+      VALUES ('admin', 'drinks:manage'), ('admin', 'catalog:manage')
       ON CONFLICT DO NOTHING;
+
+      DELETE FROM "user_permissions"
+      WHERE "permission_key" IN ('catalog:manage', 'drinks:manage')
+        AND "granted" = false
+        AND "user_id" IN (SELECT "id" FROM "users" WHERE lower("role") = 'admin');
     `);
 
     logger.info("[migration] Reassigning orders 1-221001 and 1-221002 to cashier Menna Gamal (ID 25)...");

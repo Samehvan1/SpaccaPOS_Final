@@ -225,7 +225,12 @@ export default function DrinksAdmin() {
     mutation: {
       onSuccess: async (data: any) => {
         if (imageFile && data?.id) {
-          await uploadImage(data.id);
+          try {
+            await uploadImage(data.id);
+          } catch {
+            refetch();
+            return;
+          }
         }
         toast({ title: "Drink created" });
         setMode(null);
@@ -241,7 +246,12 @@ export default function DrinksAdmin() {
       onSuccess: async (_data: any, variables: any) => {
         const idToUpload = editId ?? variables?.id;
         if (imageFile && idToUpload) {
-          await uploadImage(idToUpload);
+          try {
+            await uploadImage(idToUpload);
+          } catch {
+            refetch();
+            return;
+          }
         }
         toast({ title: "Drink updated" });
         setMode(null);
@@ -278,10 +288,11 @@ export default function DrinksAdmin() {
       });
       if (!res.ok) {
         const errData = await res.json().catch(() => null);
-        throw new Error(errData?.error || "Image upload failed");
+        throw new Error(errData?.error || `Image upload failed (HTTP ${res.status})`);
       }
     } catch (e: any) {
-      toast({ variant: "destructive", title: "Image upload failed", description: e.message });
+      toast({ variant: "destructive", title: "Image Upload Failed", description: e.message });
+      throw e;
     } finally {
       setIsUploadingImage(false);
     }
