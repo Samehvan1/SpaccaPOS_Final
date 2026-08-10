@@ -372,6 +372,7 @@ export function MainLayout({ children }: MainLayoutProps) {
       permission: "purchases:view",
       children: [
         { href: "/admin/purchases", label: "Purchase Orders" },
+        { href: "/admin/purchases/transfers", label: "Stock Transfers" },
         { href: "/admin/purchases/suppliers", label: "Suppliers Directory" },
       ]
     },

@@ -631,4 +631,212 @@ router.post("/stock/expiry/batches/initialize", async (req, res): Promise<void> 
   }
 });
 
+// GET /stock/transfers — Get all inter-branch stock transfers history
+router.get("/stock/transfers", async (req, res): Promise<void> => {
+  try {
+    const movements = await db
+      .select()
+      .from(stockMovementsTable)
+      .where(sql`note LIKE 'Transfer Out to%' OR note LIKE 'Transfer In from%'`)
+      .orderBy(desc(stockMovementsTable.createdAt));
+
+    const [allIngredients, allUsers, allBranches] = await Promise.all([
+      db.select().from(ingredientsTable),
+      db.select().from(usersTable),
+      db.select().from(branchesTable),
+    ]);
+
+    const ingredientMap = Object.fromEntries(allIngredients.map((i) => [i.id, i.name]));
+    const userMap = Object.fromEntries(allUsers.map((u) => [u.id, u.name]));
+    const branchMap = Object.fromEntries(allBranches.map((b) => [b.id, b.name]));
+
+    const transfers = movements.map((m) => {
+      const isOut = m.note?.startsWith("Transfer Out to");
+      let fromBranchName = "Unknown";
+      let toBranchName = "Unknown";
+
+      if (isOut) {
+        fromBranchName = branchMap[m.branchId || 0] ?? "Unknown";
+        const match = m.note?.match(/Transfer Out to (.*?) \(/);
+        toBranchName = match ? match[1] : "Unknown";
+      } else {
+        toBranchName = branchMap[m.branchId || 0] ?? "Unknown";
+        const match = m.note?.match(/Transfer In from (.*?) \(/);
+        fromBranchName = match ? match[1] : "Unknown";
+      }
+
+      return {
+        id: m.id,
+        branchId: m.branchId,
+        ingredientId: m.ingredientId,
+        ingredientName: ingredientMap[m.ingredientId] ?? "Unknown",
+        movementType: m.movementType,
+        quantity: Math.abs(parseFloat(String(m.quantity || "0"))),
+        quantityAfter: parseFloat(String(m.quantityAfter || "0")),
+        note: m.note,
+        fromBranchName,
+        toBranchName,
+        createdByName: userMap[m.createdBy] ?? "System Admin",
+        createdAt: m.createdAt,
+      };
+    });
+
+    res.json(serializeDates(transfers));
+  } catch (error: any) {
+    console.error("GET /stock/transfers error:", error);
+    res.status(500).json({ error: "Failed to load transfer history" });
+  }
+});
+
+// GET /stock/branch-quantities — Get all branch stock quantities mapped by { [branchId]: { [ingredientId]: quantity } }
+router.get("/stock/branch-quantities", async (req, res): Promise<void> => {
+  try {
+    const allStock = await db.select({
+      branchId: branchStockTable.branchId,
+      ingredientId: branchStockTable.ingredientId,
+      stockQuantity: branchStockTable.stockQuantity
+    }).from(branchStockTable);
+
+    const result: Record<number, Record<number, number>> = {};
+    for (const item of allStock) {
+      if (!item.branchId) continue;
+      if (!result[item.branchId]) result[item.branchId] = {};
+      result[item.branchId][item.ingredientId] = parseFloat(item.stockQuantity || "0");
+    }
+
+    res.json(result);
+  } catch (error: any) {
+    console.error("GET /stock/branch-quantities error:", error);
+    res.status(500).json({ error: "Failed to load branch stock quantities" });
+  }
+});
+
+// POST /stock/transfers — Inter-Branch Stock Transfer
+router.post("/stock/transfers", async (req, res): Promise<void> => {
+  try {
+    const { fromBranchId, toBranchId, items, notes } = req.body;
+    const sessionUserId = ((req.session as unknown as Record<string, unknown>).userId as number) ?? 1;
+
+    const fromId = parseInt(fromBranchId);
+    const toId = parseInt(toBranchId);
+
+    if (isNaN(fromId) || isNaN(toId)) {
+      res.status(400).json({ error: "fromBranchId and toBranchId are required" });
+      return;
+    }
+
+    if (fromId === toId) {
+      res.status(400).json({ error: "Source and Destination branches must be different" });
+      return;
+    }
+
+    if (!Array.isArray(items) || items.length === 0) {
+      res.status(400).json({ error: "At least one item is required for stock transfer" });
+      return;
+    }
+
+    const [fromBranch] = await db.select({ name: branchesTable.name }).from(branchesTable).where(eq(branchesTable.id, fromId));
+    const [toBranch] = await db.select({ name: branchesTable.name }).from(branchesTable).where(eq(branchesTable.id, toId));
+
+    if (!fromBranch || !toBranch) {
+      res.status(404).json({ error: "Source or Destination branch not found" });
+      return;
+    }
+
+    const { addStockBatch, deductStockFromBatches } = await import("../lib/stock-utils");
+
+    await db.transaction(async (tx) => {
+      for (const item of items) {
+        const ingredientId = parseInt(item.ingredientId);
+        const qtyInput = parseFloat(item.quantity);
+
+        if (isNaN(ingredientId) || isNaN(qtyInput) || qtyInput <= 0) continue;
+
+        const [ingredient] = await tx.select().from(ingredientsTable).where(eq(ingredientsTable.id, ingredientId));
+        if (!ingredient) continue;
+
+        let conversionFactor = 1;
+        let unitName = ingredient.unit;
+
+        if (item.conversionId && item.conversionId !== "base") {
+          const conversionId = parseInt(item.conversionId);
+          if (!isNaN(conversionId)) {
+            const [conv] = await tx.select().from(ingredientConversionsTable).where(eq(ingredientConversionsTable.id, conversionId));
+            if (conv) {
+              conversionFactor = parseFloat(conv.conversionFactor);
+              unitName = conv.unitName;
+            }
+          }
+        }
+
+        const baseQtyToTransfer = qtyInput * conversionFactor;
+
+        // 1. Deduct stock from Source Branch
+        const [fromStock] = await tx.select().from(branchStockTable).where(and(eq(branchStockTable.branchId, fromId), eq(branchStockTable.ingredientId, ingredientId)));
+        const currentFromQty = fromStock ? parseFloat(fromStock.stockQuantity) : 0;
+        const newFromQty = Math.max(0, currentFromQty - baseQtyToTransfer);
+
+        await tx.insert(branchStockTable).values({
+          branchId: fromId,
+          ingredientId,
+          stockQuantity: String(newFromQty),
+        }).onConflictDoUpdate({
+          target: [branchStockTable.branchId, branchStockTable.ingredientId],
+          set: { stockQuantity: String(newFromQty) }
+        });
+
+        await deductStockFromBatches(tx, fromId, ingredientId, baseQtyToTransfer);
+
+        await tx.insert(stockMovementsTable).values({
+          branchId: fromId,
+          ingredientId,
+          orderId: null,
+          movementType: "adjustment",
+          quantity: String(-baseQtyToTransfer),
+          quantityAfter: String(newFromQty),
+          note: `Transfer Out to ${toBranch.name} (${qtyInput} ${unitName})${notes ? `: ${notes}` : ''}`,
+          createdBy: sessionUserId,
+        });
+
+        // 2. Add stock to Destination Branch
+        const [toStock] = await tx.select().from(branchStockTable).where(and(eq(branchStockTable.branchId, toId), eq(branchStockTable.ingredientId, ingredientId)));
+        const currentToQty = toStock ? parseFloat(toStock.stockQuantity) : 0;
+        const newToQty = currentToQty + baseQtyToTransfer;
+
+        await tx.insert(branchStockTable).values({
+          branchId: toId,
+          ingredientId,
+          stockQuantity: String(newToQty),
+        }).onConflictDoUpdate({
+          target: [branchStockTable.branchId, branchStockTable.ingredientId],
+          set: { stockQuantity: String(newToQty) }
+        });
+
+        await addStockBatch(tx, toId, ingredientId, baseQtyToTransfer, null);
+
+        await tx.insert(stockMovementsTable).values({
+          branchId: toId,
+          ingredientId,
+          orderId: null,
+          movementType: "restock",
+          quantity: String(baseQtyToTransfer),
+          quantityAfter: String(newToQty),
+          note: `Transfer In from ${fromBranch.name} (${qtyInput} ${unitName})${notes ? `: ${notes}` : ''}`,
+          createdBy: sessionUserId,
+        });
+      }
+    });
+
+    const { globalCache } = await import("../lib/cache");
+    globalCache.clear();
+    const { broadcastEvent } = await import("../lib/sse");
+    broadcastEvent("inventory_updated", {});
+
+    res.json({ success: true, message: `Successfully transferred stock from ${fromBranch.name} to ${toBranch.name}` });
+  } catch (error: any) {
+    console.error("POST /stock/transfers error:", error);
+    res.status(500).json({ error: error?.message || "Failed to process stock transfer" });
+  }
+});
+
 export default router;

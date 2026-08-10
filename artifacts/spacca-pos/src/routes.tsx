@@ -22,6 +22,9 @@ import OffersAdmin from "@/pages/admin/offers";
 import CustomersAdmin from "@/pages/admin/customers";
 import BranchPricesAdmin from "@/pages/admin/branch-prices";
 import PartnersAdmin from "@/pages/admin/partners";
+import PurchasesAdmin from "@/pages/admin/purchases";
+import StockTransfersAdmin from "@/pages/admin/purchases/transfers";
+import SuppliersAdmin from "@/pages/admin/purchases/suppliers";
 
 import TagsAdmin from "@/pages/admin/tags";
 import ActivityLogs from "@/pages/admin/activity-logs";
@@ -46,8 +49,6 @@ import CalibrationPage from "@/pages/admin/operations/calibration";
 import WastagePage from "@/pages/admin/operations/wastage";
 import OperationalDeductionsReport from "@/pages/admin/operations/deductions-report";
 import AllOrdersReport from "@/pages/admin/all-orders-report";
-import PurchasesAdmin from "@/pages/admin/purchases";
-import SuppliersAdmin from "@/pages/admin/purchases/suppliers";
 
 export interface RouteConfig {
   path: string;
@@ -85,6 +86,7 @@ export const appRoutes: RouteConfig[] = [
 
   // Purchases
   { path: "/admin/purchases", component: PurchasesAdmin, permission: "purchases:view" },
+  { path: "/admin/purchases/transfers", component: StockTransfersAdmin, permission: "purchases:view" },
   { path: "/admin/purchases/suppliers", component: SuppliersAdmin, permission: "purchases:view" },
 
   // Finance & Reports

@@ -82255,21 +82255,21 @@ async function calculateDrinkData(drinkId, selections, branchId = null, partnerI
         } else {
           consumedQty = filledMl;
         }
-        let cost = 0;
+        let customerExtraCost = 0;
         const pricingMode = slotTypeOpt?.pricingMode ?? ingredientType?.pricingMode ?? "volume";
         const extraCostBase = parseFloat(slotTypeOpt?.extraCost ?? ingredientType?.extraCost ?? "0") || 0;
         if (pricingMode === "unit") {
-          cost = extraCostBase;
+          customerExtraCost = extraCostBase;
         } else {
-          cost = (consumedQty || filledMl) * extraCostBase;
+          customerExtraCost = filledMl * extraCostBase;
         }
-        totalExtras += cost;
+        totalExtras += customerExtraCost;
         const ingredientName = ingredientType?.name ?? "Dynamic";
         dynamicInfo = {
           slotLabel: dynamicSlot.slotLabel,
           ingredientName,
           filledMl,
-          cost,
+          cost: customerExtraCost,
           ingredientId: inventoryId ? Number(inventoryId) : null,
           consumedQty
         };
@@ -82281,9 +82281,9 @@ async function calculateDrinkData(drinkId, selections, branchId = null, partnerI
           consumedQty,
           producedQty: filledMl,
           color: ingredientType?.color ?? null,
-          addedCost: cost,
+          addedCost: customerExtraCost,
           slotLabel: dynamicSlot.slotLabel,
-          optionLabel: ingredientType?.name ? `${ingredientType.name} (${Math.round(consumedQty || filledMl)}${unit})` : `Dynamic (${Math.round(consumedQty || filledMl)}${unit})`,
+          optionLabel: ingredientType?.name ? `${ingredientType.name} (${Math.round(filledMl)}${unit})` : `Dynamic (${Math.round(filledMl)}${unit})`,
           baristaSortOrder: dynamicSlot.baristaSortOrder ?? 1,
           customerSortOrder: dynamicSlot.customerSortOrder ?? 1
         });
@@ -82292,7 +82292,7 @@ async function calculateDrinkData(drinkId, selections, branchId = null, partnerI
       const dynamicSelection = selections.find((s) => s.ingredientId === dynamicSlot.ingredientId);
       const optionId = dynamicSelection?.optionId ?? dynamicSlot.defaultOptionId;
       if (optionId) {
-        let cost = 0;
+        let customerExtraCost = 0;
         let consumedQty = 0;
         let optionLabel = `Dynamic (${Math.round(filledMl)}ml)`;
         let ingredientName = "Dynamic";
@@ -82313,17 +82313,17 @@ async function calculateDrinkData(drinkId, selections, branchId = null, partnerI
             consumedQty = filledMl;
           }
           if (ingredient) {
-            cost = consumedQty * parseFloat(ingredient.costPerUnit || "0");
+            customerExtraCost = parseFloat(option.extraCost || "0");
             ingredientName = ingredient.name;
-            optionLabel = `${ingredientName} (${Math.round(consumedQty || filledMl)}${ingredient.unit || "ml"})`;
+            optionLabel = `${ingredientName} (${Math.round(filledMl)}ml)`;
           }
         }
-        totalExtras += cost;
+        totalExtras += customerExtraCost;
         dynamicInfo = {
           slotLabel: dynamicSlot.slotLabel,
           ingredientName,
           filledMl,
-          cost,
+          cost: customerExtraCost,
           ingredientId: dynamicSlot.ingredientId,
           consumedQty
         };
@@ -82335,9 +82335,9 @@ async function calculateDrinkData(drinkId, selections, branchId = null, partnerI
           consumedQty,
           producedQty: filledMl,
           color: null,
-          addedCost: cost,
+          addedCost: customerExtraCost,
           slotLabel: dynamicSlot.slotLabel,
-          optionLabel: `Dynamic (${Math.round(consumedQty || filledMl)}${ingredient?.unit || "ml"})`,
+          optionLabel,
           baristaSortOrder: dynamicSlot.baristaSortOrder ?? 1,
           customerSortOrder: dynamicSlot.customerSortOrder ?? 1
         });
@@ -82405,6 +82405,7 @@ async function getProductCost(drinkId, branchId = null, partnerId = null) {
   const totalCost = Number((data.totalCost || 0).toFixed(2));
   const profitAmount = Number((standardPrice - totalCost).toFixed(2));
   const profitMargin = standardPrice > 0 ? Number((profitAmount / standardPrice * 100).toFixed(2)) : 0;
+  const priceToCost = totalCost > 0 ? Number((standardPrice / totalCost).toFixed(2)) : 0;
   return {
     drinkId,
     drinkName: data.drink.name,
@@ -82412,6 +82413,7 @@ async function getProductCost(drinkId, branchId = null, partnerId = null) {
     totalCost,
     profitAmount,
     profitMargin,
+    priceToCost,
     costBreakdown: data.costBreakdown.map((item) => ({
       ...item,
       lineCost: Number(item.lineCost.toFixed(2)),
@@ -82430,7 +82432,23 @@ var storage = import_multer.default.diskStorage({
     cb(null, `drink-${Date.now()}${ext}`);
   }
 });
-var upload = (0, import_multer.default)({ storage, limits: { fileSize: 5 * 1024 * 1024 } });
+var upload = (0, import_multer.default)({ storage, limits: { fileSize: 25 * 1024 * 1024 } });
+var uploadSingleImage = (req, res, next) => {
+  upload.single("image")(req, res, (err) => {
+    if (err instanceof import_multer.default.MulterError) {
+      if (err.code === "LIMIT_FILE_SIZE") {
+        res.status(413).json({ error: "Image file size is too large. Maximum allowed size is 25MB." });
+        return;
+      }
+      res.status(400).json({ error: `Image upload error: ${err.message}` });
+      return;
+    } else if (err) {
+      res.status(400).json({ error: err.message || "Failed to upload image" });
+      return;
+    }
+    next();
+  });
+};
 var router3 = (0, import_express3.Router)();
 async function buildDrinkDetail(drinkId, branchId) {
   const cacheKey = `drink_detail_${drinkId}_${branchId ?? "global"}`;
@@ -82968,7 +82986,7 @@ router3.patch("/drinks/:id", requirePermission("catalog:manage"), async (req, re
     categoryId: drink.categoryId ?? void 0
   })));
 });
-router3.post("/drinks/:id/image", requirePermission("catalog:manage"), upload.single("image"), async (req, res) => {
+router3.post("/drinks/:id/image", requirePermission("catalog:manage"), uploadSingleImage, async (req, res) => {
   const id = parseInt(req.params.id);
   if (isNaN(id)) {
     res.status(400).json({ error: "Invalid id" });
@@ -85892,6 +85910,171 @@ router6.post("/stock/expiry/batches/initialize", async (req, res) => {
   } catch (error40) {
     console.error("POST /stock/expiry/batches/initialize error:", error40);
     res.status(500).json({ error: error40?.message || "Failed to initialize batch" });
+  }
+});
+router6.get("/stock/transfers", async (req, res) => {
+  try {
+    const movements = await db.select().from(stockMovementsTable).where(sql`note LIKE 'Transfer Out to%' OR note LIKE 'Transfer In from%'`).orderBy(desc(stockMovementsTable.createdAt));
+    const [allIngredients, allUsers, allBranches] = await Promise.all([
+      db.select().from(ingredientsTable),
+      db.select().from(usersTable),
+      db.select().from(branchesTable)
+    ]);
+    const ingredientMap = Object.fromEntries(allIngredients.map((i) => [i.id, i.name]));
+    const userMap = Object.fromEntries(allUsers.map((u) => [u.id, u.name]));
+    const branchMap = Object.fromEntries(allBranches.map((b) => [b.id, b.name]));
+    const transfers = movements.map((m) => {
+      const isOut = m.note?.startsWith("Transfer Out to");
+      let fromBranchName = "Unknown";
+      let toBranchName = "Unknown";
+      if (isOut) {
+        fromBranchName = branchMap[m.branchId || 0] ?? "Unknown";
+        const match = m.note?.match(/Transfer Out to (.*?) \(/);
+        toBranchName = match ? match[1] : "Unknown";
+      } else {
+        toBranchName = branchMap[m.branchId || 0] ?? "Unknown";
+        const match = m.note?.match(/Transfer In from (.*?) \(/);
+        fromBranchName = match ? match[1] : "Unknown";
+      }
+      return {
+        id: m.id,
+        branchId: m.branchId,
+        ingredientId: m.ingredientId,
+        ingredientName: ingredientMap[m.ingredientId] ?? "Unknown",
+        movementType: m.movementType,
+        quantity: Math.abs(parseFloat(String(m.quantity || "0"))),
+        quantityAfter: parseFloat(String(m.quantityAfter || "0")),
+        note: m.note,
+        fromBranchName,
+        toBranchName,
+        createdByName: userMap[m.createdBy] ?? "System Admin",
+        createdAt: m.createdAt
+      };
+    });
+    res.json(serializeDates(transfers));
+  } catch (error40) {
+    console.error("GET /stock/transfers error:", error40);
+    res.status(500).json({ error: "Failed to load transfer history" });
+  }
+});
+router6.get("/stock/branch-quantities", async (req, res) => {
+  try {
+    const allStock = await db.select({
+      branchId: branchStockTable.branchId,
+      ingredientId: branchStockTable.ingredientId,
+      stockQuantity: branchStockTable.stockQuantity
+    }).from(branchStockTable);
+    const result = {};
+    for (const item of allStock) {
+      if (!item.branchId) continue;
+      if (!result[item.branchId]) result[item.branchId] = {};
+      result[item.branchId][item.ingredientId] = parseFloat(item.stockQuantity || "0");
+    }
+    res.json(result);
+  } catch (error40) {
+    console.error("GET /stock/branch-quantities error:", error40);
+    res.status(500).json({ error: "Failed to load branch stock quantities" });
+  }
+});
+router6.post("/stock/transfers", async (req, res) => {
+  try {
+    const { fromBranchId, toBranchId, items, notes } = req.body;
+    const sessionUserId = req.session.userId ?? 1;
+    const fromId = parseInt(fromBranchId);
+    const toId = parseInt(toBranchId);
+    if (isNaN(fromId) || isNaN(toId)) {
+      res.status(400).json({ error: "fromBranchId and toBranchId are required" });
+      return;
+    }
+    if (fromId === toId) {
+      res.status(400).json({ error: "Source and Destination branches must be different" });
+      return;
+    }
+    if (!Array.isArray(items) || items.length === 0) {
+      res.status(400).json({ error: "At least one item is required for stock transfer" });
+      return;
+    }
+    const [fromBranch] = await db.select({ name: branchesTable.name }).from(branchesTable).where(eq(branchesTable.id, fromId));
+    const [toBranch] = await db.select({ name: branchesTable.name }).from(branchesTable).where(eq(branchesTable.id, toId));
+    if (!fromBranch || !toBranch) {
+      res.status(404).json({ error: "Source or Destination branch not found" });
+      return;
+    }
+    const { addStockBatch: addStockBatch2, deductStockFromBatches: deductStockFromBatches2 } = await Promise.resolve().then(() => (init_stock_utils(), stock_utils_exports));
+    await db.transaction(async (tx) => {
+      for (const item of items) {
+        const ingredientId = parseInt(item.ingredientId);
+        const qtyInput = parseFloat(item.quantity);
+        if (isNaN(ingredientId) || isNaN(qtyInput) || qtyInput <= 0) continue;
+        const [ingredient] = await tx.select().from(ingredientsTable).where(eq(ingredientsTable.id, ingredientId));
+        if (!ingredient) continue;
+        let conversionFactor = 1;
+        let unitName = ingredient.unit;
+        if (item.conversionId && item.conversionId !== "base") {
+          const conversionId = parseInt(item.conversionId);
+          if (!isNaN(conversionId)) {
+            const [conv] = await tx.select().from(ingredientConversionsTable).where(eq(ingredientConversionsTable.id, conversionId));
+            if (conv) {
+              conversionFactor = parseFloat(conv.conversionFactor);
+              unitName = conv.unitName;
+            }
+          }
+        }
+        const baseQtyToTransfer = qtyInput * conversionFactor;
+        const [fromStock] = await tx.select().from(branchStockTable).where(and(eq(branchStockTable.branchId, fromId), eq(branchStockTable.ingredientId, ingredientId)));
+        const currentFromQty = fromStock ? parseFloat(fromStock.stockQuantity) : 0;
+        const newFromQty = Math.max(0, currentFromQty - baseQtyToTransfer);
+        await tx.insert(branchStockTable).values({
+          branchId: fromId,
+          ingredientId,
+          stockQuantity: String(newFromQty)
+        }).onConflictDoUpdate({
+          target: [branchStockTable.branchId, branchStockTable.ingredientId],
+          set: { stockQuantity: String(newFromQty) }
+        });
+        await deductStockFromBatches2(tx, fromId, ingredientId, baseQtyToTransfer);
+        await tx.insert(stockMovementsTable).values({
+          branchId: fromId,
+          ingredientId,
+          orderId: null,
+          movementType: "adjustment",
+          quantity: String(-baseQtyToTransfer),
+          quantityAfter: String(newFromQty),
+          note: `Transfer Out to ${toBranch.name} (${qtyInput} ${unitName})${notes ? `: ${notes}` : ""}`,
+          createdBy: sessionUserId
+        });
+        const [toStock] = await tx.select().from(branchStockTable).where(and(eq(branchStockTable.branchId, toId), eq(branchStockTable.ingredientId, ingredientId)));
+        const currentToQty = toStock ? parseFloat(toStock.stockQuantity) : 0;
+        const newToQty = currentToQty + baseQtyToTransfer;
+        await tx.insert(branchStockTable).values({
+          branchId: toId,
+          ingredientId,
+          stockQuantity: String(newToQty)
+        }).onConflictDoUpdate({
+          target: [branchStockTable.branchId, branchStockTable.ingredientId],
+          set: { stockQuantity: String(newToQty) }
+        });
+        await addStockBatch2(tx, toId, ingredientId, baseQtyToTransfer, null);
+        await tx.insert(stockMovementsTable).values({
+          branchId: toId,
+          ingredientId,
+          orderId: null,
+          movementType: "restock",
+          quantity: String(baseQtyToTransfer),
+          quantityAfter: String(newToQty),
+          note: `Transfer In from ${fromBranch.name} (${qtyInput} ${unitName})${notes ? `: ${notes}` : ""}`,
+          createdBy: sessionUserId
+        });
+      }
+    });
+    const { globalCache: globalCache2 } = await Promise.resolve().then(() => (init_cache2(), cache_exports));
+    globalCache2.clear();
+    const { broadcastEvent: broadcastEvent2 } = await Promise.resolve().then(() => (init_sse(), sse_exports));
+    broadcastEvent2("inventory_updated", {});
+    res.json({ success: true, message: `Successfully transferred stock from ${fromBranch.name} to ${toBranch.name}` });
+  } catch (error40) {
+    console.error("POST /stock/transfers error:", error40);
+    res.status(500).json({ error: error40?.message || "Failed to process stock transfer" });
   }
 });
 var stock_default = router6;
@@ -90928,8 +91111,8 @@ app.use(
 );
 app.set("trust proxy", 1);
 app.use((0, import_cors.default)({ credentials: true, origin: true, exposedHeaders: ["X-Total-Count"] }));
-app.use(import_express27.default.json());
-app.use(import_express27.default.urlencoded({ extended: true }));
+app.use(import_express27.default.json({ limit: "50mb" }));
+app.use(import_express27.default.urlencoded({ limit: "50mb", extended: true }));
 app.use(
   (0, import_express_session.default)({
     store: new PostgresStore({
@@ -91411,15 +91594,20 @@ async function runDataMigrations() {
         "created_at" timestamp with time zone DEFAULT now() NOT NULL
       );
     `);
-    logger.info("[migration] Ensuring drinks:manage permission exists...");
+    logger.info("[migration] Ensuring catalog:manage & drinks:manage permissions exist for admin role...");
     await db.execute(sql`
       INSERT INTO "permissions" ("key", "description")
       VALUES ('drinks:manage', 'Manage branch and partner drink availability')
       ON CONFLICT ("key") DO NOTHING;
 
       INSERT INTO "role_permissions" ("role_key", "permission_key")
-      VALUES ('admin', 'drinks:manage')
+      VALUES ('admin', 'drinks:manage'), ('admin', 'catalog:manage')
       ON CONFLICT DO NOTHING;
+
+      DELETE FROM "user_permissions"
+      WHERE "permission_key" IN ('catalog:manage', 'drinks:manage')
+        AND "granted" = false
+        AND "user_id" IN (SELECT "id" FROM "users" WHERE lower("role") = 'admin');
     `);
     logger.info("[migration] Reassigning orders 1-221001 and 1-221002 to cashier Menna Gamal (ID 25)...");
     await db.execute(sql`

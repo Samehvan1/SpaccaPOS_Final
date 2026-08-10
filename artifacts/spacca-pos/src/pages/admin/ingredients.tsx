@@ -15,7 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { ArrowLeft, Plus, Search, Edit, Trash2, Link2, Star, StarOff, ChevronRight, Package, Tag, Layers, FlaskConical, Check, X, Droplet, Droplets, RefreshCw, CheckCircle2, ChevronsUpDown, Loader2 } from "lucide-react";
+import { ArrowLeft, Plus, AlertTriangle, Search, Edit, Trash2, Link2, Star, StarOff, ChevronRight, Package, Tag, Layers, FlaskConical, Check, X, Droplet, Droplets, RefreshCw, CheckCircle2, ChevronsUpDown, Loader2 } from "lucide-react";
 
 const COMMON_UNITS = [
   "Kg", "Gram", "Liter", "ML", "Box", "Bag", "Bottle", "Cup", "Case", "Pack", "Gallon"
