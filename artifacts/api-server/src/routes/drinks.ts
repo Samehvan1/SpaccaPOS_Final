@@ -45,7 +45,24 @@ const storage = multer.diskStorage({
     cb(null, `drink-${Date.now()}${ext}`);
   },
 });
-const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } });
+const upload = multer({ storage, limits: { fileSize: 25 * 1024 * 1024 } });
+
+const uploadSingleImage = (req: any, res: any, next: any) => {
+  upload.single("image")(req, res, (err: any) => {
+    if (err instanceof multer.MulterError) {
+      if (err.code === "LIMIT_FILE_SIZE") {
+        res.status(413).json({ error: "Image file size is too large. Maximum allowed size is 25MB." });
+        return;
+      }
+      res.status(400).json({ error: `Image upload error: ${err.message}` });
+      return;
+    } else if (err) {
+      res.status(400).json({ error: err.message || "Failed to upload image" });
+      return;
+    }
+    next();
+  });
+};
 // ─────────────────────────────────────────────────────────────────────────────
 import {
   ListDrinksQueryParams,
@@ -763,7 +780,7 @@ router.patch("/drinks/:id", requirePermission("catalog:manage"), async (req, res
 });
 
 // POST /drinks/:id/image — upload a drink image
-router.post("/drinks/:id/image", requirePermission("catalog:manage"), upload.single("image"), async (req, res): Promise<void> => {
+router.post("/drinks/:id/image", requirePermission("catalog:manage"), uploadSingleImage, async (req, res): Promise<void> => {
   const id = parseInt(req.params.id as string);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
 
