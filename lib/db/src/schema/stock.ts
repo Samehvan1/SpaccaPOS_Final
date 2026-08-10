@@ -12,7 +12,7 @@ export const stockMovementsTable = pgTable("stock_movements", {
   ingredientId: integer("ingredient_id").notNull().references(() => ingredientsTable.id),
   orderId: integer("order_id").references(() => ordersTable.id, { onDelete: "set null" }),
   movementType: text("movement_type", {
-    enum: ["sale", "restock", "adjustment", "waste", "opening", "calibration", "testing"],
+    enum: ["sale", "restock", "adjustment", "waste", "opening", "calibration", "testing", "manufacture_consume", "manufacture_produce"],
   }).notNull(),
   quantity: numeric("quantity", { precision: 12, scale: 4 }).notNull(),
   quantityAfter: numeric("quantity_after", { precision: 12, scale: 4 }).notNull(),

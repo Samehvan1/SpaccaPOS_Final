@@ -301,6 +301,7 @@ export type ListStockMovementsQueryParams = Infer<
 export const ListStockMovementsResponseItem =
   api.ListStockMovementsResponseItem.extend({
     branchId: z.number().nullish(),
+    movementType: z.string(),
   });
 export type ListStockMovementsResponseItem = Infer<
   typeof ListStockMovementsResponseItem

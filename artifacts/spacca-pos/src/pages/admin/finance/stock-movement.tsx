@@ -278,6 +278,8 @@ export default function StockMovementPage() {
                   <SelectItem value="all">All Types</SelectItem>
                   <SelectItem value="restock">Received</SelectItem>
                   <SelectItem value="sale">Sale</SelectItem>
+                  <SelectItem value="manufacture_produce">Mfg Produce</SelectItem>
+                  <SelectItem value="manufacture_consume">Mfg Consume</SelectItem>
                   <SelectItem value="waste">Waste</SelectItem>
                   <SelectItem value="calibration">Calibration</SelectItem>
                   <SelectItem value="testing">Testing</SelectItem>
@@ -369,17 +371,22 @@ export default function StockMovementPage() {
                     <TableCell>{m.ingredientName}</TableCell>
                     <TableCell>
                       <Badge variant={
-                        m.movementType === "restock" ? "default" :
+                        m.movementType === "restock" || m.movementType === "manufacture_produce" ? "default" :
                         m.movementType === "sale" ? "secondary" :
                         m.movementType === "waste" ? "destructive" : "outline"
                       } className={`capitalize ${
                         m.movementType === "calibration" ? "border-amber-500 text-amber-600 bg-amber-50" : 
-                        m.movementType === "testing" ? "border-cyan-500 text-cyan-600 bg-cyan-50" : ""
+                        m.movementType === "testing" ? "border-cyan-500 text-cyan-600 bg-cyan-50" :
+                        m.movementType === "manufacture_produce" ? "border-emerald-500 text-emerald-700 bg-emerald-50" :
+                        m.movementType === "manufacture_consume" ? "border-purple-500 text-purple-700 bg-purple-50" : ""
                       }`}>
                         {m.movementType === "restock" && <ArrowDownLeft className="mr-1 h-3 w-3" />}
                         {m.movementType === "sale" && <ArrowUpRight className="mr-1 h-3 w-3" />}
                         {(m.movementType === "calibration" || m.movementType === "testing") && <Beaker className="mr-1 h-3 w-3" />}
-                        {m.movementType === "restock" ? "received" : m.movementType === "adjustment" ? "stock-audit" : m.movementType}
+                        {m.movementType === "manufacture_produce" ? "mfg produce" :
+                         m.movementType === "manufacture_consume" ? "mfg consume" :
+                         m.movementType === "restock" ? "received" :
+                         m.movementType === "adjustment" ? "stock-audit" : m.movementType}
                       </Badge>
                     </TableCell>
                     <TableCell className={`text-right font-mono ${m.quantity > 0 ? "text-green-600" : "text-red-600"}`}>

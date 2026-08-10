@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useTheme } from "@/hooks/use-theme";
 import { useSettings } from "@/hooks/use-settings";
 import { useOrderEvents } from "@/hooks/use-order-events";
-import { Coffee, ChefHat, LayoutDashboard, LogOut, Sun, Moon, Printer, Wifi, WifiOff, Download, RefreshCw, ClipboardCheck, History, TrendingUp, ChevronDown, ChevronRight, User, Settings, PieChart, BarChart3, PackageSearch, Lock } from "lucide-react";
+import { Coffee, ChefHat, LayoutDashboard, LogOut, Sun, Moon, Printer, Wifi, WifiOff, Download, RefreshCw, ClipboardCheck, History, TrendingUp, ChevronDown, ChevronRight, User, Settings, PieChart, BarChart3, PackageSearch, Lock, Factory } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -376,6 +376,7 @@ export function MainLayout({ children }: MainLayoutProps) {
         { href: "/admin/purchases/suppliers", label: "Suppliers Directory" },
       ]
     },
+    { href: "/admin/manufacturing", label: "Manufacturing", icon: Factory, permission: "inventory:view" },
     { href: "/admin/stock-audits", label: "Stock Audits", icon: History, permission: "inventory:view" },
   ].filter(item => hasPermission(item.permission));
 

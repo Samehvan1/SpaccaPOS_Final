@@ -15,7 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { ArrowLeft, Plus, AlertTriangle, Search, Edit, Trash2, Link2, Star, StarOff, ChevronRight, Package, Tag, Layers, FlaskConical, Check, X, Droplet, Droplets, RefreshCw, CheckCircle2, ChevronsUpDown, Loader2 } from "lucide-react";
+import { ArrowLeft, Plus, AlertTriangle, Search, Edit, Trash2, Link2, Star, StarOff, ChevronRight, Package, Tag, Layers, FlaskConical, Check, X, Droplet, Droplets, RefreshCw, CheckCircle2, ChevronsUpDown, Loader2, Factory } from "lucide-react";
 
 const COMMON_UNITS = [
   "Kg", "Gram", "Liter", "ML", "Box", "Bag", "Bottle", "Cup", "Case", "Pack", "Gallon"
@@ -2439,14 +2439,21 @@ export default function IngredientsAdmin() {
 
   return (
     <div className="p-8 w-full flex flex-col gap-6 overflow-y-auto h-full">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" asChild>
-          <Link href="/admin"><ArrowLeft className="h-5 w-5" /></Link>
-        </Button>
-        <div>
-          <h1 className="text-3xl font-bold">Ingredients</h1>
-          <p className="text-muted-foreground mt-1">Manage inventory items, catalog categories, types, and volume definitions.</p>
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" asChild>
+            <Link href="/admin"><ArrowLeft className="h-5 w-5" /></Link>
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold">Ingredients</h1>
+            <p className="text-muted-foreground mt-1">Manage inventory items, catalog categories, types, and volume definitions.</p>
+          </div>
         </div>
+        <Button variant="outline" size="sm" asChild className="font-bold gap-2">
+          <Link href="/admin/manufacturing">
+            <Factory className="h-4 w-4 text-primary" /> Manufacturing & BOM
+          </Link>
+        </Button>
       </div>
 
       <Tabs defaultValue="inventory">

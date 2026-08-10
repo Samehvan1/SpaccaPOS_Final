@@ -24,6 +24,7 @@ import branchesRouter from "./branches";
 import financeRouter from "./finance";
 import suppliersRouter from "./suppliers";
 import purchasesRouter from "./purchases";
+import manufacturingRouter from "./manufacturing";
 import { db, branchesTable } from "@workspace/db";
 import { addSseClient } from "../lib/sse";
 import path from "path";
@@ -63,6 +64,8 @@ router.use("/roles", rolesRouter);
 router.use(financeRouter);
 router.use(suppliersRouter);
 router.use(purchasesRouter);
+router.use("/admin/manufacturing", manufacturingRouter);
+router.use("/manufacturing", manufacturingRouter);
 
 // Server-Sent Events endpoint for real-time order push
 router.get("/events", (req, res) => {

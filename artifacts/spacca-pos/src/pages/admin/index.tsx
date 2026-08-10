@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Coffee, Droplet, LayoutDashboard, LineChart, PackageSearch, BarChart2, Tag, ChefHat, Users, Ticket, UserCheck, History, Shield, Settings, Building2, Clock, Gift } from "lucide-react";
+import { Coffee, Droplet, LayoutDashboard, LineChart, PackageSearch, BarChart2, Tag, ChefHat, Users, Ticket, UserCheck, History, Shield, Settings, Building2, Clock, Gift, Factory } from "lucide-react";
 
 
 export default function AdminHub() {
@@ -40,6 +40,15 @@ export default function AdminHub() {
       href: "/admin/stock",
       color: "text-purple-500",
       bg: "bg-purple-500/10"
+    },
+    {
+      title: "Manufacturing & BOM",
+      description: "Define sauce recipes, prepare batches, auto-deduct inventory",
+      icon: Factory,
+      href: "/admin/manufacturing",
+      color: "text-cyan-500",
+      bg: "bg-cyan-500/10",
+      permission: "inventory:view"
     },
     {
       title: "Stock Audits & Deviations",

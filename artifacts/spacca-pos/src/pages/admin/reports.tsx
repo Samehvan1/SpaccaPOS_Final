@@ -281,39 +281,43 @@ export default function ReportsPage() {
     enabled: activeTab === "sales" && isDailyGrouped,
   });
 
-  // Drinks Report Processing
-  const drinkItems = useMemo(() => {
-    if (!reportOrders) return [];
-    return (reportOrders as any[]).flatMap((order: any) => (order.items || []).map((item: any) => {
-      const customizations = item.customizations || [];
-      const specialNotes = (item.specialNotes || "").trim();
-      
-      // Better customization check: compare with catalog defaults if available
-      let isActuallyCustomized = false;
-      if (specialNotes !== "") {
-        isActuallyCustomized = true;
-      } else {
-        const drinkInCatalog = allDrinksCatalog?.find((d: any) => d.id === item.drinkId) as any;
-        if (drinkInCatalog?.slots) {
-          const itemDefaults = buildDrinkDefaultsMap(drinkInCatalog.slots);
-          isActuallyCustomized = customizations.some((c: any) => checkCustomization(c, itemDefaults));
-        } else {
-          // If catalog not yet loaded, don't guess based on cost (defaults can have costs)
-          isActuallyCustomized = false;
-        }
+  // Sales Items Query for Drinks Report Tab (accurate full dataset)
+  const { data: salesItemsReport = [], isLoading: loadingSalesItems } = useQuery<any[]>({
+    queryKey: ["reports-sales-items", reportStartDate, reportEndDate, selectedBranchId, reportChannel],
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        startDate: reportStartDate,
+        endDate: reportEndDate,
+      });
+      if (selectedBranchId) params.append("branchId", String(selectedBranchId));
+      if (reportChannel !== "all") {
+        if (["store", "pos"].includes(reportChannel)) params.append("partnerId", "store");
+        else if (reportChannel === "kiosk") params.append("source", "kiosk");
+        else if (["partners", "all_partners"].includes(reportChannel)) params.append("partnerId", "all_partners");
+        else params.append("partnerId", reportChannel);
       }
+      const res = await fetch(`${API_BASE}/finance/sales-items?${params.toString()}`);
+      if (!res.ok) throw new Error("Failed to fetch sales items");
+      return res.json();
+    },
+    enabled: activeTab === "drinks" || activeTab === "dashboard",
+  });
 
-      return {
+  // Drinks Report Processing (Using salesItemsReport for full date range accuracy)
+  const drinkItems = useMemo(() => {
+    if (!salesItemsReport || salesItemsReport.length === 0) return [];
+    return (salesItemsReport as any[])
+      .map((item: any) => ({
         ...item,
-        orderId: order.id,
-        orderNumber: order.orderNumber,
-        createdAt: order.createdAt,
-        orderDiscount: parseFloat(order.discount || 0),
-        orderSubtotal: parseFloat(order.subtotal || 0),
-        isCustomized: isActuallyCustomized
-      };
-    })).filter(item => !showCustomizedOnly || item.isCustomized);
-  }, [reportOrders, allDrinksCatalog, showCustomizedOnly]);
+        drinkName: item.item,
+        lineTotal: item.totalGross,
+        orderId: item.invNo,
+        orderNumber: item.orderNo,
+        createdAt: item.date,
+        isCustomized: item.isCustomized === "Customize",
+      }))
+      .filter((item: any) => !showCustomizedOnly || item.isCustomized);
+  }, [salesItemsReport, showCustomizedOnly]);
 
   const groupedDrinkItems = useMemo(() => {
     const groups: Record<string, { drinkName: string; isCustomized: boolean; quantity: number; revenue: number }> = {};
@@ -441,49 +445,19 @@ export default function ReportsPage() {
   const handleExportDrinksCSV = async () => {
     setIsExportingDrinks(true);
     try {
-      const statusParam = reportStatus === "active" 
-        ? "pending,paid,completed,ready,in_progress" 
-        : (reportStatus === "all" 
-            ? "pending,paid,completed,ready,in_progress,cancelled,refunded" 
-            : reportStatus);
+      if (!salesItemsReport || salesItemsReport.length === 0) return;
 
-      const allOrders = await listOrders({
-        startDate: reportStartDate,
-        endDate: reportEndDate,
-        status: statusParam,
-        limit: 1000000,
-        branchId: selectedBranchId ? Number(selectedBranchId) : undefined
-      } as any);
-
-      if (!allOrders || allOrders.length === 0) return;
-
-      const localDrinkItems = allOrders.flatMap((order: any) => (order.items || []).map((item: any) => {
-        const customizations = item.customizations || [];
-        const specialNotes = (item.specialNotes || "").trim();
-        
-        let isActuallyCustomized = false;
-        if (specialNotes !== "") {
-          isActuallyCustomized = true;
-        } else {
-          const drinkInCatalog = allDrinksCatalog?.find((d: any) => d.id === item.drinkId) as any;
-          if (drinkInCatalog?.slots) {
-            const itemDefaults = buildDrinkDefaultsMap(drinkInCatalog.slots);
-            isActuallyCustomized = customizations.some((c: any) => checkCustomization(c, itemDefaults));
-          } else {
-            isActuallyCustomized = false;
-          }
-        }
-
-        return {
+      const localDrinkItems = (salesItemsReport as any[])
+        .map((item: any) => ({
           ...item,
-          orderId: order.id,
-          orderNumber: order.orderNumber,
-          createdAt: order.createdAt,
-          orderDiscount: parseFloat(order.discount || 0),
-          orderSubtotal: parseFloat(order.subtotal || 0),
-          isCustomized: isActuallyCustomized
-        };
-      })).filter(item => !showCustomizedOnly || item.isCustomized);
+          drinkName: item.item,
+          lineTotal: item.totalGross,
+          orderId: item.invNo,
+          orderNumber: item.orderNo,
+          createdAt: item.date,
+          isCustomized: item.isCustomized === "Customize",
+        }))
+        .filter((item: any) => !showCustomizedOnly || item.isCustomized);
 
       if (drinksView === "grouped") {
         const groups: Record<string, { drinkName: string; isCustomized: boolean; quantity: number; revenue: number }> = {};
@@ -536,13 +510,11 @@ export default function ReportsPage() {
 
         const rows = localDrinkItems.map((item: any) => {
           const itemGross = item.lineTotal;
-          const itemNet = itemGross / 1.14;
-          const itemTax = itemGross - itemNet;
-          const orderBeforeTax = item.orderSubtotal / 1.14;
-          const discountRatio = orderBeforeTax > 0 ? item.orderDiscount / orderBeforeTax : 0;
-          const itemDiscountAmt = itemNet * discountRatio;
-          const itemAfterDiscount = itemNet - itemDiscountAmt;
-          const itemFinalPrice = itemAfterDiscount + itemTax;
+          const itemNet = item.netBeforeTax || (itemGross / 1.14);
+          const itemTax = item.taxAmount || (itemGross - itemNet);
+          const itemDiscountAmt = item.discountAmount || 0;
+          const itemAfterDiscount = item.subtotalPrice || (itemNet - itemDiscountAmt);
+          const itemFinalPrice = item.finalPrice || (itemAfterDiscount + itemTax);
 
           return [
             item.drinkName,
@@ -560,13 +532,11 @@ export default function ReportsPage() {
         // Calculate totals for individual drinks
         const totals = localDrinkItems.reduce((acc: any, item: any) => {
           const itemGross = item.lineTotal;
-          const itemNet = itemGross / 1.14;
-          const itemTax = itemGross - itemNet;
-          const orderBeforeTax = item.orderSubtotal / 1.14;
-          const discountRatio = orderBeforeTax > 0 ? item.orderDiscount / orderBeforeTax : 0;
-          const itemDiscountAmt = itemNet * discountRatio;
-          const itemAfterDiscount = itemNet - itemDiscountAmt;
-          const itemFinalPrice = itemAfterDiscount + itemTax;
+          const itemNet = item.netBeforeTax || (itemGross / 1.14);
+          const itemTax = item.taxAmount || (itemGross - itemNet);
+          const itemDiscountAmt = item.discountAmount || 0;
+          const itemAfterDiscount = item.subtotalPrice || (itemNet - itemDiscountAmt);
+          const itemFinalPrice = item.finalPrice || (itemAfterDiscount + itemTax);
 
           acc.gross += itemGross;
           acc.net += itemNet;

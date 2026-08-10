@@ -20807,27 +20807,27 @@ var require_router = __commonJS({
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var methods = METHODS.map((method) => method.toLowerCase());
-    module.exports = Router27;
+    module.exports = Router28;
     module.exports.Route = Route;
-    function Router27(options) {
-      if (!(this instanceof Router27)) {
-        return new Router27(options);
+    function Router28(options) {
+      if (!(this instanceof Router28)) {
+        return new Router28(options);
       }
       const opts = options || {};
-      function router22(req, res, next) {
-        router22.handle(req, res, next);
+      function router23(req, res, next) {
+        router23.handle(req, res, next);
       }
-      Object.setPrototypeOf(router22, this);
-      router22.caseSensitive = opts.caseSensitive;
-      router22.mergeParams = opts.mergeParams;
-      router22.params = {};
-      router22.strict = opts.strict;
-      router22.stack = [];
-      return router22;
+      Object.setPrototypeOf(router23, this);
+      router23.caseSensitive = opts.caseSensitive;
+      router23.mergeParams = opts.mergeParams;
+      router23.params = {};
+      router23.strict = opts.strict;
+      router23.stack = [];
+      return router23;
     }
-    Router27.prototype = function() {
+    Router28.prototype = function() {
     };
-    Router27.prototype.param = function param(name, fn) {
+    Router28.prototype.param = function param(name, fn) {
       if (!name) {
         throw new TypeError("argument name is required");
       }
@@ -20847,7 +20847,7 @@ var require_router = __commonJS({
       params.push(fn);
       return this;
     };
-    Router27.prototype.handle = function handle(req, res, callback) {
+    Router28.prototype.handle = function handle(req, res, callback) {
       if (!callback) {
         throw new TypeError("argument callback is required");
       }
@@ -20974,7 +20974,7 @@ var require_router = __commonJS({
         }
       }
     };
-    Router27.prototype.use = function use(handler) {
+    Router28.prototype.use = function use(handler) {
       let offset = 0;
       let path7 = "/";
       if (typeof handler !== "function") {
@@ -21007,7 +21007,7 @@ var require_router = __commonJS({
       }
       return this;
     };
-    Router27.prototype.route = function route(path7) {
+    Router28.prototype.route = function route(path7) {
       const route2 = new Route(path7);
       const layer = new Layer(path7, {
         sensitive: this.caseSensitive,
@@ -21022,7 +21022,7 @@ var require_router = __commonJS({
       return route2;
     };
     methods.concat("all").forEach(function(method) {
-      Router27.prototype[method] = function(path7) {
+      Router28.prototype[method] = function(path7) {
         const route = this.route(path7);
         route[method].apply(route, slice.call(arguments, 1));
         return this;
@@ -21205,13 +21205,13 @@ var require_application = __commonJS({
     var compileTrust = require_utils3().compileTrust;
     var resolve2 = __require("node:path").resolve;
     var once = require_once();
-    var Router27 = require_router();
+    var Router28 = require_router();
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var app2 = exports = module.exports = {};
     var trustProxyDefaultSymbol = "@@symbol:trust_proxy_default";
     app2.init = function init() {
-      var router22 = null;
+      var router23 = null;
       this.cache = /* @__PURE__ */ Object.create(null);
       this.engines = /* @__PURE__ */ Object.create(null);
       this.settings = /* @__PURE__ */ Object.create(null);
@@ -21220,13 +21220,13 @@ var require_application = __commonJS({
         configurable: true,
         enumerable: true,
         get: function getrouter() {
-          if (router22 === null) {
-            router22 = new Router27({
+          if (router23 === null) {
+            router23 = new Router28({
               caseSensitive: this.enabled("case sensitive routing"),
               strict: this.enabled("strict routing")
             });
           }
-          return router22;
+          return router23;
         }
       });
     };
@@ -21297,15 +21297,15 @@ var require_application = __commonJS({
       if (fns.length === 0) {
         throw new TypeError("app.use() requires a middleware function");
       }
-      var router22 = this.router;
+      var router23 = this.router;
       fns.forEach(function(fn2) {
         if (!fn2 || !fn2.handle || !fn2.set) {
-          return router22.use(path7, fn2);
+          return router23.use(path7, fn2);
         }
         debug(".use app under %s", path7);
         fn2.mountpath = path7;
         fn2.parent = this;
-        router22.use(path7, function mounted_app(req, res, next) {
+        router23.use(path7, function mounted_app(req, res, next) {
           var orig = req.app;
           fn2.handle(req, res, function(err) {
             Object.setPrototypeOf(req, orig.request);
@@ -23832,7 +23832,7 @@ var require_express = __commonJS({
     var EventEmitter = __require("node:events").EventEmitter;
     var mixin = require_merge_descriptors();
     var proto = require_application();
-    var Router27 = require_router();
+    var Router28 = require_router();
     var req = require_request();
     var res = require_response();
     exports = module.exports = createApplication;
@@ -23854,8 +23854,8 @@ var require_express = __commonJS({
     exports.application = proto;
     exports.request = req;
     exports.response = res;
-    exports.Route = Router27.Route;
-    exports.Router = Router27;
+    exports.Route = Router28.Route;
+    exports.Router = Router28;
     exports.json = bodyParser.json;
     exports.raw = bodyParser.raw;
     exports.static = require_serve_static();
@@ -36340,10 +36340,10 @@ var init_subquery = __esm({
     init_entity();
     Subquery = class {
       static [entityKind] = "Subquery";
-      constructor(sql3, fields, alias2, isWith = false, usedTables = []) {
+      constructor(sql4, fields, alias2, isWith = false, usedTables = []) {
         this._ = {
           brand: "Subquery",
-          sql: sql3,
+          sql: sql4,
           selectedFields: fields,
           alias: alias2,
           isWith,
@@ -42967,10 +42967,10 @@ var init_raw = __esm({
     init_entity();
     init_query_promise();
     PgRaw = class extends QueryPromise {
-      constructor(execute, sql3, query, mapBatchResult) {
+      constructor(execute, sql4, query, mapBatchResult) {
         super();
         this.execute = execute;
-        this.sql = sql3;
+        this.sql = sql4;
         this.query = query;
         this.mapBatchResult = mapBatchResult;
       }
@@ -43290,8 +43290,8 @@ var init_db = __esm({
 });
 
 // ../../node_modules/.pnpm/drizzle-orm@0.45.1_@types+pg@8.18.0_pg@8.20.0/node_modules/drizzle-orm/cache/core/cache.js
-async function hashQuery(sql3, params) {
-  const dataToHash = `${sql3}-${JSON.stringify(params)}`;
+async function hashQuery(sql4, params) {
+  const dataToHash = `${sql4}-${JSON.stringify(params)}`;
   const encoder = new TextEncoder();
   const data = encoder.encode(dataToHash);
   const hashBuffer = await crypto.subtle.digest("SHA-256", data);
@@ -56452,7 +56452,7 @@ var init_stock = __esm({
       ingredientId: integer("ingredient_id").notNull().references(() => ingredientsTable.id),
       orderId: integer("order_id").references(() => ordersTable.id, { onDelete: "set null" }),
       movementType: text("movement_type", {
-        enum: ["sale", "restock", "adjustment", "waste", "opening", "calibration", "testing"]
+        enum: ["sale", "restock", "adjustment", "waste", "opening", "calibration", "testing", "manufacture_consume", "manufacture_produce"]
       }).notNull(),
       quantity: numeric("quantity", { precision: 12, scale: 4 }).notNull(),
       quantityAfter: numeric("quantity_after", { precision: 12, scale: 4 }).notNull(),
@@ -56867,10 +56867,70 @@ var init_shift_close = __esm({
   }
 });
 
+// ../../lib/db/src/schema/manufacturing.ts
+var bomsTable, bomItemsTable, manufacturingRunsTable, manufacturingRunItemsTable, insertBomSchema, insertBomItemSchema, insertManufacturingRunSchema, insertManufacturingRunItemSchema;
+var init_manufacturing = __esm({
+  "../../lib/db/src/schema/manufacturing.ts"() {
+    "use strict";
+    init_pg_core();
+    init_drizzle_zod();
+    init_ingredients();
+    init_branches();
+    init_users();
+    bomsTable = pgTable("boms", {
+      id: serial("id").primaryKey(),
+      targetIngredientId: integer("target_ingredient_id").notNull().unique().references(() => ingredientsTable.id, { onDelete: "cascade" }),
+      yieldQuantity: numeric("yield_quantity", { precision: 12, scale: 4 }).notNull().default("1"),
+      yieldUnit: text("yield_unit").notNull().default("ml"),
+      notes: text("notes"),
+      isActive: boolean("is_active").notNull().default(true),
+      createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+      updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => /* @__PURE__ */ new Date())
+    });
+    bomItemsTable = pgTable("bom_items", {
+      id: serial("id").primaryKey(),
+      bomId: integer("bom_id").notNull().references(() => bomsTable.id, { onDelete: "cascade" }),
+      ingredientId: integer("ingredient_id").notNull().references(() => ingredientsTable.id, { onDelete: "cascade" }),
+      quantity: numeric("quantity", { precision: 12, scale: 4 }).notNull(),
+      unit: text("unit").notNull(),
+      createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+      updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => /* @__PURE__ */ new Date())
+    });
+    manufacturingRunsTable = pgTable("manufacturing_runs", {
+      id: serial("id").primaryKey(),
+      branchId: integer("branch_id").notNull().references(() => branchesTable.id, { onDelete: "cascade" }),
+      targetIngredientId: integer("target_ingredient_id").notNull().references(() => ingredientsTable.id, { onDelete: "cascade" }),
+      producedQuantity: numeric("produced_quantity", { precision: 12, scale: 4 }).notNull(),
+      producedUnit: text("produced_unit").notNull(),
+      totalCost: numeric("total_cost", { precision: 12, scale: 4 }).notNull().default("0"),
+      status: text("status", { enum: ["completed", "cancelled"] }).notNull().default("completed"),
+      preparedBy: integer("prepared_by").notNull().references(() => usersTable.id),
+      notes: text("notes"),
+      createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+    });
+    manufacturingRunItemsTable = pgTable("manufacturing_run_items", {
+      id: serial("id").primaryKey(),
+      manufacturingRunId: integer("manufacturing_run_id").notNull().references(() => manufacturingRunsTable.id, { onDelete: "cascade" }),
+      ingredientId: integer("ingredient_id").notNull().references(() => ingredientsTable.id, { onDelete: "cascade" }),
+      plannedQuantity: numeric("planned_quantity", { precision: 12, scale: 4 }).notNull(),
+      actualQuantity: numeric("actual_quantity", { precision: 12, scale: 4 }).notNull(),
+      unit: text("unit").notNull(),
+      unitCost: numeric("unit_cost", { precision: 12, scale: 4 }).notNull().default("0"),
+      totalCost: numeric("total_cost", { precision: 12, scale: 4 }).notNull().default("0")
+    });
+    insertBomSchema = createInsertSchema(bomsTable).omit({ id: true, createdAt: true, updatedAt: true });
+    insertBomItemSchema = createInsertSchema(bomItemsTable).omit({ id: true, createdAt: true, updatedAt: true });
+    insertManufacturingRunSchema = createInsertSchema(manufacturingRunsTable).omit({ id: true, createdAt: true });
+    insertManufacturingRunItemSchema = createInsertSchema(manufacturingRunItemsTable).omit({ id: true });
+  }
+});
+
 // ../../lib/db/src/schema/index.ts
 var schema_exports = {};
 __export(schema_exports, {
   activityLogsTable: () => activityLogsTable,
+  bomItemsTable: () => bomItemsTable,
+  bomsTable: () => bomsTable,
   branchDrinkPricesTable: () => branchDrinkPricesTable,
   branchDrinkStatusTable: () => branchDrinkStatusTable,
   branchInventoryBatchesTable: () => branchInventoryBatchesTable,
@@ -56894,6 +56954,8 @@ __export(schema_exports, {
   ingredientVolumesTable: () => ingredientVolumesTable,
   ingredientsTable: () => ingredientsTable,
   insertActivityLogSchema: () => insertActivityLogSchema,
+  insertBomItemSchema: () => insertBomItemSchema,
+  insertBomSchema: () => insertBomSchema,
   insertBranchInventoryBatchSchema: () => insertBranchInventoryBatchSchema,
   insertBranchSchema: () => insertBranchSchema,
   insertBranchStockSchema: () => insertBranchStockSchema,
@@ -56911,6 +56973,8 @@ __export(schema_exports, {
   insertIngredientTypeVolumeSchema: () => insertIngredientTypeVolumeSchema,
   insertIngredientVolumeSchema: () => insertIngredientVolumeSchema,
   insertKitchenStationSchema: () => insertKitchenStationSchema,
+  insertManufacturingRunItemSchema: () => insertManufacturingRunItemSchema,
+  insertManufacturingRunSchema: () => insertManufacturingRunSchema,
   insertOfferSchema: () => insertOfferSchema,
   insertOrderSchema: () => insertOrderSchema,
   insertPartnerDrinkPriceSchema: () => insertPartnerDrinkPriceSchema,
@@ -56929,6 +56993,8 @@ __export(schema_exports, {
   insertUserPermissionSchema: () => insertUserPermissionSchema,
   insertUserSchema: () => insertUserSchema,
   kitchenStationsTable: () => kitchenStationsTable,
+  manufacturingRunItemsTable: () => manufacturingRunItemsTable,
+  manufacturingRunsTable: () => manufacturingRunsTable,
   offersApplicableDrinksTable: () => offersApplicableDrinksTable,
   offersBranchesTable: () => offersBranchesTable,
   offersExcludedDrinksTable: () => offersExcludedDrinksTable,
@@ -56990,6 +57056,7 @@ var init_schema2 = __esm({
     init_branch_drink_prices();
     init_partners();
     init_shift_close();
+    init_manufacturing();
   }
 });
 
@@ -57044,6 +57111,8 @@ var init_migrator2 = __esm({
 var src_exports = {};
 __export(src_exports, {
   activityLogsTable: () => activityLogsTable,
+  bomItemsTable: () => bomItemsTable,
+  bomsTable: () => bomsTable,
   branchDrinkPricesTable: () => branchDrinkPricesTable,
   branchDrinkStatusTable: () => branchDrinkStatusTable,
   branchInventoryBatchesTable: () => branchInventoryBatchesTable,
@@ -57068,6 +57137,8 @@ __export(src_exports, {
   ingredientVolumesTable: () => ingredientVolumesTable,
   ingredientsTable: () => ingredientsTable,
   insertActivityLogSchema: () => insertActivityLogSchema,
+  insertBomItemSchema: () => insertBomItemSchema,
+  insertBomSchema: () => insertBomSchema,
   insertBranchInventoryBatchSchema: () => insertBranchInventoryBatchSchema,
   insertBranchSchema: () => insertBranchSchema,
   insertBranchStockSchema: () => insertBranchStockSchema,
@@ -57085,6 +57156,8 @@ __export(src_exports, {
   insertIngredientTypeVolumeSchema: () => insertIngredientTypeVolumeSchema,
   insertIngredientVolumeSchema: () => insertIngredientVolumeSchema,
   insertKitchenStationSchema: () => insertKitchenStationSchema,
+  insertManufacturingRunItemSchema: () => insertManufacturingRunItemSchema,
+  insertManufacturingRunSchema: () => insertManufacturingRunSchema,
   insertOfferSchema: () => insertOfferSchema,
   insertOrderSchema: () => insertOrderSchema,
   insertPartnerDrinkPriceSchema: () => insertPartnerDrinkPriceSchema,
@@ -57103,6 +57176,8 @@ __export(src_exports, {
   insertUserPermissionSchema: () => insertUserPermissionSchema,
   insertUserSchema: () => insertUserSchema,
   kitchenStationsTable: () => kitchenStationsTable,
+  manufacturingRunItemsTable: () => manufacturingRunItemsTable,
+  manufacturingRunsTable: () => manufacturingRunsTable,
   offersApplicableDrinksTable: () => offersApplicableDrinksTable,
   offersBranchesTable: () => offersBranchesTable,
   offersExcludedDrinksTable: () => offersExcludedDrinksTable,
@@ -74101,7 +74176,7 @@ import fs7 from "fs";
 import { exec as exec2 } from "child_process";
 
 // src/app.ts
-var import_express27 = __toESM(require_express2(), 1);
+var import_express28 = __toESM(require_express2(), 1);
 var import_cors = __toESM(require_lib3(), 1);
 var import_pino_http = __toESM(require_logger(), 1);
 var import_express_session = __toESM(require_express_session(), 1);
@@ -74112,7 +74187,7 @@ import fs6 from "fs";
 import { fileURLToPath as fileURLToPath3 } from "url";
 
 // src/routes/index.ts
-var import_express26 = __toESM(require_express2(), 1);
+var import_express27 = __toESM(require_express2(), 1);
 
 // src/routes/health.ts
 var import_express = __toESM(require_express2(), 1);
@@ -79694,7 +79769,8 @@ var ListStockMovementsQueryParams2 = ListStockMovementsQueryParams.extend({
   movementType: external_exports2.string().optional()
 });
 var ListStockMovementsResponseItem2 = ListStockMovementsResponseItem.extend({
-  branchId: external_exports2.number().nullish()
+  branchId: external_exports2.number().nullish(),
+  movementType: external_exports2.string()
 });
 var ListStockMovementsResponse2 = external_exports2.array(
   ListStockMovementsResponseItem2
@@ -91025,36 +91101,532 @@ purchasesRouter.delete("/purchases/:id", requirePermission("purchases:manage"), 
 });
 var purchases_default = purchasesRouter;
 
+// src/routes/manufacturing.ts
+var import_express26 = __toESM(require_express2(), 1);
+init_drizzle_orm();
+init_src();
+var router21 = (0, import_express26.Router)();
+var SaveBomSchema = external_exports2.object({
+  targetIngredientId: external_exports2.number().int().positive(),
+  yieldQuantity: external_exports2.number().positive(),
+  yieldUnit: external_exports2.string().min(1),
+  notes: external_exports2.string().optional().nullable(),
+  items: external_exports2.array(
+    external_exports2.object({
+      ingredientId: external_exports2.number().int().positive(),
+      quantity: external_exports2.number().positive(),
+      unit: external_exports2.string().min(1)
+    })
+  ).min(1, "At least one BOM item is required")
+});
+var CalculateProcessSchema = external_exports2.object({
+  targetIngredientId: external_exports2.number().int().positive(),
+  processedQuantity: external_exports2.number().positive(),
+  branchId: external_exports2.number().int().positive().optional()
+});
+var SubmitProcessSchema = external_exports2.object({
+  branchId: external_exports2.number().int().positive(),
+  targetIngredientId: external_exports2.number().int().positive(),
+  producedQuantity: external_exports2.number().positive(),
+  producedUnit: external_exports2.string().min(1),
+  notes: external_exports2.string().optional().nullable(),
+  items: external_exports2.array(
+    external_exports2.object({
+      ingredientId: external_exports2.number().int().positive(),
+      plannedQuantity: external_exports2.number().min(0),
+      actualQuantity: external_exports2.number().min(0),
+      unit: external_exports2.string().min(1)
+    })
+  ).min(1, "At least one raw ingredient component is required")
+});
+router21.get("/boms", async (req, res) => {
+  try {
+    const allBoms = await db.select({
+      bom: bomsTable,
+      targetIngredient: ingredientsTable
+    }).from(bomsTable).innerJoin(ingredientsTable, eq(bomsTable.targetIngredientId, ingredientsTable.id)).where(eq(bomsTable.isActive, true)).orderBy(desc(bomsTable.updatedAt));
+    const bomIds = allBoms.map((b) => b.bom.id);
+    let allBomItems = [];
+    if (bomIds.length > 0) {
+      allBomItems = await db.select({
+        item: bomItemsTable,
+        ingredient: ingredientsTable
+      }).from(bomItemsTable).innerJoin(ingredientsTable, eq(bomItemsTable.ingredientId, ingredientsTable.id)).where(inArray(bomItemsTable.bomId, bomIds));
+    }
+    const itemsByBomId = {};
+    for (const row of allBomItems) {
+      if (!itemsByBomId[row.item.bomId]) {
+        itemsByBomId[row.item.bomId] = [];
+      }
+      itemsByBomId[row.item.bomId].push({
+        id: row.item.id,
+        bomId: row.item.bomId,
+        ingredientId: row.item.ingredientId,
+        ingredientName: row.ingredient.name,
+        ingredientUnit: row.ingredient.unit,
+        costPerUnit: parseFloat(row.ingredient.costPerUnit || "0"),
+        quantity: parseFloat(row.item.quantity || "0"),
+        unit: row.item.unit,
+        totalItemCost: parseFloat(row.item.quantity || "0") * parseFloat(row.ingredient.costPerUnit || "0")
+      });
+    }
+    const result = allBoms.map(({ bom, targetIngredient }) => {
+      const items = itemsByBomId[bom.id] || [];
+      const totalFormulaCost = items.reduce((sum2, i) => sum2 + i.totalItemCost, 0);
+      const yieldQty = parseFloat(bom.yieldQuantity || "1");
+      const estimatedCostPerUnit = yieldQty > 0 ? totalFormulaCost / yieldQty : 0;
+      return {
+        id: bom.id,
+        targetIngredientId: bom.targetIngredientId,
+        targetIngredientName: targetIngredient.name,
+        targetIngredientUnit: targetIngredient.unit,
+        targetIngredientType: targetIngredient.ingredientType,
+        yieldQuantity: yieldQty,
+        yieldUnit: bom.yieldUnit,
+        notes: bom.notes,
+        isActive: bom.isActive,
+        createdAt: bom.createdAt,
+        updatedAt: bom.updatedAt,
+        totalFormulaCost,
+        estimatedCostPerUnit,
+        items
+      };
+    });
+    res.json(serializeDates(result));
+  } catch (error40) {
+    console.error("[manufacturing] Failed to fetch BOMs:", error40);
+    res.status(500).json({ error: error40.message || "Failed to fetch BOM list" });
+  }
+});
+router21.get("/boms/:targetIngredientId", async (req, res) => {
+  try {
+    const targetIngredientId = parseInt(req.params.targetIngredientId, 10);
+    if (isNaN(targetIngredientId)) {
+      res.status(400).json({ error: "Invalid target ingredient ID" });
+      return;
+    }
+    const bomRow = await db.select({
+      bom: bomsTable,
+      targetIngredient: ingredientsTable
+    }).from(bomsTable).innerJoin(ingredientsTable, eq(bomsTable.targetIngredientId, ingredientsTable.id)).where(eq(bomsTable.targetIngredientId, targetIngredientId)).limit(1);
+    if (bomRow.length === 0) {
+      res.status(404).json({ error: "BOM formula not found for this ingredient" });
+      return;
+    }
+    const { bom, targetIngredient } = bomRow[0];
+    const itemsRows = await db.select({
+      item: bomItemsTable,
+      ingredient: ingredientsTable
+    }).from(bomItemsTable).innerJoin(ingredientsTable, eq(bomItemsTable.ingredientId, ingredientsTable.id)).where(eq(bomItemsTable.bomId, bom.id));
+    const items = itemsRows.map(({ item, ingredient }) => ({
+      id: item.id,
+      bomId: item.bomId,
+      ingredientId: item.ingredientId,
+      ingredientName: ingredient.name,
+      ingredientUnit: ingredient.unit,
+      costPerUnit: parseFloat(ingredient.costPerUnit || "0"),
+      quantity: parseFloat(item.quantity || "0"),
+      unit: item.unit,
+      totalItemCost: parseFloat(item.quantity || "0") * parseFloat(ingredient.costPerUnit || "0")
+    }));
+    const totalFormulaCost = items.reduce((sum2, i) => sum2 + i.totalItemCost, 0);
+    const yieldQty = parseFloat(bom.yieldQuantity || "1");
+    const estimatedCostPerUnit = yieldQty > 0 ? totalFormulaCost / yieldQty : 0;
+    res.json(
+      serializeDates({
+        id: bom.id,
+        targetIngredientId: bom.targetIngredientId,
+        targetIngredientName: targetIngredient.name,
+        targetIngredientUnit: targetIngredient.unit,
+        targetIngredientType: targetIngredient.ingredientType,
+        yieldQuantity: yieldQty,
+        yieldUnit: bom.yieldUnit,
+        notes: bom.notes,
+        isActive: bom.isActive,
+        createdAt: bom.createdAt,
+        updatedAt: bom.updatedAt,
+        totalFormulaCost,
+        estimatedCostPerUnit,
+        items
+      })
+    );
+  } catch (error40) {
+    console.error("[manufacturing] Failed to fetch BOM:", error40);
+    res.status(500).json({ error: error40.message || "Failed to fetch BOM details" });
+  }
+});
+router21.post("/boms", async (req, res) => {
+  try {
+    const parsed = SaveBomSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.issues[0]?.message || "Invalid input data" });
+      return;
+    }
+    const { targetIngredientId, yieldQuantity, yieldUnit, notes, items } = parsed.data;
+    const [targetIng] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, targetIngredientId)).limit(1);
+    if (!targetIng) {
+      res.status(404).json({ error: "Target inventory item not found" });
+      return;
+    }
+    const savedBom = await db.transaction(async (tx) => {
+      const [existingBom] = await tx.select().from(bomsTable).where(eq(bomsTable.targetIngredientId, targetIngredientId)).limit(1);
+      let bomId;
+      if (existingBom) {
+        bomId = existingBom.id;
+        await tx.update(bomsTable).set({
+          yieldQuantity: yieldQuantity.toString(),
+          yieldUnit,
+          notes: notes || null,
+          isActive: true,
+          updatedAt: /* @__PURE__ */ new Date()
+        }).where(eq(bomsTable.id, bomId));
+        await tx.delete(bomItemsTable).where(eq(bomItemsTable.bomId, bomId));
+      } else {
+        const [inserted] = await tx.insert(bomsTable).values({
+          targetIngredientId,
+          yieldQuantity: yieldQuantity.toString(),
+          yieldUnit,
+          notes: notes || null,
+          isActive: true
+        }).returning();
+        bomId = inserted.id;
+      }
+      if (items.length > 0) {
+        await tx.insert(bomItemsTable).values(
+          items.map((i) => ({
+            bomId,
+            ingredientId: i.ingredientId,
+            quantity: i.quantity.toString(),
+            unit: i.unit
+          }))
+        );
+      }
+      return bomId;
+    });
+    res.json({ message: "BOM formula saved successfully", bomId: savedBom });
+  } catch (error40) {
+    console.error("[manufacturing] Failed to save BOM:", error40);
+    res.status(500).json({ error: error40.message || "Failed to save BOM formula" });
+  }
+});
+router21.delete("/boms/:id", async (req, res) => {
+  try {
+    const bomId = parseInt(req.params.id, 10);
+    if (isNaN(bomId)) {
+      res.status(400).json({ error: "Invalid BOM ID" });
+      return;
+    }
+    await db.delete(bomsTable).where(eq(bomsTable.id, bomId));
+    res.json({ message: "BOM formula deleted successfully" });
+  } catch (error40) {
+    console.error("[manufacturing] Failed to delete BOM:", error40);
+    res.status(500).json({ error: error40.message || "Failed to delete BOM formula" });
+  }
+});
+router21.post("/process/calculate", async (req, res) => {
+  try {
+    const parsed = CalculateProcessSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.issues[0]?.message || "Invalid input parameters" });
+      return;
+    }
+    const { targetIngredientId, processedQuantity, branchId } = parsed.data;
+    const [bom] = await db.select().from(bomsTable).where(and(eq(bomsTable.targetIngredientId, targetIngredientId), eq(bomsTable.isActive, true))).limit(1);
+    if (!bom) {
+      res.status(404).json({ error: "No active BOM formula found for this item" });
+      return;
+    }
+    const targetIngredient = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, targetIngredientId)).limit(1);
+    const baseYieldQty = parseFloat(bom.yieldQuantity || "1");
+    const multiplier = baseYieldQty > 0 ? processedQuantity / baseYieldQty : 1;
+    const rawBomItems = await db.select({
+      item: bomItemsTable,
+      ingredient: ingredientsTable
+    }).from(bomItemsTable).innerJoin(ingredientsTable, eq(bomItemsTable.ingredientId, ingredientsTable.id)).where(eq(bomItemsTable.bomId, bom.id));
+    let stockMap = {};
+    if (branchId) {
+      const stockRows = await db.select().from(branchStockTable).where(eq(branchStockTable.branchId, branchId));
+      for (const s of stockRows) {
+        stockMap[s.ingredientId] = parseFloat(s.stockQuantity || "0");
+      }
+    }
+    let calculatedBatchCost = 0;
+    const calculatedItems = rawBomItems.map(({ item, ingredient }) => {
+      const baseQty = parseFloat(item.quantity || "0");
+      const calculatedQty = parseFloat((baseQty * multiplier).toFixed(4));
+      const unitCost = parseFloat(ingredient.costPerUnit || "0");
+      const estimatedTotalCost = parseFloat((calculatedQty * unitCost).toFixed(4));
+      calculatedBatchCost += estimatedTotalCost;
+      const currentStock = stockMap[ingredient.id] ?? 0;
+      const isSufficientStock = branchId ? currentStock >= calculatedQty : true;
+      return {
+        ingredientId: ingredient.id,
+        ingredientName: ingredient.name,
+        ingredientUnit: ingredient.unit,
+        recipeBaseQty: baseQty,
+        recipeBaseUnit: item.unit,
+        calculatedQuantity: calculatedQty,
+        actualQuantity: calculatedQty,
+        // default for frontend editable input
+        unitCost,
+        estimatedTotalCost,
+        currentStock,
+        isSufficientStock
+      };
+    });
+    const estimatedFinishedCostPerUnit = processedQuantity > 0 ? calculatedBatchCost / processedQuantity : 0;
+    res.json({
+      targetIngredientId,
+      targetIngredientName: targetIngredient[0]?.name || "Unknown",
+      targetIngredientUnit: targetIngredient[0]?.unit || bom.yieldUnit,
+      processedQuantity,
+      baseYieldQuantity: baseYieldQty,
+      multiplier,
+      calculatedBatchCost: parseFloat(calculatedBatchCost.toFixed(4)),
+      estimatedFinishedCostPerUnit: parseFloat(estimatedFinishedCostPerUnit.toFixed(4)),
+      items: calculatedItems
+    });
+  } catch (error40) {
+    console.error("[manufacturing] Failed to calculate process:", error40);
+    res.status(500).json({ error: error40.message || "Failed to calculate preparation process" });
+  }
+});
+router21.post("/process/submit", async (req, res) => {
+  try {
+    const parsed = SubmitProcessSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.issues[0]?.message || "Invalid preparation process data" });
+      return;
+    }
+    const { branchId, targetIngredientId, producedQuantity, producedUnit, notes, items } = parsed.data;
+    const sessionUserId = req.session?.userId || 1;
+    const [branch] = await db.select().from(branchesTable).where(eq(branchesTable.id, branchId)).limit(1);
+    if (!branch) {
+      res.status(404).json({ error: "Branch not found" });
+      return;
+    }
+    const [targetIngredient] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, targetIngredientId)).limit(1);
+    if (!targetIngredient) {
+      res.status(404).json({ error: "Target manufactured ingredient not found" });
+      return;
+    }
+    const runResult = await db.transaction(async (tx) => {
+      const ingredientIds = items.map((i) => i.ingredientId);
+      const ingredientRows = await tx.select().from(ingredientsTable).where(inArray(ingredientsTable.id, ingredientIds));
+      const ingredientMap = Object.fromEntries(ingredientRows.map((ing) => [ing.id, ing]));
+      let totalBatchCost = 0;
+      const processedItemsData = [];
+      for (const item of items) {
+        const ing = ingredientMap[item.ingredientId];
+        const unitCost = parseFloat(ing?.costPerUnit || "0");
+        const totalItemCost = parseFloat((item.actualQuantity * unitCost).toFixed(4));
+        totalBatchCost += totalItemCost;
+        processedItemsData.push({
+          ingredientId: item.ingredientId,
+          plannedQuantity: item.plannedQuantity,
+          actualQuantity: item.actualQuantity,
+          unit: item.unit,
+          unitCost,
+          totalCost: totalItemCost
+        });
+      }
+      totalBatchCost = parseFloat(totalBatchCost.toFixed(4));
+      const finishedUnitCost = producedQuantity > 0 ? parseFloat((totalBatchCost / producedQuantity).toFixed(4)) : 0;
+      const [mRun] = await tx.insert(manufacturingRunsTable).values({
+        branchId,
+        targetIngredientId,
+        producedQuantity: producedQuantity.toString(),
+        producedUnit,
+        totalCost: totalBatchCost.toString(),
+        status: "completed",
+        preparedBy: sessionUserId,
+        notes: notes || null
+      }).returning();
+      if (processedItemsData.length > 0) {
+        await tx.insert(manufacturingRunItemsTable).values(
+          processedItemsData.map((pi) => ({
+            manufacturingRunId: mRun.id,
+            ingredientId: pi.ingredientId,
+            plannedQuantity: pi.plannedQuantity.toString(),
+            actualQuantity: pi.actualQuantity.toString(),
+            unit: pi.unit,
+            unitCost: pi.unitCost.toString(),
+            totalCost: pi.totalCost.toString()
+          }))
+        );
+      }
+      for (const item of items) {
+        if (item.actualQuantity <= 0) continue;
+        const [existingStock] = await tx.select().from(branchStockTable).where(and(eq(branchStockTable.branchId, branchId), eq(branchStockTable.ingredientId, item.ingredientId))).limit(1);
+        const currentQty = parseFloat(existingStock?.stockQuantity || "0");
+        const newQty = parseFloat((currentQty - item.actualQuantity).toFixed(4));
+        if (existingStock) {
+          await tx.update(branchStockTable).set({ stockQuantity: newQty.toString(), updatedAt: /* @__PURE__ */ new Date() }).where(and(eq(branchStockTable.branchId, branchId), eq(branchStockTable.ingredientId, item.ingredientId)));
+        } else {
+          await tx.insert(branchStockTable).values({
+            branchId,
+            ingredientId: item.ingredientId,
+            stockQuantity: newQty.toString()
+          });
+        }
+        await tx.insert(stockMovementsTable).values({
+          branchId,
+          ingredientId: item.ingredientId,
+          movementType: "manufacture_consume",
+          quantity: (-item.actualQuantity).toString(),
+          quantityAfter: newQty.toString(),
+          note: `Used in preparation run #${mRun.id} for ${targetIngredient.name} (${producedQuantity} ${producedUnit})`,
+          createdBy: sessionUserId
+        });
+      }
+      const [existingTargetStock] = await tx.select().from(branchStockTable).where(and(eq(branchStockTable.branchId, branchId), eq(branchStockTable.ingredientId, targetIngredientId))).limit(1);
+      const currentTargetQty = parseFloat(existingTargetStock?.stockQuantity || "0");
+      const newTargetQty = parseFloat((currentTargetQty + producedQuantity).toFixed(4));
+      if (existingTargetStock) {
+        await tx.update(branchStockTable).set({ stockQuantity: newTargetQty.toString(), updatedAt: /* @__PURE__ */ new Date() }).where(and(eq(branchStockTable.branchId, branchId), eq(branchStockTable.ingredientId, targetIngredientId)));
+      } else {
+        await tx.insert(branchStockTable).values({
+          branchId,
+          ingredientId: targetIngredientId,
+          stockQuantity: newTargetQty.toString()
+        });
+      }
+      await tx.insert(stockMovementsTable).values({
+        branchId,
+        ingredientId: targetIngredientId,
+        movementType: "manufacture_produce",
+        quantity: producedQuantity.toString(),
+        quantityAfter: newTargetQty.toString(),
+        note: `Produced in preparation run #${mRun.id}`,
+        createdBy: sessionUserId
+      });
+      if (finishedUnitCost > 0) {
+        await tx.update(ingredientsTable).set({ costPerUnit: finishedUnitCost.toString(), updatedAt: /* @__PURE__ */ new Date() }).where(eq(ingredientsTable.id, targetIngredientId));
+      }
+      return {
+        runId: mRun.id,
+        targetIngredientName: targetIngredient.name,
+        producedQuantity,
+        producedUnit,
+        totalBatchCost,
+        finishedUnitCost
+      };
+    });
+    res.json({
+      message: "Preparation process submitted successfully",
+      run: runResult
+    });
+  } catch (error40) {
+    console.error("[manufacturing] Failed to submit preparation process:", error40);
+    res.status(500).json({ error: error40.message || "Failed to submit preparation process" });
+  }
+});
+router21.get("/runs", async (req, res) => {
+  try {
+    const sessionUser = req.session;
+    const isAdmin = sessionUser.role === "admin" || sessionUser.role === "supervisor";
+    const sessionBranchId = sessionUser.branchId;
+    const queryBranchId = req.query.branchId && req.query.branchId !== "all" ? parseInt(req.query.branchId, 10) : isAdmin && (req.query.branchId === "all" || !req.query.branchId) ? null : sessionBranchId;
+    const conditions = [];
+    if (queryBranchId) {
+      conditions.push(eq(manufacturingRunsTable.branchId, queryBranchId));
+    }
+    if (req.query.targetIngredientId) {
+      const ingId = parseInt(req.query.targetIngredientId, 10);
+      if (!isNaN(ingId)) conditions.push(eq(manufacturingRunsTable.targetIngredientId, ingId));
+    }
+    if (req.query.startDate) {
+      conditions.push(gte(manufacturingRunsTable.createdAt, startOfDay2(new Date(req.query.startDate))));
+    }
+    if (req.query.endDate) {
+      conditions.push(lte(manufacturingRunsTable.createdAt, endOfDay2(new Date(req.query.endDate))));
+    }
+    const runs = await db.select({
+      run: manufacturingRunsTable,
+      targetIngredient: ingredientsTable,
+      branch: branchesTable,
+      preparedByUser: usersTable
+    }).from(manufacturingRunsTable).innerJoin(ingredientsTable, eq(manufacturingRunsTable.targetIngredientId, ingredientsTable.id)).innerJoin(branchesTable, eq(manufacturingRunsTable.branchId, branchesTable.id)).innerJoin(usersTable, eq(manufacturingRunsTable.preparedBy, usersTable.id)).where(conditions.length ? and(...conditions) : void 0).orderBy(desc(manufacturingRunsTable.createdAt)).limit(100);
+    const runIds = runs.map((r) => r.run.id);
+    let runItemsRows = [];
+    if (runIds.length > 0) {
+      runItemsRows = await db.select({
+        runItem: manufacturingRunItemsTable,
+        ingredient: ingredientsTable
+      }).from(manufacturingRunItemsTable).innerJoin(ingredientsTable, eq(manufacturingRunItemsTable.ingredientId, ingredientsTable.id)).where(inArray(manufacturingRunItemsTable.manufacturingRunId, runIds));
+    }
+    const itemsByRunId = {};
+    for (const row of runItemsRows) {
+      if (!itemsByRunId[row.runItem.manufacturingRunId]) {
+        itemsByRunId[row.runItem.manufacturingRunId] = [];
+      }
+      itemsByRunId[row.runItem.manufacturingRunId].push({
+        id: row.runItem.id,
+        ingredientId: row.runItem.ingredientId,
+        ingredientName: row.ingredient.name,
+        plannedQuantity: parseFloat(row.runItem.plannedQuantity || "0"),
+        actualQuantity: parseFloat(row.runItem.actualQuantity || "0"),
+        unit: row.runItem.unit,
+        unitCost: parseFloat(row.runItem.unitCost || "0"),
+        totalCost: parseFloat(row.runItem.totalCost || "0")
+      });
+    }
+    const result = runs.map(({ run, targetIngredient, branch, preparedByUser }) => ({
+      id: run.id,
+      branchId: run.branchId,
+      branchName: branch.name,
+      targetIngredientId: run.targetIngredientId,
+      targetIngredientName: targetIngredient.name,
+      producedQuantity: parseFloat(run.producedQuantity || "0"),
+      producedUnit: run.producedUnit,
+      totalCost: parseFloat(run.totalCost || "0"),
+      status: run.status,
+      preparedById: run.preparedBy,
+      preparedByName: preparedByUser.name,
+      notes: run.notes,
+      createdAt: run.createdAt,
+      items: itemsByRunId[run.id] || []
+    }));
+    res.json(serializeDates(result));
+  } catch (error40) {
+    console.error("[manufacturing] Failed to fetch manufacturing runs history:", error40);
+    res.status(500).json({ error: error40.message || "Failed to fetch manufacturing runs history" });
+  }
+});
+var manufacturing_default = router21;
+
 // src/routes/index.ts
 init_sse();
-var router21 = (0, import_express26.Router)();
-router21.get("/health-test", (req, res) => res.send("OK"));
-router21.use("/admin/branches", branches_default);
-router21.use(health_default);
-router21.use(auth_default);
-router21.use(drinks_default);
-router21.use(ingredients_default);
-router21.use(orders_default);
-router21.use(stock_default);
-router21.use(dashboard_default);
-router21.use(catalog_default);
-router21.use(drink_categories_default);
-router21.use(kitchen_stations_default);
-router21.use(settings_default);
-router21.use(predefined_slots_default);
-router21.use(users_default);
-router21.use(discounts_default);
-router21.use(offers_default);
-router21.use(customers_default);
-router21.use(tags_default);
-router21.use(cashier_sessions_default);
-router21.use(admin_default);
-router21.use(stock_audits_default);
-router21.use("/roles", roles_default);
-router21.use(finance_default);
-router21.use(suppliers_default);
-router21.use(purchases_default);
-router21.get("/events", (req, res) => {
+var router22 = (0, import_express27.Router)();
+router22.get("/health-test", (req, res) => res.send("OK"));
+router22.use("/admin/branches", branches_default);
+router22.use(health_default);
+router22.use(auth_default);
+router22.use(drinks_default);
+router22.use(ingredients_default);
+router22.use(orders_default);
+router22.use(stock_default);
+router22.use(dashboard_default);
+router22.use(catalog_default);
+router22.use(drink_categories_default);
+router22.use(kitchen_stations_default);
+router22.use(settings_default);
+router22.use(predefined_slots_default);
+router22.use(users_default);
+router22.use(discounts_default);
+router22.use(offers_default);
+router22.use(customers_default);
+router22.use(tags_default);
+router22.use(cashier_sessions_default);
+router22.use(admin_default);
+router22.use(stock_audits_default);
+router22.use("/roles", roles_default);
+router22.use(finance_default);
+router22.use(suppliers_default);
+router22.use(purchases_default);
+router22.use("/admin/manufacturing", manufacturing_default);
+router22.use("/manufacturing", manufacturing_default);
+router22.get("/events", (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache, no-transform");
   res.setHeader("X-Accel-Buffering", "no");
@@ -91063,7 +91635,7 @@ router21.get("/events", (req, res) => {
   res.write("event: connected\ndata: {}\n\n");
   addSseClient(res);
 });
-var routes_default = router21;
+var routes_default = router22;
 
 // src/lib/logger.ts
 var import_pino = __toESM(require_pino(), 1);
@@ -91085,7 +91657,7 @@ var logger = (0, import_pino.default)({
 
 // src/app.ts
 var PostgresStore = (0, import_connect_pg_simple.default)(import_express_session.default);
-var app = (0, import_express27.default)();
+var app = (0, import_express28.default)();
 app.set("json replacer", (_key2, value) => {
   if (value instanceof Date) return value.toISOString();
   return value;
@@ -91111,8 +91683,8 @@ app.use(
 );
 app.set("trust proxy", 1);
 app.use((0, import_cors.default)({ credentials: true, origin: true, exposedHeaders: ["X-Total-Count"] }));
-app.use(import_express27.default.json({ limit: "50mb" }));
-app.use(import_express27.default.urlencoded({ limit: "50mb", extended: true }));
+app.use(import_express28.default.json({ limit: "50mb" }));
+app.use(import_express28.default.urlencoded({ limit: "50mb", extended: true }));
 app.use(
   (0, import_express_session.default)({
     store: new PostgresStore({
@@ -91134,8 +91706,8 @@ var uploadsDir2 = process.env.UPLOADS_DIR ? path5.resolve(process.env.UPLOADS_DI
 if (!fs6.existsSync(uploadsDir2)) {
   fs6.mkdirSync(uploadsDir2, { recursive: true });
 }
-app.use("/uploads", import_express27.default.static(uploadsDir2, { maxAge: "1d" }));
-app.use("/api/uploads", import_express27.default.static(uploadsDir2, { maxAge: "1d" }));
+app.use("/uploads", import_express28.default.static(uploadsDir2, { maxAge: "1d" }));
+app.use("/api/uploads", import_express28.default.static(uploadsDir2, { maxAge: "1d" }));
 app.use("/api", (req, res, next) => {
   res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
   res.setHeader("Pragma", "no-cache");

@@ -41,6 +41,7 @@ export default function SalesAnalysisPage() {
   const [reportEndDate, setReportEndDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [reportPage, setReportPage] = useState(1);
   const [isDailyGrouped, setIsDailyGrouped] = useState(false);
+  const [isDrinkGroupedByItem, setIsDrinkGroupedByItem] = useState(false);
   const [selectedBranch, setSelectedBranch] = useState(selectedBranchId ? String(selectedBranchId) : "all");
   const [activeTab, setActiveTab] = useState("orders");
   
@@ -208,6 +209,47 @@ export default function SalesAnalysisPage() {
       return matchesCategory && matchesDrink;
     });
   }, [drinkSales, selectedCategory, selectedDrink, categories, catalogDrinks, selectedDiscountFilter]);
+
+  const groupedDrinkSales = useMemo(() => {
+    const map = new Map<string, {
+      item: string;
+      category: string;
+      quantity: number;
+      unitPrice: number;
+      totalGross: number;
+      finalPrice: number;
+      discountAmount: number;
+      orderCount: number;
+      ordersSet: Set<number>;
+    }>();
+
+    filteredDrinkSales.forEach((s) => {
+      const key = `${s.item}_${s.category}`;
+      let existing = map.get(key);
+      if (!existing) {
+        existing = {
+          item: s.item,
+          category: s.category,
+          quantity: 0,
+          unitPrice: s.salePrice,
+          totalGross: 0,
+          finalPrice: 0,
+          discountAmount: 0,
+          orderCount: 0,
+          ordersSet: new Set<number>(),
+        };
+        map.set(key, existing);
+      }
+      existing.quantity += s.quantity;
+      existing.totalGross += s.totalGross;
+      existing.finalPrice += s.finalPrice;
+      existing.discountAmount += (s.discountAmount || 0);
+      existing.ordersSet.add(s.invNo);
+      existing.orderCount = existing.ordersSet.size;
+    });
+
+    return Array.from(map.values()).sort((a, b) => b.quantity - a.quantity);
+  }, [filteredDrinkSales]);
 
   const totals = useMemo(() => {
     if (selectedCategory === "all" && selectedDrink === "all" && selectedDiscountFilter === "all") {
@@ -397,28 +439,41 @@ export default function SalesAnalysisPage() {
         ]);
       } else if (activeTab === "drinks") {
         filename = `drink_sales_${reportStartDate}_to_${reportEndDate}.csv`;
-        headers = ["Date", "Order NO", "Inv.NO", "Cashier", "Branch", "Item", "Quantity", "Standard/Customize", "Sale Price", "Total Price (Gross)", "Before Tax (Net)", "Tax Amount", "Discount Name", "Discount value", "Discount Amount", "SubTotal Price", "Final Price", "Payment Method", "Category"];
-        rows = filteredDrinkSales.map(i => [
-          format(new Date(i.date), "yyyy-MM-dd"),
-          i.orderNo,
-          i.invNo,
-          i.cashier,
-          i.branch,
-          i.item,
-          i.quantity,
-          i.isCustomized,
-          i.salePrice,
-          i.totalGross,
-          i.netBeforeTax,
-          i.taxAmount,
-          i.discountName,
-          i.discountValue,
-          i.discountAmount,
-          i.subtotalPrice,
-          i.finalPrice,
-          i.paymentMethod,
-          i.category
-        ]);
+        if (isDrinkGroupedByItem) {
+          headers = ["Item", "Category", "Quantity Sold", "Unit Price", "Total Gross", "Total Net", "Orders Count"];
+          rows = groupedDrinkSales.map(g => [
+            g.item,
+            g.category,
+            g.quantity,
+            g.unitPrice.toFixed(2),
+            g.totalGross.toFixed(2),
+            g.finalPrice.toFixed(2),
+            g.orderCount
+          ]);
+        } else {
+          headers = ["Date", "Order NO", "Inv.NO", "Cashier", "Branch", "Item", "Quantity", "Standard/Customize", "Sale Price", "Total Price (Gross)", "Before Tax (Net)", "Tax Amount", "Discount Name", "Discount value", "Discount Amount", "SubTotal Price", "Final Price", "Payment Method", "Category"];
+          rows = filteredDrinkSales.map(i => [
+            format(new Date(i.date), "yyyy-MM-dd"),
+            i.orderNo,
+            i.invNo,
+            i.cashier,
+            i.branch,
+            i.item,
+            i.quantity,
+            i.isCustomized,
+            i.salePrice,
+            i.totalGross,
+            i.netBeforeTax,
+            i.taxAmount,
+            i.discountName,
+            i.discountValue,
+            i.discountAmount,
+            i.subtotalPrice,
+            i.finalPrice,
+            i.paymentMethod,
+            i.category
+          ]);
+        }
       } else if (activeTab === "customs") {
         filename = `customizations_${reportStartDate}_to_${reportEndDate}.csv`;
         headers = ["Date", "Order NO", "Inv.NO", "Cashier", "Branch", "Item/Drink", "Standard Ing.", "Quantity", "Customized Ing.", "Quantity", "Unit", "Sales Price"];
@@ -548,8 +603,22 @@ export default function SalesAnalysisPage() {
               <Input type="date" value={reportEndDate} onChange={e => setReportEndDate(e.target.value)} />
             </div>
             <div className="flex items-center gap-2 h-10">
-              <Switch checked={isDailyGrouped} onCheckedChange={setIsDailyGrouped} id="daily-grp" disabled={activeTab !== "orders"} />
-              <Label htmlFor="daily-grp" className={`cursor-pointer ${activeTab !== "orders" ? "opacity-50" : ""}`}>Group by Day</Label>
+              {activeTab === "orders" ? (
+                <>
+                  <Switch checked={isDailyGrouped} onCheckedChange={setIsDailyGrouped} id="daily-grp" />
+                  <Label htmlFor="daily-grp" className="cursor-pointer">Group by Day</Label>
+                </>
+              ) : activeTab === "drinks" ? (
+                <>
+                  <Switch checked={isDrinkGroupedByItem} onCheckedChange={setIsDrinkGroupedByItem} id="drink-grp-item" />
+                  <Label htmlFor="drink-grp-item" className="cursor-pointer">Group by Item</Label>
+                </>
+              ) : (
+                <>
+                  <Switch checked={isDailyGrouped} onCheckedChange={setIsDailyGrouped} id="daily-grp" disabled />
+                  <Label htmlFor="daily-grp" className="cursor-pointer opacity-50">Group by Day</Label>
+                </>
+              )}
             </div>
              <div className="flex justify-end">
               <Button 
@@ -729,48 +798,81 @@ export default function SalesAnalysisPage() {
 
         <TabsContent value="drinks">
           <div className="rounded-md border bg-card">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Item</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead className="text-right">Qty</TableHead>
-                  <TableHead className="text-right">Price</TableHead>
-                  <TableHead className="text-right">Total</TableHead>
-                  <TableHead>Order #</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading ? (
-                  <TableRow><TableCell colSpan={7} className="text-center py-10">Loading drink sales...</TableCell></TableRow>
-                ) : filteredDrinkSales.length === 0 ? (
-                  <TableRow><TableCell colSpan={7} className="text-center py-10 text-muted-foreground">No data found for this range.</TableCell></TableRow>
-                ) : filteredDrinkSales.map((item, i) => (
-                  <TableRow key={i}>
-                    <TableCell className="text-sm">{format(new Date(item.date), "MMM dd")}</TableCell>
-                    <TableCell className="font-medium">
-                      <div className="flex items-center gap-2">
-                        {item.item}
-                        {item.isCustomized === "Customize" && <Badge variant="outline" className="text-[9px] h-4">Custom</Badge>}
-                      </div>
-                    </TableCell>
-                    <TableCell><Badge variant="secondary" className="capitalize text-[10px]">{item.category}</Badge></TableCell>
-                    <TableCell className="text-right">{item.quantity}</TableCell>
-                    <TableCell className="text-right">{fmt(item.salePrice)}</TableCell>
-                    <TableCell className="text-right font-bold">{fmt(item.totalGross)}</TableCell>
-                    <TableCell>
-                      <button 
-                        onClick={() => fetchOrderDetails(item.invNo)}
-                        className="font-mono text-xs text-primary hover:underline"
-                      >
-                        #{item.orderNo}
-                      </button>
-                    </TableCell>
+            {isDrinkGroupedByItem ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Item Name</TableHead>
+                    <TableHead>Category</TableHead>
+                    <TableHead className="text-right">Qty Sold</TableHead>
+                    <TableHead className="text-right">Unit Price</TableHead>
+                    <TableHead className="text-right">Total Gross</TableHead>
+                    <TableHead className="text-right">Total Net</TableHead>
+                    <TableHead className="text-right">Orders Count</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {loading ? (
+                    <TableRow><TableCell colSpan={7} className="text-center py-10">Loading drink sales...</TableCell></TableRow>
+                  ) : groupedDrinkSales.length === 0 ? (
+                    <TableRow><TableCell colSpan={7} className="text-center py-10 text-muted-foreground">No data found for this range.</TableCell></TableRow>
+                  ) : groupedDrinkSales.map((row, i) => (
+                    <TableRow key={i}>
+                      <TableCell className="font-bold text-foreground">{row.item}</TableCell>
+                      <TableCell><Badge variant="secondary" className="capitalize text-[10px]">{row.category}</Badge></TableCell>
+                      <TableCell className="text-right font-bold font-mono text-primary">{row.quantity}</TableCell>
+                      <TableCell className="text-right font-mono">{fmt(row.unitPrice)}</TableCell>
+                      <TableCell className="text-right font-bold font-mono">{fmt(row.totalGross)}</TableCell>
+                      <TableCell className="text-right font-bold font-mono text-emerald-600">{fmt(row.finalPrice)}</TableCell>
+                      <TableCell className="text-right font-mono text-xs text-muted-foreground">{row.orderCount}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Item</TableHead>
+                    <TableHead>Category</TableHead>
+                    <TableHead className="text-right">Qty</TableHead>
+                    <TableHead className="text-right">Price</TableHead>
+                    <TableHead className="text-right">Total</TableHead>
+                    <TableHead>Order #</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {loading ? (
+                    <TableRow><TableCell colSpan={7} className="text-center py-10">Loading drink sales...</TableCell></TableRow>
+                  ) : filteredDrinkSales.length === 0 ? (
+                    <TableRow><TableCell colSpan={7} className="text-center py-10 text-muted-foreground">No data found for this range.</TableCell></TableRow>
+                  ) : filteredDrinkSales.map((item, i) => (
+                    <TableRow key={i}>
+                      <TableCell className="text-sm">{format(new Date(item.date), "MMM dd")}</TableCell>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          {item.item}
+                          {item.isCustomized === "Customize" && <Badge variant="outline" className="text-[9px] h-4">Custom</Badge>}
+                        </div>
+                      </TableCell>
+                      <TableCell><Badge variant="secondary" className="capitalize text-[10px]">{item.category}</Badge></TableCell>
+                      <TableCell className="text-right">{item.quantity}</TableCell>
+                      <TableCell className="text-right">{fmt(item.salePrice)}</TableCell>
+                      <TableCell className="text-right font-bold">{fmt(item.totalGross)}</TableCell>
+                      <TableCell>
+                        <button 
+                          onClick={() => fetchOrderDetails(item.invNo)}
+                          className="font-mono text-xs text-primary hover:underline"
+                        >
+                          #{item.orderNo}
+                        </button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
           </div>
         </TabsContent>
 
