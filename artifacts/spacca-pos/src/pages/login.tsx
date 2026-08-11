@@ -48,7 +48,7 @@ export default function Login() {
         refetchUser();
       },
       onError: (error: any) => {
-        const message = error?.response?.data?.error || "Invalid username or password.";
+        const message = error?.response?.data?.error || error?.message || "Invalid username or password.";
         toast({
           variant: "destructive",
           title: "Login failed",

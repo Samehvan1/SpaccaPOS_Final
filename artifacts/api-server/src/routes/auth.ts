@@ -21,6 +21,10 @@ export class RateLimiter {
     this.requests.set(key, validTimestamps);
     return false;
   }
+
+  reset(key: string): void {
+    this.requests.delete(key);
+  }
 }
 
 const loginRateLimiter = new RateLimiter(15 * 60 * 1000, 10); // 10 attempts per 15 mins
@@ -69,6 +73,9 @@ router.post("/auth/login", async (req, res): Promise<void> => {
     res.status(403).json({ error: "Account is inactive" });
     return;
   }
+
+  // Login successful, reset rate limit counter
+  loginRateLimiter.reset(rateLimitKey);
 
   const permissions = await resolveUserPermissions(result.user.id, result.user.role);
 
@@ -193,6 +200,9 @@ router.post("/auth/verify-pin", async (req, res): Promise<void> => {
     res.status(401).json({ error: "Invalid or inactive PIN" });
     return;
   }
+
+  // PIN verified successfully, reset rate limit counter
+  pinRateLimiter.reset(rateLimitKey);
 
   res.json({ success: true, message: "PIN verified" });
 });

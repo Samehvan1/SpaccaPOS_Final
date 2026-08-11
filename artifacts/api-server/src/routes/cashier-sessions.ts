@@ -53,10 +53,12 @@ router.post("/cashier/login", async (req, res): Promise<void> => {
     return;
   }
 
-  if (user.role !== "cashier" && user.role !== "admin") {
-    res.status(403).json({ error: "User is not a cashier" });
+  if (user.role !== "cashier" && user.role !== "admin" && user.role !== "supervisor") {
+    res.status(403).json({ error: "User is not authorized for cashier sessions" });
     return;
   }
+
+  cashierLoginLimiter.reset(rateLimitKey);
 
   /* 
   // Reusing active session instead of creating duplicates

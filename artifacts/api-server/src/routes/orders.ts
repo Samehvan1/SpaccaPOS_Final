@@ -444,7 +444,7 @@ router.post("/orders", async (req, res): Promise<void> => {
       .where(
         and(
           eq(usersTable.pin, adminPin),
-          inArray(usersTable.role, ["admin", "supervisor"]),
+          inArray(usersTable.role, ["admin", "supervisor", "cashier"]),
           eq(usersTable.isActive, true)
         )
       )
@@ -1062,7 +1062,7 @@ router.patch("/orders/:id/status", async (req, res, next): Promise<void> => {
         .where(
           and(
             eq(usersTable.pin, adminPin),
-            inArray(usersTable.role, ["admin", "supervisor"]),
+            inArray(usersTable.role, ["admin", "supervisor", "cashier"]),
             eq(usersTable.isActive, true)
           )
         )
@@ -1378,7 +1378,7 @@ router.post("/orders/:id/refund", requirePermission("cashier:refund_order"), asy
     .where(
       and(
         eq(usersTable.pin, adminPin),
-        inArray(usersTable.role, ["admin", "cashier"]),
+        inArray(usersTable.role, ["admin", "supervisor", "cashier"]),
         eq(usersTable.isActive, true)
       )
     )
