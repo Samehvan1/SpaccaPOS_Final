@@ -2010,9 +2010,7 @@ function TemplateOptionsDialog({ open, onOpenChange, template, onUpdate }: { ope
         <DialogHeader>
           <DialogTitle>Configure Options — {template?.name}</DialogTitle>
         </DialogHeader>
-        
-        <UsageSection templateId={template?.id} />
-        
+
         <div className="space-y-2.5 pt-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -2173,6 +2171,8 @@ function TemplateOptionsDialog({ open, onOpenChange, template, onUpdate }: { ope
           </div>
         </div>
 
+        <UsageSection templateId={template?.id} />
+
         <DialogFooter className="pt-4">
           <Button onClick={() => onOpenChange(false)}>Done</Button>
         </DialogFooter>
@@ -2182,10 +2182,13 @@ function TemplateOptionsDialog({ open, onOpenChange, template, onUpdate }: { ope
 }
 
 function UsageSection({ templateId }: { templateId?: number }) {
+  const { toast } = useToast();
   const [usage, setUsage] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [syncingAll, setSyncingAll] = useState(false);
+  const [syncingDrinkId, setSyncingDrinkId] = useState<number | null>(null);
 
-  useEffect(() => {
+  const fetchUsage = useCallback(() => {
     if (templateId) {
       setLoading(true);
       api(`/api/catalog/predefined-slots/${templateId}/usage`)
@@ -2194,22 +2197,80 @@ function UsageSection({ templateId }: { templateId?: number }) {
     }
   }, [templateId]);
 
+  useEffect(() => {
+    fetchUsage();
+  }, [fetchUsage]);
+
+  const handleSync = async (drinkId?: number, drinkName?: string) => {
+    if (!templateId) return;
+    if (drinkId) {
+      setSyncingDrinkId(drinkId);
+    } else {
+      setSyncingAll(true);
+    }
+
+    try {
+      const res = await api(`/api/catalog/predefined-slots/${templateId}/sync`, {
+        method: "POST",
+        body: JSON.stringify({ drinkId }),
+      });
+      if (drinkName) {
+        toast({ title: `Synced "${drinkName}" with template` });
+      } else {
+        toast({ title: `Synced ${res.count ?? usage.length} product(s) with template` });
+      }
+      fetchUsage();
+    } catch {
+      toast({ variant: "destructive", title: "Failed to sync product(s) with template" });
+    } finally {
+      setSyncingAll(false);
+      setSyncingDrinkId(null);
+    }
+  };
+
   if (!templateId || (usage.length === 0 && !loading)) return null;
 
   return (
-    <div className="bg-muted/30 rounded-lg p-3 border border-dashed border-primary/20 mb-4">
-      <div className="text-[10px] font-black uppercase tracking-widest text-primary/60 flex items-center gap-2 mb-2">
-        <FlaskConical className="h-3 w-3" /> Drinks using this template
+    <div className="bg-muted/30 rounded-lg p-3 border border-dashed border-primary/20 mt-3">
+      <div className="flex items-center justify-between gap-2 mb-2">
+        <div className="text-[10px] font-black uppercase tracking-widest text-primary/60 flex items-center gap-2">
+          <FlaskConical className="h-3 w-3" /> Drinks using this template ({usage.length})
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-6 text-[10px] px-2 gap-1"
+          onClick={() => handleSync()}
+          disabled={syncingAll || loading || usage.length === 0}
+        >
+          <RefreshCw className={`h-3 w-3 ${syncingAll ? "animate-spin" : ""}`} />
+          {syncingAll ? "Syncing..." : "Sync All Products"}
+        </Button>
       </div>
       {loading ? (
         <div className="text-xs text-muted-foreground animate-pulse">Loading usage data...</div>
       ) : (
-        <div className="flex flex-wrap gap-1.5">
-          {usage.map((u, i) => (
-            <Badge key={i} variant="outline" className="bg-background/50 text-[10px] py-0 px-2 h-5">
-              {u.drinkName} <span className="opacity-40 mx-1">·</span> {u.slotLabel}
-            </Badge>
-          ))}
+        <div className="flex flex-wrap gap-1.5 max-h-[160px] overflow-y-auto pr-1">
+          {usage.map((u, i) => {
+            const isSyncingThis = syncingDrinkId === u.drinkId;
+            return (
+              <Badge key={i} variant="outline" className="bg-background/50 text-[10px] py-0 px-2 h-6 flex items-center gap-1.5">
+                <span>{u.drinkName}</span>
+                <span className="opacity-40">·</span>
+                <span className="text-muted-foreground">{u.slotLabel}</span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-4 w-4 p-0 ml-0.5 hover:bg-primary/20 hover:text-primary rounded-full transition-colors"
+                  title={`Sync ${u.drinkName}`}
+                  onClick={() => handleSync(u.drinkId, u.drinkName)}
+                  disabled={syncingAll || isSyncingThis}
+                >
+                  <RefreshCw className={`h-2.5 w-2.5 ${isSyncingThis ? "animate-spin text-primary" : ""}`} />
+                </Button>
+              </Badge>
+            );
+          })}
         </div>
       )}
     </div>

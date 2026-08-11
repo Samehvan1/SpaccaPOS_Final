@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, asc, inArray } from "drizzle-orm";
+import { eq, asc, inArray, and } from "drizzle-orm";
 import {
   db,
   predefinedSlotsTable,
@@ -11,6 +11,8 @@ import {
   ingredientCategoriesTable,
   drinksTable,
   drinkIngredientSlotsTable,
+  drinkSlotTypeOptionsTable,
+  drinkSlotVolumesTable,
 } from "@workspace/db";
 import { requirePermission } from "../middleware/permissions";
 
@@ -148,6 +150,83 @@ router.patch("/catalog/predefined-slots/:id", requirePermission("catalog:manage"
   res.json({ success: true });
 });
 
+// Sync products using template
+router.post("/catalog/predefined-slots/:id/sync", requirePermission("catalog:manage"), async (req, res): Promise<void> => {
+  const templateId = parseInt(req.params.id as string);
+  const drinkId = req.body?.drinkId ? parseInt(req.body.drinkId) : undefined;
+
+  const [template] = await db.select().from(predefinedSlotsTable).where(eq(predefinedSlotsTable.id, templateId));
+  if (!template) { res.status(404).json({ error: "Template not found" }); return; }
+
+  const templateTypeOptions = await db.select().from(predefinedSlotTypeOptionsTable)
+    .where(eq(predefinedSlotTypeOptionsTable.predefinedSlotId, templateId))
+    .orderBy(predefinedSlotTypeOptionsTable.sortOrder);
+
+  const templateVolumes = await db.select().from(predefinedSlotVolumesTable)
+    .where(eq(predefinedSlotVolumesTable.predefinedSlotId, templateId))
+    .orderBy(predefinedSlotVolumesTable.sortOrder);
+
+  const conditions = [eq(drinkIngredientSlotsTable.predefinedSlotId, templateId)];
+  if (drinkId) {
+    conditions.push(eq(drinkIngredientSlotsTable.drinkId, drinkId));
+  }
+
+  const targetSlots = await db.select().from(drinkIngredientSlotsTable).where(and(...conditions));
+
+  if (targetSlots.length === 0) {
+    res.json({ success: true, count: 0 });
+    return;
+  }
+
+  await db.transaction(async (tx) => {
+    for (const slot of targetSlots) {
+      // 1. Update slot properties
+      await tx.update(drinkIngredientSlotsTable)
+        .set({
+          slotLabel: template.slotLabel,
+          isRequired: template.isRequired,
+          isDynamic: template.isDynamic,
+          affectsCupSize: template.affectsCupSize,
+        })
+        .where(eq(drinkIngredientSlotsTable.id, slot.id));
+
+      // 2. Refresh type options for this slot
+      await tx.delete(drinkSlotTypeOptionsTable).where(eq(drinkSlotTypeOptionsTable.slotId, slot.id));
+      if (templateTypeOptions.length > 0) {
+        await tx.insert(drinkSlotTypeOptionsTable).values(templateTypeOptions.map((to, i) => ({
+          slotId: slot.id,
+          ingredientTypeId: to.ingredientTypeId,
+          isDefault: to.isDefault,
+          sortOrder: to.sortOrder ?? i,
+          processedQty: to.processedQty,
+          producedQty: to.producedQty,
+          unit: to.unit,
+          extraCost: to.extraCost,
+          pricingMode: to.pricingMode,
+        })));
+      }
+
+      // 3. Refresh slot volumes for this slot
+      await tx.delete(drinkSlotVolumesTable).where(eq(drinkSlotVolumesTable.slotId, slot.id));
+      if (templateVolumes.length > 0) {
+        await tx.insert(drinkSlotVolumesTable).values(templateVolumes.map((tv, i) => ({
+          slotId: slot.id,
+          typeVolumeId: tv.typeVolumeId,
+          processedQty: tv.processedQty,
+          producedQty: tv.producedQty,
+          unit: tv.unit,
+          extraCost: tv.extraCost,
+          isDefault: tv.isDefault,
+          isEnabled: tv.isEnabled,
+          sortOrder: tv.sortOrder ?? i,
+        })));
+      }
+    }
+  });
+
+  res.json({ success: true, count: targetSlots.length });
+});
+
 // Get template usage
 router.get("/catalog/predefined-slots/:id/usage", async (req, res): Promise<void> => {
   const id = parseInt(req.params.id as string);
@@ -156,6 +235,7 @@ router.get("/catalog/predefined-slots/:id/usage", async (req, res): Promise<void
     drinkId: drinksTable.id,
     drinkName: drinksTable.name,
     slotLabel: drinkIngredientSlotsTable.slotLabel,
+    slotId: drinkIngredientSlotsTable.id,
   })
   .from(drinkIngredientSlotsTable)
   .innerJoin(drinksTable, eq(drinkIngredientSlotsTable.drinkId, drinksTable.id))
@@ -180,3 +260,4 @@ router.delete("/catalog/predefined-slots/:id", requirePermission("catalog:manage
 });
 
 export default router;
+
