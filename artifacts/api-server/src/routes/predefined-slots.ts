@@ -227,20 +227,114 @@ router.post("/catalog/predefined-slots/:id/sync", requirePermission("catalog:man
   res.json({ success: true, count: targetSlots.length });
 });
 
+function isEqualVal(a: any, b: any): boolean {
+  if (a === b) return true;
+  if (a == null && b == null) return true;
+  if (a == null || b == null) return false;
+  const numA = Number(a);
+  const numB = Number(b);
+  if (!isNaN(numA) && !isNaN(numB)) {
+    return numA === numB;
+  }
+  return String(a) === String(b);
+}
+
 // Get template usage
 router.get("/catalog/predefined-slots/:id/usage", async (req, res): Promise<void> => {
   const id = parseInt(req.params.id as string);
   
-  const usage = await db.select({
+  const [template] = await db.select().from(predefinedSlotsTable).where(eq(predefinedSlotsTable.id, id));
+  if (!template) { res.status(404).json({ error: "Template not found" }); return; }
+
+  const templateTypeOptions = await db.select().from(predefinedSlotTypeOptionsTable)
+    .where(eq(predefinedSlotTypeOptionsTable.predefinedSlotId, id))
+    .orderBy(predefinedSlotTypeOptionsTable.sortOrder);
+
+  const templateVolumes = await db.select().from(predefinedSlotVolumesTable)
+    .where(eq(predefinedSlotVolumesTable.predefinedSlotId, id))
+    .orderBy(predefinedSlotVolumesTable.sortOrder);
+
+  const rawUsage = await db.select({
     drinkId: drinksTable.id,
     drinkName: drinksTable.name,
     slotLabel: drinkIngredientSlotsTable.slotLabel,
     slotId: drinkIngredientSlotsTable.id,
+    isRequired: drinkIngredientSlotsTable.isRequired,
+    isDynamic: drinkIngredientSlotsTable.isDynamic,
+    affectsCupSize: drinkIngredientSlotsTable.affectsCupSize,
   })
   .from(drinkIngredientSlotsTable)
   .innerJoin(drinksTable, eq(drinkIngredientSlotsTable.drinkId, drinksTable.id))
-  .where(eq(drinkIngredientSlotsTable.predefinedSlotId, id));
+  .where(eq(drinkIngredientSlotsTable.predefinedSlotId, id))
+  .orderBy(asc(drinksTable.name), asc(drinkIngredientSlotsTable.id));
   
+  const usage = await Promise.all(rawUsage.map(async (u) => {
+    // Check metadata sync
+    const isMetaSynced = 
+      u.slotLabel === template.slotLabel &&
+      u.isRequired === template.isRequired &&
+      u.isDynamic === template.isDynamic &&
+      u.affectsCupSize === template.affectsCupSize;
+
+    if (!isMetaSynced) {
+      return { drinkId: u.drinkId, drinkName: u.drinkName, slotLabel: u.slotLabel, slotId: u.slotId, isSynced: false };
+    }
+
+    const slotTypeOptions = await db.select().from(drinkSlotTypeOptionsTable)
+      .where(eq(drinkSlotTypeOptionsTable.slotId, u.slotId))
+      .orderBy(drinkSlotTypeOptionsTable.sortOrder);
+
+    if (slotTypeOptions.length !== templateTypeOptions.length) {
+      return { drinkId: u.drinkId, drinkName: u.drinkName, slotLabel: u.slotLabel, slotId: u.slotId, isSynced: false };
+    }
+
+    const isTypesSynced = templateTypeOptions.every((to) => {
+      const sto = slotTypeOptions.find(s => s.ingredientTypeId === to.ingredientTypeId);
+      if (!sto) return false;
+      return (
+        sto.isDefault === to.isDefault &&
+        isEqualVal(sto.processedQty, to.processedQty) &&
+        isEqualVal(sto.producedQty, to.producedQty) &&
+        isEqualVal(sto.unit, to.unit) &&
+        isEqualVal(sto.extraCost, to.extraCost) &&
+        isEqualVal(sto.pricingMode, to.pricingMode)
+      );
+    });
+
+    if (!isTypesSynced) {
+      return { drinkId: u.drinkId, drinkName: u.drinkName, slotLabel: u.slotLabel, slotId: u.slotId, isSynced: false };
+    }
+
+    const slotVolumes = await db.select().from(drinkSlotVolumesTable)
+      .where(eq(drinkSlotVolumesTable.slotId, u.slotId))
+      .orderBy(drinkSlotVolumesTable.sortOrder);
+
+    if (slotVolumes.length !== templateVolumes.length) {
+      return { drinkId: u.drinkId, drinkName: u.drinkName, slotLabel: u.slotLabel, slotId: u.slotId, isSynced: false };
+    }
+
+    const isVolumesSynced = templateVolumes.every((tv) => {
+      const sv = slotVolumes.find(s => s.typeVolumeId === tv.typeVolumeId);
+      if (!sv) return false;
+      return (
+        sv.isDefault === tv.isDefault &&
+        sv.isEnabled === tv.isEnabled &&
+        isEqualVal(sv.processedQty, tv.processedQty) &&
+        isEqualVal(sv.producedQty, tv.producedQty) &&
+        isEqualVal(sv.unit, tv.unit) &&
+        isEqualVal(sv.extraCost, tv.extraCost)
+      );
+    });
+
+    return {
+      drinkId: u.drinkId,
+      drinkName: u.drinkName,
+      slotLabel: u.slotLabel,
+      slotId: u.slotId,
+      isSynced: isVolumesSynced,
+    };
+  }));
+
   res.json(usage);
 });
 
@@ -260,4 +354,5 @@ router.delete("/catalog/predefined-slots/:id", requirePermission("catalog:manage
 });
 
 export default router;
+
 

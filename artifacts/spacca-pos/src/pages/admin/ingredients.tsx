@@ -2171,7 +2171,7 @@ function TemplateOptionsDialog({ open, onOpenChange, template, onUpdate }: { ope
           </div>
         </div>
 
-        <UsageSection templateId={template?.id} />
+        <UsageSection template={template} />
 
         <DialogFooter className="pt-4">
           <Button onClick={() => onOpenChange(false)}>Done</Button>
@@ -2181,12 +2181,14 @@ function TemplateOptionsDialog({ open, onOpenChange, template, onUpdate }: { ope
   );
 }
 
-function UsageSection({ templateId }: { templateId?: number }) {
+function UsageSection({ template }: { template?: any }) {
   const { toast } = useToast();
   const [usage, setUsage] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [syncingAll, setSyncingAll] = useState(false);
   const [syncingDrinkId, setSyncingDrinkId] = useState<number | null>(null);
+
+  const templateId = template?.id;
 
   const fetchUsage = useCallback(() => {
     if (templateId) {
@@ -2199,7 +2201,7 @@ function UsageSection({ templateId }: { templateId?: number }) {
 
   useEffect(() => {
     fetchUsage();
-  }, [fetchUsage]);
+  }, [fetchUsage, template]);
 
   const handleSync = async (drinkId?: number, drinkName?: string) => {
     if (!templateId) return;
@@ -2230,6 +2232,8 @@ function UsageSection({ templateId }: { templateId?: number }) {
 
   if (!templateId || (usage.length === 0 && !loading)) return null;
 
+  const allSynced = usage.length > 0 && usage.every(u => u.isSynced);
+
   return (
     <div className="bg-muted/30 rounded-lg p-3 border border-dashed border-primary/20 mt-3">
       <div className="flex items-center justify-between gap-2 mb-2">
@@ -2239,35 +2243,64 @@ function UsageSection({ templateId }: { templateId?: number }) {
         <Button
           variant="outline"
           size="sm"
-          className="h-6 text-[10px] px-2 gap-1"
+          className={`h-6 text-[10px] px-2 gap-1 transition-colors ${
+            allSynced 
+              ? "text-emerald-600 border-emerald-500/30 bg-emerald-50/50 dark:bg-emerald-950/20" 
+              : ""
+          }`}
           onClick={() => handleSync()}
           disabled={syncingAll || loading || usage.length === 0}
         >
-          <RefreshCw className={`h-3 w-3 ${syncingAll ? "animate-spin" : ""}`} />
-          {syncingAll ? "Syncing..." : "Sync All Products"}
+          {allSynced ? (
+            <CheckCircle2 className="h-3 w-3 text-emerald-600" />
+          ) : (
+            <RefreshCw className={`h-3 w-3 ${syncingAll ? "animate-spin" : ""}`} />
+          )}
+          {syncingAll ? "Syncing..." : allSynced ? "All Synced" : "Sync All Products"}
         </Button>
       </div>
       {loading ? (
         <div className="text-xs text-muted-foreground animate-pulse">Loading usage data...</div>
       ) : (
         <div className="flex flex-wrap gap-1.5 max-h-[160px] overflow-y-auto pr-1">
-          {usage.map((u, i) => {
+          {usage.map((u) => {
             const isSyncingThis = syncingDrinkId === u.drinkId;
             return (
-              <Badge key={i} variant="outline" className="bg-background/50 text-[10px] py-0 px-2 h-6 flex items-center gap-1.5">
+              <Badge
+                key={u.drinkId}
+                variant="outline"
+                className={`text-[10px] py-0 px-2 h-6 flex items-center gap-1.5 transition-colors ${
+                  u.isSynced 
+                    ? "bg-emerald-50/50 border-emerald-500/30 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300 dark:border-emerald-800/40" 
+                    : "bg-background/50"
+                }`}
+              >
                 <span>{u.drinkName}</span>
                 <span className="opacity-40">·</span>
                 <span className="text-muted-foreground">{u.slotLabel}</span>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-4 w-4 p-0 ml-0.5 hover:bg-primary/20 hover:text-primary rounded-full transition-colors"
-                  title={`Sync ${u.drinkName}`}
-                  onClick={() => handleSync(u.drinkId, u.drinkName)}
-                  disabled={syncingAll || isSyncingThis}
-                >
-                  <RefreshCw className={`h-2.5 w-2.5 ${isSyncingThis ? "animate-spin text-primary" : ""}`} />
-                </Button>
+                {u.isSynced ? (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-4 w-4 p-0 ml-0.5 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-100/50 dark:hover:bg-emerald-900/50 rounded-full transition-colors"
+                    title="Synced with template (click to re-sync)"
+                    onClick={() => handleSync(u.drinkId, u.drinkName)}
+                    disabled={syncingAll || isSyncingThis}
+                  >
+                    <CheckCircle2 className={`h-3 w-3 ${isSyncingThis ? "animate-spin text-primary" : ""}`} />
+                  </Button>
+                ) : (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-4 w-4 p-0 ml-0.5 text-primary hover:bg-primary/20 rounded-full transition-colors"
+                    title={`Sync ${u.drinkName} with template`}
+                    onClick={() => handleSync(u.drinkId, u.drinkName)}
+                    disabled={syncingAll || isSyncingThis}
+                  >
+                    <RefreshCw className={`h-2.5 w-2.5 ${isSyncingThis ? "animate-spin" : ""}`} />
+                  </Button>
+                )}
               </Badge>
             );
           })}
