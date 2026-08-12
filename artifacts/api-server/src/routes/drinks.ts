@@ -249,11 +249,31 @@ async function buildDrinkDetail(drinkId: number, branchId?: number) {
             const volRows = volIds.length > 0 ? await db.select().from(ingredientVolumesTable).where(inArray(ingredientVolumesTable.id, volIds)) : [];
             const volMap = new Map(volRows.map((v) => [v.id, v]));
 
+            const hasExplicitDefaultInSlot = allSlotVols.some(sv => {
+              const matchingTv = globalTypeVolumes.find(gt => gt.id === sv.typeVolumeId);
+              return matchingTv && sv.isDefault === true;
+            });
+            const hasExplicitDefaultInTemplate = templateVolumes.some(t => {
+              const matchingTv = globalTypeVolumes.find(gt => gt.id === t.typeVolumeId);
+              return matchingTv && t.isDefault === true;
+            });
+
             const volumes = globalTypeVolumes.map((tv) => {
               const override = slotVolumeMap.get(tv.id);
               const templateDef = templateVolumeMap.get(tv.id);
               const vol = volMap.get(tv.volumeId);
               
+              let effectiveIsDefault = tv.isDefault;
+              if (override && override.isDefault !== undefined && override.isDefault !== null) {
+                if (hasExplicitDefaultInSlot) {
+                  effectiveIsDefault = override.isDefault;
+                }
+              } else if (templateDef && templateDef.isDefault !== undefined && templateDef.isDefault !== null) {
+                if (hasExplicitDefaultInTemplate) {
+                  effectiveIsDefault = templateDef.isDefault;
+                }
+              }
+
               return {
                 id: tv.id,
                 volumeId: tv.volumeId,
@@ -262,7 +282,7 @@ async function buildDrinkDetail(drinkId: number, branchId?: number) {
                 producedQty: Number(override?.producedQty ?? templateDef?.producedQty ?? tv.producedQty ?? vol?.producedQty ?? 0),
                 unit: override?.unit ?? templateDef?.unit ?? tv.unit ?? vol?.unit ?? "ml",
                 extraCost: Number(override?.extraCost ?? templateDef?.extraCost ?? tv.extraCost),
-                isDefault: override?.isDefault ?? templateDef?.isDefault ?? tv.isDefault,
+                isDefault: effectiveIsDefault,
                 isEnabled: override?.isEnabled ?? templateDef?.isEnabled ?? true,
                 isAvailable: stockQuantity >= Number(override?.processedQty ?? templateDef?.processedQty ?? tv.processedQty ?? vol?.processedQty ?? 0),
                 sortOrder: override?.sortOrder ?? templateDef?.sortOrder ?? tv.sortOrder,

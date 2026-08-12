@@ -97,8 +97,19 @@ function makeVolumeDrafts(vols: TypeVolume[]): SlotVolumeDraft[] {
 }
 
 function resolveSlotVolumes(typeVolumes: TypeVolume[], templateVolumes: any[]): SlotVolumeDraft[] {
+  const hasTemplateDefault = templateVolumes.some((v: any) => {
+    const parentTv = typeVolumes.find(t => t.id === v.typeVolumeId);
+    return parentTv && v.isDefault === true;
+  });
+
   return typeVolumes.map(tv => {
     const override = templateVolumes.find((v: any) => v.typeVolumeId === tv.id);
+    let effectiveIsDefault = tv.isDefault;
+    if (override && override.isDefault !== undefined && override.isDefault !== null) {
+      if (hasTemplateDefault) {
+        effectiveIsDefault = override.isDefault;
+      }
+    }
     return {
       typeVolumeId: tv.id,
       volumeName: tv.volume?.name ?? `vol#${tv.volumeId}`,
@@ -106,7 +117,7 @@ function resolveSlotVolumes(typeVolumes: TypeVolume[], templateVolumes: any[]): 
       producedQty: String(override?.producedQty ?? tv.producedQty ?? 0),
       unit: override?.unit ?? tv.unit ?? "ml",
       extraCost: String(override?.extraCost ?? tv.extraCost ?? "0"),
-      isDefault: override?.isDefault ?? tv.isDefault,
+      isDefault: effectiveIsDefault,
       isEnabled: override ? override.isEnabled : true,
     };
   });

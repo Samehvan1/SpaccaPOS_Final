@@ -81645,6 +81645,9 @@ var RateLimiter = class {
     this.requests.set(key, validTimestamps);
     return false;
   }
+  reset(key) {
+    this.requests.delete(key);
+  }
 };
 var loginRateLimiter = new RateLimiter(15 * 60 * 1e3, 10);
 var pinRateLimiter = new RateLimiter(5 * 60 * 1e3, 10);
@@ -81679,6 +81682,7 @@ router2.post("/auth/login", async (req, res) => {
     res.status(403).json({ error: "Account is inactive" });
     return;
   }
+  loginRateLimiter.reset(rateLimitKey);
   const permissions = await resolveUserPermissions(result.user.id, result.user.role);
   req.session.userId = result.user.id;
   req.session.branchId = result.user.branchId;
@@ -81776,6 +81780,7 @@ router2.post("/auth/verify-pin", async (req, res) => {
     res.status(401).json({ error: "Invalid or inactive PIN" });
     return;
   }
+  pinRateLimiter.reset(rateLimitKey);
   res.json({ success: true, message: "PIN verified" });
 });
 router2.post("/auth/change-profile", async (req, res) => {
@@ -82646,10 +82651,28 @@ async function buildDrinkDetail(drinkId, branchId) {
             const volIds = globalTypeVolumes.map((tv) => tv.volumeId);
             const volRows = volIds.length > 0 ? await db.select().from(ingredientVolumesTable).where(inArray(ingredientVolumesTable.id, volIds)) : [];
             const volMap = new Map(volRows.map((v) => [v.id, v]));
+            const hasExplicitDefaultInSlot = allSlotVols.some((sv) => {
+              const matchingTv = globalTypeVolumes.find((gt2) => gt2.id === sv.typeVolumeId);
+              return matchingTv && sv.isDefault === true;
+            });
+            const hasExplicitDefaultInTemplate = templateVolumes.some((t) => {
+              const matchingTv = globalTypeVolumes.find((gt2) => gt2.id === t.typeVolumeId);
+              return matchingTv && t.isDefault === true;
+            });
             const volumes = globalTypeVolumes.map((tv) => {
               const override = slotVolumeMap.get(tv.id);
               const templateDef = templateVolumeMap.get(tv.id);
               const vol = volMap.get(tv.volumeId);
+              let effectiveIsDefault = tv.isDefault;
+              if (override && override.isDefault !== void 0 && override.isDefault !== null) {
+                if (hasExplicitDefaultInSlot) {
+                  effectiveIsDefault = override.isDefault;
+                }
+              } else if (templateDef && templateDef.isDefault !== void 0 && templateDef.isDefault !== null) {
+                if (hasExplicitDefaultInTemplate) {
+                  effectiveIsDefault = templateDef.isDefault;
+                }
+              }
               return {
                 id: tv.id,
                 volumeId: tv.volumeId,
@@ -82658,7 +82681,7 @@ async function buildDrinkDetail(drinkId, branchId) {
                 producedQty: Number(override?.producedQty ?? templateDef?.producedQty ?? tv.producedQty ?? vol?.producedQty ?? 0),
                 unit: override?.unit ?? templateDef?.unit ?? tv.unit ?? vol?.unit ?? "ml",
                 extraCost: Number(override?.extraCost ?? templateDef?.extraCost ?? tv.extraCost),
-                isDefault: override?.isDefault ?? templateDef?.isDefault ?? tv.isDefault,
+                isDefault: effectiveIsDefault,
                 isEnabled: override?.isEnabled ?? templateDef?.isEnabled ?? true,
                 isAvailable: stockQuantity >= Number(override?.processedQty ?? templateDef?.processedQty ?? tv.processedQty ?? vol?.processedQty ?? 0),
                 sortOrder: override?.sortOrder ?? templateDef?.sortOrder ?? tv.sortOrder,
@@ -84627,7 +84650,7 @@ router5.post("/orders", async (req, res) => {
     const [admin] = await db.select().from(usersTable).where(
       and(
         eq(usersTable.pin, adminPin),
-        inArray(usersTable.role, ["admin", "supervisor"]),
+        inArray(usersTable.role, ["admin", "supervisor", "cashier"]),
         eq(usersTable.isActive, true)
       )
     ).limit(1);
@@ -85087,7 +85110,7 @@ router5.patch("/orders/:id/status", async (req, res, next) => {
       const [admin] = await db.select().from(usersTable).where(
         and(
           eq(usersTable.pin, adminPin),
-          inArray(usersTable.role, ["admin", "supervisor"]),
+          inArray(usersTable.role, ["admin", "supervisor", "cashier"]),
           eq(usersTable.isActive, true)
         )
       ).limit(1);
@@ -85297,7 +85320,7 @@ router5.post("/orders/:id/refund", requirePermission("cashier:refund_order"), as
   const [admin] = await db.select().from(usersTable).where(
     and(
       eq(usersTable.pin, adminPin),
-      inArray(usersTable.role, ["admin", "cashier"]),
+      inArray(usersTable.role, ["admin", "supervisor", "cashier"]),
       eq(usersTable.isActive, true)
     )
   ).limit(1);
@@ -87199,13 +87222,180 @@ router12.patch("/catalog/predefined-slots/:id", requirePermission("catalog:manag
   }
   res.json({ success: true });
 });
+router12.post("/catalog/predefined-slots/:id/sync", requirePermission("catalog:manage"), async (req, res) => {
+  const templateId = parseInt(req.params.id);
+  const drinkId = req.body?.drinkId ? parseInt(req.body.drinkId) : void 0;
+  const [template] = await db.select().from(predefinedSlotsTable).where(eq(predefinedSlotsTable.id, templateId));
+  if (!template) {
+    res.status(404).json({ error: "Template not found" });
+    return;
+  }
+  const templateTypeOptions = await db.select().from(predefinedSlotTypeOptionsTable).where(eq(predefinedSlotTypeOptionsTable.predefinedSlotId, templateId)).orderBy(predefinedSlotTypeOptionsTable.sortOrder);
+  const templateVolumes = await db.select().from(predefinedSlotVolumesTable).where(eq(predefinedSlotVolumesTable.predefinedSlotId, templateId)).orderBy(predefinedSlotVolumesTable.sortOrder);
+  const conditions = [eq(drinkIngredientSlotsTable.predefinedSlotId, templateId)];
+  if (drinkId) {
+    conditions.push(eq(drinkIngredientSlotsTable.drinkId, drinkId));
+  }
+  const targetSlots = await db.select().from(drinkIngredientSlotsTable).where(and(...conditions));
+  if (targetSlots.length === 0) {
+    res.json({ success: true, count: 0 });
+    return;
+  }
+  await db.transaction(async (tx) => {
+    for (const slot of targetSlots) {
+      await tx.update(drinkIngredientSlotsTable).set({
+        slotLabel: template.slotLabel,
+        isRequired: template.isRequired,
+        isDynamic: template.isDynamic,
+        affectsCupSize: template.affectsCupSize
+      }).where(eq(drinkIngredientSlotsTable.id, slot.id));
+      await tx.delete(drinkSlotTypeOptionsTable).where(eq(drinkSlotTypeOptionsTable.slotId, slot.id));
+      if (templateTypeOptions.length > 0) {
+        const hasDefaultOption = templateTypeOptions.some((to) => to.isDefault);
+        await tx.insert(drinkSlotTypeOptionsTable).values(templateTypeOptions.map((to, i) => ({
+          slotId: slot.id,
+          ingredientTypeId: to.ingredientTypeId,
+          isDefault: hasDefaultOption ? to.isDefault : i === 0,
+          sortOrder: to.sortOrder ?? i,
+          processedQty: to.processedQty,
+          producedQty: to.producedQty,
+          unit: to.unit,
+          extraCost: to.extraCost,
+          pricingMode: to.pricingMode
+        })));
+      }
+      await tx.delete(drinkSlotVolumesTable).where(eq(drinkSlotVolumesTable.slotId, slot.id));
+      const templateTypeIds = templateTypeOptions.map((to) => to.ingredientTypeId);
+      if (templateTypeIds.length > 0) {
+        const allTypeVolumes = await tx.select().from(ingredientTypeVolumesTable).where(and(inArray(ingredientTypeVolumesTable.ingredientTypeId, templateTypeIds), eq(ingredientTypeVolumesTable.isActive, true)));
+        const slotVolumeValues = [];
+        for (const typeId of templateTypeIds) {
+          const typeVols = allTypeVolumes.filter((tv) => tv.ingredientTypeId === typeId);
+          const hasTemplateDefaultVol = typeVols.some((tv) => {
+            const ov = templateVolumes.find((v) => v.typeVolumeId === tv.id);
+            return ov?.isDefault === true;
+          });
+          for (const tv of typeVols) {
+            const templateOverride = templateVolumes.find((v) => v.typeVolumeId === tv.id);
+            let effectiveIsDefault = tv.isDefault;
+            if (templateOverride && templateOverride.isDefault !== void 0 && templateOverride.isDefault !== null) {
+              effectiveIsDefault = templateOverride.isDefault;
+            } else if (hasTemplateDefaultVol) {
+              effectiveIsDefault = templateOverride ? templateOverride.isDefault : false;
+            }
+            slotVolumeValues.push({
+              slotId: slot.id,
+              typeVolumeId: tv.id,
+              processedQty: templateOverride?.processedQty ?? tv.processedQty,
+              producedQty: templateOverride?.producedQty ?? tv.producedQty,
+              unit: templateOverride?.unit ?? tv.unit,
+              extraCost: templateOverride?.extraCost ?? tv.extraCost,
+              isDefault: effectiveIsDefault,
+              isEnabled: templateOverride ? templateOverride.isEnabled : true,
+              sortOrder: templateOverride?.sortOrder ?? tv.sortOrder ?? 0
+            });
+          }
+        }
+        if (slotVolumeValues.length > 0) {
+          await tx.insert(drinkSlotVolumesTable).values(slotVolumeValues);
+        }
+      }
+    }
+  });
+  res.json({ success: true, count: targetSlots.length });
+});
+function isEqualVal(a, b) {
+  if (a === b) return true;
+  if (a == null && b == null) return true;
+  if (a == null || b == null) return false;
+  const numA = Number(a);
+  const numB = Number(b);
+  if (!isNaN(numA) && !isNaN(numB)) {
+    return numA === numB;
+  }
+  return String(a) === String(b);
+}
 router12.get("/catalog/predefined-slots/:id/usage", async (req, res) => {
   const id = parseInt(req.params.id);
-  const usage = await db.select({
+  const [template] = await db.select().from(predefinedSlotsTable).where(eq(predefinedSlotsTable.id, id));
+  if (!template) {
+    res.status(404).json({ error: "Template not found" });
+    return;
+  }
+  const templateTypeOptions = await db.select().from(predefinedSlotTypeOptionsTable).where(eq(predefinedSlotTypeOptionsTable.predefinedSlotId, id)).orderBy(predefinedSlotTypeOptionsTable.sortOrder);
+  const templateVolumes = await db.select().from(predefinedSlotVolumesTable).where(eq(predefinedSlotVolumesTable.predefinedSlotId, id)).orderBy(predefinedSlotVolumesTable.sortOrder);
+  const rawUsage = await db.select({
     drinkId: drinksTable.id,
     drinkName: drinksTable.name,
-    slotLabel: drinkIngredientSlotsTable.slotLabel
-  }).from(drinkIngredientSlotsTable).innerJoin(drinksTable, eq(drinkIngredientSlotsTable.drinkId, drinksTable.id)).where(eq(drinkIngredientSlotsTable.predefinedSlotId, id));
+    slotLabel: drinkIngredientSlotsTable.slotLabel,
+    slotId: drinkIngredientSlotsTable.id,
+    isRequired: drinkIngredientSlotsTable.isRequired,
+    isDynamic: drinkIngredientSlotsTable.isDynamic,
+    affectsCupSize: drinkIngredientSlotsTable.affectsCupSize
+  }).from(drinkIngredientSlotsTable).innerJoin(drinksTable, eq(drinkIngredientSlotsTable.drinkId, drinksTable.id)).where(eq(drinkIngredientSlotsTable.predefinedSlotId, id)).orderBy(asc(drinksTable.name), asc(drinkIngredientSlotsTable.id));
+  const templateTypeIds = templateTypeOptions.map((to) => to.ingredientTypeId);
+  const allTypeVolumes = templateTypeIds.length > 0 ? await db.select().from(ingredientTypeVolumesTable).where(and(inArray(ingredientTypeVolumesTable.ingredientTypeId, templateTypeIds), eq(ingredientTypeVolumesTable.isActive, true))) : [];
+  const hasDefaultOption = templateTypeOptions.some((to) => to.isDefault);
+  const usage = await Promise.all(rawUsage.map(async (u) => {
+    const isMetaSynced = u.slotLabel === template.slotLabel && u.isRequired === template.isRequired && u.isDynamic === template.isDynamic && u.affectsCupSize === template.affectsCupSize;
+    if (!isMetaSynced) {
+      return { drinkId: u.drinkId, drinkName: u.drinkName, slotLabel: u.slotLabel, slotId: u.slotId, isSynced: false };
+    }
+    const slotTypeOptions = await db.select().from(drinkSlotTypeOptionsTable).where(eq(drinkSlotTypeOptionsTable.slotId, u.slotId)).orderBy(drinkSlotTypeOptionsTable.sortOrder);
+    if (slotTypeOptions.length !== templateTypeOptions.length) {
+      return { drinkId: u.drinkId, drinkName: u.drinkName, slotLabel: u.slotLabel, slotId: u.slotId, isSynced: false };
+    }
+    const isTypesSynced = templateTypeOptions.every((to, i) => {
+      const sto = slotTypeOptions.find((s) => s.ingredientTypeId === to.ingredientTypeId);
+      if (!sto) return false;
+      const expectedIsDefault = hasDefaultOption ? to.isDefault : i === 0;
+      return sto.isDefault === expectedIsDefault && isEqualVal(sto.processedQty, to.processedQty) && isEqualVal(sto.producedQty, to.producedQty) && isEqualVal(sto.unit, to.unit) && isEqualVal(sto.extraCost, to.extraCost) && isEqualVal(sto.pricingMode, to.pricingMode);
+    });
+    if (!isTypesSynced) {
+      return { drinkId: u.drinkId, drinkName: u.drinkName, slotLabel: u.slotLabel, slotId: u.slotId, isSynced: false };
+    }
+    const slotVolumes = await db.select().from(drinkSlotVolumesTable).where(eq(drinkSlotVolumesTable.slotId, u.slotId)).orderBy(drinkSlotVolumesTable.sortOrder);
+    let isVolumesSynced = true;
+    for (const typeId of templateTypeIds) {
+      const typeVols = allTypeVolumes.filter((tv) => tv.ingredientTypeId === typeId);
+      const hasTemplateDefaultVol = typeVols.some((tv) => {
+        const ov = templateVolumes.find((v) => v.typeVolumeId === tv.id);
+        return ov?.isDefault === true;
+      });
+      for (const tv of typeVols) {
+        const templateOverride = templateVolumes.find((v) => v.typeVolumeId === tv.id);
+        const sv = slotVolumes.find((s) => s.typeVolumeId === tv.id);
+        let expectedIsDefault = tv.isDefault;
+        if (templateOverride && templateOverride.isDefault !== void 0 && templateOverride.isDefault !== null) {
+          expectedIsDefault = templateOverride.isDefault;
+        } else if (hasTemplateDefaultVol) {
+          expectedIsDefault = templateOverride ? templateOverride.isDefault : false;
+        }
+        const expectedProcessedQty = templateOverride?.processedQty ?? tv.processedQty;
+        const expectedProducedQty = templateOverride?.producedQty ?? tv.producedQty;
+        const expectedUnit = templateOverride?.unit ?? tv.unit;
+        const expectedExtraCost = templateOverride?.extraCost ?? tv.extraCost;
+        const expectedIsEnabled = templateOverride ? templateOverride.isEnabled : true;
+        if (!sv) {
+          isVolumesSynced = false;
+          break;
+        }
+        const matches = sv.isDefault === expectedIsDefault && sv.isEnabled === expectedIsEnabled && isEqualVal(sv.processedQty, expectedProcessedQty) && isEqualVal(sv.producedQty, expectedProducedQty) && isEqualVal(sv.unit, expectedUnit) && isEqualVal(sv.extraCost, expectedExtraCost);
+        if (!matches) {
+          isVolumesSynced = false;
+          break;
+        }
+      }
+      if (!isVolumesSynced) break;
+    }
+    return {
+      drinkId: u.drinkId,
+      drinkName: u.drinkName,
+      slotLabel: u.slotLabel,
+      slotId: u.slotId,
+      isSynced: isVolumesSynced
+    };
+  }));
   res.json(usage);
 });
 router12.delete("/catalog/predefined-slots/:id", requirePermission("catalog:manage"), async (req, res) => {
@@ -88379,10 +88569,11 @@ router17.post("/cashier/login", async (req, res) => {
     res.status(401).json({ error: "Invalid username or password" });
     return;
   }
-  if (user.role !== "cashier" && user.role !== "admin") {
-    res.status(403).json({ error: "User is not a cashier" });
+  if (user.role !== "cashier" && user.role !== "admin" && user.role !== "supervisor") {
+    res.status(403).json({ error: "User is not authorized for cashier sessions" });
     return;
   }
+  cashierLoginLimiter.reset(rateLimitKey);
   const [existingSession] = await db.select().from(cashierSessionsTable).where(and(eq(cashierSessionsTable.cashierId, user.id), isNull(cashierSessionsTable.endedAt))).limit(1);
   let session2 = existingSession;
   const ipAddress = req.ip || req.headers["x-forwarded-for"]?.toString() || req.socket.remoteAddress;

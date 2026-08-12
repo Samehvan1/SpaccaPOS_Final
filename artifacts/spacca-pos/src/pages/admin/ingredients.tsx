@@ -1898,19 +1898,81 @@ function TemplateOptionsDialog({ open, onOpenChange, template, onUpdate }: { ope
     }
   };
 
+  const handleSetDefaultType = async (typeId: number) => {
+    if (!template) return;
+    setSaving(true);
+    try {
+      const currentOptions = template.typeOptions || [];
+      const updatedOptions = currentOptions.map((o: any) => ({
+        ...o,
+        isDefault: o.ingredientTypeId === typeId,
+      }));
+      await api(`/api/catalog/predefined-slots/${template.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ typeOptions: updatedOptions })
+      });
+      toast({ title: "Default type option updated" });
+      onUpdate();
+    } catch {
+      toast({ variant: "destructive", title: "Failed to set default type" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSetDefaultVolume = async (typeVolumeId: number, ingredientTypeId: number) => {
+    if (!template) return;
+    setSaving(true);
+    try {
+      const currentVolumes = template.volumes || [];
+      const typeVolIds = typeVolumes.filter(tv => tv.ingredientTypeId === ingredientTypeId).map(tv => tv.id);
+      
+      const updatedForType = typeVolIds.map(tvid => {
+        const existing = currentVolumes.find((v: any) => v.typeVolumeId === tvid);
+        const tvObj = typeVolumes.find(tv => tv.id === tvid);
+        return {
+          typeVolumeId: tvid,
+          processedQty: existing?.processedQty ?? tvObj?.processedQty ?? null,
+          producedQty: existing?.producedQty ?? tvObj?.producedQty ?? null,
+          unit: existing?.unit ?? tvObj?.unit ?? null,
+          extraCost: existing?.extraCost ?? tvObj?.extraCost ?? "0",
+          isEnabled: existing ? existing.isEnabled : true,
+          isDefault: tvid === typeVolumeId,
+        };
+      });
+
+      const otherVolumes = currentVolumes.filter((v: any) => !typeVolIds.includes(v.typeVolumeId));
+      const finalVolumes = [...otherVolumes, ...updatedForType];
+
+      await api(`/api/catalog/predefined-slots/${template.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ volumes: finalVolumes })
+      });
+      
+      toast({ title: "Default volume updated" });
+      onUpdate();
+    } catch {
+      toast({ variant: "destructive", title: "Failed to set default volume" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleUpdateVolume = async (typeVolumeId: number) => {
     if (!template) return;
     setSaving(true);
     try {
       const currentVolumes = template.volumes || [];
       const existing = currentVolumes.find((v: any) => v.typeVolumeId === typeVolumeId);
+      const tvObj = typeVolumes.find(tv => tv.id === typeVolumeId);
 
       const updated = {
         typeVolumeId,
         processedQty: editPhysQty || null,
         producedQty: editProdQty || null,
         extraCost: editExtraCost || "0",
-        isEnabled: existing ? existing.isEnabled : true
+        isEnabled: existing ? existing.isEnabled : true,
+        isDefault: existing ? (existing.isDefault ?? false) : (tvObj?.isDefault ?? false),
       };
       
       // Preserve original order by mapping instead of filtering and appending
@@ -1979,7 +2041,7 @@ function TemplateOptionsDialog({ open, onOpenChange, template, onUpdate }: { ope
           unit: ctv.unit,
           extraCost: ctv.extraCost,
           // Preserve enablement and default status from the existing template if it was there
-          isDefault: existing ? existing.isDefault : ctv.isDefault,
+          isDefault: existing ? (existing.isDefault ?? ctv.isDefault) : ctv.isDefault,
           isEnabled: existing ? existing.isEnabled : true,
           sortOrder: existing ? existing.sortOrder : i
         };
@@ -2039,8 +2101,22 @@ function TemplateOptionsDialog({ open, onOpenChange, template, onUpdate }: { ope
                 <div key={to.id} className="p-2 bg-card space-y-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 p-0 hover:bg-transparent"
+                        title={to.isDefault ? "Default type option" : "Set as default type option"}
+                        onClick={() => handleSetDefaultType(to.ingredientTypeId)}
+                        disabled={saving}
+                      >
+                        {to.isDefault ? (
+                          <Star className="h-4 w-4 fill-amber-400 text-amber-500" />
+                        ) : (
+                          <StarOff className="h-4 w-4 text-muted-foreground opacity-40 hover:opacity-100" />
+                        )}
+                      </Button>
                       <span className="font-semibold text-sm">{ingType?.name || `Type #${to.ingredientTypeId}`}</span>
-                      {to.isDefault && <Badge variant="secondary" className="text-[9px] h-3.5 px-1 font-bold">Default</Badge>}
+                      {to.isDefault && <Badge variant="secondary" className="text-[9px] h-3.5 px-1 font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20">Default Option</Badge>}
                     </div>
                     <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleRemoveType(to.ingredientTypeId)}>
                       <Trash2 className="h-4 w-4" />
@@ -2070,6 +2146,7 @@ function TemplateOptionsDialog({ open, onOpenChange, template, onUpdate }: { ope
                         const isEnabled = override ? override.isEnabled : false;
                         const isEditing = editingTypeVolId === tv.id;
                         const volName = allVolumes.find(av => av.id === tv.volumeId)?.name || `#${tv.volumeId}`;
+                        const isVolDefault = override?.isDefault !== undefined ? !!override.isDefault : tv.isDefault;
 
                         return (
                           <div key={tv.id} className="text-xs border rounded-md p-1.5 bg-muted/10">
@@ -2087,7 +2164,7 @@ function TemplateOptionsDialog({ open, onOpenChange, template, onUpdate }: { ope
                                       extraCost: tv.extraCost,
                                       isDefault: tv.isDefault 
                                     };
-                                    const updated = { ...u, isEnabled: !!val };
+                                    const updated = { ...u, isDefault: u.isDefault ?? tv.isDefault, isEnabled: !!val };
                                     
                                     const updatedVolumes = currentVolumes.some((v: any) => v.typeVolumeId === tv.id)
                                       ? currentVolumes.map((v: any) => v.typeVolumeId === tv.id ? updated : v)
@@ -2100,11 +2177,25 @@ function TemplateOptionsDialog({ open, onOpenChange, template, onUpdate }: { ope
                                     onUpdate();
                                   }}
                                 />
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-5 w-5 p-0 hover:bg-transparent shrink-0"
+                                  title={isVolDefault ? "Default volume option" : "Set as default volume option"}
+                                  onClick={() => handleSetDefaultVolume(tv.id, to.ingredientTypeId)}
+                                  disabled={saving || !isEnabled}
+                                >
+                                  {isVolDefault ? (
+                                    <Star className="h-3 w-3 fill-amber-400 text-amber-500" />
+                                  ) : (
+                                    <StarOff className="h-3 w-3 text-muted-foreground opacity-40 hover:opacity-100" />
+                                  )}
+                                </Button>
                                 <span className={`font-medium truncate ${!isEnabled ? "text-muted-foreground line-through" : ""}`}>
                                   {volName}
                                 </span>
-                                {tv.isDefault && !override?.isDefault && <Badge variant="outline" className="h-3 text-[8px] px-1 opacity-50">Base Default</Badge>}
-                                {override?.isDefault && <Badge variant="secondary" className="h-3 text-[8px] px-1 font-bold">Default</Badge>}
+                                {isVolDefault && <Badge variant="secondary" className="h-3 text-[8px] px-1 font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20">Default Volume</Badge>}
+                                {!override && tv.isDefault && <Badge variant="outline" className="h-3 text-[8px] px-1 opacity-50">Base Default</Badge>}
                               </div>
                               
                               <div className="flex items-center gap-1 shrink-0">
