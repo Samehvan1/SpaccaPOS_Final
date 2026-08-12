@@ -21,6 +21,7 @@ import {
   Info,
   ChevronsUpDown,
   Check,
+  Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,6 +37,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Switch } from "@/components/ui/switch";
 
 interface BomItem {
   id?: number;
@@ -56,6 +58,7 @@ interface BomFormula {
   targetIngredientType: string;
   yieldQuantity: number;
   yieldUnit: string;
+  isLivePrepare?: boolean;
   notes?: string;
   isActive: boolean;
   totalFormulaCost: number;
@@ -184,6 +187,7 @@ export default function ManufacturingPage() {
   const [bomTargetId, setBomTargetId] = useState<string>("");
   const [bomYieldQty, setBomYieldQty] = useState<string>("1000");
   const [bomYieldUnit, setBomYieldUnit] = useState<string>("ml");
+  const [bomIsLivePrepare, setBomIsLivePrepare] = useState<boolean>(false);
   const [bomNotes, setBomNotes] = useState<string>("");
   const [bomFormItems, setBomFormItems] = useState<{ ingredientId: number; quantity: number; unit: string }[]>([]);
 
@@ -307,6 +311,7 @@ export default function ManufacturingPage() {
     setBomTargetId("");
     setBomYieldQty("1000");
     setBomYieldUnit("ml");
+    setBomIsLivePrepare(false);
     setBomNotes("");
     setBomFormItems([]);
     setIsBomModalOpen(true);
@@ -317,6 +322,7 @@ export default function ManufacturingPage() {
     setBomTargetId(bom.targetIngredientId.toString());
     setBomYieldQty(bom.yieldQuantity.toString());
     setBomYieldUnit(bom.yieldUnit);
+    setBomIsLivePrepare(bom.isLivePrepare ?? false);
     setBomNotes(bom.notes || "");
     setBomFormItems(
       bom.items.map((i) => ({
@@ -347,6 +353,7 @@ export default function ManufacturingPage() {
       targetIngredientId: parseInt(bomTargetId, 10),
       yieldQuantity: yieldQty,
       yieldUnit: bomYieldUnit,
+      isLivePrepare: bomIsLivePrepare,
       notes: bomNotes,
       items: bomFormItems,
     });
@@ -476,7 +483,7 @@ export default function ManufacturingPage() {
                             <CommandList className="max-h-[250px] overflow-y-auto">
                               <CommandEmpty>No manufactured items found.</CommandEmpty>
                               <CommandGroup>
-                                {boms.map((bom) => (
+                                {boms.filter((b) => !b.isLivePrepare).map((bom) => (
                                   <CommandItem
                                     key={bom.targetIngredientId}
                                     value={bom.targetIngredientName}
@@ -755,9 +762,15 @@ export default function ManufacturingPage() {
                               Type: {bom.targetIngredientType}
                             </CardDescription>
                           </div>
-                          <Badge variant="secondary" className="font-bold text-[10px] bg-primary/10 text-primary border-primary/20">
-                            Yield: {bom.yieldQuantity} {bom.yieldUnit}
-                          </Badge>
+                          {bom.isLivePrepare ? (
+                            <Badge className="font-bold text-[10px] bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20 gap-1">
+                              <Zap className="h-3 w-3" /> Live Prepare
+                            </Badge>
+                          ) : (
+                            <Badge variant="secondary" className="font-bold text-[10px] bg-primary/10 text-primary border-primary/20">
+                              Yield: {bom.yieldQuantity} {bom.yieldUnit}
+                            </Badge>
+                          )}
                         </div>
                       </CardHeader>
                       <CardContent className="space-y-3 pb-3">
@@ -793,13 +806,16 @@ export default function ManufacturingPage() {
                         <Button
                           variant="ghost"
                           size="sm"
+                          disabled={bom.isLivePrepare}
+                          title={bom.isLivePrepare ? "Live Prepare items are prepared on-demand per order" : undefined}
                           onClick={() => {
+                            if (bom.isLivePrepare) return;
                             setSelectedTargetId(bom.targetIngredientId);
                             setTargetQuantity((bom.yieldQuantity * 2).toString());
                             handleCalculate(bom.targetIngredientId, (bom.yieldQuantity * 2).toString(), processBranchId);
                             setActiveTab("process");
                           }}
-                          className="text-xs font-bold text-primary hover:bg-primary/10 gap-1.5"
+                          className="text-xs font-bold text-primary hover:bg-primary/10 gap-1.5 disabled:opacity-50"
                         >
                           <FlaskConical className="h-3.5 w-3.5" /> Prepare Batch
                         </Button>
@@ -984,6 +1000,23 @@ export default function ManufacturingPage() {
                     className="font-bold"
                   />
                 </div>
+              </div>
+
+              {/* Live Prepare Switch */}
+              <div className="flex items-center justify-between p-3 rounded-lg border bg-amber-500/5 border-amber-500/20">
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-1.5 font-bold text-xs text-foreground">
+                    <Zap className="h-4 w-4 text-amber-500" />
+                    Live Prepare (Order-Time Preparation)
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    When enabled, raw materials are deducted dynamically per customer order. Manual batch production is disabled.
+                  </p>
+                </div>
+                <Switch
+                  checked={bomIsLivePrepare}
+                  onCheckedChange={setBomIsLivePrepare}
+                />
               </div>
 
               {/* Recipe Notes */}

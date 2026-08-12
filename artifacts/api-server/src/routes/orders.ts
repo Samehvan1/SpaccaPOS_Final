@@ -93,6 +93,8 @@ import {
   orderPaymentsTable,
   branchesTable,
   settingsTable,
+  bomsTable,
+  bomItemsTable,
   offersTable,
   offersBranchesTable,
   offersPartnersTable,
@@ -101,6 +103,76 @@ import {
   offersExcludedDrinksTable,
   partnersTable,
 } from "@workspace/db";
+
+export async function expandLivePrepareIngredients(
+  dbOrTx: any,
+  items: Array<{ ingredientId: number; consumedQty: number; parentName?: string }>
+): Promise<Array<{ ingredientId: number; consumedQty: number; isLiveComponent?: boolean; parentName?: string }>> {
+  if (items.length === 0) return [];
+
+  const ingredientIds = Array.from(new Set(items.map(i => i.ingredientId)));
+  const boms = await dbOrTx
+    .select({
+      bom: bomsTable,
+      targetIngredient: ingredientsTable,
+    })
+    .from(bomsTable)
+    .innerJoin(ingredientsTable, eq(bomsTable.targetIngredientId, ingredientsTable.id))
+    .where(and(inArray(bomsTable.targetIngredientId, ingredientIds), eq(bomsTable.isActive, true), eq(bomsTable.isLivePrepare, true)));
+
+  if (boms.length === 0) {
+    return items;
+  }
+
+  const liveBomMap = new Map<number, { bom: typeof bomsTable.$inferSelect; targetIngredient: typeof ingredientsTable.$inferSelect }>();
+  boms.forEach((b: any) => liveBomMap.set(b.bom.targetIngredientId, b));
+  const bomIds = boms.map((b: any) => b.bom.id);
+
+  const bomItems = await dbOrTx
+    .select()
+    .from(bomItemsTable)
+    .where(inArray(bomItemsTable.bomId, bomIds));
+
+  const bomItemsMap = new Map<number, typeof bomItems>();
+  bomItems.forEach((item: any) => {
+    const list = bomItemsMap.get(item.bomId) ?? [];
+    list.push(item);
+    bomItemsMap.set(item.bomId, list);
+  });
+
+  const expandedList: Array<{ ingredientId: number; consumedQty: number; isLiveComponent?: boolean; parentName?: string }> = [];
+
+  for (const item of items) {
+    const liveBomEntry = liveBomMap.get(item.ingredientId);
+    if (!liveBomEntry) {
+      expandedList.push(item);
+      continue;
+    }
+
+    const { bom, targetIngredient } = liveBomEntry;
+    const yieldQty = parseFloat(bom.yieldQuantity || "1");
+    const multiplier = yieldQty > 0 ? item.consumedQty / yieldQty : 1;
+    const components = bomItemsMap.get(bom.id) ?? [];
+
+    for (const comp of components) {
+      const compQty = parseFloat(comp.quantity || "0") * multiplier;
+      expandedList.push({
+        ingredientId: comp.ingredientId,
+        consumedQty: compQty,
+        isLiveComponent: true,
+        parentName: targetIngredient.name,
+      });
+    }
+  }
+
+  const hasSubLive = expandedList.some(e => liveBomMap.has(e.ingredientId));
+  if (hasSubLive) {
+    return expandLivePrepareIngredients(dbOrTx, expandedList);
+  }
+
+  return expandedList;
+}
+
 import {
   ListOrdersResponse,
   CreateOrderBody,
@@ -545,17 +617,23 @@ router.post("/orders", async (req, res): Promise<void> => {
   }
 
   // ── Stock Validation ──
-  const requiredStockMap = new Map<number, number>();
+  const rawStockReqs: Array<{ ingredientId: number; consumedQty: number }> = [];
   for (const item of itemDetails) {
     for (const c of item.customizations) {
       if (c.ingredientId && c.consumedQty > 0) {
-        const currentReq = requiredStockMap.get(c.ingredientId) ?? 0;
-        requiredStockMap.set(c.ingredientId, currentReq + c.consumedQty);
+        rawStockReqs.push({ ingredientId: c.ingredientId, consumedQty: c.consumedQty });
       }
     }
   }
 
-  if (requiredStockMap.size > 0) {
+  if (rawStockReqs.length > 0) {
+    const expandedReqs = await expandLivePrepareIngredients(db, rawStockReqs);
+    const requiredStockMap = new Map<number, number>();
+    expandedReqs.forEach((r) => {
+      requiredStockMap.set(r.ingredientId, (requiredStockMap.get(r.ingredientId) ?? 0) + r.consumedQty);
+    });
+
+    if (requiredStockMap.size > 0) {
     const [allowNoStockSellRow] = await db
       .select()
       .from(settingsTable)
@@ -595,6 +673,7 @@ router.post("/orders", async (req, res): Promise<void> => {
       }
     }
   }
+}
 
   // ── Calculate Offer Discount (Requirement #1, #2, #4) ──────────────────────
   const offersList = await db
@@ -1216,66 +1295,85 @@ router.patch("/orders/:id/status", async (req, res, next): Promise<void> => {
         .innerJoin(orderItemsTable, eq(orderItemsTable.id, orderItemCustomizationsTable.orderItemId))
         .where(eq(orderItemsTable.orderId, existingOrder.id));
 
-      const totalsToDeduct = new Map<number, number>();
+      const rawCustomizations: Array<{ ingredientId: number; consumedQty: number }> = [];
       customizations.forEach(c => {
         if (c.ingredientId && parseFloat(c.consumedQty) > 0) {
-          const qty = parseFloat(c.consumedQty);
-          totalsToDeduct.set(c.ingredientId, (totalsToDeduct.get(c.ingredientId) ?? 0) + qty);
+          rawCustomizations.push({ ingredientId: c.ingredientId, consumedQty: parseFloat(c.consumedQty) });
         }
       });
 
-      if (totalsToDeduct.size > 0) {
-        const ingredientIds = Array.from(totalsToDeduct.keys());
-        const stockRows = await tx
-          .select({ ingredientId: branchStockTable.ingredientId, stockQuantity: branchStockTable.stockQuantity })
-          .from(branchStockTable)
-          .where(and(eq(branchStockTable.branchId, existingOrder.branchId), inArray(branchStockTable.ingredientId, ingredientIds)));
-        const stockMap = new Map(stockRows.map((r) => [r.ingredientId, parseFloat(r.stockQuantity)]));
+      if (rawCustomizations.length > 0) {
+        const expandedDeductions = await expandLivePrepareIngredients(tx, rawCustomizations);
+        const liveComponentNotesMap = new Map<number, string[]>();
+        expandedDeductions.forEach(e => {
+          if (e.isLiveComponent && e.parentName) {
+            const list = liveComponentNotesMap.get(e.ingredientId) ?? [];
+            list.push(`Live Prepare component for ${e.parentName}`);
+            liveComponentNotesMap.set(e.ingredientId, list);
+          }
+        });
 
-        const stockUpdates: Array<{ id: number; newQty: number; delta: number }> = [];
-        const { deductStockFromBatches } = await import("../lib/stock-utils");
+        const totalsToDeduct = new Map<number, number>();
+        expandedDeductions.forEach(c => {
+          totalsToDeduct.set(c.ingredientId, (totalsToDeduct.get(c.ingredientId) ?? 0) + c.consumedQty);
+        });
 
-        for (const [ingredientId, delta] of totalsToDeduct.entries()) {
-          const current = stockMap.get(ingredientId) ?? 0;
-          const newQty = Math.max(0, current - delta);
-          console.log(`[stock] Confirming order: Deducting ${delta} from ${ingredientId} in branch ${existingOrder.branchId}. ${current} -> ${newQty}`);
-          stockMap.set(ingredientId, newQty);
-          stockUpdates.push({ id: ingredientId, newQty, delta });
+        if (totalsToDeduct.size > 0) {
+          const ingredientIds = Array.from(totalsToDeduct.keys());
+          const stockRows = await tx
+            .select({ ingredientId: branchStockTable.ingredientId, stockQuantity: branchStockTable.stockQuantity })
+            .from(branchStockTable)
+            .where(and(eq(branchStockTable.branchId, existingOrder.branchId), inArray(branchStockTable.ingredientId, ingredientIds)));
+          const stockMap = new Map(stockRows.map((r) => [r.ingredientId, parseFloat(r.stockQuantity)]));
 
-          // Deduct from batches using FEFO
-          await deductStockFromBatches(tx, existingOrder.branchId, ingredientId, delta);
+          const stockUpdates: Array<{ id: number; newQty: number; delta: number; liveNote?: string }> = [];
+          const { deductStockFromBatches } = await import("../lib/stock-utils");
+
+          for (const [ingredientId, delta] of totalsToDeduct.entries()) {
+            const current = stockMap.get(ingredientId) ?? 0;
+            const newQty = Math.max(0, current - delta);
+            const liveNotes = liveComponentNotesMap.get(ingredientId);
+            const liveNoteStr = liveNotes && liveNotes.length > 0 ? ` (${[...new Set(liveNotes)].join(", ")})` : "";
+
+            console.log(`[stock] Confirming order: Deducting ${delta} from ${ingredientId} in branch ${existingOrder.branchId}. ${current} -> ${newQty}${liveNoteStr}`);
+            stockMap.set(ingredientId, newQty);
+            stockUpdates.push({ id: ingredientId, newQty, delta, liveNote: liveNoteStr });
+
+            // Deduct from batches using FEFO
+            await deductStockFromBatches(tx, existingOrder.branchId, ingredientId, delta);
+          }
+
+          // Batch-update branch stock
+          await Promise.all(
+            stockUpdates.map((u) =>
+              tx.insert(branchStockTable)
+                .values({
+                  branchId: existingOrder.branchId,
+                  ingredientId: u.id,
+                  stockQuantity: String(u.newQty),
+                })
+                .onConflictDoUpdate({
+                  target: [branchStockTable.branchId, branchStockTable.ingredientId],
+                  set: { stockQuantity: String(u.newQty) }
+                })
+            )
+          );
+
+          // Insert stock movements
+          const sessionUserId = (req.session as any).userId;
+          await tx.insert(stockMovementsTable).values(
+            stockUpdates.map((u) => ({
+              branchId: existingOrder.branchId,
+              ingredientId: u.id,
+              orderId: existingOrder.id,
+              movementType: "sale" as const,
+              quantity: String(-u.delta),
+              quantityAfter: String(u.newQty),
+              note: `Order ${existingOrder.orderNumber} Confirmation${u.liveNote || ""}`,
+              createdBy: sessionUserId,
+            }))
+          );
         }
-
-        // Batch-update branch stock
-        await Promise.all(
-          stockUpdates.map((u) =>
-            tx.insert(branchStockTable)
-              .values({
-                branchId: existingOrder.branchId,
-                ingredientId: u.id,
-                stockQuantity: String(u.newQty),
-              })
-              .onConflictDoUpdate({
-                target: [branchStockTable.branchId, branchStockTable.ingredientId],
-                set: { stockQuantity: String(u.newQty) }
-              })
-          )
-        );
-
-        // Insert stock movements
-        const sessionUserId = (req.session as any).userId;
-        await tx.insert(stockMovementsTable).values(
-          stockUpdates.map((u) => ({
-            branchId: existingOrder.branchId,
-            ingredientId: u.id,
-            orderId: existingOrder.id,
-            movementType: "sale" as const,
-            quantity: String(-u.delta),
-            quantityAfter: String(u.newQty),
-            note: `Order ${existingOrder.orderNumber} Confirmation`,
-            createdBy: sessionUserId,
-          }))
-        );
       }
     }
 

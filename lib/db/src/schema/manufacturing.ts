@@ -14,6 +14,7 @@ export const bomsTable = pgTable("boms", {
   yieldQuantity: numeric("yield_quantity", { precision: 12, scale: 4 }).notNull().default("1"),
   yieldUnit: text("yield_unit").notNull().default("ml"),
   notes: text("notes"),
+  isLivePrepare: boolean("is_live_prepare").notNull().default(false),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),

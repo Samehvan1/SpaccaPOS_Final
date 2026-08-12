@@ -23,6 +23,7 @@ const SaveBomSchema = z.object({
   targetIngredientId: z.number().int().positive(),
   yieldQuantity: z.number().positive(),
   yieldUnit: z.string().min(1),
+  isLivePrepare: z.boolean().optional().default(false),
   notes: z.string().optional().nullable(),
   items: z.array(
     z.object({
@@ -113,6 +114,7 @@ router.get("/boms", async (req, res): Promise<void> => {
         targetIngredientType: targetIngredient.ingredientType,
         yieldQuantity: yieldQty,
         yieldUnit: bom.yieldUnit,
+        isLivePrepare: bom.isLivePrepare,
         notes: bom.notes,
         isActive: bom.isActive,
         createdAt: bom.createdAt,
@@ -189,6 +191,7 @@ router.get("/boms/:targetIngredientId", async (req, res): Promise<void> => {
         targetIngredientType: targetIngredient.ingredientType,
         yieldQuantity: yieldQty,
         yieldUnit: bom.yieldUnit,
+        isLivePrepare: bom.isLivePrepare,
         notes: bom.notes,
         isActive: bom.isActive,
         createdAt: bom.createdAt,
@@ -213,7 +216,7 @@ router.post("/boms", async (req, res): Promise<void> => {
       return;
     }
 
-    const { targetIngredientId, yieldQuantity, yieldUnit, notes, items } = parsed.data;
+    const { targetIngredientId, yieldQuantity, yieldUnit, isLivePrepare, notes, items } = parsed.data;
 
     // Check if target ingredient exists
     const [targetIng] = await db
@@ -244,6 +247,7 @@ router.post("/boms", async (req, res): Promise<void> => {
           .set({
             yieldQuantity: yieldQuantity.toString(),
             yieldUnit,
+            isLivePrepare: isLivePrepare ?? false,
             notes: notes || null,
             isActive: true,
             updatedAt: new Date(),
@@ -259,6 +263,7 @@ router.post("/boms", async (req, res): Promise<void> => {
             targetIngredientId,
             yieldQuantity: yieldQuantity.toString(),
             yieldUnit,
+            isLivePrepare: isLivePrepare ?? false,
             notes: notes || null,
             isActive: true,
           })
@@ -325,6 +330,11 @@ router.post("/process/calculate", async (req, res): Promise<void> => {
 
     if (!bom) {
       res.status(404).json({ error: "No active BOM formula found for this item" });
+      return;
+    }
+
+    if (bom.isLivePrepare) {
+      res.status(400).json({ error: "Live Prepare items are prepared on-demand when ordered and cannot be pre-manufactured via Preparation Batches." });
       return;
     }
 
