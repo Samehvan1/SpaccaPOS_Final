@@ -68,7 +68,7 @@ function endOfDay(d: Date): Date {
 import { broadcastEvent } from "../lib/sse";
 import { logActivity } from "../lib/activity-logger";
 import { requirePermission } from "../middleware/permissions";
-import { calculateDrinkData } from "../lib/price-calculator";
+import { calculateDrinkData, resolveProductDiscount, calculateProductDiscountAmount } from "../lib/price-calculator";
 import {
   db,
   ordersTable,
@@ -761,29 +761,47 @@ router.post("/orders", async (req, res): Promise<void> => {
   // Rule #5: when the order has an offer applied, discounts can not be accepted
   if (offerDiscountAmount > 0) {
     discountAmount = 0;
-  } else if (parsed.data.discountCode) {
-    const [discountRow] = await db
-      .select()
-      .from(discountsTable)
-      .where(eq(discountsTable.code, parsed.data.discountCode));
-    
-    if (discountRow && discountRow.isActive) {
-      discountId = discountRow.id;
-      discountCode = discountRow.code;
-      discountValue = parseFloat(discountRow.value);
-      discountType = discountRow.type as "percentage" | "fixed" | "fixed_per_item";
-      
-      if (discountType === "percentage") {
-        const beforeTax = subtotal / 1.14;
-        discountAmount = (beforeTax * discountValue) / 100;
-      } else if (discountType === "fixed_per_item") {
-        const totalItems = orderItems.reduce((sum, item) => sum + item.quantity, 0);
-        discountAmount = totalItems * discountValue;
-      } else {
-        discountAmount = discountValue;
+  } else {
+    // 1. Fetch order coupon if provided
+    let orderCouponRow: any = null;
+    if (parsed.data.discountCode) {
+      const [row] = await db
+        .select()
+        .from(discountsTable)
+        .where(eq(discountsTable.code, parsed.data.discountCode));
+      if (row && row.isActive) {
+        orderCouponRow = row;
+        discountId = row.id;
+        discountCode = row.code;
+        discountValue = parseFloat(row.value);
+        discountType = row.type as any;
       }
-      discountAmount = Math.min(discountAmount, subtotal);
     }
+
+    // 2. Evaluate Best-Deal (Product Discount vs Order Coupon Share) for each line item
+    let totalCalculatedDiscount = 0;
+    for (const item of itemDetails) {
+      const productDisc = await resolveProductDiscount(item.drinkId, targetBranchId, parsed.data.partnerId || null);
+      const productDiscPerUnit = calculateProductDiscountAmount(item.unitPrice, productDisc);
+
+      let couponSharePerUnit = 0;
+      if (orderCouponRow && discountValue) {
+        if (discountType === "percentage") {
+          const unitBeforeTax = item.unitPrice / 1.14;
+          couponSharePerUnit = (unitBeforeTax * discountValue) / 100;
+        } else if (discountType === "fixed_per_item") {
+          couponSharePerUnit = discountValue;
+        } else if (discountType === "fixed" && subtotal > 0) {
+          couponSharePerUnit = (item.unitPrice / subtotal) * discountValue;
+        }
+      }
+
+      // Best-Deal Rule: Select maximum discount per unit
+      const bestUnitDiscount = Math.max(productDiscPerUnit, couponSharePerUnit);
+      totalCalculatedDiscount += bestUnitDiscount * item.quantity;
+    }
+
+    discountAmount = Number(Math.min(totalCalculatedDiscount, subtotal).toFixed(2));
   }
 
   let total = subtotal - (offerDiscountAmount > 0 ? offerDiscountAmount : discountAmount);

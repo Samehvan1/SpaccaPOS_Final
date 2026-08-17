@@ -3290,4 +3290,100 @@ export declare const UpdateOfferBody: z.ZodObject<{
     excludedDrinkIds?: number[] | undefined;
 }>;
 export type UpdateOfferBody = Infer<typeof api.UpdateOfferBody>;
+export declare const ProductDrinkDiscount: z.ZodObject<{
+    id: z.ZodNumber;
+    drinkId: z.ZodNumber;
+    branchId: z.ZodNullable<z.ZodNumber>;
+    partnerId: z.ZodNullable<z.ZodNumber>;
+    discountType: z.ZodEnum<["percentage", "fixed_amount", "fixed_price"]>;
+    discountValue: z.ZodNumber;
+    isActive: z.ZodBoolean;
+    startDate: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    endDate: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    createdAt: z.ZodOptional<z.ZodString>;
+    updatedAt: z.ZodOptional<z.ZodString>;
+}, "strip", z.ZodTypeAny, {
+    id: number;
+    branchId: number | null;
+    isActive: boolean;
+    drinkId: number;
+    partnerId: number | null;
+    discountValue: number;
+    discountType: "percentage" | "fixed_amount" | "fixed_price";
+    createdAt?: string | undefined;
+    updatedAt?: string | undefined;
+    startDate?: string | null | undefined;
+    endDate?: string | null | undefined;
+}, {
+    id: number;
+    branchId: number | null;
+    isActive: boolean;
+    drinkId: number;
+    partnerId: number | null;
+    discountValue: number;
+    discountType: "percentage" | "fixed_amount" | "fixed_price";
+    createdAt?: string | undefined;
+    updatedAt?: string | undefined;
+    startDate?: string | null | undefined;
+    endDate?: string | null | undefined;
+}>;
+export type ProductDrinkDiscount = Infer<typeof ProductDrinkDiscount>;
+export declare const CreateProductDrinkDiscountBody: z.ZodObject<{
+    drinkId: z.ZodNumber;
+    branchId: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
+    partnerId: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
+    discountType: z.ZodEnum<["percentage", "fixed_amount", "fixed_price"]>;
+    discountValue: z.ZodNumber;
+    isActive: z.ZodDefault<z.ZodOptional<z.ZodBoolean>>;
+    startDate: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    endDate: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+}, "strip", z.ZodTypeAny, {
+    isActive: boolean;
+    drinkId: number;
+    discountValue: number;
+    discountType: "percentage" | "fixed_amount" | "fixed_price";
+    branchId?: number | null | undefined;
+    startDate?: string | null | undefined;
+    endDate?: string | null | undefined;
+    partnerId?: number | null | undefined;
+}, {
+    drinkId: number;
+    discountValue: number;
+    discountType: "percentage" | "fixed_amount" | "fixed_price";
+    branchId?: number | null | undefined;
+    isActive?: boolean | undefined;
+    startDate?: string | null | undefined;
+    endDate?: string | null | undefined;
+    partnerId?: number | null | undefined;
+}>;
+export type CreateProductDrinkDiscountBody = Infer<typeof CreateProductDrinkDiscountBody>;
+export declare const UpdateProductDrinkDiscountBody: z.ZodObject<{
+    drinkId: z.ZodOptional<z.ZodNumber>;
+    branchId: z.ZodOptional<z.ZodOptional<z.ZodNullable<z.ZodNumber>>>;
+    partnerId: z.ZodOptional<z.ZodOptional<z.ZodNullable<z.ZodNumber>>>;
+    discountType: z.ZodOptional<z.ZodEnum<["percentage", "fixed_amount", "fixed_price"]>>;
+    discountValue: z.ZodOptional<z.ZodNumber>;
+    isActive: z.ZodOptional<z.ZodDefault<z.ZodOptional<z.ZodBoolean>>>;
+    startDate: z.ZodOptional<z.ZodOptional<z.ZodNullable<z.ZodString>>>;
+    endDate: z.ZodOptional<z.ZodOptional<z.ZodNullable<z.ZodString>>>;
+}, "strip", z.ZodTypeAny, {
+    branchId?: number | null | undefined;
+    isActive?: boolean | undefined;
+    drinkId?: number | undefined;
+    startDate?: string | null | undefined;
+    endDate?: string | null | undefined;
+    partnerId?: number | null | undefined;
+    discountValue?: number | undefined;
+    discountType?: "percentage" | "fixed_amount" | "fixed_price" | undefined;
+}, {
+    branchId?: number | null | undefined;
+    isActive?: boolean | undefined;
+    drinkId?: number | undefined;
+    startDate?: string | null | undefined;
+    endDate?: string | null | undefined;
+    partnerId?: number | null | undefined;
+    discountValue?: number | undefined;
+    discountType?: "percentage" | "fixed_amount" | "fixed_price" | undefined;
+}>;
+export type UpdateProductDrinkDiscountBody = Infer<typeof UpdateProductDrinkDiscountBody>;
 //# sourceMappingURL=index.d.ts.map

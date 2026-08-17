@@ -174,6 +174,18 @@ export default function PosTerminal() {
     enabled: !!selectedBranchId,
   });
 
+  const { data: productDiscounts = [] } = useQuery<any[]>({
+    queryKey: ["pos-product-discounts", selectedBranchId, selectedPartnerId],
+    queryFn: async () => {
+      const q = new URLSearchParams();
+      if (selectedBranchId) q.set("branchId", String(selectedBranchId));
+      if (selectedPartnerId) q.set("partnerId", String(selectedPartnerId));
+      const res = await fetch(`${API_BASE}/product-discounts?${q.toString()}`);
+      if (!res.ok) return [];
+      return res.json();
+    },
+  });
+
   // Only show active categories that have the sort order from admin
   const categories = useMemo(() => {
     return allCategories.filter(c => c.isActive);
@@ -775,17 +787,60 @@ export default function PosTerminal() {
 
   const discountAmount = useMemo(() => {
     if (isOfferApplied) return 0;
-    if (!appliedDiscount) return 0;
-    if (appliedDiscount.type === "percentage") {
-      const beforeTax = cartSubtotal / 1.14;
-      return (beforeTax * appliedDiscount.value) / 100;
-    }
-    if (appliedDiscount.type === "fixed_per_item") {
-      const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
-      return totalItems * Number(appliedDiscount.value);
-    }
-    return appliedDiscount.value;
-  }, [appliedDiscount, cartSubtotal, cart, isOfferApplied]);
+    if (cart.length === 0) return 0;
+
+    let totalDiscount = 0;
+    const orderCouponValue = appliedDiscount ? Number(appliedDiscount.value || 0) : 0;
+    const orderCouponType = appliedDiscount?.type;
+
+    cart.forEach(item => {
+      const drinkId = item.drinkId;
+      const allProductDiscs = (productDiscounts || []).filter((pd: any) => pd.drinkId === drinkId && pd.isActive);
+      
+      let matchedPd: any = null;
+      if (selectedPartnerId && selectedBranchId) {
+        matchedPd = allProductDiscs.find((pd: any) => pd.partnerId === selectedPartnerId && pd.branchId === selectedBranchId);
+      }
+      if (!matchedPd && selectedPartnerId) {
+        matchedPd = allProductDiscs.find((pd: any) => pd.partnerId === selectedPartnerId && (!pd.branchId || pd.branchId === null));
+      }
+      if (!matchedPd && selectedBranchId) {
+        matchedPd = allProductDiscs.find((pd: any) => pd.branchId === selectedBranchId && (!pd.partnerId || pd.partnerId === null));
+      }
+      if (!matchedPd) {
+        matchedPd = allProductDiscs.find((pd: any) => (!pd.branchId || pd.branchId === null) && (!pd.partnerId || pd.partnerId === null));
+      }
+
+      let productDiscPerUnit = 0;
+      if (matchedPd) {
+        const val = Number(matchedPd.discountValue);
+        if (matchedPd.discountType === "percentage") {
+          productDiscPerUnit = (item.totalPrice * val) / 100;
+        } else if (matchedPd.discountType === "fixed_amount") {
+          productDiscPerUnit = Math.min(val, item.totalPrice);
+        } else if (matchedPd.discountType === "fixed_price") {
+          productDiscPerUnit = Math.max(0, item.totalPrice - val);
+        }
+      }
+
+      let couponSharePerUnit = 0;
+      if (appliedDiscount && orderCouponValue > 0) {
+        if (orderCouponType === "percentage") {
+          const beforeTax = item.totalPrice / 1.14;
+          couponSharePerUnit = (beforeTax * orderCouponValue) / 100;
+        } else if (orderCouponType === "fixed_per_item") {
+          couponSharePerUnit = orderCouponValue;
+        } else if (cartSubtotal > 0) {
+          couponSharePerUnit = (item.totalPrice / cartSubtotal) * orderCouponValue;
+        }
+      }
+
+      const bestUnitDiscount = Math.max(productDiscPerUnit, couponSharePerUnit);
+      totalDiscount += bestUnitDiscount * item.quantity;
+    });
+
+    return Number(Math.min(totalDiscount, cartSubtotal).toFixed(2));
+  }, [appliedDiscount, cartSubtotal, cart, isOfferApplied, productDiscounts, selectedBranchId, selectedPartnerId]);
 
   const cartTotal = isOfferApplied ? (cartSubtotal - offerDiscount) : (cartSubtotal - discountAmount);
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
@@ -1208,6 +1263,7 @@ export default function PosTerminal() {
         extraFreeCount={offerCalculation.extraFreeCount}
         offerDiscount={offerDiscount}
         offerName={activeOffer?.name}
+        discountAmount={discountAmount}
       />
 
 

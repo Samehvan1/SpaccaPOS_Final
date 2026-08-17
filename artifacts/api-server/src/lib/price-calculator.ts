@@ -7,6 +7,7 @@ import {
   drinkSlotTypeOptionsTable,
   branchDrinkPricesTable,
   partnerDrinkPricesTable,
+  productDrinkDiscountsTable,
 } from "@workspace/db/schema";
 import {
   ingredientsTable,
@@ -860,5 +861,127 @@ export async function getProductCost(
     })),
   };
 }
+
+/**
+ * Resolve effective product discount for a drink given branch and partner context.
+ * Resolution hierarchy:
+ * 1. Partner + Branch specific
+ * 2. Partner general (branch null)
+ * 3. Branch specific (partner null)
+ * 4. Global (branch null, partner null)
+ */
+export async function resolveProductDiscount(
+  drinkId: number,
+  branchId: number | null = null,
+  partnerId: number | null = null
+): Promise<{
+  id: number;
+  discountType: "percentage" | "fixed_amount" | "fixed_price";
+  discountValue: number;
+  branchId: number | null;
+  partnerId: number | null;
+} | null> {
+  const allDiscounts = await db
+    .select()
+    .from(productDrinkDiscountsTable)
+    .where(
+      and(
+        eq(productDrinkDiscountsTable.drinkId, drinkId),
+        eq(productDrinkDiscountsTable.isActive, true)
+      )
+    );
+
+  if (!allDiscounts.length) return null;
+
+  const now = new Date();
+  const validDiscounts = allDiscounts.filter((d) => {
+    if (d.startDate && new Date(d.startDate) > now) return false;
+    if (d.endDate && new Date(d.endDate) < now) return false;
+    return true;
+  });
+
+  if (!validDiscounts.length) return null;
+
+  // 1. Partner + Branch
+  if (partnerId && branchId) {
+    const match = validDiscounts.find(
+      (d) => d.partnerId === partnerId && d.branchId === branchId
+    );
+    if (match) {
+      return {
+        id: match.id,
+        discountType: match.discountType as any,
+        discountValue: parseFloat(match.discountValue),
+        branchId: match.branchId,
+        partnerId: match.partnerId,
+      };
+    }
+  }
+
+  // 2. Partner general
+  if (partnerId) {
+    const match = validDiscounts.find(
+      (d) => d.partnerId === partnerId && d.branchId === null
+    );
+    if (match) {
+      return {
+        id: match.id,
+        discountType: match.discountType as any,
+        discountValue: parseFloat(match.discountValue),
+        branchId: match.branchId,
+        partnerId: match.partnerId,
+      };
+    }
+  }
+
+  // 3. Branch match
+  if (branchId) {
+    const match = validDiscounts.find(
+      (d) => d.branchId === branchId && d.partnerId === null
+    );
+    if (match) {
+      return {
+        id: match.id,
+        discountType: match.discountType as any,
+        discountValue: parseFloat(match.discountValue),
+        branchId: match.branchId,
+        partnerId: match.partnerId,
+      };
+    }
+  }
+
+  // 4. Global match
+  const globalMatch = validDiscounts.find(
+    (d) => d.branchId === null && d.partnerId === null
+  );
+  if (globalMatch) {
+    return {
+      id: globalMatch.id,
+      discountType: globalMatch.discountType as any,
+      discountValue: parseFloat(globalMatch.discountValue),
+      branchId: globalMatch.branchId,
+      partnerId: globalMatch.partnerId,
+    };
+  }
+
+  return null;
+}
+
+export function calculateProductDiscountAmount(
+  itemBasePrice: number,
+  discount: { discountType: "percentage" | "fixed_amount" | "fixed_price"; discountValue: number } | null
+): number {
+  if (!discount) return 0;
+  let amount = 0;
+  if (discount.discountType === "percentage") {
+    amount = (itemBasePrice * discount.discountValue) / 100;
+  } else if (discount.discountType === "fixed_amount") {
+    amount = Math.min(discount.discountValue, itemBasePrice);
+  } else if (discount.discountType === "fixed_price") {
+    amount = Math.max(0, itemBasePrice - discount.discountValue);
+  }
+  return Number(amount.toFixed(2));
+}
+
 
 

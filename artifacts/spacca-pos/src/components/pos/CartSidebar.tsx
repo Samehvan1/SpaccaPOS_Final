@@ -44,6 +44,7 @@ interface CartSidebarProps {
   extraFreeCount?: number;
   offerDiscount?: number;
   offerName?: string;
+  discountAmount?: number;
 }
 
 export const CartSidebar: React.FC<CartSidebarProps> = ({
@@ -60,6 +61,7 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({
   extraFreeCount = 0,
   offerDiscount = 0,
   offerName = "Promo Offer",
+  discountAmount = 0,
 }) => {
 
   return (
@@ -189,6 +191,14 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({
                 <Tag className="h-3.5 w-3.5 text-destructive" /> Offer: {offerName}
               </span>
               <span>-{fmt(offerDiscount)}</span>
+            </div>
+          )}
+          {discountAmount > 0 && offerDiscount === 0 && (
+            <div className="flex justify-between items-center text-xs text-emerald-600 font-bold bg-emerald-50 dark:bg-emerald-950/30 p-2 rounded-lg border border-emerald-200/60">
+              <span className="flex items-center gap-1 capitalize">
+                <Tag className="h-3.5 w-3.5 text-emerald-600" /> Discount Savings
+              </span>
+              <span>-{fmt(discountAmount)}</span>
             </div>
           )}
           {availableDiscounts.length > 0 && offerDiscount === 0 && (

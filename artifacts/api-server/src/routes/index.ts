@@ -13,7 +13,9 @@ import settingsRouter from "./settings";
 import predefinedSlotsRouter from "./predefined-slots";
 import usersRouter from "./users";
 import discountsRouter from "./discounts";
+import productDiscountsRouter from "./product-discounts";
 import offersRouter from "./offers";
+
 import customersRouter from "./customers";
 import tagsRouter from "./tags";
 import cashierSessionsRouter from "./cashier-sessions";
@@ -52,6 +54,7 @@ router.use(settingsRouter);
 router.use(predefinedSlotsRouter);
 router.use(usersRouter);
 router.use(discountsRouter);
+router.use(productDiscountsRouter);
 router.use(offersRouter);
 router.use(customersRouter);
 
