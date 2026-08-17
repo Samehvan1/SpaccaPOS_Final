@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrig
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft, Plus, Trash2, ChevronUp, ChevronDown, Droplets, Save, FlaskConical, Layers, Tag, ChevronRight } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, ChevronUp, ChevronDown, Droplets, Save, FlaskConical, Layers, Tag, ChevronRight, Flame } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 type SlotStyle = "legacy" | "typed";
@@ -65,6 +65,8 @@ type Category = { id: number; name: string; sortOrder: number };
 type IngType = {
   id: number; categoryId: number; name: string; isActive: boolean;
   processedQty: string; producedQty: string; unit: string; extraCost: string;
+  inventoryIngredientId?: number | null;
+  isLiveBom?: boolean;
   category?: { id: number; name: string } | null;
 };
 type TypeVolume = {
@@ -143,13 +145,35 @@ export default function DrinkRecipe() {
   const [optionsCache, setOptionsCache] = useState<Record<number, any[]>>({});
   const [isCustomizable, setIsCustomizable] = useState<boolean>(true);
   const [cupIngredientId, setCupIngredientId] = useState<string>("none");
+  const [liveBomIngredientIds, setLiveBomIngredientIds] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     api("/api/catalog/predefined-slots").then(setPredefinedSlots).catch(() => {});
     Promise.all([api("/api/catalog/categories"), api("/api/catalog/types")])
       .then(([cats, types]) => { setCategories(cats); setAllTypes(types); })
       .catch(() => {});
+    api("/api/manufacturing/boms")
+      .then((data: any[]) => {
+        const liveSet = new Set<number>();
+        for (const b of data || []) {
+          const isLive = b.bom?.isLivePrepare ?? b.isLivePrepare ?? false;
+          const targetId = b.bom?.targetIngredientId ?? b.targetIngredientId;
+          if (isLive && targetId) {
+            liveSet.add(targetId);
+          }
+        }
+        setLiveBomIngredientIds(liveSet);
+      })
+      .catch(() => {});
   }, []);
+
+  const isTypeLiveBom = (typeId: number) => {
+    const t = allTypes.find(at => at.id === typeId);
+    if (!t) return false;
+    if (t.isLiveBom) return true;
+    if (t.inventoryIngredientId && liveBomIngredientIds.has(t.inventoryIngredientId)) return true;
+    return false;
+  };
 
   const loadTypeVolumes = useCallback(async (typeId: number): Promise<TypeVolume[]> => {
     if (typeVolumeCache[typeId]) return typeVolumeCache[typeId];
@@ -184,7 +208,7 @@ export default function DrinkRecipe() {
           categoryName: to.categoryName ?? "",
           isDefault: to.isDefault ?? false,
           sortOrder: to.sortOrder ?? 0,
-          expanded: true,
+          expanded: false,
           slotVolumes: (to.volumes ?? []).map((v: any) => ({
             typeVolumeId: v.id,
             volumeName: v.volumeName ?? "",
@@ -203,7 +227,7 @@ export default function DrinkRecipe() {
         }));
         return {
           key: newKey(), style: "typed" as SlotStyle,
-          slotLabel: s.slotLabel, isRequired: s.isRequired, expanded: true,
+          slotLabel: s.slotLabel, isRequired: s.isRequired, expanded: false,
           typeOptions: typeOpts,
           ingredientId: null, isDynamic: s.isDynamic ?? false, defaultOptionId: null,
           baristaSortOrder: s.baristaSortOrder ?? s.sortOrder ?? 1,
@@ -214,7 +238,7 @@ export default function DrinkRecipe() {
       }
       return {
         key: newKey(), style: "legacy" as SlotStyle,
-        slotLabel: s.slotLabel, isRequired: s.isRequired, expanded: true,
+        slotLabel: s.slotLabel, isRequired: s.isRequired, expanded: false,
         typeOptions: [],
         ingredientId: s.ingredientId ?? null, isDynamic: s.isDynamic ?? false,
         defaultOptionId: s.defaultOptionId ?? null,
@@ -260,7 +284,7 @@ export default function DrinkRecipe() {
       style,
       slotLabel: "",
       isRequired: true,
-      expanded: true,
+      expanded: false,
       typeOptions: [],
       ingredientId: null,
       isDynamic: false,
@@ -314,7 +338,7 @@ export default function DrinkRecipe() {
       style: "typed",
       slotLabel: fullTemplate.slotLabel,
       isRequired: fullTemplate.isRequired,
-      expanded: true,
+      expanded: false,
       predefinedSlotId: fullTemplate.id,
       isDynamic: fullTemplate.isDynamic,
       affectsCupSize: fullTemplate.affectsCupSize,
@@ -678,9 +702,32 @@ export default function DrinkRecipe() {
         {/* Slots */}
         <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
-            <h2 className="font-semibold text-lg">
-              {isCustomizable ? "Ingredient Slots" : "Fixed Recipe Ingredients"} ({slots.length})
-            </h2>
+            <div className="flex items-center gap-3">
+              <h2 className="font-semibold text-lg">
+                {isCustomizable ? "Ingredient Slots" : "Fixed Recipe Ingredients"} ({slots.length})
+              </h2>
+              {slots.length > 0 && (
+                <div className="flex items-center gap-1.5 border-l pl-3">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs px-2 text-muted-foreground hover:text-foreground"
+                    onClick={() => setSlots(prev => prev.map(s => ({ ...s, expanded: true })))}
+                  >
+                    Expand All
+                  </Button>
+                  <span className="text-muted-foreground text-xs">·</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs px-2 text-muted-foreground hover:text-foreground"
+                    onClick={() => setSlots(prev => prev.map(s => ({ ...s, expanded: false })))}
+                  >
+                    Collapse All
+                  </Button>
+                </div>
+              )}
+            </div>
             <div className="flex gap-2 items-center">
               <div className="flex gap-1.5 items-center mr-2 pr-2 border-r">
                 <Select onValueChange={(v) => v !== "none" && addFromTemplate(parseInt(v))}>
@@ -800,14 +847,29 @@ export default function DrinkRecipe() {
                       )}
                       {/* Compact summary when collapsed */}
                       {!slot.expanded && (
-                        <span className="text-xs text-muted-foreground truncate shrink-0">
-                          {slot.style === "typed"
-                            ? slot.typeOptions.length > 0
-                              ? `· ${slot.typeOptions.map(t => t.typeName).join(", ")}`
-                              : "· no types"
-                            : slot.isDynamic ? "· dynamic fill"
-                            : ""}
-                        </span>
+                        <div className="flex items-center gap-1.5 overflow-hidden text-xs text-muted-foreground shrink-0">
+                          {slot.style === "typed" ? (
+                            slot.typeOptions.length > 0 ? (
+                              <>
+                                <span className="truncate">· {slot.typeOptions.map(t => t.typeName).join(", ")}</span>
+                                {slot.typeOptions.some(to => isTypeLiveBom(to.ingredientTypeId)) && (
+                                  <Badge variant="outline" className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30 gap-1 text-[9px] font-bold px-1.5 py-0 h-4 shrink-0">
+                                    <Flame className="h-2.5 w-2.5 text-amber-500 fill-amber-500" /> Live BOM
+                                  </Badge>
+                                )}
+                              </>
+                            ) : "· no types"
+                          ) : (
+                            <>
+                              {slot.isDynamic ? "· dynamic fill" : ""}
+                              {slot.ingredientId && liveBomIngredientIds.has(slot.ingredientId) && (
+                                <Badge variant="outline" className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30 gap-1 text-[9px] font-bold px-1.5 py-0 h-4 shrink-0">
+                                  <Flame className="h-2.5 w-2.5 text-amber-500 fill-amber-500" /> Live BOM
+                                </Badge>
+                              )}
+                            </>
+                          )}
+                        </div>
                       )}
                     </button>
 
@@ -916,6 +978,11 @@ export default function DrinkRecipe() {
                                   <ChevronRight className={`h-3.5 w-3.5 transition-transform ${to.expanded ? "rotate-90" : ""}`} />
                                   <Tag className="h-3.5 w-3.5 text-primary shrink-0" />
                                   <span>{to.typeName || "Unnamed type"}</span>
+                                  {isTypeLiveBom(to.ingredientTypeId) && (
+                                    <Badge variant="outline" className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30 gap-1 text-[10px] font-bold px-1.5 py-0 h-4 shrink-0">
+                                      <Flame className="h-2.5 w-2.5 text-amber-500 fill-amber-500" /> Live BOM
+                                    </Badge>
+                                  )}
                                   {to.categoryName && <span className="text-xs text-muted-foreground font-normal">({to.categoryName})</span>}
                                   <span className="text-xs text-muted-foreground font-normal">· {to.slotVolumes.filter(v => v.isEnabled).length} vol.</span>
                                 </button>
@@ -1105,7 +1172,14 @@ export default function DrinkRecipe() {
                                   <SelectLabel>{cat.name}</SelectLabel>
                                   {catTypes.map(t => (
                                     <SelectItem key={t.id} value={String(t.id)}>
-                                      {t.name} <span className="text-muted-foreground">({cat.name})</span>
+                                      <div className="flex items-center justify-between gap-3 w-full">
+                                        <span>{t.name} <span className="text-muted-foreground font-normal">({cat.name})</span></span>
+                                        {isTypeLiveBom(t.id) && (
+                                          <span className="text-[9px] font-bold text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-950/60 px-1.5 py-0.5 rounded border border-amber-300 dark:border-amber-800 shrink-0 flex items-center gap-1">
+                                            <Flame className="h-2.5 w-2.5 text-amber-500 fill-amber-500" /> Live BOM
+                                          </span>
+                                        )}
+                                      </div>
                                     </SelectItem>
                                   ))}
                                 </SelectGroup>

@@ -56883,6 +56883,7 @@ var init_manufacturing = __esm({
       yieldQuantity: numeric("yield_quantity", { precision: 12, scale: 4 }).notNull().default("1"),
       yieldUnit: text("yield_unit").notNull().default("ml"),
       notes: text("notes"),
+      isLivePrepare: boolean("is_live_prepare").notNull().default(false),
       isActive: boolean("is_active").notNull().default(true),
       createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
       updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => /* @__PURE__ */ new Date())
@@ -84385,6 +84386,53 @@ function startOfDay(d) {
 function endOfDay(d) {
   return toCairoMidnight(d, true);
 }
+async function expandLivePrepareIngredients(dbOrTx, items) {
+  if (items.length === 0) return [];
+  const ingredientIds = Array.from(new Set(items.map((i) => i.ingredientId)));
+  const boms = await dbOrTx.select({
+    bom: bomsTable,
+    targetIngredient: ingredientsTable
+  }).from(bomsTable).innerJoin(ingredientsTable, eq(bomsTable.targetIngredientId, ingredientsTable.id)).where(and(inArray(bomsTable.targetIngredientId, ingredientIds), eq(bomsTable.isActive, true), eq(bomsTable.isLivePrepare, true)));
+  if (boms.length === 0) {
+    return items;
+  }
+  const liveBomMap = /* @__PURE__ */ new Map();
+  boms.forEach((b) => liveBomMap.set(b.bom.targetIngredientId, b));
+  const bomIds = boms.map((b) => b.bom.id);
+  const bomItems = await dbOrTx.select().from(bomItemsTable).where(inArray(bomItemsTable.bomId, bomIds));
+  const bomItemsMap = /* @__PURE__ */ new Map();
+  bomItems.forEach((item) => {
+    const list = bomItemsMap.get(item.bomId) ?? [];
+    list.push(item);
+    bomItemsMap.set(item.bomId, list);
+  });
+  const expandedList = [];
+  for (const item of items) {
+    const liveBomEntry = liveBomMap.get(item.ingredientId);
+    if (!liveBomEntry) {
+      expandedList.push(item);
+      continue;
+    }
+    const { bom, targetIngredient } = liveBomEntry;
+    const yieldQty = parseFloat(bom.yieldQuantity || "1");
+    const multiplier = yieldQty > 0 ? item.consumedQty / yieldQty : 1;
+    const components = bomItemsMap.get(bom.id) ?? [];
+    for (const comp of components) {
+      const compQty = parseFloat(comp.quantity || "0") * multiplier;
+      expandedList.push({
+        ingredientId: comp.ingredientId,
+        consumedQty: compQty,
+        isLiveComponent: true,
+        parentName: targetIngredient.name
+      });
+    }
+  }
+  const hasSubLive = expandedList.some((e) => liveBomMap.has(e.ingredientId));
+  if (hasSubLive) {
+    return expandLivePrepareIngredients(dbOrTx, expandedList);
+  }
+  return expandedList;
+}
 var router5 = (0, import_express5.Router)();
 function getDayOfYear(date6) {
   const formatter = new Intl.DateTimeFormat("en-US", {
@@ -84719,40 +84767,46 @@ router5.post("/orders", async (req, res) => {
       throw e;
     }
   }
-  const requiredStockMap = /* @__PURE__ */ new Map();
+  const rawStockReqs = [];
   for (const item of itemDetails) {
     for (const c of item.customizations) {
       if (c.ingredientId && c.consumedQty > 0) {
-        const currentReq = requiredStockMap.get(c.ingredientId) ?? 0;
-        requiredStockMap.set(c.ingredientId, currentReq + c.consumedQty);
+        rawStockReqs.push({ ingredientId: c.ingredientId, consumedQty: c.consumedQty });
       }
     }
   }
-  if (requiredStockMap.size > 0) {
-    const [allowNoStockSellRow] = await db.select().from(settingsTable).where(and(eq(settingsTable.scope, "global"), eq(settingsTable.key, "allowNoStockSell"))).limit(1);
-    const allowNoStockSell = allowNoStockSellRow ? allowNoStockSellRow.value === "true" : false;
-    if (!allowNoStockSell) {
-      const allReqIngredientIds = Array.from(requiredStockMap.keys());
-      const stockRows = await db.select({
-        ingredientId: branchStockTable.ingredientId,
-        stockQuantity: branchStockTable.stockQuantity,
-        name: ingredientsTable.name
-      }).from(branchStockTable).innerJoin(ingredientsTable, eq(ingredientsTable.id, branchStockTable.ingredientId)).where(and(eq(branchStockTable.branchId, targetBranchId), inArray(branchStockTable.ingredientId, allReqIngredientIds)));
-      const stockMap = new Map(stockRows.map((r) => [r.ingredientId, { stock: parseFloat(r.stockQuantity), name: r.name }]));
-      const insufficientStockItems = [];
-      for (const [ingId, reqQty] of requiredStockMap.entries()) {
-        const stockInfo = stockMap.get(ingId);
-        const availableStock = stockInfo ? stockInfo.stock : 0;
-        if (reqQty > availableStock) {
-          const ingName = stockInfo ? stockInfo.name : `Ingredient #${ingId}`;
-          insufficientStockItems.push(`${ingName} (Required: ${reqQty.toFixed(1)}, Available: ${availableStock.toFixed(1)})`);
+  if (rawStockReqs.length > 0) {
+    const expandedReqs = await expandLivePrepareIngredients(db, rawStockReqs);
+    const requiredStockMap = /* @__PURE__ */ new Map();
+    expandedReqs.forEach((r) => {
+      requiredStockMap.set(r.ingredientId, (requiredStockMap.get(r.ingredientId) ?? 0) + r.consumedQty);
+    });
+    if (requiredStockMap.size > 0) {
+      const [allowNoStockSellRow] = await db.select().from(settingsTable).where(and(eq(settingsTable.scope, "global"), eq(settingsTable.key, "allowNoStockSell"))).limit(1);
+      const allowNoStockSell = allowNoStockSellRow ? allowNoStockSellRow.value === "true" : false;
+      if (!allowNoStockSell) {
+        const allReqIngredientIds = Array.from(requiredStockMap.keys());
+        const stockRows = await db.select({
+          ingredientId: branchStockTable.ingredientId,
+          stockQuantity: branchStockTable.stockQuantity,
+          name: ingredientsTable.name
+        }).from(branchStockTable).innerJoin(ingredientsTable, eq(ingredientsTable.id, branchStockTable.ingredientId)).where(and(eq(branchStockTable.branchId, targetBranchId), inArray(branchStockTable.ingredientId, allReqIngredientIds)));
+        const stockMap = new Map(stockRows.map((r) => [r.ingredientId, { stock: parseFloat(r.stockQuantity), name: r.name }]));
+        const insufficientStockItems = [];
+        for (const [ingId, reqQty] of requiredStockMap.entries()) {
+          const stockInfo = stockMap.get(ingId);
+          const availableStock = stockInfo ? stockInfo.stock : 0;
+          if (reqQty > availableStock) {
+            const ingName = stockInfo ? stockInfo.name : `Ingredient #${ingId}`;
+            insufficientStockItems.push(`${ingName} (Required: ${reqQty.toFixed(1)}, Available: ${availableStock.toFixed(1)})`);
+          }
         }
-      }
-      if (insufficientStockItems.length > 0) {
-        res.status(400).json({
-          error: `Insufficient stock for the following: ${insufficientStockItems.join(", ")}`
-        });
-        return;
+        if (insufficientStockItems.length > 0) {
+          res.status(400).json({
+            error: `Insufficient stock for the following: ${insufficientStockItems.join(", ")}`
+          });
+          return;
+        }
       }
     }
   }
@@ -85214,52 +85268,68 @@ router5.patch("/orders/:id/status", async (req, res, next) => {
         consumedQty: orderItemCustomizationsTable.consumedQty,
         slotLabel: orderItemCustomizationsTable.slotLabel
       }).from(orderItemCustomizationsTable).innerJoin(orderItemsTable, eq(orderItemsTable.id, orderItemCustomizationsTable.orderItemId)).where(eq(orderItemsTable.orderId, existingOrder.id));
-      const totalsToDeduct = /* @__PURE__ */ new Map();
+      const rawCustomizations = [];
       customizations.forEach((c) => {
         if (c.ingredientId && parseFloat(c.consumedQty) > 0) {
-          const qty = parseFloat(c.consumedQty);
-          totalsToDeduct.set(c.ingredientId, (totalsToDeduct.get(c.ingredientId) ?? 0) + qty);
+          rawCustomizations.push({ ingredientId: c.ingredientId, consumedQty: parseFloat(c.consumedQty) });
         }
       });
-      if (totalsToDeduct.size > 0) {
-        const ingredientIds = Array.from(totalsToDeduct.keys());
-        const stockRows = await tx.select({ ingredientId: branchStockTable.ingredientId, stockQuantity: branchStockTable.stockQuantity }).from(branchStockTable).where(and(eq(branchStockTable.branchId, existingOrder.branchId), inArray(branchStockTable.ingredientId, ingredientIds)));
-        const stockMap = new Map(stockRows.map((r) => [r.ingredientId, parseFloat(r.stockQuantity)]));
-        const stockUpdates = [];
-        const { deductStockFromBatches: deductStockFromBatches2 } = await Promise.resolve().then(() => (init_stock_utils(), stock_utils_exports));
-        for (const [ingredientId, delta] of totalsToDeduct.entries()) {
-          const current = stockMap.get(ingredientId) ?? 0;
-          const newQty = Math.max(0, current - delta);
-          console.log(`[stock] Confirming order: Deducting ${delta} from ${ingredientId} in branch ${existingOrder.branchId}. ${current} -> ${newQty}`);
-          stockMap.set(ingredientId, newQty);
-          stockUpdates.push({ id: ingredientId, newQty, delta });
-          await deductStockFromBatches2(tx, existingOrder.branchId, ingredientId, delta);
-        }
-        await Promise.all(
-          stockUpdates.map(
-            (u) => tx.insert(branchStockTable).values({
+      if (rawCustomizations.length > 0) {
+        const expandedDeductions = await expandLivePrepareIngredients(tx, rawCustomizations);
+        const liveComponentNotesMap = /* @__PURE__ */ new Map();
+        expandedDeductions.forEach((e) => {
+          if (e.isLiveComponent && e.parentName) {
+            const list = liveComponentNotesMap.get(e.ingredientId) ?? [];
+            list.push(`Live Prepare component for ${e.parentName}`);
+            liveComponentNotesMap.set(e.ingredientId, list);
+          }
+        });
+        const totalsToDeduct = /* @__PURE__ */ new Map();
+        expandedDeductions.forEach((c) => {
+          totalsToDeduct.set(c.ingredientId, (totalsToDeduct.get(c.ingredientId) ?? 0) + c.consumedQty);
+        });
+        if (totalsToDeduct.size > 0) {
+          const ingredientIds = Array.from(totalsToDeduct.keys());
+          const stockRows = await tx.select({ ingredientId: branchStockTable.ingredientId, stockQuantity: branchStockTable.stockQuantity }).from(branchStockTable).where(and(eq(branchStockTable.branchId, existingOrder.branchId), inArray(branchStockTable.ingredientId, ingredientIds)));
+          const stockMap = new Map(stockRows.map((r) => [r.ingredientId, parseFloat(r.stockQuantity)]));
+          const stockUpdates = [];
+          const { deductStockFromBatches: deductStockFromBatches2 } = await Promise.resolve().then(() => (init_stock_utils(), stock_utils_exports));
+          for (const [ingredientId, delta] of totalsToDeduct.entries()) {
+            const current = stockMap.get(ingredientId) ?? 0;
+            const newQty = Math.max(0, current - delta);
+            const liveNotes = liveComponentNotesMap.get(ingredientId);
+            const liveNoteStr = liveNotes && liveNotes.length > 0 ? ` (${[...new Set(liveNotes)].join(", ")})` : "";
+            console.log(`[stock] Confirming order: Deducting ${delta} from ${ingredientId} in branch ${existingOrder.branchId}. ${current} -> ${newQty}${liveNoteStr}`);
+            stockMap.set(ingredientId, newQty);
+            stockUpdates.push({ id: ingredientId, newQty, delta, liveNote: liveNoteStr });
+            await deductStockFromBatches2(tx, existingOrder.branchId, ingredientId, delta);
+          }
+          await Promise.all(
+            stockUpdates.map(
+              (u) => tx.insert(branchStockTable).values({
+                branchId: existingOrder.branchId,
+                ingredientId: u.id,
+                stockQuantity: String(u.newQty)
+              }).onConflictDoUpdate({
+                target: [branchStockTable.branchId, branchStockTable.ingredientId],
+                set: { stockQuantity: String(u.newQty) }
+              })
+            )
+          );
+          const sessionUserId = req.session.userId;
+          await tx.insert(stockMovementsTable).values(
+            stockUpdates.map((u) => ({
               branchId: existingOrder.branchId,
               ingredientId: u.id,
-              stockQuantity: String(u.newQty)
-            }).onConflictDoUpdate({
-              target: [branchStockTable.branchId, branchStockTable.ingredientId],
-              set: { stockQuantity: String(u.newQty) }
-            })
-          )
-        );
-        const sessionUserId = req.session.userId;
-        await tx.insert(stockMovementsTable).values(
-          stockUpdates.map((u) => ({
-            branchId: existingOrder.branchId,
-            ingredientId: u.id,
-            orderId: existingOrder.id,
-            movementType: "sale",
-            quantity: String(-u.delta),
-            quantityAfter: String(u.newQty),
-            note: `Order ${existingOrder.orderNumber} Confirmation`,
-            createdBy: sessionUserId
-          }))
-        );
+              orderId: existingOrder.id,
+              movementType: "sale",
+              quantity: String(-u.delta),
+              quantityAfter: String(u.newQty),
+              note: `Order ${existingOrder.orderNumber} Confirmation${u.liveNote || ""}`,
+              createdBy: sessionUserId
+            }))
+          );
+        }
       }
     }
     const [updatedOrder] = await tx.update(ordersTable).set(updateData).where(eq(ordersTable.id, params.data.id)).returning();
@@ -91301,6 +91371,7 @@ var SaveBomSchema = external_exports2.object({
   targetIngredientId: external_exports2.number().int().positive(),
   yieldQuantity: external_exports2.number().positive(),
   yieldUnit: external_exports2.string().min(1),
+  isLivePrepare: external_exports2.boolean().optional().default(false),
   notes: external_exports2.string().optional().nullable(),
   items: external_exports2.array(
     external_exports2.object({
@@ -91374,6 +91445,7 @@ router21.get("/boms", async (req, res) => {
         targetIngredientType: targetIngredient.ingredientType,
         yieldQuantity: yieldQty,
         yieldUnit: bom.yieldUnit,
+        isLivePrepare: bom.isLivePrepare,
         notes: bom.notes,
         isActive: bom.isActive,
         createdAt: bom.createdAt,
@@ -91432,6 +91504,7 @@ router21.get("/boms/:targetIngredientId", async (req, res) => {
         targetIngredientType: targetIngredient.ingredientType,
         yieldQuantity: yieldQty,
         yieldUnit: bom.yieldUnit,
+        isLivePrepare: bom.isLivePrepare,
         notes: bom.notes,
         isActive: bom.isActive,
         createdAt: bom.createdAt,
@@ -91453,7 +91526,7 @@ router21.post("/boms", async (req, res) => {
       res.status(400).json({ error: parsed.error.issues[0]?.message || "Invalid input data" });
       return;
     }
-    const { targetIngredientId, yieldQuantity, yieldUnit, notes, items } = parsed.data;
+    const { targetIngredientId, yieldQuantity, yieldUnit, isLivePrepare, notes, items } = parsed.data;
     const [targetIng] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, targetIngredientId)).limit(1);
     if (!targetIng) {
       res.status(404).json({ error: "Target inventory item not found" });
@@ -91467,6 +91540,7 @@ router21.post("/boms", async (req, res) => {
         await tx.update(bomsTable).set({
           yieldQuantity: yieldQuantity.toString(),
           yieldUnit,
+          isLivePrepare: isLivePrepare ?? false,
           notes: notes || null,
           isActive: true,
           updatedAt: /* @__PURE__ */ new Date()
@@ -91477,6 +91551,7 @@ router21.post("/boms", async (req, res) => {
           targetIngredientId,
           yieldQuantity: yieldQuantity.toString(),
           yieldUnit,
+          isLivePrepare: isLivePrepare ?? false,
           notes: notes || null,
           isActive: true
         }).returning();
@@ -91525,6 +91600,10 @@ router21.post("/process/calculate", async (req, res) => {
     const [bom] = await db.select().from(bomsTable).where(and(eq(bomsTable.targetIngredientId, targetIngredientId), eq(bomsTable.isActive, true))).limit(1);
     if (!bom) {
       res.status(404).json({ error: "No active BOM formula found for this item" });
+      return;
+    }
+    if (bom.isLivePrepare) {
+      res.status(400).json({ error: "Live Prepare items are prepared on-demand when ordered and cannot be pre-manufactured via Preparation Batches." });
       return;
     }
     const targetIngredient = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, targetIngredientId)).limit(1);

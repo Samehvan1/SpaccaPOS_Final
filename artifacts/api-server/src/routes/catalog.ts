@@ -14,6 +14,7 @@ import {
   drinkSlotTypeOptionsTable,
   drinkSlotVolumesTable,
   drinksTable,
+  bomsTable,
 } from "@workspace/db";
 import { globalCache } from "../lib/cache";
 import { requirePermission } from "../middleware/permissions";
@@ -69,14 +70,19 @@ router.delete("/catalog/categories/:id", requirePermission("catalog:manage"), as
 
 router.get("/catalog/types", async (_req, res): Promise<void> => {
   const types = await db.select().from(ingredientTypesTable).orderBy(asc(ingredientTypesTable.categoryId), asc(ingredientTypesTable.sortOrder));
-  const [categories, inventoryItems, slotLinks, optionLinks] = await Promise.all([
+  const [categories, inventoryItems, slotLinks, optionLinks, activeBoms] = await Promise.all([
     db.select().from(ingredientCategoriesTable),
     db.select({ id: ingredientsTable.id, name: ingredientsTable.name, unit: ingredientsTable.unit }).from(ingredientsTable),
     db.select({ drinkId: drinkIngredientSlotsTable.drinkId, typeId: drinkIngredientSlotsTable.ingredientTypeId }).from(drinkIngredientSlotsTable),
     db.select({ drinkId: drinkIngredientSlotsTable.drinkId, typeId: drinkSlotTypeOptionsTable.ingredientTypeId })
       .from(drinkSlotTypeOptionsTable)
       .innerJoin(drinkIngredientSlotsTable, eq(drinkSlotTypeOptionsTable.slotId, drinkIngredientSlotsTable.id)),
+    db.select({ targetIngredientId: bomsTable.targetIngredientId, isLivePrepare: bomsTable.isLivePrepare }).from(bomsTable).where(eq(bomsTable.isActive, true)),
   ]);
+
+  const liveBomTargetIds = new Set(
+    activeBoms.filter(b => b.isLivePrepare).map(b => b.targetIngredientId)
+  );
 
   const typeDrinkMap = new Map<number, Set<number>>();
   [...slotLinks, ...optionLinks].forEach(link => {
@@ -93,6 +99,7 @@ router.get("/catalog/types", async (_req, res): Promise<void> => {
     drinkCount: typeDrinkMap.get(t.id)?.size ?? 0,
     category: catMap.get(t.categoryId) ?? null,
     inventoryIngredient: t.inventoryIngredientId ? invMap.get(t.inventoryIngredientId) ?? null : null,
+    isLiveBom: t.inventoryIngredientId ? liveBomTargetIds.has(t.inventoryIngredientId) : false,
   })));
 });
 
