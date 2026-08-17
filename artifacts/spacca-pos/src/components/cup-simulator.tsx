@@ -1,6 +1,6 @@
 import { useMemo, useRef } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { OrbitControls, Environment, Float, ContactShadows } from "@react-three/drei";
+import { OrbitControls, Float, ContactShadows } from "@react-three/drei";
 import * as THREE from "three";
 
 export type CupLayer = {
@@ -344,11 +344,10 @@ export function CupSimulator({
   return (
     <div className={`relative flex flex-col items-center w-full h-full ${className}`}>
       <Canvas camera={{ position: [0, 2, 8], fov: 45 }}>
-        <ambientLight intensity={0.6} />
-        <directionalLight position={[10, 10, 5]} intensity={1} />
-        <directionalLight position={[-10, 10, -5]} intensity={0.5} />
-
-        <Environment preset="city" />
+        <ambientLight intensity={0.9} />
+        <directionalLight position={[10, 10, 5]} intensity={1.4} />
+        <directionalLight position={[-10, 10, -5]} intensity={0.8} />
+        <pointLight position={[0, 4, 2]} intensity={0.6} />
 
         <Float speed={2} rotationIntensity={0.5} floatIntensity={0.5}>
           <CupAssembly cupSizeMl={cupSizeMl} layers={layers} />

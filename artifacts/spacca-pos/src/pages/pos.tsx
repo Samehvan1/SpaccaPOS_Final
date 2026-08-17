@@ -818,12 +818,13 @@ export default function PosTerminal() {
       let productDiscPerUnit = 0;
       if (matchedPd) {
         const val = Number(matchedPd.discountValue);
+        const unitBeforeTax = item.totalPrice / 1.14;
         if (matchedPd.discountType === "percentage") {
-          productDiscPerUnit = (item.totalPrice * val) / 100;
+          productDiscPerUnit = (unitBeforeTax * val) / 100;
         } else if (matchedPd.discountType === "fixed_amount") {
-          productDiscPerUnit = Math.min(val, item.totalPrice);
+          productDiscPerUnit = Math.min(val, unitBeforeTax);
         } else if (matchedPd.discountType === "fixed_price") {
-          productDiscPerUnit = Math.max(0, item.totalPrice - val);
+          productDiscPerUnit = Math.max(0, unitBeforeTax - val);
         }
       }
 

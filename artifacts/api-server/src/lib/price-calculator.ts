@@ -973,12 +973,13 @@ export function calculateProductDiscountAmount(
 ): number {
   if (!discount) return 0;
   let amount = 0;
+  const unitBeforeTax = itemBasePrice / 1.14;
   if (discount.discountType === "percentage") {
-    amount = (itemBasePrice * discount.discountValue) / 100;
+    amount = (unitBeforeTax * discount.discountValue) / 100;
   } else if (discount.discountType === "fixed_amount") {
-    amount = Math.min(discount.discountValue, itemBasePrice);
+    amount = Math.min(discount.discountValue, unitBeforeTax);
   } else if (discount.discountType === "fixed_price") {
-    amount = Math.max(0, itemBasePrice - discount.discountValue);
+    amount = Math.max(0, unitBeforeTax - discount.discountValue);
   }
   return Number(amount.toFixed(2));
 }
