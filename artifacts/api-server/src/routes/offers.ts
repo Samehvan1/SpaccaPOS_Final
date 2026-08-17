@@ -12,7 +12,6 @@ import {
 import { serializeDates } from "../lib/serialize";
 import { requirePermission } from "../middleware/permissions";
 import {
-  Offer,
   CreateOfferBody,
   UpdateOfferBody,
 } from "@workspace/api-zod";
@@ -83,12 +82,14 @@ async function syncOfferScopes(
   }
 }
 
-// Helper to deactivate overlapping active offers based on junction table scopes
+// Helper to deactivate overlapping active offers ONLY if product scopes conflict
 async function deactivateOverlappingOffers(
   tx: any,
   newOffer: {
     branchIds: number[];        // empty = all branches
-    partnerIds: number[];       // empty = all partners (when applyToAllPartners=true)
+    partnerIds: number[];       // empty = all partners
+    applicableDrinkIds?: number[];
+    rewardDrinkIds?: number[];
     applyToStore?: boolean;
     applyToAllPartners?: boolean;
   },
@@ -103,9 +104,9 @@ async function deactivateOverlappingOffers(
   const overlappingIds: number[] = [];
 
   for (const o of activeOffers) {
-    const { branchIds: oBranchIds, partnerIds: oPartnerIds } = await loadOfferScopes(tx, o.id);
+    const { branchIds: oBranchIds, partnerIds: oPartnerIds, applicableDrinkIds: oApplicable, rewardDrinkIds: oReward } = await loadOfferScopes(tx, o.id);
 
-    // Branches overlap: if either offer has no branch restriction, or they share at least one branch
+    // 1. Branch overlap check
     const branchesOverlap =
       oBranchIds.length === 0 ||
       newOffer.branchIds.length === 0 ||
@@ -113,19 +114,34 @@ async function deactivateOverlappingOffers(
 
     if (!branchesOverlap) continue;
 
-    // Store channel overlap
+    // 2. Channel overlap check (Store or Partner)
     const storeOverlap = (o.applyToStore ?? true) && (newOffer.applyToStore ?? true);
-
-    // Partner channel overlap
     const oAllPartners = o.applyToAllPartners ?? true;
     const newAllPartners = newOffer.applyToAllPartners ?? true;
     const partnerOverlap =
       (oAllPartners && newAllPartners) ||
-      (oAllPartners && newOffer.partnerIds.length > 0) ||
+      (oAllPartners && (newOffer.partnerIds?.length ?? 0) > 0) ||
       (newAllPartners && oPartnerIds.length > 0) ||
-      oPartnerIds.some(p => newOffer.partnerIds.includes(p));
+      oPartnerIds.some(p => (newOffer.partnerIds ?? []).includes(p));
 
-    if (storeOverlap || partnerOverlap) {
+    if (!storeOverlap && !partnerOverlap) continue;
+
+    // 3. Product Scope Conflict Check:
+    // Non-conflicting offers have disjoint applicable (trigger) AND reward drink lists.
+    const newApplicable = newOffer.applicableDrinkIds ?? [];
+    const applicableOverlap =
+      oApplicable.length === 0 ||
+      newApplicable.length === 0 ||
+      oApplicable.some(d => newApplicable.includes(d));
+
+    const newReward = newOffer.rewardDrinkIds ?? [];
+    const rewardOverlap =
+      oReward.length === 0 ||
+      newReward.length === 0 ||
+      oReward.some(d => newReward.includes(d));
+
+    // If both applicable AND reward drinks overlap (or either offer applies to all drinks), they conflict!
+    if (applicableOverlap || rewardOverlap) {
       overlappingIds.push(o.id);
     }
   }
@@ -150,7 +166,7 @@ router.get("/offers", requirePermission("discounts:view"), async (req, res): Pro
   }
 });
 
-// GET /offers/active - Get the currently active offer for a branch and partner
+// GET /offers/active - Get all active matching offers for a branch and partner
 router.get("/offers/active", async (req, res): Promise<void> => {
   try {
     const { branchId, partnerId } = req.query;
@@ -158,35 +174,30 @@ router.get("/offers/active", async (req, res): Promise<void> => {
     const targetPartnerId = partnerId && partnerId !== "all" && partnerId !== "null" && partnerId !== "undefined" ? parseInt(partnerId as string) : null;
 
     const offers = await db.select().from(offersTable).where(eq(offersTable.isActive, true));
+    const matchingOffers: any[] = [];
 
     for (const o of offers) {
       const { branchIds, partnerIds } = await loadOfferScopes(db, o.id);
 
-      // Branch check: if offer has no specific branches, applies to all
       if (targetBranchId && branchIds.length > 0 && !branchIds.includes(targetBranchId)) {
         continue;
       }
 
-      // Channel check
       if (targetPartnerId) {
-        // Partner order: match if applyToAllPartners or specific partner is listed
         const matchesPartner = (o.applyToAllPartners ?? true) || partnerIds.includes(targetPartnerId);
         if (!matchesPartner) continue;
       } else {
-        // Store order: match if applyToStore
         if (!(o.applyToStore ?? true)) continue;
       }
 
-      // Return enriched offer with all branch, partner, and drink scoping lists
       const enriched = await enrichOffer(db, o);
-      res.json(enriched);
-      return;
+      matchingOffers.push(enriched);
     }
 
-    res.json(null);
+    res.json(matchingOffers);
   } catch (error: any) {
     console.error("[GET /offers/active] error:", error?.message);
-    res.status(500).json({ error: "Failed to fetch active offer" });
+    res.status(500).json({ error: "Failed to fetch active offers" });
   }
 });
 
@@ -210,7 +221,7 @@ router.post("/offers", requirePermission("discounts:manage"), async (req, res): 
       const applyToAllPartners = parsed.data.applyToAllPartners ?? true;
 
       if (isAct) {
-        await deactivateOverlappingOffers(tx, { branchIds, partnerIds, applyToStore, applyToAllPartners });
+        await deactivateOverlappingOffers(tx, { branchIds, partnerIds, applicableDrinkIds, rewardDrinkIds, applyToStore, applyToAllPartners });
       }
 
       const [newOffer] = await tx
@@ -247,31 +258,22 @@ router.patch("/offers/:id", requirePermission("discounts:manage"), async (req, r
   }
 
   try {
-    const enrichedOffer = await db.transaction(async (tx) => {
-      const [existing] = await tx.select().from(offersTable).where(eq(offersTable.id, id));
-      if (!existing) {
-        throw new Error("Offer not found");
-      }
+    const enriched = await db.transaction(async (tx) => {
+      const existing = await tx.select().from(offersTable).where(eq(offersTable.id, id));
+      if (existing.length === 0) return null;
 
-      const { 
-        branchIds: existingBranchIds, 
-        partnerIds: existingPartnerIds,
-        applicableDrinkIds: existingApplicable,
-        rewardDrinkIds: existingReward,
-        excludedDrinkIds: existingExcluded 
-      } = await loadOfferScopes(tx, id);
-
-      const isAct = parsed.data.isActive !== undefined ? parsed.data.isActive : existing.isActive;
-      const branchIds: number[] = parsed.data.branchIds !== undefined ? parsed.data.branchIds : existingBranchIds;
-      const partnerIds: number[] = parsed.data.partnerIds !== undefined ? parsed.data.partnerIds : existingPartnerIds;
-      const applicableDrinkIds: number[] = (parsed.data as any).applicableDrinkIds !== undefined ? (parsed.data as any).applicableDrinkIds : existingApplicable;
-      const rewardDrinkIds: number[] = (parsed.data as any).rewardDrinkIds !== undefined ? (parsed.data as any).rewardDrinkIds : existingReward;
-      const excludedDrinkIds: number[] = (parsed.data as any).excludedDrinkIds !== undefined ? (parsed.data as any).excludedDrinkIds : existingExcluded;
-      const applyToStore = parsed.data.applyToStore !== undefined ? parsed.data.applyToStore : existing.applyToStore;
-      const applyToAllPartners = parsed.data.applyToAllPartners !== undefined ? parsed.data.applyToAllPartners : existing.applyToAllPartners;
+      const { branchIds: curBranches, partnerIds: curPartners, applicableDrinkIds: curApp, rewardDrinkIds: curRew } = await loadOfferScopes(tx, id);
+      const branchIds: number[] = parsed.data.branchIds ?? curBranches;
+      const partnerIds: number[] = parsed.data.partnerIds ?? curPartners;
+      const applicableDrinkIds: number[] = (parsed.data as any).applicableDrinkIds ?? curApp;
+      const rewardDrinkIds: number[] = (parsed.data as any).rewardDrinkIds ?? curRew;
+      const excludedDrinkIds: number[] = (parsed.data as any).excludedDrinkIds;
+      const applyToStore = parsed.data.applyToStore ?? existing[0].applyToStore;
+      const applyToAllPartners = parsed.data.applyToAllPartners ?? existing[0].applyToAllPartners;
+      const isAct = parsed.data.isActive ?? existing[0].isActive;
 
       if (isAct) {
-        await deactivateOverlappingOffers(tx, { branchIds, partnerIds, applyToStore, applyToAllPartners }, id);
+        await deactivateOverlappingOffers(tx, { branchIds, partnerIds, applicableDrinkIds, rewardDrinkIds, applyToStore, applyToAllPartners }, id);
       }
 
       const updateData: any = { updatedAt: new Date() };
@@ -282,44 +284,42 @@ router.patch("/offers/:id", requirePermission("discounts:manage"), async (req, r
       if (parsed.data.applyToStore !== undefined) updateData.applyToStore = parsed.data.applyToStore;
       if (parsed.data.applyToAllPartners !== undefined) updateData.applyToAllPartners = parsed.data.applyToAllPartners;
 
-      const [updatedOffer] = await tx
+      const [updated] = await tx
         .update(offersTable)
         .set(updateData)
         .where(eq(offersTable.id, id))
         .returning();
 
-      await syncOfferScopes(
-        tx, 
-        id, 
-        parsed.data.branchIds, 
-        parsed.data.partnerIds,
-        (parsed.data as any).applicableDrinkIds,
-        (parsed.data as any).rewardDrinkIds,
-        (parsed.data as any).excludedDrinkIds
-      );
+      await syncOfferScopes(tx, id, parsed.data.branchIds, parsed.data.partnerIds, (parsed.data as any).applicableDrinkIds, (parsed.data as any).rewardDrinkIds, excludedDrinkIds);
 
-      return { ...serializeDates(updatedOffer), branchIds, partnerIds, applicableDrinkIds, rewardDrinkIds, excludedDrinkIds };
+      return { ...serializeDates(updated), branchIds, partnerIds, applicableDrinkIds, rewardDrinkIds, excludedDrinkIds: excludedDrinkIds ?? [] };
     });
 
-    res.json(enrichedOffer);
-  } catch (error: any) {
-    console.error("[PATCH /offers/:id] error:", error?.message);
-    if (error.message === "Offer not found") {
+    if (!enriched) {
       res.status(404).json({ error: "Offer not found" });
       return;
     }
+
+    res.json(enriched);
+  } catch (error: any) {
+    console.error("[PATCH /offers/:id] error:", error?.message);
     res.status(500).json({ error: "Failed to update offer: " + error.message });
   }
 });
 
 // DELETE /offers/:id - Delete an offer
 router.delete("/offers/:id", requirePermission("discounts:manage"), async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id as string);
   try {
-    const id = parseInt(req.params.id as string);
-    const [deleted] = await db
-      .delete(offersTable)
-      .where(eq(offersTable.id, id))
-      .returning();
+    const deleted = await db.transaction(async (tx) => {
+      await tx.delete(offersBranchesTable).where(eq(offersBranchesTable.offerId, id));
+      await tx.delete(offersPartnersTable).where(eq(offersPartnersTable.offerId, id));
+      await tx.delete(offersApplicableDrinksTable).where(eq(offersApplicableDrinksTable.offerId, id));
+      await tx.delete(offersRewardDrinksTable).where(eq(offersRewardDrinksTable.offerId, id));
+      await tx.delete(offersExcludedDrinksTable).where(eq(offersExcludedDrinksTable.offerId, id));
+      const [o] = await tx.delete(offersTable).where(eq(offersTable.id, id)).returning();
+      return o;
+    });
 
     if (!deleted) {
       res.status(404).json({ error: "Offer not found" });
@@ -329,7 +329,7 @@ router.delete("/offers/:id", requirePermission("discounts:manage"), async (req, 
     res.sendStatus(204);
   } catch (error: any) {
     console.error("[DELETE /offers/:id] error:", error?.message);
-    res.status(500).json({ error: "Failed to delete offer: " + error.message });
+    res.status(500).json({ error: "Failed to delete offer" });
   }
 });
 

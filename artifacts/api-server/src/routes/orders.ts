@@ -681,18 +681,15 @@ router.post("/orders", async (req, res): Promise<void> => {
     .from(offersTable)
     .where(eq(offersTable.isActive, true));
 
-  let activeOffer: (typeof offersList[0]) | undefined;
+  const activeOffers: (typeof offersList[0])[] = [];
   for (const o of offersList) {
-    // Load branch and partner scopes from junction tables
     const offerBranches = await db.select().from(offersBranchesTable).where(eq(offersBranchesTable.offerId, o.id));
     const offerPartners = await db.select().from(offersPartnersTable).where(eq(offersPartnersTable.offerId, o.id));
     const oBranchIds = offerBranches.map((b: any) => b.branchId);
     const oPartnerIds = offerPartners.map((p: any) => p.partnerId);
 
-    // Branch match: offer applies to all branches (empty list) or includes this branch
     if (targetBranchId && oBranchIds.length > 0 && !oBranchIds.includes(targetBranchId)) continue;
 
-    // Channel match
     if (parsed.data.partnerId) {
       const matchesPartner = (o.applyToAllPartners ?? true) || oPartnerIds.includes(parsed.data.partnerId);
       if (!matchesPartner) continue;
@@ -700,18 +697,16 @@ router.post("/orders", async (req, res): Promise<void> => {
       if (!(o.applyToStore ?? true)) continue;
     }
 
-    activeOffer = o;
-    break;
+    activeOffers.push(o);
   }
 
   let offerDiscountAmount = 0;
   let offerIdToSave: number | null = null;
 
-  if (activeOffer) {
+  for (const activeOffer of activeOffers) {
     const N = activeOffer.buyAmount;
     const X = activeOffer.freeAmount;
 
-    // Load drink scopes for active offer
     const applicableRows = await db.select().from(offersApplicableDrinksTable).where(eq(offersApplicableDrinksTable.offerId, activeOffer.id));
     const rewardRows = await db.select().from(offersRewardDrinksTable).where(eq(offersRewardDrinksTable.offerId, activeOffer.id));
     const excludedRows = await db.select().from(offersExcludedDrinksTable).where(eq(offersExcludedDrinksTable.offerId, activeOffer.id));
@@ -720,31 +715,27 @@ router.post("/orders", async (req, res): Promise<void> => {
     const rewardDrinkIds = rewardRows.map(r => r.drinkId);
     const excludedDrinkIds = excludedRows.map(r => r.drinkId);
 
-    // 1. Trigger items: items that count towards "Buy N"
     const triggerItems = itemDetails.filter(item => 
       !excludedDrinkIds.includes(item.drinkId) &&
       (applicableDrinkIds.length === 0 || applicableDrinkIds.includes(item.drinkId))
     );
 
-    // 2. Reward items: items eligible for "Get X Free" discount
     const rewardItems = itemDetails.filter(item =>
       !excludedDrinkIds.includes(item.drinkId) &&
       (rewardDrinkIds.length === 0 || rewardDrinkIds.includes(item.drinkId))
     );
 
-    // Count qualifying buy units
     const M = triggerItems.reduce((sum, item) => sum + item.quantity, 0);
     const F = Math.floor(M / (N + X)) * X + Math.min(X, Math.max(0, (M % (N + X)) - N));
 
     if (F > 0 && rewardItems.length > 0) {
-      // Flatten unit prices of reward items and sort cheapest first
       const flatRewardPrices = rewardItems.flatMap(item => 
         Array.from({ length: item.quantity }).map(() => item.unitPrice)
       ).sort((a, b) => a - b);
 
       const itemsToDiscountCount = Math.min(F, flatRewardPrices.length);
       if (itemsToDiscountCount > 0) {
-        offerIdToSave = activeOffer.id;
+        if (!offerIdToSave) offerIdToSave = activeOffer.id;
         for (let i = 0; i < itemsToDiscountCount; i++) {
           offerDiscountAmount += flatRewardPrices[i];
         }

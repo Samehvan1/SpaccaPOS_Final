@@ -30,6 +30,36 @@ interface CustomizerDialogProps {
   onAddToCart: () => void;
 }
 
+class CupSimulatorErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean }
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: any, errorInfo: any) {
+    console.error("[CupSimulator ErrorBoundary] Caught render failure:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="w-full h-full flex flex-col items-center justify-center bg-muted/20 rounded-xl p-2 text-center text-xs text-muted-foreground border border-muted/50">
+          <Droplets className="h-6 w-6 text-primary/70 mb-1" />
+          <span className="font-semibold text-[10px] text-muted-foreground/80">Drink Preview</span>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 export const CustomizerDialog: React.FC<CustomizerDialogProps> = ({
   isOpen,
   activeDrink,
@@ -80,11 +110,13 @@ export const CustomizerDialog: React.FC<CustomizerDialogProps> = ({
           </div>
           {drinkDetail && activeDrink?.cupIngredientId && (
             <div className="w-24 h-32 shrink-0 pr-6 mr-2">
-              <CupSimulator
-                cupSizeMl={drinkDetail.cupSizeMl || 0}
-                layers={simulatorLayers}
-                className="mb-2"
-              />
+              <CupSimulatorErrorBoundary>
+                <CupSimulator
+                  cupSizeMl={drinkDetail.cupSizeMl || 0}
+                  layers={simulatorLayers || []}
+                  className="mb-2"
+                />
+              </CupSimulatorErrorBoundary>
             </div>
           )}
         </DialogHeader>
