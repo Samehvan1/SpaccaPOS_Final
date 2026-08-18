@@ -543,6 +543,7 @@ router.get("/finance/sales-items", requirePermission("reports:view"), async (req
       total: ordersTable.total,
       paymentMethod: ordersTable.paymentMethod,
       category: drinksTable.category,
+      specialNotes: orderItemsTable.specialNotes,
     })
     .from(orderItemsTable)
     .innerJoin(ordersTable, eq(orderItemsTable.orderId, ordersTable.id))
@@ -600,6 +601,12 @@ router.get("/finance/sales-items", requirePermission("reports:view"), async (req
       drinkId: item.drinkId,
       quantity: item.quantity,
       isCustomized: actualOverrides.length > 0 ? "Customize" : "Standard",
+      customizations: itemCustoms.map(c => ({
+        ...c,
+        addedCost: parseFloat(c.addedCost as string || "0"),
+        consumedQty: c.consumedQty || 0,
+      })),
+      specialNotes: item.specialNotes || "",
       salePrice: parseFloat(item.unitPrice as string),
       totalGross: lineGross,
       netBeforeTax: beforeTax,

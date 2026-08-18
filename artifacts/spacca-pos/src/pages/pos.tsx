@@ -152,11 +152,14 @@ export default function PosTerminal() {
   const [selectedPartnerId, setSelectedPartnerId] = useState<number | null>(null);
   const { data: partners = [] } = usePartners();
   
-  const { data: drinks, isLoading: isLoadingDrinks } = useListDrinks({ 
-    active: true, 
-    branchId: selectedBranchId || undefined,
-    partnerId: selectedPartnerId || undefined,
-  } as any);
+  const { data: drinks, isLoading: isLoadingDrinks } = useListDrinks(
+    { 
+      active: true, 
+      branchId: selectedBranchId || undefined,
+      partnerId: selectedPartnerId || undefined,
+    } as any,
+    { query: { staleTime: 5 * 60 * 1000, gcTime: 15 * 60 * 1000 } } as any
+  );
   const { data: allCategories = [] } = useDrinkCategories();
   const { data: activeOffer } = useGetActiveOffer({
     branchId: selectedBranchId || undefined,
@@ -279,7 +282,13 @@ export default function PosTerminal() {
   const { data: drinkDetail, isLoading: isLoadingDrinkDetail } = useGetDrink(
     activeDrink?.id || 0,
     { branchId: selectedBranchId || undefined },
-    { query: { enabled: !!activeDrink } } as any
+    { 
+      query: { 
+        enabled: !!activeDrink,
+        staleTime: 10 * 60 * 1000,
+        gcTime: 30 * 60 * 1000,
+      } 
+    } as any
   );
 
   const [selections, setSelections] = useState<Record<number, number>>({});
