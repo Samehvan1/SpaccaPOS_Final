@@ -725,8 +725,19 @@ router.post("/orders", async (req, res): Promise<void> => {
       (rewardDrinkIds.length === 0 || rewardDrinkIds.includes(item.drinkId))
     );
 
-    const M = triggerItems.reduce((sum, item) => sum + item.quantity, 0);
-    const F = Math.floor(M / (N + X)) * X + Math.min(X, Math.max(0, (M % (N + X)) - N));
+    const triggerQty = triggerItems.reduce((sum, item) => sum + item.quantity, 0);
+    const isCrossList = applicableDrinkIds.length > 0 && rewardDrinkIds.length > 0 && 
+      !applicableDrinkIds.some(id => rewardDrinkIds.includes(id));
+
+    let F = 0;
+    if (isCrossList) {
+      const maxEarned = Math.floor(triggerQty / N) * X;
+      const rewardQty = rewardItems.reduce((sum, item) => sum + item.quantity, 0);
+      F = Math.min(maxEarned, rewardQty);
+    } else {
+      const M = triggerQty;
+      F = Math.floor(M / (N + X)) * X + Math.min(X, Math.max(0, (M % (N + X)) - N));
+    }
 
     if (F > 0 && rewardItems.length > 0) {
       const flatRewardPrices = rewardItems.flatMap(item => 
