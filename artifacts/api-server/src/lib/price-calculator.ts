@@ -878,6 +878,7 @@ export async function resolveProductDiscount(
   id: number;
   discountType: "percentage" | "fixed_amount" | "fixed_price";
   discountValue: number;
+  isTaxable: boolean;
   branchId: number | null;
   partnerId: number | null;
 } | null> {
@@ -912,6 +913,7 @@ export async function resolveProductDiscount(
         id: match.id,
         discountType: match.discountType as any,
         discountValue: parseFloat(match.discountValue),
+        isTaxable: match.isTaxable ?? false,
         branchId: match.branchId,
         partnerId: match.partnerId,
       };
@@ -928,6 +930,7 @@ export async function resolveProductDiscount(
         id: match.id,
         discountType: match.discountType as any,
         discountValue: parseFloat(match.discountValue),
+        isTaxable: match.isTaxable ?? false,
         branchId: match.branchId,
         partnerId: match.partnerId,
       };
@@ -944,6 +947,7 @@ export async function resolveProductDiscount(
         id: match.id,
         discountType: match.discountType as any,
         discountValue: parseFloat(match.discountValue),
+        isTaxable: match.isTaxable ?? false,
         branchId: match.branchId,
         partnerId: match.partnerId,
       };
@@ -959,6 +963,7 @@ export async function resolveProductDiscount(
       id: globalMatch.id,
       discountType: globalMatch.discountType as any,
       discountValue: parseFloat(globalMatch.discountValue),
+      isTaxable: globalMatch.isTaxable ?? false,
       branchId: globalMatch.branchId,
       partnerId: globalMatch.partnerId,
     };
@@ -969,17 +974,17 @@ export async function resolveProductDiscount(
 
 export function calculateProductDiscountAmount(
   itemBasePrice: number,
-  discount: { discountType: "percentage" | "fixed_amount" | "fixed_price"; discountValue: number } | null
+  discount: { discountType: "percentage" | "fixed_amount" | "fixed_price"; discountValue: number; isTaxable?: boolean } | null
 ): number {
   if (!discount) return 0;
   let amount = 0;
-  const unitBeforeTax = itemBasePrice / 1.14;
+  const baseForCalc = discount.isTaxable ? itemBasePrice : itemBasePrice / 1.14;
   if (discount.discountType === "percentage") {
-    amount = (unitBeforeTax * discount.discountValue) / 100;
+    amount = (baseForCalc * discount.discountValue) / 100;
   } else if (discount.discountType === "fixed_amount") {
-    amount = Math.min(discount.discountValue, unitBeforeTax);
+    amount = Math.min(discount.discountValue, baseForCalc);
   } else if (discount.discountType === "fixed_price") {
-    amount = Math.max(0, unitBeforeTax - discount.discountValue);
+    amount = Math.max(0, baseForCalc - discount.discountValue);
   }
   return Number(amount.toFixed(2));
 }

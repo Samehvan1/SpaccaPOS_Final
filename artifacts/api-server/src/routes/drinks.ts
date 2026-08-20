@@ -26,11 +26,16 @@ import {
   partnerDrinkStatusTable,
   orderItemsTable,
   orderItemCustomizationsTable,
+  offersTable,
+  offersBranchesTable,
+  offersPartnersTable,
+  offersApplicableDrinksTable,
+  offersExcludedDrinksTable,
 } from "@workspace/db";
 import { serializeDates } from "../lib/serialize";
 import { globalCache } from "../lib/cache";
 import { requirePermission } from "../middleware/permissions";
-import { calculateDrinkData, getProductCost, getStandardProductPrice } from "../lib/price-calculator";
+import { calculateDrinkData, getProductCost, getStandardProductPrice, resolveProductDiscount } from "../lib/price-calculator";
 
 // ── Image upload: store in <cwd>/uploads/ ────────────────────────────────────
 const uploadsDir = process.env.UPLOADS_DIR
@@ -561,6 +566,46 @@ router.get("/drinks", async (req, res): Promise<void> => {
     return a.name.localeCompare(b.name);
   });
 
+  // Fetch active offers with promoLabel to map to drinks
+  const activeOffers = await db.select().from(offersTable).where(eq(offersTable.isActive, true));
+  const promoLabelMap = new Map<number, string>();
+  for (const offer of activeOffers) {
+    if (!offer.promoLabel) continue;
+    
+    if (targetBranchId) {
+      const offerBranches = await db.select().from(offersBranchesTable).where(eq(offersBranchesTable.offerId, offer.id));
+      const bIds = offerBranches.map(b => b.branchId);
+      if (bIds.length > 0 && !bIds.includes(targetBranchId)) continue;
+    }
+    if (queryPartnerId) {
+      const offerPartners = await db.select().from(offersPartnersTable).where(eq(offersPartnersTable.offerId, offer.id));
+      const pIds = offerPartners.map(p => p.partnerId);
+      const matchesPartner = (offer.applyToAllPartners ?? true) || pIds.includes(queryPartnerId);
+      if (!matchesPartner) continue;
+    } else {
+      if (!(offer.applyToStore ?? true)) continue;
+    }
+
+    const applicable = await db.select().from(offersApplicableDrinksTable).where(eq(offersApplicableDrinksTable.offerId, offer.id));
+    const excluded = await db.select().from(offersExcludedDrinksTable).where(eq(offersExcludedDrinksTable.offerId, offer.id));
+    const appDrinkIds = applicable.map(a => a.drinkId);
+    const exclDrinkIds = new Set(excluded.map(e => e.drinkId));
+
+    if (appDrinkIds.length > 0) {
+      for (const did of appDrinkIds) {
+        if (!exclDrinkIds.has(did) && !promoLabelMap.has(did)) {
+          promoLabelMap.set(did, offer.promoLabel);
+        }
+      }
+    } else {
+      for (const d of filtered) {
+        if (!exclDrinkIds.has(d.id) && !promoLabelMap.has(d.id)) {
+          promoLabelMap.set(d.id, offer.promoLabel);
+        }
+      }
+    }
+  }
+
   const drinksWithDetails = await Promise.all(
     filtered.map(async (d) => {
       // Always calculate detail (availability) to ensure the POS shows accurate Out of Stock badges.
@@ -568,6 +613,8 @@ router.get("/drinks", async (req, res): Promise<void> => {
       const detail = await buildDrinkDetail(d.id, targetBranchId);
       
       const { defaultPrice, cost } = await computeDefaultPrice(d.id, targetBranchId, queryPartnerId);
+      const productDiscount = await resolveProductDiscount(d.id, targetBranchId, queryPartnerId);
+      const promoLabel = promoLabelMap.get(d.id) ?? null;
 
       let basePrice = Number(d.basePrice);
       if (queryPartnerId) {
@@ -619,6 +666,8 @@ router.get("/drinks", async (req, res): Promise<void> => {
         basePrice, 
         defaultPrice,
         cost,
+        productDiscount,
+        promoLabel,
         isAvailable: detail ? detail.isAvailable : true,
         unavailableReasons: detail ? detail.unavailableReasons : [],
         slots: (req.query.includeSlots === "true" || req.query.includeSlots === "1" || (params.success && !!params.data.includeSlots)) ? detail?.slots : undefined,

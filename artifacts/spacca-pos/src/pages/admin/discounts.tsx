@@ -22,6 +22,7 @@ type Discount = {
   type: "percentage" | "fixed" | "fixed_per_item";
   value: number;
   isActive: boolean;
+  isTaxable?: boolean;
   createdAt: string;
   updatedAt: string;
 };
@@ -37,6 +38,7 @@ type ProductDiscount = {
   discountType: "percentage" | "fixed_amount" | "fixed_price";
   discountValue: number;
   isActive: boolean;
+  isTaxable?: boolean;
   startDate?: string | null;
   endDate?: string | null;
   createdAt?: string;
@@ -55,6 +57,7 @@ type GroupedProductDiscount = {
   discountType: "percentage" | "fixed_amount" | "fixed_price";
   discountValue: number;
   isActive: boolean;
+  isTaxable: boolean;
 };
 
 type Drink = { id: number; name: string };
@@ -91,6 +94,7 @@ export default function DiscountsAdmin() {
   const [type, setType] = useState<"percentage" | "fixed" | "fixed_per_item">("percentage");
   const [value, setValue] = useState("0");
   const [isActive, setIsActive] = useState(true);
+  const [isTaxable, setIsTaxable] = useState(false);
   const [isFirstOrder, setIsFirstOrder] = useState(false);
   const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
 
@@ -105,6 +109,7 @@ export default function DiscountsAdmin() {
   const [pdDiscountType, setPdDiscountType] = useState<"percentage" | "fixed_amount" | "fixed_price">("percentage");
   const [pdDiscountValue, setPdDiscountValue] = useState("0");
   const [pdIsActive, setPdIsActive] = useState(true);
+  const [pdIsTaxable, setPdIsTaxable] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -138,7 +143,7 @@ export default function DiscountsAdmin() {
     const map = new Map<string, GroupedProductDiscount>();
 
     for (const pd of productDiscounts) {
-      const key = `${pd.branchId ?? "null"}_${pd.partnerId ?? "null"}_${pd.discountType}_${pd.discountValue}_${pd.isActive}`;
+      const key = `${pd.branchId ?? "null"}_${pd.partnerId ?? "null"}_${pd.discountType}_${pd.discountValue}_${pd.isActive}_${pd.isTaxable}`;
       if (!map.has(key)) {
         map.set(key, {
           groupKey: key,
@@ -152,6 +157,7 @@ export default function DiscountsAdmin() {
           discountType: pd.discountType,
           discountValue: pd.discountValue,
           isActive: pd.isActive,
+          isTaxable: pd.isTaxable ?? false,
         });
       } else {
         const g = map.get(key)!;
@@ -170,13 +176,14 @@ export default function DiscountsAdmin() {
 
   // Coupon Handlers
   const openAddCoupon = () => {
-    setEditCouponId(null); setCode(""); setType("percentage"); setValue("0"); setIsActive(true);
+    setEditCouponId(null); setCode(""); setType("percentage"); setValue("0"); setIsActive(true); setIsTaxable(false);
     setIsFirstOrder(false); setSelectedTagIds([]);
     setShowCouponForm(true);
   };
 
   const openEditCoupon = (d: Discount) => {
     setEditCouponId(d.id); setCode(d.code); setType(d.type); setValue(String(d.value)); setIsActive(d.isActive);
+    setIsTaxable(d.isTaxable || false);
     setIsFirstOrder((d as any).isFirstOrder || false);
     setSelectedTagIds((d as any).tagIds || []);
     setShowCouponForm(true);
@@ -191,6 +198,7 @@ export default function DiscountsAdmin() {
         type,
         value: parseFloat(value),
         isActive,
+        isTaxable,
         isFirstOrder,
         tagIds: selectedTagIds,
       };
@@ -229,6 +237,7 @@ export default function DiscountsAdmin() {
     setPdDiscountType("percentage");
     setPdDiscountValue("0");
     setPdIsActive(true);
+    setPdIsTaxable(false);
     setShowProductForm(true);
   };
 
@@ -240,6 +249,7 @@ export default function DiscountsAdmin() {
     setPdDiscountType(group.discountType);
     setPdDiscountValue(String(group.discountValue));
     setPdIsActive(group.isActive);
+    setPdIsTaxable(group.isTaxable);
     setShowProductForm(true);
   };
 
@@ -268,6 +278,7 @@ export default function DiscountsAdmin() {
           discountType: pdDiscountType,
           discountValue,
           isActive: pdIsActive,
+          isTaxable: pdIsTaxable,
         }),
       });
 
@@ -380,6 +391,11 @@ export default function DiscountsAdmin() {
                           {d.type === "percentage" ? `${d.value}%` : `${fmt(d.value)}${d.type === "fixed_per_item" ? " / item" : ""}`}
                         </TableCell>
                         <TableCell>
+                          <Badge variant={d.isTaxable ? "outline" : "secondary"} className={d.isTaxable ? "bg-cyan-50 text-cyan-800 border-cyan-300 font-semibold" : ""}>
+                            {d.isTaxable ? "Taxable (Direct)" : "Pre-Tax Excl."}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
                           <Badge variant={d.isActive ? "default" : "secondary"}>
                             {d.isActive ? "Active" : "Inactive"}
                           </Badge>
@@ -421,15 +437,16 @@ export default function DiscountsAdmin() {
                       <TableHead>Partner Scope</TableHead>
                       <TableHead>Discount Type</TableHead>
                       <TableHead>Discount Value</TableHead>
+                      <TableHead>Taxable</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {loading ? (
-                      <TableRow><TableCell colSpan={7} className="text-center py-8">Loading product discounts...</TableCell></TableRow>
+                      <TableRow><TableCell colSpan={8} className="text-center py-8">Loading product discounts...</TableCell></TableRow>
                     ) : filteredGroups.length === 0 ? (
-                      <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">No product discounts found.</TableCell></TableRow>
+                      <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">No product discounts found.</TableCell></TableRow>
                     ) : filteredGroups.map(g => (
                       <TableRow key={g.groupKey}>
                         <TableCell className="font-semibold text-primary">
@@ -457,6 +474,11 @@ export default function DiscountsAdmin() {
                         </TableCell>
                         <TableCell className="font-bold text-emerald-600">
                           {g.discountType === "percentage" ? `${g.discountValue}% Off` : g.discountType === "fixed_amount" ? `-${fmt(g.discountValue)}` : `Special Price: ${fmt(g.discountValue)}`}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={g.isTaxable ? "outline" : "secondary"} className={g.isTaxable ? "bg-cyan-50 text-cyan-800 border-cyan-300 font-semibold" : ""}>
+                            {g.isTaxable ? "Taxable (Direct)" : "Pre-Tax Excl."}
+                          </Badge>
                         </TableCell>
                         <TableCell>
                           <Badge variant={g.isActive ? "default" : "secondary"}>
@@ -523,6 +545,13 @@ export default function DiscountsAdmin() {
                   </div>
                 </div>
               </div>
+            </div>
+            <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/20">
+              <div className="space-y-0.5">
+                <Label htmlFor="taxable" className="cursor-pointer font-semibold">Taxable Discount</Label>
+                <p className="text-xs text-muted-foreground">Apply directly on product prices (gross incl. tax) instead of pre-tax</p>
+              </div>
+              <Switch id="taxable" checked={isTaxable} onCheckedChange={setIsTaxable} />
             </div>
             <div className="flex items-center gap-2 pt-1">
               <Switch id="firstOrder" checked={isFirstOrder} onCheckedChange={setIsFirstOrder} />
@@ -739,7 +768,15 @@ export default function DiscountsAdmin() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2 pt-2">
+            <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/20">
+              <div className="space-y-0.5">
+                <Label htmlFor="pdTaxable" className="cursor-pointer font-semibold">Taxable Product Discount</Label>
+                <p className="text-xs text-muted-foreground">Apply directly on product base price (gross incl. tax) instead of pre-tax</p>
+              </div>
+              <Switch id="pdTaxable" checked={pdIsTaxable} onCheckedChange={setPdIsTaxable} />
+            </div>
+
+            <div className="flex items-center gap-2 pt-1">
               <Switch id="pdActive" checked={pdIsActive} onCheckedChange={setPdIsActive} />
               <Label htmlFor="pdActive" className="cursor-pointer">Product discount is active</Label>
             </div>

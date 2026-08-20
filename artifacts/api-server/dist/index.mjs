@@ -56193,7 +56193,8 @@ var init_discounts = __esm({
       isActive: boolean("is_active").notNull().default(true),
       createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
       updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => /* @__PURE__ */ new Date()),
-      isFirstOrder: boolean("is_first_order").notNull().default(false)
+      isFirstOrder: boolean("is_first_order").notNull().default(false),
+      isTaxable: boolean("is_taxable").notNull().default(false)
     });
     insertDiscountSchema = createInsertSchema(discountsTable).omit({ id: true, createdAt: true, updatedAt: true });
   }
@@ -56272,6 +56273,7 @@ var init_offers = __esm({
       isActive: boolean("is_active").notNull().default(true),
       applyToStore: boolean("apply_to_store").notNull().default(true),
       applyToAllPartners: boolean("apply_to_all_partners").notNull().default(true),
+      promoLabel: text("promo_label"),
       createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
       updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => /* @__PURE__ */ new Date())
     });
@@ -56946,6 +56948,7 @@ var init_product_discounts = __esm({
       discountType: text("discount_type", { enum: ["percentage", "fixed_amount", "fixed_price"] }).notNull().default("percentage"),
       discountValue: numeric("discount_value", { precision: 8, scale: 2 }).notNull(),
       isActive: boolean("is_active").notNull().default(true),
+      isTaxable: boolean("is_taxable").notNull().default(false),
       startDate: timestamp("start_date", { withTimezone: true }),
       endDate: timestamp("end_date", { withTimezone: true }),
       createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -79838,11 +79841,13 @@ var Discount = ListDiscountsResponseItem.extend({
 });
 var CreateDiscountBody2 = CreateDiscountBody.extend({
   tagIds: external_exports2.array(external_exports2.number()).optional(),
-  isFirstOrder: external_exports2.boolean().optional()
+  isFirstOrder: external_exports2.boolean().optional(),
+  isTaxable: external_exports2.boolean().optional()
 });
 var UpdateDiscountBody2 = UpdateDiscountBody.extend({
   tagIds: external_exports2.array(external_exports2.number()).optional(),
-  isFirstOrder: external_exports2.boolean().optional()
+  isFirstOrder: external_exports2.boolean().optional(),
+  isTaxable: external_exports2.boolean().optional()
 });
 var ListUsersResponseItem2 = ListUsersResponseItem.extend({
   pin: external_exports2.string().nullish()
@@ -79877,8 +79882,15 @@ var ListActivityLogsResponse2 = external_exports2.object({
   limit: external_exports2.number(),
   offset: external_exports2.number()
 });
-var CreateOfferBody2 = CreateOfferBody;
-var UpdateOfferBody2 = UpdateOfferBody;
+var Offer = ListOffersResponseItem.extend({
+  promoLabel: external_exports2.string().nullish()
+});
+var CreateOfferBody2 = CreateOfferBody.extend({
+  promoLabel: external_exports2.string().nullish()
+});
+var UpdateOfferBody2 = UpdateOfferBody.extend({
+  promoLabel: external_exports2.string().nullish()
+});
 var ProductDrinkDiscount = external_exports2.object({
   id: external_exports2.number(),
   drinkId: external_exports2.number(),
@@ -79887,18 +79899,21 @@ var ProductDrinkDiscount = external_exports2.object({
   discountType: external_exports2.enum(["percentage", "fixed_amount", "fixed_price"]),
   discountValue: external_exports2.number(),
   isActive: external_exports2.boolean(),
+  isTaxable: external_exports2.boolean().optional(),
   startDate: external_exports2.string().nullable().optional(),
   endDate: external_exports2.string().nullable().optional(),
   createdAt: external_exports2.string().optional(),
   updatedAt: external_exports2.string().optional()
 });
 var CreateProductDrinkDiscountBody = external_exports2.object({
-  drinkId: external_exports2.number(),
+  drinkId: external_exports2.number().optional(),
+  drinkIds: external_exports2.array(external_exports2.number()).optional(),
   branchId: external_exports2.number().nullable().optional(),
   partnerId: external_exports2.number().nullable().optional(),
   discountType: external_exports2.enum(["percentage", "fixed_amount", "fixed_price"]),
   discountValue: external_exports2.number().positive(),
   isActive: external_exports2.boolean().optional().default(true),
+  isTaxable: external_exports2.boolean().optional().default(false),
   startDate: external_exports2.string().nullable().optional(),
   endDate: external_exports2.string().nullable().optional()
 });
@@ -82589,6 +82604,7 @@ async function resolveProductDiscount(drinkId, branchId = null, partnerId = null
         id: match.id,
         discountType: match.discountType,
         discountValue: parseFloat(match.discountValue),
+        isTaxable: match.isTaxable ?? false,
         branchId: match.branchId,
         partnerId: match.partnerId
       };
@@ -82603,6 +82619,7 @@ async function resolveProductDiscount(drinkId, branchId = null, partnerId = null
         id: match.id,
         discountType: match.discountType,
         discountValue: parseFloat(match.discountValue),
+        isTaxable: match.isTaxable ?? false,
         branchId: match.branchId,
         partnerId: match.partnerId
       };
@@ -82617,6 +82634,7 @@ async function resolveProductDiscount(drinkId, branchId = null, partnerId = null
         id: match.id,
         discountType: match.discountType,
         discountValue: parseFloat(match.discountValue),
+        isTaxable: match.isTaxable ?? false,
         branchId: match.branchId,
         partnerId: match.partnerId
       };
@@ -82630,6 +82648,7 @@ async function resolveProductDiscount(drinkId, branchId = null, partnerId = null
       id: globalMatch.id,
       discountType: globalMatch.discountType,
       discountValue: parseFloat(globalMatch.discountValue),
+      isTaxable: globalMatch.isTaxable ?? false,
       branchId: globalMatch.branchId,
       partnerId: globalMatch.partnerId
     };
@@ -82639,13 +82658,13 @@ async function resolveProductDiscount(drinkId, branchId = null, partnerId = null
 function calculateProductDiscountAmount(itemBasePrice, discount) {
   if (!discount) return 0;
   let amount = 0;
-  const unitBeforeTax = itemBasePrice / 1.14;
+  const baseForCalc = discount.isTaxable ? itemBasePrice : itemBasePrice / 1.14;
   if (discount.discountType === "percentage") {
-    amount = unitBeforeTax * discount.discountValue / 100;
+    amount = baseForCalc * discount.discountValue / 100;
   } else if (discount.discountType === "fixed_amount") {
-    amount = Math.min(discount.discountValue, unitBeforeTax);
+    amount = Math.min(discount.discountValue, baseForCalc);
   } else if (discount.discountType === "fixed_price") {
-    amount = Math.max(0, unitBeforeTax - discount.discountValue);
+    amount = Math.max(0, baseForCalc - discount.discountValue);
   }
   return Number(amount.toFixed(2));
 }
@@ -83044,10 +83063,47 @@ router3.get("/drinks", async (req, res) => {
     if (sortA !== sortB) return sortA - sortB;
     return a.name.localeCompare(b.name);
   });
+  const activeOffers = await db.select().from(offersTable).where(eq(offersTable.isActive, true));
+  const promoLabelMap = /* @__PURE__ */ new Map();
+  for (const offer of activeOffers) {
+    if (!offer.promoLabel) continue;
+    if (targetBranchId) {
+      const offerBranches = await db.select().from(offersBranchesTable).where(eq(offersBranchesTable.offerId, offer.id));
+      const bIds = offerBranches.map((b) => b.branchId);
+      if (bIds.length > 0 && !bIds.includes(targetBranchId)) continue;
+    }
+    if (queryPartnerId) {
+      const offerPartners = await db.select().from(offersPartnersTable).where(eq(offersPartnersTable.offerId, offer.id));
+      const pIds = offerPartners.map((p) => p.partnerId);
+      const matchesPartner = (offer.applyToAllPartners ?? true) || pIds.includes(queryPartnerId);
+      if (!matchesPartner) continue;
+    } else {
+      if (!(offer.applyToStore ?? true)) continue;
+    }
+    const applicable = await db.select().from(offersApplicableDrinksTable).where(eq(offersApplicableDrinksTable.offerId, offer.id));
+    const excluded = await db.select().from(offersExcludedDrinksTable).where(eq(offersExcludedDrinksTable.offerId, offer.id));
+    const appDrinkIds = applicable.map((a) => a.drinkId);
+    const exclDrinkIds = new Set(excluded.map((e) => e.drinkId));
+    if (appDrinkIds.length > 0) {
+      for (const did of appDrinkIds) {
+        if (!exclDrinkIds.has(did) && !promoLabelMap.has(did)) {
+          promoLabelMap.set(did, offer.promoLabel);
+        }
+      }
+    } else {
+      for (const d of filtered) {
+        if (!exclDrinkIds.has(d.id) && !promoLabelMap.has(d.id)) {
+          promoLabelMap.set(d.id, offer.promoLabel);
+        }
+      }
+    }
+  }
   const drinksWithDetails = await Promise.all(
     filtered.map(async (d) => {
       const detail = await buildDrinkDetail(d.id, targetBranchId);
       const { defaultPrice, cost } = await computeDefaultPrice(d.id, targetBranchId, queryPartnerId);
+      const productDiscount = await resolveProductDiscount(d.id, targetBranchId, queryPartnerId);
+      const promoLabel = promoLabelMap.get(d.id) ?? null;
       let basePrice = Number(d.basePrice);
       if (queryPartnerId) {
         if (targetBranchId) {
@@ -83085,6 +83141,8 @@ router3.get("/drinks", async (req, res) => {
         basePrice,
         defaultPrice,
         cost,
+        productDiscount,
+        promoLabel,
         isAvailable: detail ? detail.isAvailable : true,
         unavailableReasons: detail ? detail.unavailableReasons : [],
         slots: req.query.includeSlots === "true" || req.query.includeSlots === "1" || params.success && !!params.data.includeSlots ? detail?.slots : void 0
@@ -84989,8 +85047,17 @@ router5.post("/orders", async (req, res) => {
     const rewardItems = itemDetails.filter(
       (item) => !excludedDrinkIds.includes(item.drinkId) && (rewardDrinkIds.length === 0 || rewardDrinkIds.includes(item.drinkId))
     );
-    const M = triggerItems.reduce((sum2, item) => sum2 + item.quantity, 0);
-    const F = Math.floor(M / (N + X)) * X + Math.min(X, Math.max(0, M % (N + X) - N));
+    const triggerQty = triggerItems.reduce((sum2, item) => sum2 + item.quantity, 0);
+    const isCrossList = applicableDrinkIds.length > 0 && rewardDrinkIds.length > 0 && !applicableDrinkIds.some((id) => rewardDrinkIds.includes(id));
+    let F = 0;
+    if (isCrossList) {
+      const maxEarned = Math.floor(triggerQty / N) * X;
+      const rewardQty = rewardItems.reduce((sum2, item) => sum2 + item.quantity, 0);
+      F = Math.min(maxEarned, rewardQty);
+    } else {
+      const M = triggerQty;
+      F = Math.floor(M / (N + X)) * X + Math.min(X, Math.max(0, M % (N + X) - N));
+    }
     if (F > 0 && rewardItems.length > 0) {
       const flatRewardPrices = rewardItems.flatMap(
         (item) => Array.from({ length: item.quantity }).map(() => item.unitPrice)
@@ -85029,9 +85096,10 @@ router5.post("/orders", async (req, res) => {
       const productDiscPerUnit = calculateProductDiscountAmount(item.unitPrice, productDisc);
       let couponSharePerUnit = 0;
       if (orderCouponRow && discountValue) {
+        const isTaxable = orderCouponRow.isTaxable ?? false;
+        const baseForCalc = isTaxable ? item.unitPrice : item.unitPrice / 1.14;
         if (discountType === "percentage") {
-          const unitBeforeTax = item.unitPrice / 1.14;
-          couponSharePerUnit = unitBeforeTax * discountValue / 100;
+          couponSharePerUnit = baseForCalc * discountValue / 100;
         } else if (discountType === "fixed_per_item") {
           couponSharePerUnit = discountValue;
         } else if (discountType === "fixed" && subtotal > 0) {
@@ -87832,6 +87900,7 @@ router13.get("/discounts", requirePermission("discounts:view"), async (req, res)
         ...serializeDates(d),
         value: parseFloat(d.value),
         isFirstOrder: d.isFirstOrder,
+        isTaxable: d.isTaxable ?? false,
         tagIds: tagsMap[d.id] || []
       }))
     );
@@ -87842,6 +87911,7 @@ router13.get("/discounts", requirePermission("discounts:view"), async (req, res)
 });
 router13.post("/discounts", requirePermission("discounts:manage"), async (req, res) => {
   const parsed = CreateDiscountBody2.safeParse(req.body);
+  const isTaxableInput = req.body.isTaxable ?? false;
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
     return;
@@ -87853,7 +87923,8 @@ router13.post("/discounts", requirePermission("discounts:manage"), async (req, r
         type: parsed.data.type,
         value: String(parsed.data.value),
         isActive: parsed.data.isActive ?? true,
-        isFirstOrder: parsed.data.isFirstOrder ?? false
+        isFirstOrder: parsed.data.isFirstOrder ?? false,
+        isTaxable: Boolean(isTaxableInput)
       }).returning();
       if (Array.isArray(parsed.data.tagIds) && parsed.data.tagIds.length > 0) {
         await tx.insert(discountTagsTable).values(
@@ -87870,7 +87941,8 @@ router13.post("/discounts", requirePermission("discounts:manage"), async (req, r
     });
     res.status(201).json({
       ...serializeDates(discount),
-      value: parseFloat(discount.value)
+      value: parseFloat(discount.value),
+      isTaxable: discount.isTaxable ?? false
     });
   } catch (error40) {
     console.error("[POST /discounts] error:", error40?.message);
@@ -87892,6 +87964,7 @@ router13.patch("/discounts/:id", requirePermission("discounts:manage"), async (r
       if (parsed.data.value !== void 0) updateData.value = String(parsed.data.value);
       if (parsed.data.isActive !== void 0) updateData.isActive = parsed.data.isActive;
       if (parsed.data.isFirstOrder !== void 0) updateData.isFirstOrder = parsed.data.isFirstOrder;
+      if (req.body.isTaxable !== void 0) updateData.isTaxable = Boolean(req.body.isTaxable);
       updateData.updatedAt = /* @__PURE__ */ new Date();
       const [updatedDisc] = await tx.update(discountsTable).set(updateData).where(eq(discountsTable.id, id)).returning();
       if (!updatedDisc) {
@@ -87919,7 +87992,8 @@ router13.patch("/discounts/:id", requirePermission("discounts:manage"), async (r
     });
     res.json({
       ...serializeDates(discount),
-      value: parseFloat(discount.value)
+      value: parseFloat(discount.value),
+      isTaxable: discount.isTaxable ?? false
     });
   } catch (error40) {
     console.error("[PATCH /discounts/:id] error:", error40?.message);
@@ -87953,6 +88027,7 @@ router13.get("/discounts/validate/:code", async (req, res) => {
     ...serializeDates(discount),
     value: parseFloat(discount.value),
     isFirstOrder: discount.isFirstOrder,
+    isTaxable: discount.isTaxable ?? false,
     tagIds
   });
 });
@@ -87995,6 +88070,7 @@ router14.get("/product-discounts", requirePermission("discounts:view"), async (r
       rows.map(({ discount, drinkName, branchName, partnerName }) => ({
         ...serializeDates(discount),
         discountValue: parseFloat(discount.discountValue),
+        isTaxable: discount.isTaxable ?? false,
         drinkName,
         branchName: branchName ?? "All Branches",
         partnerName: partnerName ?? "Direct POS / All Partners"
@@ -88011,7 +88087,7 @@ router14.post("/product-discounts", requirePermission("discounts:manage"), async
     res.status(400).json({ error: "At least one product (drinkId or drinkIds) must be selected" });
     return;
   }
-  const { branchId, partnerId, discountType, discountValue, isActive, startDate, endDate } = req.body;
+  const { branchId, partnerId, discountType, discountValue, isActive, isTaxable, startDate, endDate } = req.body;
   if (!discountType || discountValue === void 0) {
     res.status(400).json({ error: "discountType and discountValue are required" });
     return;
@@ -88025,6 +88101,7 @@ router14.post("/product-discounts", requirePermission("discounts:manage"), async
         discountType,
         discountValue: String(discountValue),
         isActive: isActive ?? true,
+        isTaxable: isTaxable ?? false,
         startDate: startDate ? new Date(startDate) : null,
         endDate: endDate ? new Date(endDate) : null
       }))
@@ -88032,7 +88109,8 @@ router14.post("/product-discounts", requirePermission("discounts:manage"), async
     res.status(201).json(
       insertedRows.map((row) => ({
         ...serializeDates(row),
-        discountValue: parseFloat(row.discountValue)
+        discountValue: parseFloat(row.discountValue),
+        isTaxable: row.isTaxable ?? false
       }))
     );
   } catch (error40) {
@@ -88050,6 +88128,7 @@ router14.patch("/product-discounts/:id", requirePermission("discounts:manage"), 
     if (req.body.discountType !== void 0) updateData.discountType = req.body.discountType;
     if (req.body.discountValue !== void 0) updateData.discountValue = String(req.body.discountValue);
     if (req.body.isActive !== void 0) updateData.isActive = req.body.isActive;
+    if (req.body.isTaxable !== void 0) updateData.isTaxable = Boolean(req.body.isTaxable);
     if (req.body.startDate !== void 0) updateData.startDate = req.body.startDate ? new Date(req.body.startDate) : null;
     if (req.body.endDate !== void 0) updateData.endDate = req.body.endDate ? new Date(req.body.endDate) : null;
     updateData.updatedAt = /* @__PURE__ */ new Date();
@@ -88060,7 +88139,8 @@ router14.patch("/product-discounts/:id", requirePermission("discounts:manage"), 
     }
     res.json({
       ...serializeDates(updated),
-      discountValue: parseFloat(updated.discountValue)
+      discountValue: parseFloat(updated.discountValue),
+      isTaxable: updated.isTaxable ?? false
     });
   } catch (error40) {
     console.error("[PATCH /product-discounts/:id] error:", error40?.message);
@@ -88228,7 +88308,8 @@ router15.post("/offers", requirePermission("discounts:manage"), async (req, res)
         freeAmount: parsed.data.freeAmount,
         isActive: isAct,
         applyToStore,
-        applyToAllPartners
+        applyToAllPartners,
+        promoLabel: req.body.promoLabel ?? null
       }).returning();
       await syncOfferScopes(tx, newOffer.id, branchIds, partnerIds, applicableDrinkIds, rewardDrinkIds, excludedDrinkIds);
       return { ...serializeDates(newOffer), branchIds, partnerIds, applicableDrinkIds, rewardDrinkIds, excludedDrinkIds };
@@ -88269,6 +88350,7 @@ router15.patch("/offers/:id", requirePermission("discounts:manage"), async (req,
       if (parsed.data.isActive !== void 0) updateData.isActive = parsed.data.isActive;
       if (parsed.data.applyToStore !== void 0) updateData.applyToStore = parsed.data.applyToStore;
       if (parsed.data.applyToAllPartners !== void 0) updateData.applyToAllPartners = parsed.data.applyToAllPartners;
+      if (req.body.promoLabel !== void 0) updateData.promoLabel = req.body.promoLabel || null;
       const [updated] = await tx.update(offersTable).set(updateData).where(eq(offersTable.id, id)).returning();
       await syncOfferScopes(tx, id, parsed.data.branchIds, parsed.data.partnerIds, parsed.data.applicableDrinkIds, parsed.data.rewardDrinkIds, excludedDrinkIds);
       return { ...serializeDates(updated), branchIds, partnerIds, applicableDrinkIds, rewardDrinkIds, excludedDrinkIds: excludedDrinkIds ?? [] };

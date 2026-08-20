@@ -827,21 +827,22 @@ export default function PosTerminal() {
       let productDiscPerUnit = 0;
       if (matchedPd) {
         const val = Number(matchedPd.discountValue);
-        const unitBeforeTax = item.totalPrice / 1.14;
+        const baseForCalc = matchedPd.isTaxable ? item.totalPrice : item.totalPrice / 1.14;
         if (matchedPd.discountType === "percentage") {
-          productDiscPerUnit = (unitBeforeTax * val) / 100;
+          productDiscPerUnit = (baseForCalc * val) / 100;
         } else if (matchedPd.discountType === "fixed_amount") {
-          productDiscPerUnit = Math.min(val, unitBeforeTax);
+          productDiscPerUnit = Math.min(val, baseForCalc);
         } else if (matchedPd.discountType === "fixed_price") {
-          productDiscPerUnit = Math.max(0, unitBeforeTax - val);
+          productDiscPerUnit = Math.max(0, baseForCalc - val);
         }
       }
 
       let couponSharePerUnit = 0;
       if (appliedDiscount && orderCouponValue > 0) {
+        const isTaxable = (appliedDiscount as any).isTaxable ?? false;
+        const baseForCalc = isTaxable ? item.totalPrice : item.totalPrice / 1.14;
         if (orderCouponType === "percentage") {
-          const beforeTax = item.totalPrice / 1.14;
-          couponSharePerUnit = (beforeTax * orderCouponValue) / 100;
+          couponSharePerUnit = (baseForCalc * orderCouponValue) / 100;
         } else if (orderCouponType === "fixed_per_item") {
           couponSharePerUnit = orderCouponValue;
         } else if (cartSubtotal > 0) {

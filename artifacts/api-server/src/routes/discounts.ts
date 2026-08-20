@@ -31,6 +31,7 @@ router.get("/discounts", requirePermission("discounts:view"), async (req, res): 
         ...serializeDates(d),
         value: parseFloat(d.value),
         isFirstOrder: d.isFirstOrder,
+        isTaxable: d.isTaxable ?? false,
         tagIds: tagsMap[d.id] || [],
       }))
     );
@@ -42,6 +43,7 @@ router.get("/discounts", requirePermission("discounts:view"), async (req, res): 
 
 router.post("/discounts", requirePermission("discounts:manage"), async (req, res): Promise<void> => {
   const parsed = CreateDiscountBody.safeParse(req.body);
+  const isTaxableInput = req.body.isTaxable ?? false;
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
     return;
@@ -57,6 +59,7 @@ router.post("/discounts", requirePermission("discounts:manage"), async (req, res
           value: String(parsed.data.value),
           isActive: parsed.data.isActive ?? true,
           isFirstOrder: parsed.data.isFirstOrder ?? false,
+          isTaxable: Boolean(isTaxableInput),
         })
         .returning();
 
@@ -78,6 +81,7 @@ router.post("/discounts", requirePermission("discounts:manage"), async (req, res
     res.status(201).json({
       ...serializeDates(discount),
       value: parseFloat(discount.value),
+      isTaxable: discount.isTaxable ?? false,
     });
   } catch (error: any) {
     console.error("[POST /discounts] error:", error?.message);
@@ -101,6 +105,7 @@ router.patch("/discounts/:id", requirePermission("discounts:manage"), async (req
       if (parsed.data.value !== undefined) updateData.value = String(parsed.data.value);
       if (parsed.data.isActive !== undefined) updateData.isActive = parsed.data.isActive;
       if (parsed.data.isFirstOrder !== undefined) updateData.isFirstOrder = parsed.data.isFirstOrder;
+      if (req.body.isTaxable !== undefined) updateData.isTaxable = Boolean(req.body.isTaxable);
       updateData.updatedAt = new Date();
 
       const [updatedDisc] = await tx
@@ -140,6 +145,7 @@ router.patch("/discounts/:id", requirePermission("discounts:manage"), async (req
     res.json({
       ...serializeDates(discount),
       value: parseFloat(discount.value),
+      isTaxable: discount.isTaxable ?? false,
     });
   } catch (error: any) {
     console.error("[PATCH /discounts/:id] error:", error?.message);
@@ -186,6 +192,7 @@ router.get("/discounts/validate/:code", async (req, res): Promise<void> => {
     ...serializeDates(discount),
     value: parseFloat(discount.value),
     isFirstOrder: discount.isFirstOrder,
+    isTaxable: discount.isTaxable ?? false,
     tagIds,
   });
 });

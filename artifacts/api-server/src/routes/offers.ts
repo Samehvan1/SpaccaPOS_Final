@@ -233,6 +233,7 @@ router.post("/offers", requirePermission("discounts:manage"), async (req, res): 
           isActive: isAct,
           applyToStore,
           applyToAllPartners,
+          promoLabel: req.body.promoLabel ?? null,
         })
         .returning();
 
@@ -283,6 +284,7 @@ router.patch("/offers/:id", requirePermission("discounts:manage"), async (req, r
       if (parsed.data.isActive !== undefined) updateData.isActive = parsed.data.isActive;
       if (parsed.data.applyToStore !== undefined) updateData.applyToStore = parsed.data.applyToStore;
       if (parsed.data.applyToAllPartners !== undefined) updateData.applyToAllPartners = parsed.data.applyToAllPartners;
+      if (req.body.promoLabel !== undefined) updateData.promoLabel = req.body.promoLabel || null;
 
       const [updated] = await tx
         .update(offersTable)

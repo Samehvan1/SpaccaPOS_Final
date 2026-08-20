@@ -25,6 +25,7 @@ type Offer = {
   excludedDrinkIds?: number[];
   applyToStore: boolean;
   applyToAllPartners: boolean;
+  promoLabel?: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -50,6 +51,7 @@ export default function OffersAdmin() {
 
   // Form state
   const [name, setName] = useState("");
+  const [promoLabel, setPromoLabel] = useState("");
   const [buyAmount, setBuyAmount] = useState("2");
   const [freeAmount, setFreeAmount] = useState("1");
   const [isActive, setIsActive] = useState(true);
@@ -97,6 +99,7 @@ export default function OffersAdmin() {
   const openAdd = () => {
     setEditId(null);
     setName("");
+    setPromoLabel("");
     setBuyAmount("2");
     setFreeAmount("1");
     setIsActive(true);
@@ -117,6 +120,7 @@ export default function OffersAdmin() {
   const openEdit = (o: Offer) => {
     setEditId(o.id);
     setName(o.name);
+    setPromoLabel(o.promoLabel || "");
     setBuyAmount(String(o.buyAmount));
     setFreeAmount(String(o.freeAmount));
     setIsActive(o.isActive);
@@ -191,6 +195,7 @@ export default function OffersAdmin() {
     try {
       const payload = {
         name: name.trim(),
+        promoLabel: promoLabel.trim() || null,
         buyAmount: buyVal,
         freeAmount: freeVal,
         isActive,
@@ -303,6 +308,7 @@ export default function OffersAdmin() {
                 <TableRow>
                   <TableHead className="w-[80px]">ID</TableHead>
                   <TableHead>Offer Rule Name</TableHead>
+                  <TableHead>Promo Label</TableHead>
                   <TableHead>Branch Target</TableHead>
                   <TableHead>Channel Scope</TableHead>
                   <TableHead className="text-center">Buy (N)</TableHead>
@@ -315,13 +321,13 @@ export default function OffersAdmin() {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-12 text-muted-foreground">
+                    <TableCell colSpan={10} className="text-center py-12 text-muted-foreground">
                       Loading promotional offers...
                     </TableCell>
                   </TableRow>
                 ) : filteredOffers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-12 text-muted-foreground">
+                    <TableCell colSpan={10} className="text-center py-12 text-muted-foreground">
                       No promotional offers found. Click "Add Offer" to create one.
                     </TableCell>
                   </TableRow>
@@ -330,6 +336,15 @@ export default function OffersAdmin() {
                     <TableRow key={o.id} className="hover:bg-muted/20">
                       <TableCell className="font-mono font-bold text-xs">{o.id}</TableCell>
                       <TableCell className="font-bold">{o.name}</TableCell>
+                      <TableCell>
+                        {o.promoLabel ? (
+                          <Badge variant="outline" className="bg-amber-500/10 text-amber-700 border-amber-300 font-extrabold">
+                            {o.promoLabel}
+                          </Badge>
+                        ) : (
+                          <span className="text-xs text-muted-foreground italic">None</span>
+                        )}
+                      </TableCell>
                       <TableCell>
                         <div className="flex flex-wrap gap-1">
                           {(o.branchIds ?? []).length === 0 ? (
@@ -417,15 +432,26 @@ export default function OffersAdmin() {
             <DialogTitle>{editId ? "Edit Promotional Offer" : "Add Promotional Offer"}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-5 py-4">
-            {/* Name */}
-            <div className="grid gap-2">
-              <Label htmlFor="offer-name">Offer Name</Label>
-              <Input
-                id="offer-name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. Buy 2 Get 1 Free"
-              />
+            {/* Name & Promo Label */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="offer-name">Offer Name</Label>
+                <Input
+                  id="offer-name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g. Buy 1 Hot Drink Get 1 Bakery"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="offer-promolabel">Promo Label on POS Card</Label>
+                <Input
+                  id="offer-promolabel"
+                  value={promoLabel}
+                  onChange={(e) => setPromoLabel(e.target.value)}
+                  placeholder="e.g. Free Bakery"
+                />
+              </div>
             </div>
 
             {/* Buy/Free amounts */}

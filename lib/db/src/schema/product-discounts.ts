@@ -13,6 +13,7 @@ export const productDrinkDiscountsTable = pgTable("product_drink_discounts", {
   discountType: text("discount_type", { enum: ["percentage", "fixed_amount", "fixed_price"] }).notNull().default("percentage"),
   discountValue: numeric("discount_value", { precision: 8, scale: 2 }).notNull(),
   isActive: boolean("is_active").notNull().default(true),
+  isTaxable: boolean("is_taxable").notNull().default(false),
   startDate: timestamp("start_date", { withTimezone: true }),
   endDate: timestamp("end_date", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

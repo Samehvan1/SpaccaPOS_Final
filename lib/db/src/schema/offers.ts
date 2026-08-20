@@ -13,6 +13,7 @@ export const offersTable = pgTable("offers", {
   isActive: boolean("is_active").notNull().default(true),
   applyToStore: boolean("apply_to_store").notNull().default(true),
   applyToAllPartners: boolean("apply_to_all_partners").notNull().default(true),
+  promoLabel: text("promo_label"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

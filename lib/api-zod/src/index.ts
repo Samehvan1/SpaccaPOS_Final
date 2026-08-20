@@ -380,12 +380,14 @@ export type Discount = Infer<typeof Discount>;
 export const CreateDiscountBody = api.CreateDiscountBody.extend({
   tagIds: z.array(z.number()).optional(),
   isFirstOrder: z.boolean().optional(),
+  isTaxable: z.boolean().optional(),
 });
 export type CreateDiscountBody = Infer<typeof CreateDiscountBody>;
 
 export const UpdateDiscountBody = api.UpdateDiscountBody.extend({
   tagIds: z.array(z.number()).optional(),
   isFirstOrder: z.boolean().optional(),
+  isTaxable: z.boolean().optional(),
 });
 export type UpdateDiscountBody = Infer<typeof UpdateDiscountBody>;
 
@@ -448,14 +450,21 @@ export type Permission = Infer<typeof api.ListPermissionsResponseItem>;
 export { ALL_PERMISSIONS, type PermissionKey } from "./permissions";
 
 // Offers
-export const Offer = api.ListOffersResponseItem;
-export type Offer = Infer<typeof api.ListOffersResponseItem>;
+export const Offer = api.ListOffersResponseItem.extend({
+  promoLabel: z.string().nullish(),
+});
+export type Offer = Infer<typeof Offer>;
 
-export const CreateOfferBody = api.CreateOfferBody;
-export type CreateOfferBody = Infer<typeof api.CreateOfferBody>;
+export const CreateOfferBody = api.CreateOfferBody.extend({
+  promoLabel: z.string().nullish(),
+});
+export type CreateOfferBody = Infer<typeof CreateOfferBody>;
 
-export const UpdateOfferBody = api.UpdateOfferBody;
-export type UpdateOfferBody = Infer<typeof api.UpdateOfferBody>;
+export const UpdateOfferBody = api.UpdateOfferBody.extend({
+  promoLabel: z.string().nullish(),
+});
+export type UpdateOfferBody = Infer<typeof UpdateOfferBody>;
+
 
 // Product Drink Discounts
 export const ProductDrinkDiscount = z.object({
@@ -466,6 +475,7 @@ export const ProductDrinkDiscount = z.object({
   discountType: z.enum(["percentage", "fixed_amount", "fixed_price"]),
   discountValue: z.number(),
   isActive: z.boolean(),
+  isTaxable: z.boolean().optional(),
   startDate: z.string().nullable().optional(),
   endDate: z.string().nullable().optional(),
   createdAt: z.string().optional(),
@@ -474,12 +484,14 @@ export const ProductDrinkDiscount = z.object({
 export type ProductDrinkDiscount = Infer<typeof ProductDrinkDiscount>;
 
 export const CreateProductDrinkDiscountBody = z.object({
-  drinkId: z.number(),
+  drinkId: z.number().optional(),
+  drinkIds: z.array(z.number()).optional(),
   branchId: z.number().nullable().optional(),
   partnerId: z.number().nullable().optional(),
   discountType: z.enum(["percentage", "fixed_amount", "fixed_price"]),
   discountValue: z.number().positive(),
   isActive: z.boolean().optional().default(true),
+  isTaxable: z.boolean().optional().default(false),
   startDate: z.string().nullable().optional(),
   endDate: z.string().nullable().optional(),
 });

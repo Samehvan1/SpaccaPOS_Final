@@ -11,6 +11,7 @@ export const discountsTable = pgTable("discounts", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
   isFirstOrder: boolean("is_first_order").notNull().default(false),
+  isTaxable: boolean("is_taxable").notNull().default(false),
 });
 
 

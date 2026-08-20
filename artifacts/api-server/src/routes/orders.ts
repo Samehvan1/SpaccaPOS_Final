@@ -788,9 +788,10 @@ router.post("/orders", async (req, res): Promise<void> => {
 
       let couponSharePerUnit = 0;
       if (orderCouponRow && discountValue) {
+        const isTaxable = orderCouponRow.isTaxable ?? false;
+        const baseForCalc = isTaxable ? item.unitPrice : item.unitPrice / 1.14;
         if (discountType === "percentage") {
-          const unitBeforeTax = item.unitPrice / 1.14;
-          couponSharePerUnit = (unitBeforeTax * discountValue) / 100;
+          couponSharePerUnit = (baseForCalc * discountValue) / 100;
         } else if (discountType === "fixed_per_item") {
           couponSharePerUnit = discountValue;
         } else if (discountType === "fixed" && subtotal > 0) {

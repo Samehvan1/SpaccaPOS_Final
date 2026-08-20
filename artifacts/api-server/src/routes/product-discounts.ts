@@ -49,6 +49,7 @@ router.get("/product-discounts", requirePermission("discounts:view"), async (req
       rows.map(({ discount, drinkName, branchName, partnerName }) => ({
         ...serializeDates(discount),
         discountValue: parseFloat(discount.discountValue),
+        isTaxable: discount.isTaxable ?? false,
         drinkName,
         branchName: branchName ?? "All Branches",
         partnerName: partnerName ?? "Direct POS / All Partners",
@@ -71,7 +72,7 @@ router.post("/product-discounts", requirePermission("discounts:manage"), async (
     return;
   }
 
-  const { branchId, partnerId, discountType, discountValue, isActive, startDate, endDate } = req.body;
+  const { branchId, partnerId, discountType, discountValue, isActive, isTaxable, startDate, endDate } = req.body;
   if (!discountType || discountValue === undefined) {
     res.status(400).json({ error: "discountType and discountValue are required" });
     return;
@@ -88,6 +89,7 @@ router.post("/product-discounts", requirePermission("discounts:manage"), async (
           discountType: discountType,
           discountValue: String(discountValue),
           isActive: isActive ?? true,
+          isTaxable: isTaxable ?? false,
           startDate: startDate ? new Date(startDate) : null,
           endDate: endDate ? new Date(endDate) : null,
         }))
@@ -98,6 +100,7 @@ router.post("/product-discounts", requirePermission("discounts:manage"), async (
       insertedRows.map((row) => ({
         ...serializeDates(row),
         discountValue: parseFloat(row.discountValue),
+        isTaxable: row.isTaxable ?? false,
       }))
     );
   } catch (error: any) {
@@ -118,6 +121,7 @@ router.patch("/product-discounts/:id", requirePermission("discounts:manage"), as
     if (req.body.discountType !== undefined) updateData.discountType = req.body.discountType;
     if (req.body.discountValue !== undefined) updateData.discountValue = String(req.body.discountValue);
     if (req.body.isActive !== undefined) updateData.isActive = req.body.isActive;
+    if (req.body.isTaxable !== undefined) updateData.isTaxable = Boolean(req.body.isTaxable);
     if (req.body.startDate !== undefined) updateData.startDate = req.body.startDate ? new Date(req.body.startDate) : null;
     if (req.body.endDate !== undefined) updateData.endDate = req.body.endDate ? new Date(req.body.endDate) : null;
     updateData.updatedAt = new Date();
@@ -136,6 +140,7 @@ router.patch("/product-discounts/:id", requirePermission("discounts:manage"), as
     res.json({
       ...serializeDates(updated),
       discountValue: parseFloat(updated.discountValue),
+      isTaxable: updated.isTaxable ?? false,
     });
   } catch (error: any) {
     console.error("[PATCH /product-discounts/:id] error:", error?.message);

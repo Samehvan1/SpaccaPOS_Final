@@ -2845,6 +2845,7 @@ export declare const CreateDiscountBody: z.ZodObject<{
 } & {
     tagIds: z.ZodOptional<z.ZodArray<z.ZodNumber, "many">>;
     isFirstOrder: z.ZodOptional<z.ZodBoolean>;
+    isTaxable: z.ZodOptional<z.ZodBoolean>;
 }, "strip", z.ZodTypeAny, {
     value: number;
     code: string;
@@ -2852,6 +2853,7 @@ export declare const CreateDiscountBody: z.ZodObject<{
     isActive?: boolean | undefined;
     tagIds?: number[] | undefined;
     isFirstOrder?: boolean | undefined;
+    isTaxable?: boolean | undefined;
 }, {
     value: number;
     code: string;
@@ -2859,6 +2861,7 @@ export declare const CreateDiscountBody: z.ZodObject<{
     isActive?: boolean | undefined;
     tagIds?: number[] | undefined;
     isFirstOrder?: boolean | undefined;
+    isTaxable?: boolean | undefined;
 }>;
 export type CreateDiscountBody = Infer<typeof CreateDiscountBody>;
 export declare const UpdateDiscountBody: z.ZodObject<{
@@ -2869,6 +2872,7 @@ export declare const UpdateDiscountBody: z.ZodObject<{
 } & {
     tagIds: z.ZodOptional<z.ZodArray<z.ZodNumber, "many">>;
     isFirstOrder: z.ZodOptional<z.ZodBoolean>;
+    isTaxable: z.ZodOptional<z.ZodBoolean>;
 }, "strip", z.ZodTypeAny, {
     value?: number | undefined;
     code?: string | undefined;
@@ -2876,6 +2880,7 @@ export declare const UpdateDiscountBody: z.ZodObject<{
     isActive?: boolean | undefined;
     tagIds?: number[] | undefined;
     isFirstOrder?: boolean | undefined;
+    isTaxable?: boolean | undefined;
 }, {
     value?: number | undefined;
     code?: string | undefined;
@@ -2883,6 +2888,7 @@ export declare const UpdateDiscountBody: z.ZodObject<{
     isActive?: boolean | undefined;
     tagIds?: number[] | undefined;
     isFirstOrder?: boolean | undefined;
+    isTaxable?: boolean | undefined;
 }>;
 export type UpdateDiscountBody = Infer<typeof UpdateDiscountBody>;
 export declare const ListUsersResponseItem: z.ZodObject<{
@@ -3182,6 +3188,8 @@ export declare const Offer: z.ZodObject<{
     excludedDrinkIds: z.ZodOptional<z.ZodArray<z.ZodNumber, "many">>;
     createdAt: z.ZodString;
     updatedAt: z.ZodString;
+} & {
+    promoLabel: z.ZodOptional<z.ZodNullable<z.ZodString>>;
 }, "strip", z.ZodTypeAny, {
     id: number;
     name: string;
@@ -3197,6 +3205,7 @@ export declare const Offer: z.ZodObject<{
     applicableDrinkIds?: number[] | undefined;
     rewardDrinkIds?: number[] | undefined;
     excludedDrinkIds?: number[] | undefined;
+    promoLabel?: string | null | undefined;
 }, {
     id: number;
     name: string;
@@ -3212,8 +3221,9 @@ export declare const Offer: z.ZodObject<{
     applicableDrinkIds?: number[] | undefined;
     rewardDrinkIds?: number[] | undefined;
     excludedDrinkIds?: number[] | undefined;
+    promoLabel?: string | null | undefined;
 }>;
-export type Offer = Infer<typeof api.ListOffersResponseItem>;
+export type Offer = Infer<typeof Offer>;
 export declare const CreateOfferBody: z.ZodObject<{
     name: z.ZodString;
     buyAmount: z.ZodNumber;
@@ -3226,6 +3236,8 @@ export declare const CreateOfferBody: z.ZodObject<{
     applicableDrinkIds: z.ZodOptional<z.ZodArray<z.ZodNumber, "many">>;
     rewardDrinkIds: z.ZodOptional<z.ZodArray<z.ZodNumber, "many">>;
     excludedDrinkIds: z.ZodOptional<z.ZodArray<z.ZodNumber, "many">>;
+} & {
+    promoLabel: z.ZodOptional<z.ZodNullable<z.ZodString>>;
 }, "strip", z.ZodTypeAny, {
     name: string;
     buyAmount: number;
@@ -3238,6 +3250,7 @@ export declare const CreateOfferBody: z.ZodObject<{
     applicableDrinkIds?: number[] | undefined;
     rewardDrinkIds?: number[] | undefined;
     excludedDrinkIds?: number[] | undefined;
+    promoLabel?: string | null | undefined;
 }, {
     name: string;
     buyAmount: number;
@@ -3250,8 +3263,9 @@ export declare const CreateOfferBody: z.ZodObject<{
     applicableDrinkIds?: number[] | undefined;
     rewardDrinkIds?: number[] | undefined;
     excludedDrinkIds?: number[] | undefined;
+    promoLabel?: string | null | undefined;
 }>;
-export type CreateOfferBody = Infer<typeof api.CreateOfferBody>;
+export type CreateOfferBody = Infer<typeof CreateOfferBody>;
 export declare const UpdateOfferBody: z.ZodObject<{
     name: z.ZodOptional<z.ZodString>;
     buyAmount: z.ZodOptional<z.ZodNumber>;
@@ -3264,6 +3278,8 @@ export declare const UpdateOfferBody: z.ZodObject<{
     applicableDrinkIds: z.ZodOptional<z.ZodArray<z.ZodNumber, "many">>;
     rewardDrinkIds: z.ZodOptional<z.ZodArray<z.ZodNumber, "many">>;
     excludedDrinkIds: z.ZodOptional<z.ZodArray<z.ZodNumber, "many">>;
+} & {
+    promoLabel: z.ZodOptional<z.ZodNullable<z.ZodString>>;
 }, "strip", z.ZodTypeAny, {
     name?: string | undefined;
     isActive?: boolean | undefined;
@@ -3276,6 +3292,7 @@ export declare const UpdateOfferBody: z.ZodObject<{
     applicableDrinkIds?: number[] | undefined;
     rewardDrinkIds?: number[] | undefined;
     excludedDrinkIds?: number[] | undefined;
+    promoLabel?: string | null | undefined;
 }, {
     name?: string | undefined;
     isActive?: boolean | undefined;
@@ -3288,8 +3305,9 @@ export declare const UpdateOfferBody: z.ZodObject<{
     applicableDrinkIds?: number[] | undefined;
     rewardDrinkIds?: number[] | undefined;
     excludedDrinkIds?: number[] | undefined;
+    promoLabel?: string | null | undefined;
 }>;
-export type UpdateOfferBody = Infer<typeof api.UpdateOfferBody>;
+export type UpdateOfferBody = Infer<typeof UpdateOfferBody>;
 export declare const ProductDrinkDiscount: z.ZodObject<{
     id: z.ZodNumber;
     drinkId: z.ZodNumber;
@@ -3298,6 +3316,7 @@ export declare const ProductDrinkDiscount: z.ZodObject<{
     discountType: z.ZodEnum<["percentage", "fixed_amount", "fixed_price"]>;
     discountValue: z.ZodNumber;
     isActive: z.ZodBoolean;
+    isTaxable: z.ZodOptional<z.ZodBoolean>;
     startDate: z.ZodOptional<z.ZodNullable<z.ZodString>>;
     endDate: z.ZodOptional<z.ZodNullable<z.ZodString>>;
     createdAt: z.ZodOptional<z.ZodString>;
@@ -3314,6 +3333,7 @@ export declare const ProductDrinkDiscount: z.ZodObject<{
     updatedAt?: string | undefined;
     startDate?: string | null | undefined;
     endDate?: string | null | undefined;
+    isTaxable?: boolean | undefined;
 }, {
     id: number;
     branchId: number | null;
@@ -3326,44 +3346,53 @@ export declare const ProductDrinkDiscount: z.ZodObject<{
     updatedAt?: string | undefined;
     startDate?: string | null | undefined;
     endDate?: string | null | undefined;
+    isTaxable?: boolean | undefined;
 }>;
 export type ProductDrinkDiscount = Infer<typeof ProductDrinkDiscount>;
 export declare const CreateProductDrinkDiscountBody: z.ZodObject<{
-    drinkId: z.ZodNumber;
+    drinkId: z.ZodOptional<z.ZodNumber>;
+    drinkIds: z.ZodOptional<z.ZodArray<z.ZodNumber, "many">>;
     branchId: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
     partnerId: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
     discountType: z.ZodEnum<["percentage", "fixed_amount", "fixed_price"]>;
     discountValue: z.ZodNumber;
     isActive: z.ZodDefault<z.ZodOptional<z.ZodBoolean>>;
+    isTaxable: z.ZodDefault<z.ZodOptional<z.ZodBoolean>>;
     startDate: z.ZodOptional<z.ZodNullable<z.ZodString>>;
     endDate: z.ZodOptional<z.ZodNullable<z.ZodString>>;
 }, "strip", z.ZodTypeAny, {
     isActive: boolean;
-    drinkId: number;
     discountValue: number;
     discountType: "percentage" | "fixed_amount" | "fixed_price";
+    isTaxable: boolean;
     branchId?: number | null | undefined;
+    drinkId?: number | undefined;
     startDate?: string | null | undefined;
     endDate?: string | null | undefined;
     partnerId?: number | null | undefined;
+    drinkIds?: number[] | undefined;
 }, {
-    drinkId: number;
     discountValue: number;
     discountType: "percentage" | "fixed_amount" | "fixed_price";
     branchId?: number | null | undefined;
     isActive?: boolean | undefined;
+    drinkId?: number | undefined;
     startDate?: string | null | undefined;
     endDate?: string | null | undefined;
     partnerId?: number | null | undefined;
+    isTaxable?: boolean | undefined;
+    drinkIds?: number[] | undefined;
 }>;
 export type CreateProductDrinkDiscountBody = Infer<typeof CreateProductDrinkDiscountBody>;
 export declare const UpdateProductDrinkDiscountBody: z.ZodObject<{
-    drinkId: z.ZodOptional<z.ZodNumber>;
+    drinkId: z.ZodOptional<z.ZodOptional<z.ZodNumber>>;
+    drinkIds: z.ZodOptional<z.ZodOptional<z.ZodArray<z.ZodNumber, "many">>>;
     branchId: z.ZodOptional<z.ZodOptional<z.ZodNullable<z.ZodNumber>>>;
     partnerId: z.ZodOptional<z.ZodOptional<z.ZodNullable<z.ZodNumber>>>;
     discountType: z.ZodOptional<z.ZodEnum<["percentage", "fixed_amount", "fixed_price"]>>;
     discountValue: z.ZodOptional<z.ZodNumber>;
     isActive: z.ZodOptional<z.ZodDefault<z.ZodOptional<z.ZodBoolean>>>;
+    isTaxable: z.ZodOptional<z.ZodDefault<z.ZodOptional<z.ZodBoolean>>>;
     startDate: z.ZodOptional<z.ZodOptional<z.ZodNullable<z.ZodString>>>;
     endDate: z.ZodOptional<z.ZodOptional<z.ZodNullable<z.ZodString>>>;
 }, "strip", z.ZodTypeAny, {
@@ -3375,6 +3404,8 @@ export declare const UpdateProductDrinkDiscountBody: z.ZodObject<{
     partnerId?: number | null | undefined;
     discountValue?: number | undefined;
     discountType?: "percentage" | "fixed_amount" | "fixed_price" | undefined;
+    isTaxable?: boolean | undefined;
+    drinkIds?: number[] | undefined;
 }, {
     branchId?: number | null | undefined;
     isActive?: boolean | undefined;
@@ -3384,6 +3415,8 @@ export declare const UpdateProductDrinkDiscountBody: z.ZodObject<{
     partnerId?: number | null | undefined;
     discountValue?: number | undefined;
     discountType?: "percentage" | "fixed_amount" | "fixed_price" | undefined;
+    isTaxable?: boolean | undefined;
+    drinkIds?: number[] | undefined;
 }>;
 export type UpdateProductDrinkDiscountBody = Infer<typeof UpdateProductDrinkDiscountBody>;
 //# sourceMappingURL=index.d.ts.map
