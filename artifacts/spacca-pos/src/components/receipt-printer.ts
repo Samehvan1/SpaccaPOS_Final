@@ -26,6 +26,7 @@ interface Customization {
 
 interface OrderItem {
   id: number;
+  drinkId?: number;
   drinkName: string;
   quantity: number;
   unitPrice: number;
@@ -33,6 +34,17 @@ interface OrderItem {
   specialNotes?: string | null;
   status: "pending" | "ready" | "refunded" | "cancelled";
   customizations: Customization[];
+}
+
+interface OfferMetadata {
+  id?: number;
+  name?: string;
+  buyAmount?: number;
+  freeAmount?: number;
+  promoLabel?: string | null;
+  applicableDrinkIds?: number[];
+  rewardDrinkIds?: number[];
+  excludedDrinkIds?: number[];
 }
 
 interface CompletedOrder {
@@ -47,6 +59,7 @@ interface CompletedOrder {
   discountType?: "percentage" | "fixed" | null;
   offerId?: number | null;
   offerDiscount?: number | null;
+  offer?: OfferMetadata | null;
   total: number;
   paymentMethod: string;
   amountTendered?: number | null;
@@ -101,6 +114,83 @@ function openPrintWindow(html: string) {
   }, 100);
 }
 
+export function computeFreeQtyMap(order: CompletedOrder): Map<number, number> {
+  const freeQtyMap = new Map<number, number>();
+  if (!order.offerDiscount || order.offerDiscount <= 0 || !order.items || order.items.length === 0) {
+    return freeQtyMap;
+  }
+
+  const activeItems = order.items.filter(i => i.status !== "refunded" && i.status !== "cancelled");
+  if (activeItems.length === 0) return freeQtyMap;
+
+  const offer = order.offer;
+  const applicableDrinkIds = offer?.applicableDrinkIds ?? [];
+  const rewardDrinkIds = offer?.rewardDrinkIds ?? [];
+  const excludedDrinkIds = offer?.excludedDrinkIds ?? [];
+  const N = offer?.buyAmount ?? 1;
+  const X = offer?.freeAmount ?? 1;
+
+  const rewardItems = activeItems.filter(item => {
+    const dId = item.drinkId ?? 0;
+    if (excludedDrinkIds.length > 0 && dId > 0 && excludedDrinkIds.includes(dId)) return false;
+    if (rewardDrinkIds.length > 0 && dId > 0 && !rewardDrinkIds.includes(dId)) return false;
+    return true;
+  });
+
+  const triggerItems = activeItems.filter(item => {
+    const dId = item.drinkId ?? 0;
+    if (excludedDrinkIds.length > 0 && dId > 0 && excludedDrinkIds.includes(dId)) return false;
+    if (applicableDrinkIds.length > 0 && dId > 0 && !applicableDrinkIds.includes(dId)) return false;
+    return true;
+  });
+
+  let F = 0;
+  if (offer && offer.buyAmount && offer.freeAmount) {
+    const triggerQty = triggerItems.reduce((sum, item) => sum + item.quantity, 0);
+    const rewardQty = rewardItems.reduce((sum, item) => sum + item.quantity, 0);
+    const isCrossList = applicableDrinkIds.length > 0 && rewardDrinkIds.length > 0 &&
+      !applicableDrinkIds.some(id => rewardDrinkIds.includes(id));
+
+    if (isCrossList) {
+      F = Math.min(Math.floor(triggerQty / N) * X, rewardQty);
+    } else {
+      const M = triggerQty;
+      F = Math.floor(M / (N + X)) * X + Math.min(X, Math.max(0, (M % (N + X)) - N));
+    }
+  } else {
+    // Fallback if offer scope details are missing: allocate discount only among reward items (or active items)
+    let remainingDiscount = order.offerDiscount;
+    const itemsToUse = rewardItems.length > 0 ? rewardItems : activeItems;
+    const flatUnits = itemsToUse.flatMap(item =>
+      Array.from({ length: item.quantity }).map(() => ({ id: item.id, unitPrice: item.unitPrice }))
+    ).sort((a, b) => a.unitPrice - b.unitPrice);
+
+    for (const unit of flatUnits) {
+      if (remainingDiscount >= unit.unitPrice - 0.01) {
+        freeQtyMap.set(unit.id, (freeQtyMap.get(unit.id) ?? 0) + 1);
+        remainingDiscount -= unit.unitPrice;
+      } else {
+        break;
+      }
+    }
+    return freeQtyMap;
+  }
+
+  if (F > 0 && rewardItems.length > 0) {
+    const flatRewardUnits = rewardItems.flatMap(item =>
+      Array.from({ length: item.quantity }).map(() => ({ id: item.id, unitPrice: item.unitPrice }))
+    ).sort((a, b) => a.unitPrice - b.unitPrice);
+
+    const discountCount = Math.min(F, flatRewardUnits.length);
+    for (let i = 0; i < discountCount; i++) {
+      const unit = flatRewardUnits[i];
+      freeQtyMap.set(unit.id, (freeQtyMap.get(unit.id) ?? 0) + 1);
+    }
+  }
+
+  return freeQtyMap;
+}
+
 /**
  * Simple drinks-only receipt: one line per drink (name × qty = price).
  * No customization/recipe details — keeps the receipt short for multi-drink orders.
@@ -110,23 +200,7 @@ export function printSimpleDrinksReceipt(order: CompletedOrder) {
   const date = format(new Date(order.createdAt), "MMM d, yyyy  h:mm a");
   const payLabel = order.paymentMethod.charAt(0).toUpperCase() + order.paymentMethod.slice(1);
 
-  const freeQtyMap = new Map<number, number>();
-  if (order.offerDiscount && order.offerDiscount > 0 && order.items) {
-    let remainingOfferDiscount = order.offerDiscount;
-    const activeItems = order.items.filter(i => i.status !== "refunded" && i.status !== "cancelled");
-    const flat = activeItems.flatMap(item =>
-      Array.from({ length: item.quantity }).map(() => ({ id: item.id, unitPrice: item.unitPrice }))
-    ).sort((a, b) => a.unitPrice - b.unitPrice);
-
-    for (const unit of flat) {
-      if (remainingOfferDiscount >= unit.unitPrice - 0.01) {
-        freeQtyMap.set(unit.id, (freeQtyMap.get(unit.id) ?? 0) + 1);
-        remainingOfferDiscount -= unit.unitPrice;
-      } else {
-        break;
-      }
-    }
-  }
+  const freeQtyMap = computeFreeQtyMap(order);
 
   const activeItems = order.items.filter(i => i.status !== "refunded" && i.status !== "cancelled");
   const refundedItems = order.items.filter(i => i.status === "refunded" || i.status === "cancelled");
@@ -165,8 +239,9 @@ export function printSimpleDrinksReceipt(order: CompletedOrder) {
     ? `<div class="row"><span class="label">Tendered:</span><span class="value">${fmt(order.amountTendered)}</span></div>` : "";
   const discount = order.discount > 0
     ? `<div class="row"><span class="label">Discount amount${order.discountCode ? ` (${esc(order.discountCode)})` : ""}:</span><span class="value">-${fmt(order.discount)}</span></div>` : "";
+  const offerLabelName = order.offer?.promoLabel || order.offer?.name;
   const offerDiscount = order.offerDiscount && order.offerDiscount > 0
-    ? `<div class="row"><span class="label">Offer:</span><span class="value">-${fmt(order.offerDiscount)}</span></div>` : "";
+    ? `<div class="row"><span class="label">Offer${offerLabelName ? ` (${esc(offerLabelName)})` : ""}:</span><span class="value">-${fmt(order.offerDiscount)}</span></div>` : "";
 
   openPrintWindow(`
     <div class="center" style="margin-bottom:6px">
@@ -210,23 +285,7 @@ export function printCustomerReceipt(order: CompletedOrder) {
   const date = format(new Date(order.createdAt), "MMM d, yyyy  h:mm a");
   const payLabel = order.paymentMethod.charAt(0).toUpperCase() + order.paymentMethod.slice(1);
 
-  const freeQtyMap = new Map<number, number>();
-  if (order.offerDiscount && order.offerDiscount > 0 && order.items) {
-    let remainingOfferDiscount = order.offerDiscount;
-    const activeItems = order.items.filter(i => i.status !== "refunded" && i.status !== "cancelled");
-    const flat = activeItems.flatMap(item =>
-      Array.from({ length: item.quantity }).map(() => ({ id: item.id, unitPrice: item.unitPrice }))
-    ).sort((a, b) => a.unitPrice - b.unitPrice);
-
-    for (const unit of flat) {
-      if (remainingOfferDiscount >= unit.unitPrice - 0.01) {
-        freeQtyMap.set(unit.id, (freeQtyMap.get(unit.id) ?? 0) + 1);
-        remainingOfferDiscount -= unit.unitPrice;
-      } else {
-        break;
-      }
-    }
-  }
+  const freeQtyMap = computeFreeQtyMap(order);
 
   const itemRows = order.items.map(item => {
     const isRefunded = item.status === "refunded" || item.status === "cancelled";
@@ -268,8 +327,9 @@ export function printCustomerReceipt(order: CompletedOrder) {
 
   const discount = order.discount > 0
     ? `<div class="row"><span class="label">Discount amount${order.discountCode ? ` (${esc(order.discountCode)})` : ""}:</span><span class="value">-${fmt(order.discount)}</span></div>` : "";
+  const offerLabelName = order.offer?.promoLabel || order.offer?.name;
   const offerDiscount = order.offerDiscount && order.offerDiscount > 0
-    ? `<div class="row"><span class="label">Offer:</span><span class="value">-${fmt(order.offerDiscount)}</span></div>` : "";
+    ? `<div class="row"><span class="label">Offer${offerLabelName ? ` (${esc(offerLabelName)})` : ""}:</span><span class="value">-${fmt(order.offerDiscount)}</span></div>` : "";
 
   openPrintWindow(`
     <div class="center" style="margin-bottom:6px">

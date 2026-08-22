@@ -149,6 +149,7 @@ export const ListOrdersResponseItem = (
       "refund",
       "points",
     ]),
+    offer: z.any().nullish().optional(),
   })
   .and(
     ((api.ListOrdersResponseItem as any)._def.right as z.ZodObject<any>).extend(
@@ -242,6 +243,7 @@ export const GetOrderResponse = (
       "split",
       "points",
     ]),
+    offer: z.any().nullish().optional(),
     payments: z
       .array(
         z.object({

@@ -79701,7 +79701,8 @@ var ListOrdersResponseItem2 = ListOrdersResponseItem._def.left.extend({
     "split",
     "refund",
     "points"
-  ])
+  ]),
+  offer: external_exports2.any().nullish().optional()
 }).and(
   ListOrdersResponseItem._def.right.extend(
     {
@@ -79773,6 +79774,7 @@ var GetOrderResponse2 = GetOrderResponse._def.left.extend({
     "split",
     "points"
   ]),
+  offer: external_exports2.any().nullish().optional(),
   payments: external_exports2.array(
     external_exports2.object({
       id: external_exports2.number(),
@@ -84708,17 +84710,60 @@ async function generateOrderNumber(tx, branchId) {
   const serial2 = maxSerial + 1;
   return `${newPrefix}${String(serial2).padStart(3, "0")}`;
 }
+async function loadOfferMap(dbOrTx, offerIds) {
+  const validIds = [...new Set(offerIds.filter((id) => typeof id === "number" && id > 0))];
+  if (validIds.length === 0) return /* @__PURE__ */ new Map();
+  const offers = await dbOrTx.select().from(offersTable).where(inArray(offersTable.id, validIds));
+  const [applicable, reward, excluded] = await Promise.all([
+    dbOrTx.select().from(offersApplicableDrinksTable).where(inArray(offersApplicableDrinksTable.offerId, validIds)),
+    dbOrTx.select().from(offersRewardDrinksTable).where(inArray(offersRewardDrinksTable.offerId, validIds)),
+    dbOrTx.select().from(offersExcludedDrinksTable).where(inArray(offersExcludedDrinksTable.offerId, validIds))
+  ]);
+  const appMap = /* @__PURE__ */ new Map();
+  for (const a of applicable) {
+    const list = appMap.get(a.offerId) ?? [];
+    list.push(a.drinkId);
+    appMap.set(a.offerId, list);
+  }
+  const rewMap = /* @__PURE__ */ new Map();
+  for (const r of reward) {
+    const list = rewMap.get(r.offerId) ?? [];
+    list.push(r.drinkId);
+    rewMap.set(r.offerId, list);
+  }
+  const excMap = /* @__PURE__ */ new Map();
+  for (const e of excluded) {
+    const list = excMap.get(e.offerId) ?? [];
+    list.push(e.drinkId);
+    excMap.set(e.offerId, list);
+  }
+  const map2 = /* @__PURE__ */ new Map();
+  for (const o of offers) {
+    map2.set(o.id, {
+      id: o.id,
+      name: o.name,
+      buyAmount: o.buyAmount,
+      freeAmount: o.freeAmount,
+      promoLabel: o.promoLabel ?? null,
+      applicableDrinkIds: appMap.get(o.id) ?? [],
+      rewardDrinkIds: rewMap.get(o.id) ?? [],
+      excludedDrinkIds: excMap.get(o.id) ?? []
+    });
+  }
+  return map2;
+}
 async function buildOrderDetail(orderId) {
   const [[order], items] = await Promise.all([
     db.select().from(ordersTable).where(eq(ordersTable.id, orderId)),
     db.select().from(orderItemsTable).where(eq(orderItemsTable.orderId, orderId))
   ]);
   if (!order) return null;
-  const [[barista], [branch], customizations, payments] = await Promise.all([
+  const [[barista], [branch], customizations, payments, offerMap] = await Promise.all([
     db.select().from(usersTable).where(eq(usersTable.id, order.baristaId)),
     db.select().from(branchesTable).where(eq(branchesTable.id, order.branchId)),
     items.length > 0 ? db.select().from(orderItemCustomizationsTable).where(inArray(orderItemCustomizationsTable.orderItemId, items.map((i) => i.id))) : Promise.resolve([]),
-    db.select().from(orderPaymentsTable).where(eq(orderPaymentsTable.orderId, orderId))
+    db.select().from(orderPaymentsTable).where(eq(orderPaymentsTable.orderId, orderId)),
+    order.offerId ? loadOfferMap(db, [order.offerId]) : Promise.resolve(/* @__PURE__ */ new Map())
   ]);
   const custByItem = /* @__PURE__ */ new Map();
   for (const c of customizations) {
@@ -84738,6 +84783,7 @@ async function buildOrderDetail(orderId) {
     discountType: order.discountType,
     offerId: order.offerId,
     offerDiscount: order.offerDiscount ? parseFloat(order.offerDiscount) : 0,
+    offer: order.offerId ? offerMap.get(order.offerId) ?? null : null,
     total: parseFloat(order.total),
     amountTendered: order.amountTendered ? parseFloat(order.amountTendered) : null,
     changeDue: order.changeDue ? parseFloat(order.changeDue) : null,
@@ -84812,15 +84858,17 @@ router5.get("/orders", requirePermission("cashier:view"), async (req, res) => {
   res.setHeader("X-Total-Count", String(totalCount));
   res.setHeader("Access-Control-Expose-Headers", "X-Total-Count");
   const orderIds = orders.map((o) => o.id);
-  const [items, baristas, payments, branches, partners] = await Promise.all([
+  const offerIds = orders.map((o) => o.offerId).filter(Boolean);
+  const [items, baristas, payments, branches, partners, offerMap] = await Promise.all([
     orderIds.length > 0 ? db.select().from(orderItemsTable).where(inArray(orderItemsTable.orderId, orderIds)) : Promise.resolve([]),
     db.select().from(usersTable),
     // Fetch all baristas for mapping
     orderIds.length > 0 ? db.select().from(orderPaymentsTable).where(inArray(orderPaymentsTable.orderId, orderIds)) : Promise.resolve([]),
     db.select().from(branchesTable),
     // Fetch all branches for mapping
-    db.select().from(partnersTable)
+    db.select().from(partnersTable),
     // Fetch all ordering partners for mapping
+    offerIds.length > 0 ? loadOfferMap(db, offerIds) : Promise.resolve(/* @__PURE__ */ new Map())
   ]);
   const itemIds = items.map((i) => i.id);
   const customizations = itemIds.length > 0 ? await db.select().from(orderItemCustomizationsTable).where(inArray(orderItemCustomizationsTable.orderItemId, itemIds)) : [];
@@ -84864,6 +84912,7 @@ router5.get("/orders", requirePermission("cashier:view"), async (req, res) => {
         discountType: o.discountType,
         offerId: o.offerId,
         offerDiscount: o.offerDiscount ? parseFloat(o.offerDiscount) : 0,
+        offer: o.offerId ? offerMap.get(o.offerId) ?? null : null,
         total: parseFloat(o.total),
         amountTendered: o.amountTendered ? parseFloat(o.amountTendered) : null,
         changeDue: o.changeDue ? parseFloat(o.changeDue) : null,
@@ -85299,6 +85348,7 @@ router5.post("/orders", async (req, res) => {
   const { globalCache: globalCache2 } = await Promise.resolve().then(() => (init_cache2(), cache_exports));
   globalCache2.clear();
   broadcastEvent("inventory_updated", { orderId: order.id });
+  const createdOfferMap = order.offerId ? await loadOfferMap(db, [order.offerId]) : /* @__PURE__ */ new Map();
   res.status(201).json(
     GetOrderResponse2.parse(
       serializeDates({
@@ -85312,6 +85362,7 @@ router5.post("/orders", async (req, res) => {
         discountType: order.discountType,
         offerId: order.offerId,
         offerDiscount: order.offerDiscount ? parseFloat(order.offerDiscount) : 0,
+        offer: order.offerId ? createdOfferMap.get(order.offerId) ?? null : null,
         total: parseFloat(order.total),
         amountTendered: order.amountTendered ? parseFloat(order.amountTendered) : null,
         changeDue: order.changeDue ? parseFloat(order.changeDue) : null,

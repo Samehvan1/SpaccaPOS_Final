@@ -27,6 +27,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { format, subDays, startOfDay, endOfDay, parseISO, differenceInSeconds } from "date-fns";
 import { fmt, pure, CURRENCY } from "@/lib/currency";
 import { isActuallyCustomized as checkCustomization, buildDrinkDefaultsMap } from "@/lib/recipe-utils";
+import { computeFreeQtyMap } from "@/components/receipt-printer";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend,
@@ -2273,30 +2274,45 @@ export default function ReportsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {selectedOrderDetails?.items?.map((item: any, i: number) => (
-                    <TableRow key={i} className={`hover:bg-transparent ${item.status === 'refunded' ? "opacity-50 line-through bg-red-500/5" : ""}`}>
-                      <TableCell className="py-3">
-                        <div className="flex items-center gap-2">
-                          <p className="font-bold">{item.drinkName}</p>
-                          {item.status === 'refunded' && <Badge variant="destructive" className="text-[8px] h-4">REFUNDED</Badge>}
-                        </div>
-                        {item.customizations?.length > 0 && (
-                          <p className="text-[10px] text-muted-foreground mt-0.5">
-                            {item.customizations.map((c: any) => c.optionLabel).join(", ")}
-                          </p>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-center font-medium">x{item.quantity}</TableCell>
-                      <TableCell className="text-right font-bold">{pure(item.lineTotal)}</TableCell>
-                    </TableRow>
-                  ))}
+                  {(() => {
+                    const freeQtyMap = selectedOrderDetails ? computeFreeQtyMap(selectedOrderDetails) : new Map();
+                    return selectedOrderDetails?.items?.map((item: any, i: number) => {
+                      const isRefunded = item.status === 'refunded' || item.status === 'cancelled';
+                      const freeQty = freeQtyMap.get(item.id) ?? 0;
+                      const offerLabel = !isRefunded && freeQty > 0 ? (freeQty === item.quantity ? "FREE" : `${freeQty} FREE`) : null;
+                      return (
+                        <TableRow key={i} className={`hover:bg-transparent ${isRefunded ? "opacity-50 line-through bg-red-500/5" : ""}`}>
+                          <TableCell className="py-3">
+                            <div className="flex items-center gap-2">
+                              <p className="font-bold">{item.drinkName}</p>
+                              {offerLabel && (
+                                <Badge variant="outline" className="text-[9px] h-4 bg-emerald-500/10 text-emerald-600 border-emerald-200 font-bold">
+                                  [{offerLabel}]
+                                </Badge>
+                              )}
+                              {isRefunded && <Badge variant="destructive" className="text-[8px] h-4">REFUNDED</Badge>}
+                            </div>
+                            {item.customizations?.length > 0 && (
+                              <p className="text-[10px] text-muted-foreground mt-0.5">
+                                {item.customizations.map((c: any) => c.optionLabel).join(", ")}
+                              </p>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-center font-medium">x{item.quantity}</TableCell>
+                          <TableCell className="text-right font-bold">{pure(item.lineTotal)}</TableCell>
+                        </TableRow>
+                      );
+                    });
+                  })()}
                   <TableRow className="bg-muted/20">
                     <TableCell colSpan={2} className="text-right font-medium">Subtotal</TableCell>
                     <TableCell className="text-right font-bold">{pure(selectedOrderDetails?.subtotal)}</TableCell>
                   </TableRow>
                   {selectedOrderDetails?.offerDiscount > 0 && (
                     <TableRow className="bg-muted/20 border-t-0 text-destructive">
-                      <TableCell colSpan={2} className="text-right font-medium text-destructive">Offer Discount</TableCell>
+                      <TableCell colSpan={2} className="text-right font-medium text-destructive">
+                        Offer Discount {selectedOrderDetails?.offer?.promoLabel || selectedOrderDetails?.offer?.name ? `(${selectedOrderDetails.offer.promoLabel || selectedOrderDetails.offer.name})` : ""}
+                      </TableCell>
                       <TableCell className="text-right font-bold text-destructive">-{pure(selectedOrderDetails.offerDiscount)}</TableCell>
                     </TableRow>
                   )}

@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Search, Download, Filter, Receipt, Clock, Calendar, RefreshCw } from "lucide-react";
 import { format } from "date-fns";
 import { fmt, pure } from "@/lib/currency";
+import { computeFreeQtyMap } from "@/components/receipt-printer";
 
 const STATUS_COLORS: Record<string, string> = {
   pending: "bg-yellow-500/10 text-yellow-600 border-yellow-200 dark:border-yellow-900/30",
@@ -391,30 +392,45 @@ export default function AllOrdersReport() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {selectedOrderDetails?.items?.map((item: any, i: number) => (
-                    <TableRow key={i} className={`hover:bg-transparent ${item.status === 'refunded' ? "opacity-50 line-through bg-red-500/5" : ""}`}>
-                      <TableCell className="py-3">
-                        <div className="flex items-center gap-2">
-                          <p className="font-bold text-sm">{item.drinkName}</p>
-                          {item.status === 'refunded' && <Badge variant="destructive" className="text-[8px] h-4 font-black">REFUNDED</Badge>}
-                        </div>
-                        {item.customizations?.length > 0 && (
-                          <p className="text-[10px] text-muted-foreground mt-0.5 font-medium">
-                            {item.customizations.map((c: any) => c.optionLabel).join(", ")}
-                          </p>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-center font-bold">x{item.quantity}</TableCell>
-                      <TableCell className="text-right font-bold text-sm">{pure(item.lineTotal)}</TableCell>
-                    </TableRow>
-                  ))}
+                  {(() => {
+                    const freeQtyMap = selectedOrderDetails ? computeFreeQtyMap(selectedOrderDetails) : new Map();
+                    return selectedOrderDetails?.items?.map((item: any, i: number) => {
+                      const isRefunded = item.status === 'refunded' || item.status === 'cancelled';
+                      const freeQty = freeQtyMap.get(item.id) ?? 0;
+                      const offerLabel = !isRefunded && freeQty > 0 ? (freeQty === item.quantity ? "FREE" : `${freeQty} FREE`) : null;
+                      return (
+                        <TableRow key={i} className={`hover:bg-transparent ${isRefunded ? "opacity-50 line-through bg-red-500/5" : ""}`}>
+                          <TableCell className="py-3">
+                            <div className="flex items-center gap-2">
+                              <p className="font-bold text-sm">{item.drinkName}</p>
+                              {offerLabel && (
+                                <Badge variant="outline" className="text-[9px] h-4 bg-emerald-500/10 text-emerald-600 border-emerald-200 font-bold">
+                                  [{offerLabel}]
+                                </Badge>
+                              )}
+                              {isRefunded && <Badge variant="destructive" className="text-[8px] h-4 font-black">REFUNDED</Badge>}
+                            </div>
+                            {item.customizations?.length > 0 && (
+                              <p className="text-[10px] text-muted-foreground mt-0.5 font-medium">
+                                {item.customizations.map((c: any) => c.optionLabel).join(", ")}
+                              </p>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-center font-bold">x{item.quantity}</TableCell>
+                          <TableCell className="text-right font-bold text-sm">{pure(item.lineTotal)}</TableCell>
+                        </TableRow>
+                      );
+                    });
+                  })()}
                   <TableRow className="bg-muted/20 border-t">
                     <TableCell colSpan={2} className="text-right font-semibold text-xs uppercase tracking-wider text-muted-foreground">Subtotal</TableCell>
                     <TableCell className="text-right font-bold text-sm">{pure(selectedOrderDetails?.subtotal)}</TableCell>
                   </TableRow>
                   {selectedOrderDetails?.offerDiscount > 0 && (
                     <TableRow className="bg-muted/20 border-t-0 text-destructive">
-                      <TableCell colSpan={2} className="text-right font-semibold text-xs uppercase tracking-wider text-destructive">Offer Discount</TableCell>
+                      <TableCell colSpan={2} className="text-right font-semibold text-xs uppercase tracking-wider text-destructive">
+                        Offer Discount {selectedOrderDetails?.offer?.promoLabel || selectedOrderDetails?.offer?.name ? `(${selectedOrderDetails.offer.promoLabel || selectedOrderDetails.offer.name})` : ""}
+                      </TableCell>
                       <TableCell className="text-right font-bold text-sm text-destructive">-{pure(selectedOrderDetails.offerDiscount)}</TableCell>
                     </TableRow>
                   )}

@@ -1469,18 +1469,21 @@ export declare const ListOrdersResponseItem: z.ZodIntersection<z.ZodObject<{
     branchName: z.ZodOptional<z.ZodString>;
     source: z.ZodOptional<z.ZodEnum<["pos", "kiosk", "web", "mobile"]>>;
     paymentMethod: z.ZodEnum<["cash", "card", "wallet", "hospitality", "split", "refund", "points"]>;
+    offer: z.ZodOptional<z.ZodOptional<z.ZodNullable<z.ZodAny>>>;
 }, z.UnknownKeysParam, z.ZodTypeAny, {
     [x: string]: any;
     discountCode?: unknown;
     branchName?: unknown;
     source?: unknown;
     paymentMethod?: unknown;
+    offer?: unknown;
 }, {
     [x: string]: any;
     discountCode?: unknown;
     branchName?: unknown;
     source?: unknown;
     paymentMethod?: unknown;
+    offer?: unknown;
 }>, z.ZodObject<{
     [x: string]: any;
 } & {
@@ -1521,18 +1524,21 @@ export declare const ListOrdersResponse: z.ZodArray<z.ZodIntersection<z.ZodObjec
     branchName: z.ZodOptional<z.ZodString>;
     source: z.ZodOptional<z.ZodEnum<["pos", "kiosk", "web", "mobile"]>>;
     paymentMethod: z.ZodEnum<["cash", "card", "wallet", "hospitality", "split", "refund", "points"]>;
+    offer: z.ZodOptional<z.ZodOptional<z.ZodNullable<z.ZodAny>>>;
 }, z.UnknownKeysParam, z.ZodTypeAny, {
     [x: string]: any;
     discountCode?: unknown;
     branchName?: unknown;
     source?: unknown;
     paymentMethod?: unknown;
+    offer?: unknown;
 }, {
     [x: string]: any;
     discountCode?: unknown;
     branchName?: unknown;
     source?: unknown;
     paymentMethod?: unknown;
+    offer?: unknown;
 }>, z.ZodObject<{
     [x: string]: any;
 } & {
@@ -1720,6 +1726,7 @@ export declare const GetOrderResponse: z.ZodIntersection<z.ZodObject<{
     branchName: z.ZodOptional<z.ZodString>;
     source: z.ZodOptional<z.ZodEnum<["pos", "kiosk", "web", "mobile"]>>;
     paymentMethod: z.ZodEnum<["cash", "card", "wallet", "hospitality", "split", "points"]>;
+    offer: z.ZodOptional<z.ZodOptional<z.ZodNullable<z.ZodAny>>>;
     payments: z.ZodOptional<z.ZodArray<z.ZodObject<{
         id: z.ZodNumber;
         paymentMethod: z.ZodString;
@@ -1745,6 +1752,7 @@ export declare const GetOrderResponse: z.ZodIntersection<z.ZodObject<{
     branchName?: unknown;
     source?: unknown;
     paymentMethod?: unknown;
+    offer?: unknown;
     payments?: unknown;
 }, {
     [x: string]: any;
@@ -1752,6 +1760,7 @@ export declare const GetOrderResponse: z.ZodIntersection<z.ZodObject<{
     branchName?: unknown;
     source?: unknown;
     paymentMethod?: unknown;
+    offer?: unknown;
     payments?: unknown;
 }>, z.ZodObject<{
     [x: string]: any;
@@ -1821,6 +1830,7 @@ export declare const UpdateOrderStatusResponse: z.ZodIntersection<z.ZodObject<{
     branchName: z.ZodOptional<z.ZodString>;
     source: z.ZodOptional<z.ZodEnum<["pos", "kiosk", "web", "mobile"]>>;
     paymentMethod: z.ZodEnum<["cash", "card", "wallet", "hospitality", "split", "points"]>;
+    offer: z.ZodOptional<z.ZodOptional<z.ZodNullable<z.ZodAny>>>;
     payments: z.ZodOptional<z.ZodArray<z.ZodObject<{
         id: z.ZodNumber;
         paymentMethod: z.ZodString;
@@ -1846,6 +1856,7 @@ export declare const UpdateOrderStatusResponse: z.ZodIntersection<z.ZodObject<{
     branchName?: unknown;
     source?: unknown;
     paymentMethod?: unknown;
+    offer?: unknown;
     payments?: unknown;
 }, {
     [x: string]: any;
@@ -1853,6 +1864,7 @@ export declare const UpdateOrderStatusResponse: z.ZodIntersection<z.ZodObject<{
     branchName?: unknown;
     source?: unknown;
     paymentMethod?: unknown;
+    offer?: unknown;
     payments?: unknown;
 }>, z.ZodObject<{
     [x: string]: any;

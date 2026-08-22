@@ -274,6 +274,52 @@ async function generateOrderNumber(tx: any, branchId: number): Promise<string> {
   return `${newPrefix}${String(serial).padStart(3, "0")}`;
 }
 
+export async function loadOfferMap(dbOrTx: any, offerIds: (number | null | undefined)[]) {
+  const validIds = [...new Set(offerIds.filter((id): id is number => typeof id === "number" && id > 0))];
+  if (validIds.length === 0) return new Map<number, any>();
+
+  const offers = await dbOrTx.select().from(offersTable).where(inArray(offersTable.id, validIds));
+  const [applicable, reward, excluded] = await Promise.all([
+    dbOrTx.select().from(offersApplicableDrinksTable).where(inArray(offersApplicableDrinksTable.offerId, validIds)),
+    dbOrTx.select().from(offersRewardDrinksTable).where(inArray(offersRewardDrinksTable.offerId, validIds)),
+    dbOrTx.select().from(offersExcludedDrinksTable).where(inArray(offersExcludedDrinksTable.offerId, validIds)),
+  ]);
+
+  const appMap = new Map<number, number[]>();
+  for (const a of applicable) {
+    const list = appMap.get(a.offerId) ?? [];
+    list.push(a.drinkId);
+    appMap.set(a.offerId, list);
+  }
+  const rewMap = new Map<number, number[]>();
+  for (const r of reward) {
+    const list = rewMap.get(r.offerId) ?? [];
+    list.push(r.drinkId);
+    rewMap.set(r.offerId, list);
+  }
+  const excMap = new Map<number, number[]>();
+  for (const e of excluded) {
+    const list = excMap.get(e.offerId) ?? [];
+    list.push(e.drinkId);
+    excMap.set(e.offerId, list);
+  }
+
+  const map = new Map<number, any>();
+  for (const o of offers) {
+    map.set(o.id, {
+      id: o.id,
+      name: o.name,
+      buyAmount: o.buyAmount,
+      freeAmount: o.freeAmount,
+      promoLabel: o.promoLabel ?? null,
+      applicableDrinkIds: appMap.get(o.id) ?? [],
+      rewardDrinkIds: rewMap.get(o.id) ?? [],
+      excludedDrinkIds: excMap.get(o.id) ?? [],
+    });
+  }
+  return map;
+}
+
 async function buildOrderDetail(orderId: number) {
   // Fetch order + items in parallel
   const [[order], items] = await Promise.all([
@@ -282,8 +328,8 @@ async function buildOrderDetail(orderId: number) {
   ]);
   if (!order) return null;
 
-  // Fetch barista, branch, customizations, and payments in parallel
-  const [[barista], [branch], customizations, payments] = await Promise.all([
+  // Fetch barista, branch, customizations, payments, and offer details in parallel
+  const [[barista], [branch], customizations, payments, offerMap] = await Promise.all([
     db.select().from(usersTable).where(eq(usersTable.id, order.baristaId)),
     db.select().from(branchesTable).where(eq(branchesTable.id, order.branchId)),
     items.length > 0
@@ -291,6 +337,7 @@ async function buildOrderDetail(orderId: number) {
           .where(inArray(orderItemCustomizationsTable.orderItemId, items.map((i) => i.id)))
       : Promise.resolve([]),
     db.select().from(orderPaymentsTable).where(eq(orderPaymentsTable.orderId, orderId)),
+    order.offerId ? loadOfferMap(db, [order.offerId]) : Promise.resolve(new Map()),
   ]);
 
   const custByItem = new Map<number, typeof customizations>();
@@ -312,6 +359,7 @@ async function buildOrderDetail(orderId: number) {
     discountType: order.discountType as "percentage" | "fixed" | "fixed_per_item" | null,
     offerId: order.offerId,
     offerDiscount: order.offerDiscount ? parseFloat(order.offerDiscount) : 0,
+    offer: order.offerId ? (offerMap.get(order.offerId) ?? null) : null,
     total: parseFloat(order.total),
 
     amountTendered: order.amountTendered ? parseFloat(order.amountTendered) : null,
@@ -407,8 +455,9 @@ router.get("/orders", requirePermission("cashier:view"), async (req, res): Promi
   res.setHeader("Access-Control-Expose-Headers", "X-Total-Count");
 
   const orderIds = orders.map((o) => o.id);
+  const offerIds = orders.map((o) => o.offerId).filter(Boolean);
 
-  const [items, baristas, payments, branches, partners] = await Promise.all([
+  const [items, baristas, payments, branches, partners, offerMap] = await Promise.all([
     orderIds.length > 0
       ? db.select().from(orderItemsTable).where(inArray(orderItemsTable.orderId, orderIds))
       : Promise.resolve([]),
@@ -418,6 +467,9 @@ router.get("/orders", requirePermission("cashier:view"), async (req, res): Promi
       : Promise.resolve([]),
     db.select().from(branchesTable), // Fetch all branches for mapping
     db.select().from(partnersTable), // Fetch all ordering partners for mapping
+    offerIds.length > 0
+      ? loadOfferMap(db, offerIds)
+      : Promise.resolve(new Map()),
   ]);
 
   const itemIds = items.map((i) => i.id);
@@ -468,6 +520,7 @@ router.get("/orders", requirePermission("cashier:view"), async (req, res): Promi
         discountType: o.discountType as "percentage" | "fixed" | "fixed_per_item" | null,
         offerId: o.offerId,
         offerDiscount: o.offerDiscount ? parseFloat(o.offerDiscount) : 0,
+        offer: o.offerId ? (offerMap.get(o.offerId) ?? null) : null,
         total: parseFloat(o.total),
 
         amountTendered: o.amountTendered ? parseFloat(o.amountTendered) : null,
@@ -1051,6 +1104,8 @@ router.post("/orders", async (req, res): Promise<void> => {
   globalCache.clear();
   broadcastEvent("inventory_updated", { orderId: order.id });
 
+  const createdOfferMap = order.offerId ? await loadOfferMap(db, [order.offerId]) : new Map();
+
   res.status(201).json(
     GetOrderResponse.parse(
       serializeDates({
@@ -1064,6 +1119,7 @@ router.post("/orders", async (req, res): Promise<void> => {
         discountType: order.discountType as "percentage" | "fixed" | "fixed_per_item" | null,
         offerId: order.offerId,
         offerDiscount: order.offerDiscount ? parseFloat(order.offerDiscount) : 0,
+        offer: order.offerId ? (createdOfferMap.get(order.offerId) ?? null) : null,
         total: parseFloat(order.total),
 
         amountTendered: order.amountTendered ? parseFloat(order.amountTendered) : null,
