@@ -10,11 +10,11 @@ import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { Search, Download, Filter, ArrowUpRight, ArrowDownLeft, History, Package, Beaker, List, Layers, ChevronsUpDown, Check } from "lucide-react";
 import { format } from "date-fns";
+import { handleApiResponse, parseApiError } from "@/lib/api-error";
 
 const api = async (path: string, opts?: RequestInit) => {
   const res = await fetch(path, { headers: { "Content-Type": "application/json" }, ...opts });
-  if (!res.ok) throw new Error(await res.text());
-  return res.json();
+  return handleApiResponse(res);
 };
 
 const fmtQty = (val: any): string => {
@@ -159,8 +159,12 @@ export default function StockMovementPage() {
       setIngredients(ingData);
       setBranches(branchData);
       setProductCategories(catData || []);
-    } catch (err) {
-      toast({ variant: "destructive", title: "Failed to load data" });
+    } catch (err: any) {
+      toast({ 
+        variant: "destructive", 
+        title: err?.message?.includes("permission") || err?.message?.includes("Denied") ? "Permission Denied" : "Failed to load data", 
+        description: parseApiError(err, "Failed to load data") 
+      });
     } finally {
       setLoading(false);
     }

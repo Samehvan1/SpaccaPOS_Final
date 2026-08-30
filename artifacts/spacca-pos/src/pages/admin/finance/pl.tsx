@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { fmt } from "@/lib/currency";
+import { handleApiResponse, parseApiError } from "@/lib/api-error";
 import {
   ResponsiveContainer,
   AreaChart,
@@ -37,8 +38,7 @@ import {
 
 const api = async (path: string, opts?: RequestInit) => {
   const res = await fetch(path, { headers: { "Content-Type": "application/json" }, ...opts });
-  if (!res.ok) throw new Error(await res.text());
-  return res.json();
+  return handleApiResponse(res);
 };
 
 export default function PLReportsPage() {
@@ -73,8 +73,12 @@ export default function PLReportsPage() {
       setReport(reportData);
       setDailyData(dailyPlData);
       setBranches(branchData);
-    } catch (err) {
-      toast({ variant: "destructive", title: "Failed to load report data" });
+    } catch (err: any) {
+      toast({ 
+        variant: "destructive", 
+        title: err?.message?.includes("permission") || err?.message?.includes("Denied") ? "Permission Denied" : "Failed to load report data", 
+        description: parseApiError(err, "Failed to load report data") 
+      });
     } finally {
       setLoading(false);
     }

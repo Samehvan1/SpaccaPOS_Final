@@ -26,11 +26,11 @@ import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { format, subDays } from "date-fns";
 import { fmt, pure } from "@/lib/currency";
+import { handleApiResponse, parseApiError } from "@/lib/api-error";
 
 const api = async (path: string, opts?: RequestInit) => {
   const res = await fetch(path, { headers: { "Content-Type": "application/json" }, ...opts });
-  if (!res.ok) throw new Error(await res.text());
-  return res.json();
+  return handleApiResponse(res);
 };
 
 export default function SalesAnalysisPage() {
@@ -144,8 +144,12 @@ export default function SalesAnalysisPage() {
         setCatalogDrinks(drinkData);
         setPartners(partnerData || []);
       }
-    } catch (err) {
-      toast({ variant: "destructive", title: "Failed to load sales data" });
+    } catch (err: any) {
+      toast({ 
+        variant: "destructive", 
+        title: err?.message?.includes("permission") || err?.message?.includes("Denied") ? "Permission Denied" : "Failed to load sales data", 
+        description: parseApiError(err, "Failed to load sales data") 
+      });
     } finally {
       setLoading(false);
     }

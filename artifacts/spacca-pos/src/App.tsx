@@ -9,6 +9,10 @@ import { MainLayout } from "@/components/layout/main-layout";
 import { useEffect } from "react";
 import { PWAUpdater } from "@/components/pwa-updater";
 import { CustomerAuthProvider } from "@/hooks/use-customer-auth";
+import { ShieldAlert } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { ALL_PERMISSIONS } from "@workspace/api-zod";
 import Login from "@/pages/login";
 import NotFound from "@/pages/not-found";
 import { appRoutes, type RouteConfig } from "./routes";
@@ -54,6 +58,29 @@ function getDefaultRoute(role: string): string {
   }
 }
 
+function AccessDeniedCard({ permission }: { permission: string }) {
+  const permObj = (ALL_PERMISSIONS as any)?.[permission];
+  const permName = permObj?.name || permission;
+
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[500px] p-6 text-center">
+      <div className="mx-auto w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
+        <ShieldAlert className="h-8 w-8 text-destructive" />
+      </div>
+      <h2 className="text-2xl font-bold tracking-tight mb-2">Access Denied</h2>
+      <p className="text-muted-foreground max-w-md mb-4">
+        You do not have the required permission to view or manage this section.
+      </p>
+      <div className="flex flex-col items-center gap-2 mb-6">
+        <Badge variant="outline" className="text-destructive border-destructive font-mono text-sm px-4 py-1.5">
+          Missing Permission: {permName} ({permission})
+        </Badge>
+      </div>
+      <Button variant="outline" onClick={() => window.history.back()}>Go Back</Button>
+    </div>
+  );
+}
+
 function ProtectedRoute({ 
   component: Component, 
   permission,
@@ -74,7 +101,7 @@ function ProtectedRoute({
 
   // If a specific permission is required, check it
   if (permission && !hasPermission(permission)) {
-    return <Redirect to={getDefaultRoute(user.role)} />;
+    return <AccessDeniedCard permission={permission} />;
   }
 
   return <Component />;

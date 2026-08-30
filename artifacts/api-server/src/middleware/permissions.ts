@@ -2,6 +2,7 @@ import type { Request, Response, NextFunction } from "express";
 import { db, usersTable, userPermissionsTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import { resolveUserPermissions } from "../lib/permissions";
+import { ALL_PERMISSIONS } from "@workspace/api-zod";
 
 export function requirePermission(permissionKey: string) {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -61,11 +62,14 @@ export function requirePermission(permissionKey: string) {
     }
 
     if (!permissions.includes(permissionKey)) {
-      console.log(`[Permission] DENIED: User ${userId} (Role: ${userRole}) lacks '${permissionKey}'`);
+      const permObj = (ALL_PERMISSIONS as any)[permissionKey];
+      const permName = permObj?.name || permissionKey;
+      console.log(`[Permission] DENIED: User ${userId} (Role: ${userRole}) lacks '${permissionKey}' (${permName})`);
       res.status(403).json({ 
-        error: `Insufficient permissions: '${permissionKey}' required`,
+        error: `Access Denied: Missing permission '${permName}' (${permissionKey})`,
         role: userRole,
-        permission: permissionKey
+        permission: permissionKey,
+        permissionName: permName
       });
       return;
     }

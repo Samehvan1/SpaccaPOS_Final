@@ -12,6 +12,7 @@ import { Search, Download, Filter, Receipt, Clock, Calendar, RefreshCw } from "l
 import { format } from "date-fns";
 import { fmt, pure } from "@/lib/currency";
 import { computeFreeQtyMap } from "@/components/receipt-printer";
+import { handleApiResponse, parseApiError } from "@/lib/api-error";
 
 const STATUS_COLORS: Record<string, string> = {
   pending: "bg-yellow-500/10 text-yellow-600 border-yellow-200 dark:border-yellow-900/30",
@@ -25,8 +26,7 @@ const STATUS_COLORS: Record<string, string> = {
 
 const api = async (path: string, opts?: RequestInit) => {
   const res = await fetch(path, { headers: { "Content-Type": "application/json" }, ...opts });
-  if (!res.ok) throw new Error(await res.text());
-  return res.json();
+  return handleApiResponse(res);
 };
 
 export default function AllOrdersReport() {
@@ -60,29 +60,29 @@ export default function AllOrdersReport() {
       
       if (startDate) params.append("startDate", startDate);
       if (endDate) params.append("endDate", endDate);
-      
-      // Handle Branch Filter
+
       if (selectedBranch !== "all") {
         params.append("branchId", selectedBranch);
       }
-      
-      // Handle Status Filter
       if (selectedStatus !== "all") {
         params.append("status", selectedStatus);
       }
 
       const ordersRes = await fetch(`/api/orders?${params.toString()}`);
-      if (!ordersRes.ok) throw new Error(await ordersRes.text());
       const totalCount = parseInt(ordersRes.headers.get("X-Total-Count") || ordersRes.headers.get("x-total-count") || "0");
-      const ordersData = await ordersRes.json();
+      const ordersData = await handleApiResponse(ordersRes);
       
       const branchData = await api("/api/admin/branches");
 
       setOrders(ordersData);
       setTotalOrders(totalCount);
       setBranches(branchData);
-    } catch (err) {
-      toast({ variant: "destructive", title: "Failed to load orders data" });
+    } catch (err: any) {
+      toast({ 
+        variant: "destructive", 
+        title: err?.message?.includes("permission") || err?.message?.includes("Denied") ? "Permission Denied" : "Failed to load orders data", 
+        description: parseApiError(err, "Failed to load orders data") 
+      });
     } finally {
       setLoading(false);
     }

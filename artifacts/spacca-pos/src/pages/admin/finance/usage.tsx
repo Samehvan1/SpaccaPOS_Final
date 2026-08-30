@@ -12,11 +12,11 @@ import { useToast } from "@/hooks/use-toast";
 import { Search, Download, Filter, Package, ShoppingCart, ChevronDown } from "lucide-react";
 import { format } from "date-fns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { handleApiResponse, parseApiError } from "@/lib/api-error";
 
 const api = async (path: string, opts?: RequestInit) => {
   const res = await fetch(path, { headers: { "Content-Type": "application/json" }, ...opts });
-  if (!res.ok) throw new Error(await res.text());
-  return res.json();
+  return handleApiResponse(res);
 };
 
 function CollapsibleDrinks({ drinks }: { drinks: any[] }) {
@@ -87,8 +87,12 @@ export default function InventoryUsagePage() {
       setReport(reportData);
       setBranches(branchData);
       setCatalogReport(catalogData);
-    } catch (err) {
-      toast({ variant: "destructive", title: "Failed to load report" });
+    } catch (err: any) {
+      toast({ 
+        variant: "destructive", 
+        title: err?.message?.includes("permission") || err?.message?.includes("Denied") ? "Permission Denied" : "Failed to load report", 
+        description: parseApiError(err, "Failed to load report") 
+      });
     } finally {
       setLoading(false);
     }
