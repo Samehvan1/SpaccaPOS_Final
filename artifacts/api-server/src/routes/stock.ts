@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, and, inArray, sql, gte, lte, desc, asc } from "drizzle-orm";
+import { eq, and, inArray, sql, gte, lte, desc, asc, sum } from "drizzle-orm";
 import { startOfDay, endOfDay } from "date-fns";
 import { serializeDates } from "../lib/serialize";
 import {
@@ -79,6 +79,217 @@ router.get("/stock/movements", async (req, res): Promise<void> => {
       })))
     )
   );
+});
+
+router.get("/stock/movement-summary", async (req, res): Promise<void> => {
+  try {
+    const sessionUser = (req.session as any);
+    const isAdmin = sessionUser?.role === "admin" || sessionUser?.role === "supervisor";
+    const sessionBranchId = sessionUser?.branchId;
+
+    const targetBranchId = req.query.branchId && req.query.branchId !== "all"
+      ? parseInt(req.query.branchId as string)
+      : (isAdmin && (req.query.branchId === "all" || !req.query.branchId)) ? null : sessionBranchId;
+
+    const targetIngredientId = req.query.ingredientId && req.query.ingredientId !== "all"
+      ? parseInt(req.query.ingredientId as string)
+      : null;
+
+    const startDateStr = req.query.startDate as string;
+    const endDateStr = req.query.endDate as string;
+
+    const start = startDateStr ? startOfDay(new Date(startDateStr)) : startOfDay(new Date());
+    const end = endDateStr ? endOfDay(new Date(endDateStr)) : endOfDay(new Date());
+
+    // 1. Fetch active ingredients
+    const ingConditions = [eq(ingredientsTable.isActive, true)];
+    if (targetIngredientId) {
+      ingConditions.push(eq(ingredientsTable.id, targetIngredientId));
+    }
+    const ingredients = await db.select().from(ingredientsTable).where(and(...ingConditions));
+
+    // 2. Fetch current live branch stock per ingredient
+    const stockConditions = [];
+    if (targetBranchId) {
+      stockConditions.push(eq(branchStockTable.branchId, targetBranchId));
+    }
+    if (targetIngredientId) {
+      stockConditions.push(eq(branchStockTable.ingredientId, targetIngredientId));
+    }
+
+    const branchStocks = await db
+      .select({
+        ingredientId: branchStockTable.ingredientId,
+        stockQuantity: branchStockTable.stockQuantity,
+      })
+      .from(branchStockTable)
+      .where(stockConditions.length ? and(...stockConditions) : undefined);
+
+    const currentStockMap = new Map<number, number>();
+    for (const s of branchStocks) {
+      const prev = currentStockMap.get(s.ingredientId) || 0;
+      currentStockMap.set(s.ingredientId, prev + (parseFloat(String(s.stockQuantity || "0")) || 0));
+    }
+
+    // 3. Fetch net movements since `start` date to compute opening stock at `start`
+    const sinceStartConditions = [
+      gte(stockMovementsTable.createdAt, start)
+    ];
+    if (targetBranchId) {
+      sinceStartConditions.push(eq(stockMovementsTable.branchId, targetBranchId));
+    }
+    if (targetIngredientId) {
+      sinceStartConditions.push(eq(stockMovementsTable.ingredientId, targetIngredientId));
+    }
+
+    const movementsSinceStart = await db
+      .select({
+        ingredientId: stockMovementsTable.ingredientId,
+        netQuantity: sum(stockMovementsTable.quantity),
+      })
+      .from(stockMovementsTable)
+      .where(and(...sinceStartConditions))
+      .groupBy(stockMovementsTable.ingredientId);
+
+    const netSinceStartMap = new Map<number, number>();
+    for (const m of movementsSinceStart) {
+      netSinceStartMap.set(m.ingredientId, parseFloat(String(m.netQuantity || "0")) || 0);
+    }
+
+    // 4. Fetch period movements within [start, end]
+    const periodConditions = [
+      gte(stockMovementsTable.createdAt, start),
+      lte(stockMovementsTable.createdAt, end),
+    ];
+    if (targetBranchId) {
+      periodConditions.push(eq(stockMovementsTable.branchId, targetBranchId));
+    }
+    if (targetIngredientId) {
+      periodConditions.push(eq(stockMovementsTable.ingredientId, targetIngredientId));
+    }
+
+    const periodMovements = await db
+      .select({
+        ingredientId: stockMovementsTable.ingredientId,
+        movementType: stockMovementsTable.movementType,
+        quantity: stockMovementsTable.quantity,
+      })
+      .from(stockMovementsTable)
+      .where(and(...periodConditions));
+
+    // Group period movements by ingredientId
+    const periodMovementsMap = new Map<number, typeof periodMovements>();
+    for (const pm of periodMovements) {
+      let list = periodMovementsMap.get(pm.ingredientId);
+      if (!list) {
+        list = [];
+        periodMovementsMap.set(pm.ingredientId, list);
+      }
+      list.push(pm);
+    }
+
+    // 5. Build response list
+    const results = ingredients.map((ing) => {
+      const currentStock = currentStockMap.get(ing.id) || 0;
+      const netSinceStart = netSinceStartMap.get(ing.id) || 0;
+      const openingStock = currentStock - netSinceStart;
+
+      const pMovements = periodMovementsMap.get(ing.id) || [];
+
+      let saleQty = 0;
+      let calibrationQty = 0;
+      let testQty = 0;
+      let wasteQty = 0;
+      let mfgConsumeQty = 0;
+      let mfgProduceQty = 0;
+      let adjPos = 0;
+      let adjNeg = 0;
+      let adjNet = 0;
+      let restockPos = 0;
+      let restockNeg = 0;
+      let restockNet = 0;
+      let totalIn = 0;
+      let totalOut = 0;
+
+      for (const m of pMovements) {
+        const qty = parseFloat(String(m.quantity || "0")) || 0;
+        const absQty = Math.abs(qty);
+
+        if (m.movementType === "sale") {
+          saleQty += absQty;
+        } else if (m.movementType === "calibration") {
+          calibrationQty += absQty;
+        } else if (m.movementType === "testing") {
+          testQty += absQty;
+        } else if (m.movementType === "waste") {
+          wasteQty += absQty;
+        } else if (m.movementType === "manufacture_consume") {
+          mfgConsumeQty += absQty;
+        } else if (m.movementType === "manufacture_produce") {
+          mfgProduceQty += absQty;
+        } else if (m.movementType === "restock") {
+          restockNet += qty;
+          if (qty > 0) restockPos += qty;
+          else if (qty < 0) restockNeg += absQty;
+        } else if (m.movementType === "adjustment") {
+          adjNet += qty;
+          if (qty > 0) adjPos += qty;
+          else if (qty < 0) adjNeg += absQty;
+        } else {
+          adjNet += qty;
+          if (qty > 0) adjPos += qty;
+          else if (qty < 0) adjNeg += absQty;
+        }
+
+        if (qty > 0) totalIn += absQty;
+        else if (qty < 0) totalOut += absQty;
+      }
+
+      const netChange = totalIn - totalOut;
+      const closingStock = openingStock + netChange;
+
+      return {
+        ingredientId: ing.id,
+        ingredientName: ing.name,
+        unit: ing.unit,
+        currentStock,
+        openingStock,
+        saleQty,
+        calibrationQty,
+        testQty,
+        wasteQty,
+        mfgConsumeQty,
+        mfgProduceQty,
+        adjPos,
+        adjNeg,
+        adjNet,
+        restockPos,
+        restockNeg,
+        restockNet,
+        totalOut,
+        totalIn,
+        netChange,
+        closingStock,
+        movementCount: pMovements.length,
+      };
+    });
+
+    const filteredResults = targetIngredientId
+      ? results
+      : results.filter(
+          (r) =>
+            Math.abs(r.currentStock) > 0.0001 ||
+            Math.abs(r.openingStock) > 0.0001 ||
+            r.movementCount > 0 ||
+            r.totalIn > 0 ||
+            r.totalOut > 0
+        );
+
+    res.json(serializeDates(filteredResults));
+  } catch (err: any) {
+    console.error("GET /stock/movement-summary error:", err);
+    res.status(500).json({ error: err?.message || "Failed to load stock movement summary" });
+  }
 });
 
 router.post("/stock/adjustments", async (req, res): Promise<void> => {

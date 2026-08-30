@@ -9,7 +9,6 @@ import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { Search, Download, Filter, ArrowUpRight, ArrowDownLeft, History, Package, Beaker, List, Layers } from "lucide-react";
 import { format } from "date-fns";
-import { fmt } from "@/lib/currency";
 
 const api = async (path: string, opts?: RequestInit) => {
   const res = await fetch(path, { headers: { "Content-Type": "application/json" }, ...opts });
@@ -28,6 +27,7 @@ export default function StockMovementPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [movements, setMovements] = useState<any[]>([]);
+  const [summaryItems, setSummaryItems] = useState<any[]>([]);
   const [ingredients, setIngredients] = useState<any[]>([]);
   const [branches, setBranches] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -51,12 +51,18 @@ export default function StockMovementPage() {
       if (selectedIngredient !== "all") params.append("ingredientId", selectedIngredient);
       if (selectedType !== "all") params.append("movementType", selectedType);
 
-      const [moveData, ingData, branchData] = await Promise.all([
+      const summaryParams = new URLSearchParams({ startDate, endDate });
+      if (selectedBranch !== "all") summaryParams.append("branchId", selectedBranch);
+      if (selectedIngredient !== "all") summaryParams.append("ingredientId", selectedIngredient);
+
+      const [moveData, summaryData, ingData, branchData] = await Promise.all([
         api(`/api/stock/movements?${params.toString()}`),
+        api(`/api/stock/movement-summary?${summaryParams.toString()}`),
         api("/api/ingredients"),
         api("/api/admin/branches")
       ]);
       setMovements(moveData);
+      setSummaryItems(summaryData);
       setIngredients(ingData);
       setBranches(branchData);
     } catch (err) {
@@ -71,100 +77,47 @@ export default function StockMovementPage() {
   }, [selectedBranch, selectedIngredient, startDate, endDate, selectedType]);
 
   const filteredMovements = movements.filter(m => {
+    const matchesIngredient = selectedIngredient === "all" || String(m.ingredientId) === selectedIngredient;
     const matchesSearch = (m.ingredientName || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
       (m.movementType || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
       (m.note && m.note.toLowerCase().includes(searchTerm.toLowerCase()));
     
     const matchesType = selectedType === "all" || m.movementType === selectedType;
     
-    return matchesSearch && matchesType;
+    return matchesIngredient && matchesSearch && matchesType;
   });
 
   const groupedData = useMemo(() => {
-    const map = new Map<string, {
-      ingredientId: number | string;
-      ingredientName: string;
-      saleQty: number;
-      calibrationQty: number;
-      testQty: number;
-      wasteQty: number;
-      adjPos: number;
-      adjNeg: number;
-      adjNet: number;
-      restockPos: number;
-      restockNeg: number;
-      restockNet: number;
-      totalOut: number;
-      totalIn: number;
-      finalTotal: number;
-    }>();
-
-    filteredMovements.forEach(m => {
-      const key = (m.ingredientName || `Ingredient #${m.ingredientId}`).trim();
-      let item = map.get(key);
-      if (!item) {
-        item = {
-          ingredientId: m.ingredientId,
-          ingredientName: key,
-          saleQty: 0,
-          calibrationQty: 0,
-          testQty: 0,
-          wasteQty: 0,
-          adjPos: 0,
-          adjNeg: 0,
-          adjNet: 0,
-          restockPos: 0,
-          restockNeg: 0,
-          restockNet: 0,
-          totalOut: 0,
-          totalIn: 0,
-          finalTotal: 0,
-        };
-        map.set(key, item);
-      }
-
-      const qty = Number(m.quantity) || 0;
-      const absQty = Math.abs(qty);
-
-      if (m.movementType === "sale") {
-        item.saleQty += absQty;
-      } else if (m.movementType === "calibration") {
-        item.calibrationQty += absQty;
-      } else if (m.movementType === "testing") {
-        item.testQty += absQty;
-      } else if (m.movementType === "waste") {
-        item.wasteQty += absQty;
-      } else if (m.movementType === "restock") {
-        item.restockNet += qty;
-        if (qty > 0) item.restockPos += qty;
-        else if (qty < 0) item.restockNeg += absQty;
-      } else if (m.movementType === "adjustment") {
-        item.adjNet += qty;
-        if (qty > 0) item.adjPos += qty;
-        else if (qty < 0) item.adjNeg += absQty;
-      } else {
-        item.adjNet += qty;
-        if (qty > 0) item.adjPos += qty;
-        else if (qty < 0) item.adjNeg += absQty;
-      }
-
-      if (qty > 0) {
-        item.totalIn += absQty;
-      } else if (qty < 0) {
-        item.totalOut += absQty;
-      }
-
-      item.finalTotal += qty;
-    });
-
-    return Array.from(map.values()).sort((a, b) => a.ingredientName.localeCompare(b.ingredientName));
-  }, [filteredMovements]);
+    if (!summaryItems || summaryItems.length === 0) return [];
+    
+    return summaryItems.filter(g => {
+      const matchesSearch = !searchTerm || (g.ingredientName || "").toLowerCase().includes(searchTerm.toLowerCase());
+      return matchesSearch;
+    }).sort((a, b) => (a.ingredientName || "").localeCompare(b.ingredientName || ""));
+  }, [summaryItems, searchTerm]);
 
   const exportCsv = () => {
     if (viewMode === "grouped") {
-      const headers = ["Item Name", "Sale Total Qty", "Calibration", "Test", "Waste", "Stock-Audit", "Received", "Total Out Movement", "Total In", "Final Total"];
+      const headers = [
+        "Item Name",
+        "Unit",
+        "Start / Opening Stock",
+        "Sale Total Qty",
+        "Calibration",
+        "Test",
+        "Waste",
+        "Stock-Audit",
+        "Received",
+        "Total Out Movement",
+        "Total In",
+        "Net Change",
+        "Period Closing Stock",
+        "Current Live Stock"
+      ];
       const rows = groupedData.map(g => [
-        `"${g.ingredientName.replace(/"/g, '""')}"`,
+        `"${(g.ingredientName || "").replace(/"/g, '""')}"`,
+        `"${(g.unit || "").replace(/"/g, '""')}"`,
+        fmtQty(g.openingStock),
         fmtQty(g.saleQty),
         fmtQty(g.calibrationQty),
         fmtQty(g.testQty),
@@ -173,7 +126,9 @@ export default function StockMovementPage() {
         g.restockPos > 0 && g.restockNeg > 0 ? `"+${fmtQty(g.restockPos)} / -${fmtQty(g.restockNeg)}"` : fmtQty(g.restockNet),
         fmtQty(g.totalOut),
         fmtQty(g.totalIn),
-        fmtQty(g.finalTotal)
+        fmtQty(g.netChange),
+        fmtQty(g.closingStock),
+        fmtQty(g.currentStock)
       ]);
 
       const csvContent = "data:text/csv;charset=utf-8," 
@@ -217,7 +172,7 @@ export default function StockMovementPage() {
     <div className="space-y-6 p-6">
       <div className="flex flex-col gap-2">
         <h1 className="text-3xl font-bold tracking-tight">Stock Movement</h1>
-        <p className="text-muted-foreground">Track all inventory changes across branches.</p>
+        <p className="text-muted-foreground">Track all inventory changes, opening balances, and live stock across branches.</p>
       </div>
 
       <Card>
@@ -227,7 +182,7 @@ export default function StockMovementPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Branch</label>
               <Select value={selectedBranch} onValueChange={setSelectedBranch}>
@@ -293,7 +248,7 @@ export default function StockMovementPage() {
               <div className="relative">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input 
-                  placeholder="Search..." 
+                  placeholder="Search item..." 
                   className="pl-9" 
                   value={searchTerm} 
                   onChange={e => setSearchTerm(e.target.value)} 
@@ -329,7 +284,7 @@ export default function StockMovementPage() {
         </Button>
       </div>
 
-      <div className="rounded-md border bg-card">
+      <div className="rounded-md border bg-card overflow-x-auto">
         {viewMode === "detailed" ? (
           <Table>
             <TableHeader>
@@ -409,21 +364,24 @@ export default function StockMovementPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Item Name</TableHead>
+                <TableHead className="text-right bg-blue-100/70 text-blue-900 font-bold dark:bg-blue-950/40 dark:text-blue-200">Start / Opening Stock</TableHead>
                 <TableHead className="text-right">Sale Total Qty</TableHead>
                 <TableHead className="text-right">Calibration</TableHead>
                 <TableHead className="text-right">Test</TableHead>
                 <TableHead className="text-right">Waste</TableHead>
                 <TableHead className="text-right">Stock-Audit</TableHead>
                 <TableHead className="text-right">Received</TableHead>
-                <TableHead className="text-right bg-rose-100/70 text-rose-900 font-semibold dark:bg-rose-950/40 dark:text-rose-200">Total Out Movement</TableHead>
+                <TableHead className="text-right bg-rose-100/70 text-rose-900 font-semibold dark:bg-rose-950/40 dark:text-rose-200">Total Out</TableHead>
                 <TableHead className="text-right bg-emerald-100/70 text-emerald-900 font-semibold dark:bg-emerald-950/40 dark:text-emerald-200">Total In</TableHead>
-                <TableHead className="text-right bg-sky-100/70 text-sky-900 font-bold dark:bg-sky-950/40 dark:text-sky-200">Final Total</TableHead>
+                <TableHead className="text-right bg-sky-100/70 text-sky-900 font-bold dark:bg-sky-950/40 dark:text-sky-200">Net Change</TableHead>
+                <TableHead className="text-right bg-indigo-100/70 text-indigo-900 font-bold dark:bg-indigo-950/40 dark:text-indigo-200">Period Closing Stock</TableHead>
+                <TableHead className="text-right bg-violet-100/70 text-violet-900 font-bold dark:bg-violet-950/40 dark:text-violet-200">Current Live Stock</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center py-10">
+                  <TableCell colSpan={13} className="text-center py-10">
                     <div className="flex flex-col items-center gap-2">
                       <History className="h-8 w-8 text-muted-foreground animate-spin" />
                       <p className="text-muted-foreground">Loading summary...</p>
@@ -432,7 +390,7 @@ export default function StockMovementPage() {
                 </TableRow>
               ) : groupedData.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center py-10">
+                  <TableCell colSpan={13} className="text-center py-10">
                     <div className="flex flex-col items-center gap-2">
                       <Package className="h-8 w-8 text-muted-foreground opacity-20" />
                       <p className="text-muted-foreground">No items found for the selected period.</p>
@@ -444,6 +402,9 @@ export default function StockMovementPage() {
                   {groupedData.map((g) => (
                     <TableRow key={g.ingredientId || g.ingredientName}>
                       <TableCell className="font-semibold">{g.ingredientName}</TableCell>
+                      <TableCell className="text-right font-mono font-bold text-blue-700 dark:text-blue-400 bg-blue-50/70 dark:bg-blue-950/20">
+                        {fmtQty(g.openingStock)}
+                      </TableCell>
                       <TableCell className="text-right font-mono text-amber-700">
                         {g.saleQty > 0 ? fmtQty(g.saleQty) : "—"}
                       </TableCell>
@@ -480,13 +441,22 @@ export default function StockMovementPage() {
                       <TableCell className="text-right font-mono font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-50/70 dark:bg-emerald-950/20">
                         {g.totalIn > 0 ? `+${fmtQty(g.totalIn)}` : "0"}
                       </TableCell>
-                      <TableCell className={`text-right font-mono font-bold bg-sky-50/70 dark:bg-sky-950/20 ${g.finalTotal > 0 ? "text-emerald-700 dark:text-emerald-400" : g.finalTotal < 0 ? "text-rose-700 dark:text-rose-400" : ""}`}>
-                        {g.finalTotal > 0 ? `+${fmtQty(g.finalTotal)}` : fmtQty(g.finalTotal)}
+                      <TableCell className={`text-right font-mono font-bold bg-sky-50/70 dark:bg-sky-950/20 ${g.netChange > 0 ? "text-emerald-700 dark:text-emerald-400" : g.netChange < 0 ? "text-rose-700 dark:text-rose-400" : ""}`}>
+                        {g.netChange > 0 ? `+${fmtQty(g.netChange)}` : fmtQty(g.netChange)}
+                      </TableCell>
+                      <TableCell className="text-right font-mono font-bold text-indigo-700 dark:text-indigo-400 bg-indigo-50/70 dark:bg-indigo-950/20">
+                        {fmtQty(g.closingStock)}
+                      </TableCell>
+                      <TableCell className="text-right font-mono font-bold text-violet-700 dark:text-violet-400 bg-violet-50/70 dark:bg-violet-950/20">
+                        {fmtQty(g.currentStock)}
                       </TableCell>
                     </TableRow>
                   ))}
                   <TableRow className="bg-muted/50 font-bold border-t-2">
                     <TableCell>Total ({groupedData.length} items)</TableCell>
+                    <TableCell className="text-right font-mono text-blue-700 dark:text-blue-400 bg-blue-100/80 dark:bg-blue-900/40">
+                      {fmtQty(groupedData.reduce((acc, g) => acc + g.openingStock, 0))}
+                    </TableCell>
                     <TableCell className="text-right font-mono text-amber-700">
                       {fmtQty(groupedData.reduce((acc, g) => acc + g.saleQty, 0))}
                     </TableCell>
@@ -519,9 +489,15 @@ export default function StockMovementPage() {
                     </TableCell>
                     <TableCell className="text-right font-mono font-bold bg-sky-100/80 dark:bg-sky-900/40">
                       {(() => {
-                        const net = groupedData.reduce((acc, g) => acc + g.finalTotal, 0);
+                        const net = groupedData.reduce((acc, g) => acc + g.netChange, 0);
                         return net > 0 ? `+${fmtQty(net)}` : fmtQty(net);
                       })()}
+                    </TableCell>
+                    <TableCell className="text-right font-mono font-bold text-indigo-700 dark:text-indigo-400 bg-indigo-100/80 dark:bg-indigo-900/40">
+                      {fmtQty(groupedData.reduce((acc, g) => acc + g.closingStock, 0))}
+                    </TableCell>
+                    <TableCell className="text-right font-mono font-bold text-violet-700 dark:text-violet-400 bg-violet-100/80 dark:bg-violet-900/40">
+                      {fmtQty(groupedData.reduce((acc, g) => acc + g.currentStock, 0))}
                     </TableCell>
                   </TableRow>
                 </>
@@ -533,4 +509,3 @@ export default function StockMovementPage() {
     </div>
   );
 }
-
