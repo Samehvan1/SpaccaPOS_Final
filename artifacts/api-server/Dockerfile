@@ -2,7 +2,7 @@
 FROM node:20-alpine AS builder
 
 # Install pnpm
-RUN npm install -g pnpm
+RUN npm install -g pnpm@9
 
 WORKDIR /app
 
@@ -22,7 +22,7 @@ COPY scripts/ ./scripts/
 COPY Inventory2026.csv ./Inventory2026.csv
 
 # Install dependencies
-RUN pnpm config set ignore-scripts false && pnpm install --no-frozen-lockfile
+RUN pnpm install --no-frozen-lockfile
 
 # Build the api-server
 WORKDIR /app/artifacts/api-server

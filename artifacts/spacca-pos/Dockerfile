@@ -2,7 +2,7 @@
 FROM node:20-alpine AS builder
 
 # Install pnpm
-RUN npm install -g pnpm
+RUN npm install -g pnpm@9
 
 WORKDIR /app
 
@@ -21,7 +21,7 @@ COPY artifacts/spacca-pos/src/ ./artifacts/spacca-pos/src/
 COPY artifacts/spacca-pos/public/ ./artifacts/spacca-pos/public/
 
 # Install dependencies
-RUN pnpm config set ignore-scripts false && pnpm install --no-frozen-lockfile
+RUN pnpm install --no-frozen-lockfile
 
 # Build the frontend
 # We pass the production API URL here
