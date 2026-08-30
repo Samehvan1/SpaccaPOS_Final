@@ -7,7 +7,7 @@ RUN npm install -g pnpm
 WORKDIR /app
 
 # Copy workspace configuration
-COPY pnpm-workspace.yaml pnpm-lock.yaml package.json tsconfig.base.json ./
+COPY .npmrc pnpm-workspace.yaml pnpm-lock.yaml package.json tsconfig.base.json ./
 
 # Copy lib packages (needed for the build)
 COPY lib/ ./lib/
@@ -21,7 +21,7 @@ COPY artifacts/spacca-pos/src/ ./artifacts/spacca-pos/src/
 COPY artifacts/spacca-pos/public/ ./artifacts/spacca-pos/public/
 
 # Install dependencies
-RUN pnpm install --no-frozen-lockfile
+RUN pnpm config set ignore-scripts false && pnpm install --no-frozen-lockfile
 
 # Build the frontend
 # We pass the production API URL here

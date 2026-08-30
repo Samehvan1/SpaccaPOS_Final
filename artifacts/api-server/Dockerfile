@@ -7,7 +7,7 @@ RUN npm install -g pnpm
 WORKDIR /app
 
 # Copy workspace configuration
-COPY pnpm-workspace.yaml pnpm-lock.yaml package.json tsconfig.base.json ./
+COPY .npmrc pnpm-workspace.yaml pnpm-lock.yaml package.json tsconfig.base.json ./
 
 # Copy lib packages (needed for the build)
 COPY lib/ ./lib/
@@ -22,7 +22,7 @@ COPY scripts/ ./scripts/
 COPY Inventory2026.csv ./Inventory2026.csv
 
 # Install dependencies
-RUN pnpm install --no-frozen-lockfile
+RUN pnpm config set ignore-scripts false && pnpm install --no-frozen-lockfile
 
 # Build the api-server
 WORKDIR /app/artifacts/api-server
