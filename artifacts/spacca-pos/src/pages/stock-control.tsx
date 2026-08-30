@@ -9,6 +9,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
+import { useAuth } from "@/hooks/use-auth";
+
 type Conversion = {
   id: number;
   unitName: string;
@@ -29,6 +31,7 @@ const INGREDIENT_TYPES = ["coffee", "milk", "syrup", "sauce", "sweetener", "topp
 
 export default function StockControlPage() {
   const { toast } = useToast();
+  const { user, selectedBranchId } = useAuth();
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -117,10 +120,11 @@ export default function StockControlPage() {
 
     setSubmitting(true);
     try {
+      const auditBranchId = user?.branchId || selectedBranchId || 1;
       const res = await fetch("/api/stock-audits", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ notes, items }),
+        body: JSON.stringify({ notes, items, branchId: auditBranchId }),
       });
 
       if (!res.ok) throw new Error(await res.text());

@@ -102,12 +102,13 @@ router.get("/stock-audits/:id", requirePermission("inventory:manage"), async (re
 
 // Create audit report (Staff)
 router.post("/stock-audits", requirePermission("inventory:view"), async (req, res) => {
-  const { notes, items } = req.body; // items: Array<{ ingredientId, actualQuantity, notes }>
+  const { notes, items, branchId: bodyBranchId } = req.body; // items: Array<{ ingredientId, actualQuantity, notes }>
   const sessionUser = (req.session as any);
   const userId = sessionUser?.userId || 1;
-  const branchId = sessionUser?.branchId;
+  const rawBranchId = bodyBranchId || sessionUser?.branchId;
+  const branchId = rawBranchId ? parseInt(String(rawBranchId)) : null;
 
-  if (!branchId) {
+  if (!branchId || isNaN(branchId)) {
     res.status(400).json({ error: "Branch ID required for audit" });
     return;
   }

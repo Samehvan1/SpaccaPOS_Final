@@ -51,10 +51,14 @@ ON CONFLICT ("key") DO UPDATE SET "description" = EXCLUDED."description";
 -- Admin gets all permissions
 INSERT INTO "role_permissions" ("role_key", "permission_key")
 SELECT 'admin', p."key" FROM "permissions" p
-ON CONFLICT DO NOTHING;
+WHERE NOT EXISTS (
+  SELECT 1 FROM "role_permissions" rp WHERE rp."role_key" = 'admin' AND rp."permission_key" = p."key"
+);
 
 -- Cashier defaults
-INSERT INTO "role_permissions" ("role_key", "permission_key") VALUES
+INSERT INTO "role_permissions" ("role_key", "permission_key")
+SELECT v.role_key, v.permission_key
+FROM (VALUES
   ('cashier', 'pos:view'),
   ('cashier', 'pos:create_order'),
   ('cashier', 'cashier:view'),
@@ -67,22 +71,35 @@ INSERT INTO "role_permissions" ("role_key", "permission_key") VALUES
   ('cashier', 'catalog:view'),
   ('cashier', 'inventory:view'),
   ('cashier', 'partners:view')
-ON CONFLICT DO NOTHING;
+) AS v(role_key, permission_key)
+WHERE NOT EXISTS (
+  SELECT 1 FROM "role_permissions" rp WHERE rp."role_key" = v.role_key AND rp."permission_key" = v.permission_key
+);
 
 -- Barista defaults
-INSERT INTO "role_permissions" ("role_key", "permission_key") VALUES
+INSERT INTO "role_permissions" ("role_key", "permission_key")
+SELECT v.role_key, v.permission_key
+FROM (VALUES
   ('barista', 'pos:view'),
   ('barista', 'kitchen:view'),
   ('barista', 'kitchen:mark_ready'),
   ('barista', 'catalog:view'),
   ('barista', 'inventory:view')
-ON CONFLICT DO NOTHING;
+) AS v(role_key, permission_key)
+WHERE NOT EXISTS (
+  SELECT 1 FROM "role_permissions" rp WHERE rp."role_key" = v.role_key AND rp."permission_key" = v.permission_key
+);
 
 -- Finance defaults
-INSERT INTO "role_permissions" ("role_key", "permission_key") VALUES
+INSERT INTO "role_permissions" ("role_key", "permission_key")
+SELECT v.role_key, v.permission_key
+FROM (VALUES
   ('finance', 'admin:view'),
   ('finance', 'reports:view'),
   ('finance', 'inventory:view'),
   ('finance', 'cashier:view_reports'),
   ('finance', 'purchases:view')
-ON CONFLICT DO NOTHING;
+) AS v(role_key, permission_key)
+WHERE NOT EXISTS (
+  SELECT 1 FROM "role_permissions" rp WHERE rp."role_key" = v.role_key AND rp."permission_key" = v.permission_key
+);
