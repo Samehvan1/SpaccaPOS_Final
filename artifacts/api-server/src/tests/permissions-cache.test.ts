@@ -90,7 +90,7 @@ describe("requirePermission Middleware", () => {
     expect(mockRes.status).toHaveBeenCalledWith(403);
     expect(mockRes.json).toHaveBeenCalledWith(
       expect.objectContaining({
-        error: "Insufficient permissions: 'admin_settings' required",
+        permission: "admin_settings",
       })
     );
     expect(nextFunction).not.toHaveBeenCalled();
