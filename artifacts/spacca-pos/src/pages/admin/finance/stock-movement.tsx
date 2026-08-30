@@ -5,9 +5,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
-import { Search, Download, Filter, ArrowUpRight, ArrowDownLeft, History, Package, Beaker, List, Layers } from "lucide-react";
+import { Search, Download, Filter, ArrowUpRight, ArrowDownLeft, History, Package, Beaker, List, Layers, ChevronsUpDown, Check } from "lucide-react";
 import { format } from "date-fns";
 
 const api = async (path: string, opts?: RequestInit) => {
@@ -22,6 +23,75 @@ const fmtQty = (val: any): string => {
   if (Number.isInteger(num)) return num.toString();
   return num.toFixed(3);
 };
+
+function SearchableIngredientSelect({
+  ingredients,
+  value,
+  onValueChange
+}: {
+  ingredients: { id: number; name: string }[];
+  value: string;
+  onValueChange: (val: string) => void;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [search, setSearch] = useState("");
+
+  const options = useMemo(() => [
+    { value: "all", label: "All Ingredients" },
+    ...ingredients.map(i => ({ value: String(i.id), label: i.name }))
+  ], [ingredients]);
+
+  const selectedOption = options.find(o => o.value === value);
+  const filtered = options.filter(o => o.label.toLowerCase().includes(search.toLowerCase()));
+
+  return (
+    <Popover open={isOpen} onOpenChange={setIsOpen}>
+      <PopoverTrigger asChild>
+        <Button 
+          variant="outline" 
+          className="w-full justify-between bg-background border-input font-normal h-10 px-3"
+          type="button"
+        >
+          <span className="truncate">{selectedOption ? selectedOption.label : "All Ingredients"}</span>
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      
+      <PopoverContent className="w-[280px] p-0 z-[200]" align="start">
+        <div className="p-2 border-b flex items-center gap-2">
+          <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <Input 
+            placeholder="Search ingredient..." 
+            value={search} 
+            onChange={e => setSearch(e.target.value)} 
+            className="h-8 border-none focus-visible:ring-0 px-1"
+            autoFocus
+          />
+        </div>
+        <div className="max-h-[240px] overflow-y-auto p-1">
+          {filtered.length === 0 ? (
+            <div className="text-xs text-muted-foreground p-3 text-center">No ingredient found.</div>
+          ) : (
+            filtered.map(opt => (
+              <div 
+                key={opt.value}
+                className={`flex items-center justify-between px-3 py-2 text-sm rounded-md cursor-pointer hover:bg-accent hover:text-accent-foreground ${opt.value === value ? "bg-accent/50 font-semibold" : ""}`}
+                onClick={() => {
+                  onValueChange(opt.value);
+                  setIsOpen(false);
+                  setSearch("");
+                }}
+              >
+                <span className="truncate">{opt.label}</span>
+                {opt.value === value && <Check className="h-4 w-4 text-primary shrink-0 ml-2" />}
+              </div>
+            ))
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 export default function StockMovementPage() {
   const { user } = useAuth();
@@ -200,17 +270,11 @@ export default function StockMovementPage() {
 
             <div className="space-y-2">
               <label className="text-sm font-medium">Ingredient</label>
-              <Select value={selectedIngredient} onValueChange={setSelectedIngredient}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All Ingredients" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Ingredients</SelectItem>
-                  {ingredients.map(i => (
-                    <SelectItem key={i.id} value={String(i.id)}>{i.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableIngredientSelect
+                ingredients={ingredients}
+                value={selectedIngredient}
+                onValueChange={setSelectedIngredient}
+              />
             </div>
 
             <div className="space-y-2">
