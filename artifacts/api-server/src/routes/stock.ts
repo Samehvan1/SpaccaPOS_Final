@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, and, inArray, sql, gte, lte, desc, asc, sum } from "drizzle-orm";
+import { eq, and, inArray, sql, gte, lte, desc, asc, sum, isNotNull } from "drizzle-orm";
 import { startOfDay, endOfDay } from "date-fns";
 import { serializeDates } from "../lib/serialize";
 import {
@@ -11,6 +11,10 @@ import {
   usersTable,
   branchesTable,
   branchInventoryBatchesTable,
+  drinksTable,
+  drinkIngredientSlotsTable,
+  drinkSlotTypeOptionsTable,
+  ingredientTypesTable,
 } from "@workspace/db";
 import {
   ListStockMovementsQueryParams,
@@ -19,6 +23,51 @@ import {
 } from "@workspace/api-zod";
 
 const router: IRouter = Router();
+
+async function getIngredientIdsForCategory(categoryId: number): Promise<number[]> {
+  const drinks = await db
+    .select({ id: drinksTable.id, cupIngredientId: drinksTable.cupIngredientId })
+    .from(drinksTable)
+    .where(eq(drinksTable.categoryId, categoryId));
+
+  const drinkIds = drinks.map(d => d.id);
+  const ingredientIdSet = new Set<number>();
+
+  for (const d of drinks) {
+    if (d.cupIngredientId) ingredientIdSet.add(d.cupIngredientId);
+  }
+
+  if (drinkIds.length > 0) {
+    const directSlots = await db
+      .select({ ingredientId: drinkIngredientSlotsTable.ingredientId })
+      .from(drinkIngredientSlotsTable)
+      .where(and(inArray(drinkIngredientSlotsTable.drinkId, drinkIds), isNotNull(drinkIngredientSlotsTable.ingredientId)));
+    for (const s of directSlots) {
+      if (s.ingredientId) ingredientIdSet.add(s.ingredientId);
+    }
+
+    const typeSlots = await db
+      .select({ inventoryIngredientId: ingredientTypesTable.inventoryIngredientId })
+      .from(drinkIngredientSlotsTable)
+      .innerJoin(ingredientTypesTable, eq(drinkIngredientSlotsTable.ingredientTypeId, ingredientTypesTable.id))
+      .where(and(inArray(drinkIngredientSlotsTable.drinkId, drinkIds), isNotNull(ingredientTypesTable.inventoryIngredientId)));
+    for (const ts of typeSlots) {
+      if (ts.inventoryIngredientId) ingredientIdSet.add(ts.inventoryIngredientId);
+    }
+
+    const slotOptions = await db
+      .select({ inventoryIngredientId: ingredientTypesTable.inventoryIngredientId })
+      .from(drinkSlotTypeOptionsTable)
+      .innerJoin(ingredientTypesTable, eq(drinkSlotTypeOptionsTable.ingredientTypeId, ingredientTypesTable.id))
+      .innerJoin(drinkIngredientSlotsTable, eq(drinkSlotTypeOptionsTable.slotId, drinkIngredientSlotsTable.id))
+      .where(and(inArray(drinkIngredientSlotsTable.drinkId, drinkIds), isNotNull(ingredientTypesTable.inventoryIngredientId)));
+    for (const so of slotOptions) {
+      if (so.inventoryIngredientId) ingredientIdSet.add(so.inventoryIngredientId);
+    }
+  }
+
+  return Array.from(ingredientIdSet);
+}
 
 router.get("/stock/movements", async (req, res): Promise<void> => {
   const params = ListStockMovementsQueryParams.safeParse(req.query);
@@ -34,6 +83,26 @@ router.get("/stock/movements", async (req, res): Promise<void> => {
 
   if (targetBranchId) {
     conditions.push(eq(stockMovementsTable.branchId, targetBranchId));
+  }
+
+  const reqType = req.query.ingredientType && req.query.ingredientType !== "all" ? (req.query.ingredientType as string) : null;
+  const reqCategory = req.query.categoryId && req.query.categoryId !== "all" ? parseInt(req.query.categoryId as string) : null;
+
+  if (reqType || reqCategory) {
+    const filterIngConditions = [eq(ingredientsTable.isActive, true)];
+    if (reqType) filterIngConditions.push(eq(ingredientsTable.ingredientType, reqType as any));
+    if (reqCategory) {
+      const cIds = await getIngredientIdsForCategory(reqCategory);
+      if (cIds.length > 0) filterIngConditions.push(inArray(ingredientsTable.id, cIds));
+      else filterIngConditions.push(sql`1=0`);
+    }
+    const matchingIngs = await db.select({ id: ingredientsTable.id }).from(ingredientsTable).where(and(...filterIngConditions));
+    const matchingIds = matchingIngs.map(i => i.id);
+    if (matchingIds.length > 0) {
+      conditions.push(inArray(stockMovementsTable.ingredientId, matchingIds));
+    } else {
+      conditions.push(sql`1=0`);
+    }
   }
 
   if (params.success) {
@@ -95,6 +164,14 @@ router.get("/stock/movement-summary", async (req, res): Promise<void> => {
       ? parseInt(req.query.ingredientId as string)
       : null;
 
+    const targetIngredientType = req.query.ingredientType && req.query.ingredientType !== "all"
+      ? (req.query.ingredientType as string)
+      : null;
+
+    const targetCategoryId = req.query.categoryId && req.query.categoryId !== "all"
+      ? parseInt(req.query.categoryId as string)
+      : null;
+
     const startDateStr = req.query.startDate as string;
     const endDateStr = req.query.endDate as string;
 
@@ -105,6 +182,17 @@ router.get("/stock/movement-summary", async (req, res): Promise<void> => {
     const ingConditions = [eq(ingredientsTable.isActive, true)];
     if (targetIngredientId) {
       ingConditions.push(eq(ingredientsTable.id, targetIngredientId));
+    }
+    if (targetIngredientType) {
+      ingConditions.push(eq(ingredientsTable.ingredientType, targetIngredientType as any));
+    }
+    if (targetCategoryId) {
+      const categoryIngredientIds = await getIngredientIdsForCategory(targetCategoryId);
+      if (categoryIngredientIds.length > 0) {
+        ingConditions.push(inArray(ingredientsTable.id, categoryIngredientIds));
+      } else {
+        ingConditions.push(sql`1=0`);
+      }
     }
     const ingredients = await db.select().from(ingredientsTable).where(and(...ingConditions));
 

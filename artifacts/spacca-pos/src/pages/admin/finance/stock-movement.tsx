@@ -24,6 +24,21 @@ const fmtQty = (val: any): string => {
   return num.toFixed(3);
 };
 
+const INGREDIENT_TYPES = [
+  { value: "all", label: "All Ingredient Types" },
+  { value: "base", label: "Base Ingredients" },
+  { value: "coffee", label: "Coffee" },
+  { value: "milk", label: "Milk" },
+  { value: "syrup", label: "Syrup" },
+  { value: "sauce", label: "Sauce" },
+  { value: "sweetener", label: "Sweetener" },
+  { value: "topping", label: "Topping" },
+  { value: "tea", label: "Tea" },
+  { value: "cup", label: "Cup & Containers" },
+  { value: "packing", label: "Packaging Materials" },
+  { value: "other", label: "Other Supplies" },
+];
+
 function SearchableIngredientSelect({
   ingredients,
   value,
@@ -100,6 +115,7 @@ export default function StockMovementPage() {
   const [summaryItems, setSummaryItems] = useState<any[]>([]);
   const [ingredients, setIngredients] = useState<any[]>([]);
   const [branches, setBranches] = useState<any[]>([]);
+  const [productCategories, setProductCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   // View mode: detailed or grouped by item
@@ -108,6 +124,8 @@ export default function StockMovementPage() {
   // Filters
   const [selectedBranch, setSelectedBranch] = useState<string>("all");
   const [selectedIngredient, setSelectedIngredient] = useState<string>("all");
+  const [selectedIngredientType, setSelectedIngredientType] = useState<string>("all");
+  const [selectedProductCategory, setSelectedProductCategory] = useState<string>("all");
   const [selectedType, setSelectedType] = useState<string>("all");
   const [startDate, setStartDate] = useState(format(new Date().setDate(new Date().getDate() - 30), "yyyy-MM-dd"));
   const [endDate, setEndDate] = useState(format(new Date(), "yyyy-MM-dd"));
@@ -119,22 +137,28 @@ export default function StockMovementPage() {
       const params = new URLSearchParams({ startDate, endDate, limit: "5000" });
       if (selectedBranch !== "all") params.append("branchId", selectedBranch);
       if (selectedIngredient !== "all") params.append("ingredientId", selectedIngredient);
+      if (selectedIngredientType !== "all") params.append("ingredientType", selectedIngredientType);
+      if (selectedProductCategory !== "all") params.append("categoryId", selectedProductCategory);
       if (selectedType !== "all") params.append("movementType", selectedType);
 
       const summaryParams = new URLSearchParams({ startDate, endDate });
       if (selectedBranch !== "all") summaryParams.append("branchId", selectedBranch);
       if (selectedIngredient !== "all") summaryParams.append("ingredientId", selectedIngredient);
+      if (selectedIngredientType !== "all") summaryParams.append("ingredientType", selectedIngredientType);
+      if (selectedProductCategory !== "all") summaryParams.append("categoryId", selectedProductCategory);
 
-      const [moveData, summaryData, ingData, branchData] = await Promise.all([
+      const [moveData, summaryData, ingData, branchData, catData] = await Promise.all([
         api(`/api/stock/movements?${params.toString()}`),
         api(`/api/stock/movement-summary?${summaryParams.toString()}`),
         api("/api/ingredients"),
-        api("/api/admin/branches")
+        api("/api/admin/branches"),
+        api("/api/drink-categories").catch(() => [])
       ]);
       setMovements(moveData);
       setSummaryItems(summaryData);
       setIngredients(ingData);
       setBranches(branchData);
+      setProductCategories(catData || []);
     } catch (err) {
       toast({ variant: "destructive", title: "Failed to load data" });
     } finally {
@@ -144,7 +168,7 @@ export default function StockMovementPage() {
 
   useEffect(() => {
     loadData();
-  }, [selectedBranch, selectedIngredient, startDate, endDate, selectedType]);
+  }, [selectedBranch, selectedIngredient, selectedIngredientType, selectedProductCategory, startDate, endDate, selectedType]);
 
   const filteredMovements = movements.filter(m => {
     const matchesIngredient = selectedIngredient === "all" || String(m.ingredientId) === selectedIngredient;
@@ -252,7 +276,7 @@ export default function StockMovementPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Branch</label>
               <Select value={selectedBranch} onValueChange={setSelectedBranch}>
@@ -278,6 +302,35 @@ export default function StockMovementPage() {
             </div>
 
             <div className="space-y-2">
+              <label className="text-sm font-medium">Ingredient Type</label>
+              <Select value={selectedIngredientType} onValueChange={setSelectedIngredientType}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All Ingredient Types" />
+                </SelectTrigger>
+                <SelectContent>
+                  {INGREDIENT_TYPES.map(t => (
+                    <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Product Category</label>
+              <Select value={selectedProductCategory} onValueChange={setSelectedProductCategory}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All Product Categories" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Product Categories</SelectItem>
+                  {productCategories.map(c => (
+                    <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
               <label className="text-sm font-medium">From</label>
               <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} />
             </div>
@@ -294,7 +347,7 @@ export default function StockMovementPage() {
                   <SelectValue placeholder="All Types" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="all">All Movement Types</SelectItem>
                   <SelectItem value="restock">Received</SelectItem>
                   <SelectItem value="sale">Sale</SelectItem>
                   <SelectItem value="manufacture_produce">Mfg Produce</SelectItem>
