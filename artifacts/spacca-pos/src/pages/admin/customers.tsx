@@ -9,7 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Search, Plus, Edit, History, ArrowLeft, Loader2, User, Phone, Mail, Award, Landmark, Calendar, Ticket, Download } from "lucide-react";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Search, Plus, Edit, History, ArrowLeft, Loader2, User, Phone, Mail, Award, Landmark, Calendar, Ticket, Download, KeyRound, Sparkles, Copy, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
 import { fmt } from "@/lib/currency";
@@ -20,6 +21,9 @@ type Customer = {
   name: string;
   phone: string;
   email?: string | null;
+  avatarUrl?: string | null;
+  otp?: string | null;
+  otpExpiresAt?: string | null;
   points: number;
   total_spent: number;
   visit_count: number;
@@ -80,6 +84,10 @@ export default function CustomersAdmin() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState("");
+  const [otp, setOtp] = useState("");
+  const [otpExpiresAt, setOtpExpiresAt] = useState("");
+  const [copiedOtp, setCopiedOtp] = useState(false);
   const [points, setPoints] = useState("0");
   const [notes, setNotes] = useState("");
   const [isActive, setIsActive] = useState(true);
@@ -90,6 +98,29 @@ export default function CustomersAdmin() {
   const [historyCustomer, setHistoryCustomer] = useState<Customer | null>(null);
   const [historyOrders, setHistoryOrders] = useState<OrderHistoryItem[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
+
+  const getInitials = (nameStr: string) => {
+    if (!nameStr) return "U";
+    const parts = nameStr.trim().split(" ").filter(Boolean);
+    if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+    return nameStr.slice(0, 2).toUpperCase();
+  };
+
+  const generateOtpCode = () => {
+    const code = String(Math.floor(100000 + Math.random() * 900000));
+    setOtp(code);
+    const expires = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+    setOtpExpiresAt(expires);
+    toast({ title: "New OTP Generated", description: `Generated 6-digit OTP code: ${code} (expires in 10 minutes)` });
+  };
+
+  const handleCopyOtp = () => {
+    if (!otp) return;
+    navigator.clipboard.writeText(otp);
+    setCopiedOtp(true);
+    toast({ title: "OTP Copied", description: "Customer OTP code copied to clipboard." });
+    setTimeout(() => setCopiedOtp(false), 2000);
+  };
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -112,13 +143,14 @@ export default function CustomersAdmin() {
   useEffect(() => { loadData(); }, [loadData]);
 
   const openAdd = () => {
-    setEditId(null); setName(""); setPhone(""); setEmail(""); setPoints("0"); setNotes("");
+    setEditId(null); setName(""); setPhone(""); setEmail(""); setAvatarUrl(""); setOtp(""); setOtpExpiresAt(""); setPoints("0"); setNotes("");
     setIsActive(true); setDiscountId("none"); setSelectedTagIds([]);
     setShowForm(true);
   };
 
   const openEdit = (c: Customer) => {
     setEditId(c.id); setName(c.name); setPhone(c.phone); setEmail(c.email || "");
+    setAvatarUrl(c.avatarUrl || ""); setOtp(c.otp || ""); setOtpExpiresAt(c.otpExpiresAt || "");
     setPoints(String(c.points)); setNotes(c.notes || ""); setIsActive(c.isActive);
     setDiscountId(c.discountId ? String(c.discountId) : "none");
     setSelectedTagIds(c.tagIds || []);
@@ -146,6 +178,9 @@ export default function CustomersAdmin() {
         name: name.trim(),
         phone: phone.trim(),
         email: email.trim() || undefined,
+        avatarUrl: avatarUrl.trim() || undefined,
+        otp: otp.trim() || undefined,
+        otpExpiresAt: otp.trim() ? (otpExpiresAt || new Date(Date.now() + 10 * 60 * 1000).toISOString()) : null,
         points: parseInt(points) || 0,
         notes: notes.trim() || undefined,
         isActive,
@@ -297,11 +332,21 @@ export default function CustomersAdmin() {
                     return paginated.map(c => (
                       <TableRow key={c.id} className={c.isActive ? "" : "opacity-60"}>
                         <TableCell>
-                          <div className="font-bold text-foreground capitalize flex items-center gap-2">
-                            {c.name}
-                            {!c.isActive && <Badge variant="secondary" className="text-[9px] scale-90">Inactive</Badge>}
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-9 w-9 border border-amber-500/20 shrink-0 shadow-sm">
+                              <AvatarImage src={c.avatarUrl || ""} alt={c.name} />
+                              <AvatarFallback className="bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200 text-xs font-bold">
+                                {getInitials(c.name)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <div className="font-bold text-foreground capitalize flex items-center gap-2">
+                                {c.name}
+                                {!c.isActive && <Badge variant="secondary" className="text-[9px] scale-90">Inactive</Badge>}
+                              </div>
+                              <div className="text-muted-foreground text-xs font-semibold">{c.email || "No email"}</div>
+                            </div>
                           </div>
-                          <div className="text-muted-foreground text-xs font-semibold">{c.email || "No email"}</div>
                         </TableCell>
                         <TableCell className="font-semibold text-sm">
                           <div className="flex items-center gap-1.5"><Phone className="h-3 w-3 text-muted-foreground" />{c.phone}</div>
@@ -423,9 +468,97 @@ export default function CustomersAdmin() {
       <Dialog open={showForm} onOpenChange={setShowForm}>
         <DialogContent className="sm:max-w-lg overflow-y-auto max-h-[85vh]">
           <DialogHeader>
-            <DialogTitle>{editId ? "Edit Customer Details" : "Register Customer"}</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <User className="h-5 w-5 text-amber-500" />
+              <span>{editId ? "Edit Customer Details" : "Register Customer"}</span>
+            </DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-4 text-sm">
+            {/* Customer Avatar & Profile Header Section */}
+            <div className="flex items-center gap-4 p-3.5 rounded-lg bg-amber-500/5 border border-amber-500/20">
+              <Avatar className="h-16 w-16 border-2 border-amber-500/30 shadow-md shrink-0">
+                <AvatarImage src={avatarUrl} alt={name || "Customer"} />
+                <AvatarFallback className="bg-amber-500 text-white font-bold text-lg">
+                  {getInitials(name)}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1 space-y-1.5">
+                <Label htmlFor="cust-avatar" className="text-xs font-bold text-muted-foreground flex items-center gap-1.5">
+                  <User className="h-3.5 w-3.5 text-amber-500" />
+                  Customer Avatar Image URL
+                </Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    id="cust-avatar"
+                    value={avatarUrl}
+                    onChange={(e) => setAvatarUrl(e.target.value)}
+                    placeholder="https://... or avatar image URL"
+                    className="h-8 text-xs font-mono"
+                  />
+                  {avatarUrl && (
+                    <Button type="button" variant="ghost" size="sm" className="h-8 text-xs px-2 text-muted-foreground hover:text-destructive" onClick={() => setAvatarUrl("")}>
+                      Clear
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Customer Mobile App OTP Code Section */}
+            <div className="p-3.5 rounded-lg border bg-card/60 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5 font-bold text-xs">
+                  <KeyRound className="h-4 w-4 text-amber-500" />
+                  <span>Mobile App Authentication OTP Code</span>
+                </div>
+                {otp ? (
+                  otpExpiresAt && new Date(otpExpiresAt) > new Date() ? (
+                    <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-400 font-mono text-[10px]">
+                      Active (Expires {format(new Date(otpExpiresAt), "HH:mm")})
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="bg-red-500/10 text-red-600 border-red-200 font-mono text-[10px]">
+                      Expired
+                    </Badge>
+                  )
+                ) : (
+                  <Badge variant="outline" className="text-[10px] text-muted-foreground">
+                    No active OTP
+                  </Badge>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="relative flex-1">
+                  <Input
+                    id="cust-otp"
+                    value={otp}
+                    onChange={(e) => {
+                      setOtp(e.target.value);
+                      if (e.target.value && !otpExpiresAt) {
+                        setOtpExpiresAt(new Date(Date.now() + 10 * 60 * 1000).toISOString());
+                      }
+                    }}
+                    placeholder="e.g. 123456"
+                    className="font-mono text-sm tracking-wider font-bold pr-9"
+                    maxLength={6}
+                  />
+                  {otp && (
+                    <button
+                      type="button"
+                      onClick={handleCopyOtp}
+                      className="absolute right-2.5 top-2.5 text-muted-foreground hover:text-foreground transition-colors"
+                      title="Copy OTP"
+                    >
+                      {copiedOtp ? <Check className="h-4 w-4 text-emerald-500" /> : <Copy className="h-4 w-4" />}
+                    </button>
+                  )}
+                </div>
+                <Button type="button" variant="outline" size="sm" onClick={generateOtpCode} className="h-9 gap-1.5 text-xs font-semibold">
+                  <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+                  Generate OTP
+                </Button>
+              </div>
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-1.5">
                 <Label htmlFor="cust-name">Customer Name</Label>

@@ -36,6 +36,15 @@ async function ensureCustomersTable() {
     await db.execute(sql`
       ALTER TABLE customers ALTER COLUMN password_hash DROP NOT NULL;
     `);
+    await db.execute(sql`
+      ALTER TABLE customers ADD COLUMN IF NOT EXISTS avatar_url TEXT;
+    `);
+    await db.execute(sql`
+      ALTER TABLE customers ADD COLUMN IF NOT EXISTS otp TEXT;
+    `);
+    await db.execute(sql`
+      ALTER TABLE customers ADD COLUMN IF NOT EXISTS otp_expires_at TIMESTAMPTZ;
+    `);
     console.log("[customers] Table schema ready");
   } catch (e) {
     console.error("[customers] Table init error:", e);
@@ -244,6 +253,7 @@ router.get("/admin/customers", requirePermission("admin:view"), async (req, res)
   try {
     const customersRes = await db.execute(sql`
       SELECT c.id, c.name, c.phone, c.email, c.points, c.total_spent, c.visit_count, c.is_active, c.created_at, c.discount_id, c.notes,
+             c.avatar_url, c.otp, c.otp_expires_at,
              d.code AS discount_code, d.type AS discount_type, d.value AS discount_value
       FROM customers c
       LEFT JOIN discounts d ON c.discount_id = d.id
@@ -267,6 +277,9 @@ router.get("/admin/customers", requirePermission("admin:view"), async (req, res)
       isActive: c.is_active ?? true,
       createdAt: c.created_at,
       discountId: c.discount_id,
+      avatarUrl: c.avatar_url,
+      otp: c.otp,
+      otpExpiresAt: c.otp_expires_at,
       points: parseInt(c.points || 0),
       visit_count: parseInt(c.visit_count || 0),
       total_spent: parseFloat(c.total_spent || 0),
@@ -283,7 +296,7 @@ router.get("/admin/customers", requirePermission("admin:view"), async (req, res)
 
 // ─── Admin: create a customer ────────────────────────────────────────────────
 router.post("/admin/customers", requirePermission("admin:view"), async (req, res): Promise<void> => {
-  const { name, phone, email, points, notes, isActive, discountId, tagIds } = req.body ?? {};
+  const { name, phone, email, avatarUrl, otp, otpExpiresAt, points, notes, isActive, discountId, tagIds } = req.body ?? {};
   
   if (!name || typeof name !== "string" || name.trim().length < 2) {
     res.status(400).json({ error: "Name is required (at least 2 characters)" });
@@ -306,11 +319,17 @@ router.post("/admin/customers", requirePermission("admin:view"), async (req, res
       return;
     }
 
+    const cleanOtp = typeof otp === "string" && otp.trim() ? otp.trim() : null;
+    const cleanAvatarUrl = typeof avatarUrl === "string" && avatarUrl.trim() ? avatarUrl.trim() : null;
+
     const customer = await db.transaction(async (tx) => {
       const [cust] = await tx.insert(customersTable).values({
         name: cleanName,
         phone: cleanPhone,
         email: cleanEmail,
+        avatarUrl: cleanAvatarUrl,
+        otp: cleanOtp,
+        otpExpiresAt: cleanOtp ? (otpExpiresAt ? new Date(otpExpiresAt) : new Date(Date.now() + 10 * 60 * 1000)) : null,
         points: points || 0,
         notes: notes || null,
         isActive: isActive ?? true,
@@ -343,7 +362,7 @@ router.post("/admin/customers", requirePermission("admin:view"), async (req, res
 // ─── Admin: update a customer ────────────────────────────────────────────────
 router.patch("/admin/customers/:id", requirePermission("admin:view"), async (req, res): Promise<void> => {
   const id = parseInt(req.params.id as string);
-  const { name, phone, email, points, notes, isActive, discountId, tagIds } = req.body ?? {};
+  const { name, phone, email, avatarUrl, otp, otpExpiresAt, points, notes, isActive, discountId, tagIds } = req.body ?? {};
 
   try {
     await db.transaction(async (tx) => {
@@ -351,6 +370,14 @@ router.patch("/admin/customers/:id", requirePermission("admin:view"), async (req
       if (name !== undefined) updateData.name = name.trim();
       if (phone !== undefined) updateData.phone = phone.trim();
       if (email !== undefined) updateData.email = email ? email.trim() : null;
+      if (avatarUrl !== undefined) updateData.avatarUrl = avatarUrl ? avatarUrl.trim() : null;
+      if (otp !== undefined) {
+        const cleanOtp = typeof otp === "string" && otp.trim() ? otp.trim() : null;
+        updateData.otp = cleanOtp;
+        updateData.otpExpiresAt = cleanOtp ? (otpExpiresAt ? new Date(otpExpiresAt) : new Date(Date.now() + 10 * 60 * 1000)) : null;
+      } else if (otpExpiresAt !== undefined) {
+        updateData.otpExpiresAt = otpExpiresAt ? new Date(otpExpiresAt) : null;
+      }
       if (points !== undefined) updateData.points = parseInt(points);
       if (notes !== undefined) updateData.notes = notes ? notes.trim() : null;
       if (isActive !== undefined) updateData.isActive = isActive;
