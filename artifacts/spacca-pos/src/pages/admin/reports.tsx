@@ -20,7 +20,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { 
   ArrowLeft, BarChart2, TrendingUp, Coffee, Receipt, 
   Banknote, Medal, Calendar, ChevronLeft, ChevronRight,
-  Download, Tag, CheckCircle2, XCircle, FileText, Layers, Clock, Loader2, User, Printer, Globe, Store
+  Download, Tag, CheckCircle2, XCircle, FileText, Layers, Clock, Loader2, User, Printer, Globe, Store, Smartphone
 } from "lucide-react";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
@@ -177,6 +177,7 @@ export default function ReportsPage() {
   const channelFilterParams = useMemo(() => {
     if (reportChannel === "store" || reportChannel === "pos") return { partnerId: "store" };
     if (reportChannel === "kiosk") return { source: "kiosk" };
+    if (reportChannel === "mobile") return { source: "mobile" };
     if (reportChannel === "partners" || reportChannel === "all_partners") return { partnerId: "all_partners" };
     if (reportChannel !== "all") return { partnerId: reportChannel };
     return {};
@@ -256,6 +257,7 @@ export default function ReportsPage() {
       if (reportChannel !== "all") {
         if (["store", "pos"].includes(reportChannel)) url.searchParams.set("partnerId", "store");
         else if (reportChannel === "kiosk") url.searchParams.set("source", "kiosk");
+        else if (reportChannel === "mobile") url.searchParams.set("source", "mobile");
         else if (["partners", "all_partners"].includes(reportChannel)) url.searchParams.set("partnerId", "all_partners");
         else url.searchParams.set("partnerId", reportChannel);
       }
@@ -294,6 +296,7 @@ export default function ReportsPage() {
       if (reportChannel !== "all") {
         if (["store", "pos"].includes(reportChannel)) params.append("partnerId", "store");
         else if (reportChannel === "kiosk") params.append("source", "kiosk");
+        else if (reportChannel === "mobile") params.append("source", "mobile");
         else if (["partners", "all_partners"].includes(reportChannel)) params.append("partnerId", "all_partners");
         else params.append("partnerId", reportChannel);
       }
@@ -702,6 +705,7 @@ export default function ReportsPage() {
                         <SelectItem value="all">All Channels</SelectItem>
                         <SelectItem value="store">Store (POS)</SelectItem>
                         <SelectItem value="kiosk">Kiosk</SelectItem>
+                        <SelectItem value="mobile">Mobile App</SelectItem>
                         <SelectItem value="all_partners">All Ordering Partners</SelectItem>
                         {partnersList?.map((p: any) => (
                           <SelectItem key={p.id} value={String(p.id)}>
@@ -1307,6 +1311,11 @@ export default function ReportsPage() {
                                 ) : order.source === "kiosk" ? (
                                   <Badge variant="outline" className="bg-blue-500/10 text-blue-700 border-blue-200 text-[10px] font-bold mt-1 inline-flex items-center gap-1">
                                     Kiosk
+                                  </Badge>
+                                ) : (order.source === "mobile" || order.source === "app" || order.source === "mobile_app") ? (
+                                  <Badge variant="outline" className="bg-amber-500/10 text-amber-700 border-amber-200 text-[10px] font-bold mt-1 inline-flex items-center gap-1">
+                                    <Smartphone className="h-3 w-3" />
+                                    Mobile
                                   </Badge>
                                 ) : null}
                               </TableCell>

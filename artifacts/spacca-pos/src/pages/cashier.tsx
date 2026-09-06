@@ -8,7 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/componen
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Check, X, Loader2, Calculator, ClipboardList, User, ListChecks, CreditCard, Banknote, Wallet, Receipt, Printer, FileText, LogOut, Clock, ShoppingBag, TrendingUp, Lock, RotateCcw, Search, History, Gift, Tag, Plus, Trash2, LayoutGrid, Store } from "lucide-react";
+import { Check, X, Loader2, Calculator, ClipboardList, User, ListChecks, CreditCard, Banknote, Wallet, Receipt, Printer, FileText, LogOut, Clock, ShoppingBag, TrendingUp, Lock, RotateCcw, Search, History, Gift, Tag, Plus, Trash2, LayoutGrid, Store, Smartphone } from "lucide-react";
+import { format } from "date-fns";
 import { fmt } from "@/lib/currency";
 import { printCustomerReceipt, printAgentReceipts, printSimpleDrinksReceipt } from "@/components/receipt-printer";
 import { useSettings } from "@/hooks/use-settings";
@@ -22,6 +23,49 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "/api";
 
 type CashierUser = { id: number; name: string; role: string };
 type ActiveSession = { sessionId: number; cashier: CashierUser; startedAt: string } | null;
+
+function renderOrderSourceBadge(order: any) {
+  if (!order) return null;
+  if (order.partnerName || order.partnerId) {
+    return (
+      <Badge variant="outline" className="bg-purple-500/20 text-purple-300 border-purple-500/40 text-[10px] font-black uppercase tracking-wider inline-flex items-center gap-1">
+        <Store className="h-3 w-3" />
+        {order.partnerName || `Partner #${order.partnerId}`}
+      </Badge>
+    );
+  }
+  if (order.source === "kiosk") {
+    return (
+      <Badge variant="outline" className="bg-blue-500/20 text-blue-300 border-blue-500/40 text-[10px] font-black uppercase tracking-wider inline-flex items-center gap-1">
+        Kiosk
+      </Badge>
+    );
+  }
+  if (order.source === "mobile" || order.source === "app" || order.source === "mobile_app") {
+    return (
+      <Badge variant="outline" className="bg-amber-500/20 text-amber-300 border-amber-500/40 text-[10px] font-black uppercase tracking-wider inline-flex items-center gap-1">
+        <Smartphone className="h-3 w-3" />
+        Mobile
+      </Badge>
+    );
+  }
+  return (
+    <Badge variant="outline" className="bg-white/5 text-muted-foreground border-white/10 text-[10px] font-black uppercase tracking-wider">
+      POS
+    </Badge>
+  );
+}
+
+function formatReceivedTime(createdAt: string | Date | undefined | null) {
+  if (!createdAt) return "N/A";
+  try {
+    const d = new Date(createdAt);
+    if (isNaN(d.getTime())) return "N/A";
+    return format(d, "MMM d, h:mm a");
+  } catch {
+    return "N/A";
+  }
+}
 
 function useCashierSession() {
   const queryClient = useQueryClient();
@@ -544,14 +588,24 @@ export default function CashierPage() {
                         <CardContent className="p-0">
                           <div className="flex flex-col lg:flex-row">
                             <div className="flex-1 p-6 space-y-6">
-                              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                                 <div>
-                                  <label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-1 block">Order</label>
-                                  <div className="text-4xl font-black tracking-tighter neon-text-cyan">#{heroOrder.orderNumber}</div>
+                                  <label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-1 block">Order & Source</label>
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <div className="text-4xl font-black tracking-tighter neon-text-cyan">#{heroOrder.orderNumber}</div>
+                                    {renderOrderSourceBadge(heroOrder)}
+                                  </div>
                                 </div>
                                 <div>
                                   <label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-1 block">Customer</label>
                                   <div className="text-xl font-bold truncate">{heroOrder.customerName || "Walk-in Guest"}</div>
+                                </div>
+                                <div>
+                                  <label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-1 block">Received At</label>
+                                  <div className="text-sm font-bold text-muted-foreground flex items-center gap-1.5 mt-1">
+                                    <Clock className="h-4 w-4 text-neon-cyan" />
+                                    <span>{formatReceivedTime(heroOrder.createdAt)}</span>
+                                  </div>
                                 </div>
                                 <div>
                                   <label className="text-[10px] font-black text-neon-green uppercase tracking-[0.2em] mb-1 block">Amount Due</label>
@@ -677,8 +731,15 @@ export default function CashierPage() {
                             <CardHeader className="p-6 pb-4 border-b border-white/5 space-y-4">
                               <div className="flex justify-between items-start">
                                 <div>
-                                  <div className="text-2xl font-black tracking-tighter group-hover:text-neon-cyan transition-colors">#{order.orderNumber}</div>
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <div className="text-2xl font-black tracking-tighter group-hover:text-neon-cyan transition-colors">#{order.orderNumber}</div>
+                                    {renderOrderSourceBadge(order)}
+                                  </div>
                                   <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1 truncate max-w-[150px]">{order.customerName || "Walk-in"}</div>
+                                  <div className="text-[10px] font-semibold text-muted-foreground/80 flex items-center gap-1 mt-1">
+                                    <Clock className="h-3 w-3 text-neon-cyan" />
+                                    <span>Recv: {formatReceivedTime(order.createdAt)}</span>
+                                  </div>
                                 </div>
                                 <div className="text-right">
                                   <div className="text-2xl font-black text-neon-green">{fmt(order.total)}</div>
@@ -811,8 +872,14 @@ export default function CashierPage() {
                         #{order.orderNumber}
                       </div>
                       <div>
-                        <div className="font-bold">{order.customerName || "Walk-in Guest"}</div>
-                        <div className="text-[10px] text-muted-foreground uppercase tracking-widest">{order.createdAt ? new Date(order.createdAt).toLocaleTimeString() : 'N/A'} · {order.paymentMethod}</div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <div className="font-bold">{order.customerName || "Walk-in Guest"}</div>
+                          {renderOrderSourceBadge(order)}
+                        </div>
+                        <div className="text-[10px] text-muted-foreground uppercase tracking-widest mt-1 flex items-center gap-1.5">
+                          <Clock className="h-3 w-3 text-neon-cyan" />
+                          <span>{formatReceivedTime(order.createdAt)} · {order.paymentMethod}</span>
+                        </div>
                       </div>
                     </div>
                     <div className="flex items-center gap-6">
