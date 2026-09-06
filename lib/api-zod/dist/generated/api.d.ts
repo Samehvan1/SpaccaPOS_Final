@@ -4566,4 +4566,1296 @@ export declare const ValidateDiscountResponse: zod.ZodObject<{
     createdAt: string;
     updatedAt: string;
 }>;
+/**
+ * @summary Request an OTP for a phone number (login/register)
+ */
+export declare const MobileRequestOtpBody: zod.ZodObject<{
+    phone: zod.ZodString;
+}, "strip", zod.ZodTypeAny, {
+    phone: string;
+}, {
+    phone: string;
+}>;
+export declare const MobileRequestOtpResponse: zod.ZodObject<{
+    success: zod.ZodOptional<zod.ZodBoolean>;
+    message: zod.ZodOptional<zod.ZodString>;
+    devOtp: zod.ZodOptional<zod.ZodString>;
+    expiresIn: zod.ZodOptional<zod.ZodNumber>;
+}, "strip", zod.ZodTypeAny, {
+    message?: string | undefined;
+    success?: boolean | undefined;
+    devOtp?: string | undefined;
+    expiresIn?: number | undefined;
+}, {
+    message?: string | undefined;
+    success?: boolean | undefined;
+    devOtp?: string | undefined;
+    expiresIn?: number | undefined;
+}>;
+/**
+ * @summary Verify OTP and establish customer session
+ */
+export declare const MobileVerifyOtpBody: zod.ZodObject<{
+    phone: zod.ZodString;
+    otp: zod.ZodString;
+    name: zod.ZodOptional<zod.ZodString>;
+}, "strip", zod.ZodTypeAny, {
+    phone: string;
+    otp: string;
+    name?: string | undefined;
+}, {
+    phone: string;
+    otp: string;
+    name?: string | undefined;
+}>;
+export declare const MobileVerifyOtpResponse: zod.ZodObject<{
+    customer: zod.ZodOptional<zod.ZodObject<{
+        id: zod.ZodOptional<zod.ZodNumber>;
+        name: zod.ZodOptional<zod.ZodString>;
+        phone: zod.ZodOptional<zod.ZodString>;
+        email: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
+        birthdate: zod.ZodOptional<zod.ZodNullable<zod.ZodDate>>;
+        gender: zod.ZodOptional<zod.ZodNullable<zod.ZodEnum<["male", "female", "other", "prefer_not_to_say"]>>>;
+        avatarUrl: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
+        preferredBranchId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
+        address: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
+        city: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
+        loyaltyTier: zod.ZodOptional<zod.ZodEnum<["bronze", "silver", "gold", "platinum"]>>;
+        points: zod.ZodOptional<zod.ZodNumber>;
+        totalSpent: zod.ZodOptional<zod.ZodString>;
+        visitCount: zod.ZodOptional<zod.ZodNumber>;
+        isActive: zod.ZodOptional<zod.ZodBoolean>;
+        createdAt: zod.ZodOptional<zod.ZodDate>;
+    }, "strip", zod.ZodTypeAny, {
+        id?: number | undefined;
+        name?: string | undefined;
+        isActive?: boolean | undefined;
+        createdAt?: Date | undefined;
+        phone?: string | undefined;
+        points?: number | undefined;
+        email?: string | null | undefined;
+        birthdate?: Date | null | undefined;
+        gender?: "other" | "male" | "female" | "prefer_not_to_say" | null | undefined;
+        avatarUrl?: string | null | undefined;
+        preferredBranchId?: number | null | undefined;
+        address?: string | null | undefined;
+        city?: string | null | undefined;
+        loyaltyTier?: "bronze" | "silver" | "gold" | "platinum" | undefined;
+        totalSpent?: string | undefined;
+        visitCount?: number | undefined;
+    }, {
+        id?: number | undefined;
+        name?: string | undefined;
+        isActive?: boolean | undefined;
+        createdAt?: Date | undefined;
+        phone?: string | undefined;
+        points?: number | undefined;
+        email?: string | null | undefined;
+        birthdate?: Date | null | undefined;
+        gender?: "other" | "male" | "female" | "prefer_not_to_say" | null | undefined;
+        avatarUrl?: string | null | undefined;
+        preferredBranchId?: number | null | undefined;
+        address?: string | null | undefined;
+        city?: string | null | undefined;
+        loyaltyTier?: "bronze" | "silver" | "gold" | "platinum" | undefined;
+        totalSpent?: string | undefined;
+        visitCount?: number | undefined;
+    }>>;
+    hasPin: zod.ZodOptional<zod.ZodBoolean>;
+}, "strip", zod.ZodTypeAny, {
+    customer?: {
+        id?: number | undefined;
+        name?: string | undefined;
+        isActive?: boolean | undefined;
+        createdAt?: Date | undefined;
+        phone?: string | undefined;
+        points?: number | undefined;
+        email?: string | null | undefined;
+        birthdate?: Date | null | undefined;
+        gender?: "other" | "male" | "female" | "prefer_not_to_say" | null | undefined;
+        avatarUrl?: string | null | undefined;
+        preferredBranchId?: number | null | undefined;
+        address?: string | null | undefined;
+        city?: string | null | undefined;
+        loyaltyTier?: "bronze" | "silver" | "gold" | "platinum" | undefined;
+        totalSpent?: string | undefined;
+        visitCount?: number | undefined;
+    } | undefined;
+    hasPin?: boolean | undefined;
+}, {
+    customer?: {
+        id?: number | undefined;
+        name?: string | undefined;
+        isActive?: boolean | undefined;
+        createdAt?: Date | undefined;
+        phone?: string | undefined;
+        points?: number | undefined;
+        email?: string | null | undefined;
+        birthdate?: Date | null | undefined;
+        gender?: "other" | "male" | "female" | "prefer_not_to_say" | null | undefined;
+        avatarUrl?: string | null | undefined;
+        preferredBranchId?: number | null | undefined;
+        address?: string | null | undefined;
+        city?: string | null | undefined;
+        loyaltyTier?: "bronze" | "silver" | "gold" | "platinum" | undefined;
+        totalSpent?: string | undefined;
+        visitCount?: number | undefined;
+    } | undefined;
+    hasPin?: boolean | undefined;
+}>;
+/**
+ * @summary Create or update the customer PIN
+ */
+export declare const MobileCreatePinBody: zod.ZodObject<{
+    pin: zod.ZodString;
+}, "strip", zod.ZodTypeAny, {
+    pin: string;
+}, {
+    pin: string;
+}>;
+export declare const MobileCreatePinResponse: zod.ZodObject<{
+    success: zod.ZodOptional<zod.ZodBoolean>;
+    customer: zod.ZodOptional<zod.ZodObject<{
+        id: zod.ZodOptional<zod.ZodNumber>;
+        name: zod.ZodOptional<zod.ZodString>;
+        phone: zod.ZodOptional<zod.ZodString>;
+        email: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
+        birthdate: zod.ZodOptional<zod.ZodNullable<zod.ZodDate>>;
+        gender: zod.ZodOptional<zod.ZodNullable<zod.ZodEnum<["male", "female", "other", "prefer_not_to_say"]>>>;
+        avatarUrl: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
+        preferredBranchId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
+        address: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
+        city: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
+        loyaltyTier: zod.ZodOptional<zod.ZodEnum<["bronze", "silver", "gold", "platinum"]>>;
+        points: zod.ZodOptional<zod.ZodNumber>;
+        totalSpent: zod.ZodOptional<zod.ZodString>;
+        visitCount: zod.ZodOptional<zod.ZodNumber>;
+        isActive: zod.ZodOptional<zod.ZodBoolean>;
+        createdAt: zod.ZodOptional<zod.ZodDate>;
+    }, "strip", zod.ZodTypeAny, {
+        id?: number | undefined;
+        name?: string | undefined;
+        isActive?: boolean | undefined;
+        createdAt?: Date | undefined;
+        phone?: string | undefined;
+        points?: number | undefined;
+        email?: string | null | undefined;
+        birthdate?: Date | null | undefined;
+        gender?: "other" | "male" | "female" | "prefer_not_to_say" | null | undefined;
+        avatarUrl?: string | null | undefined;
+        preferredBranchId?: number | null | undefined;
+        address?: string | null | undefined;
+        city?: string | null | undefined;
+        loyaltyTier?: "bronze" | "silver" | "gold" | "platinum" | undefined;
+        totalSpent?: string | undefined;
+        visitCount?: number | undefined;
+    }, {
+        id?: number | undefined;
+        name?: string | undefined;
+        isActive?: boolean | undefined;
+        createdAt?: Date | undefined;
+        phone?: string | undefined;
+        points?: number | undefined;
+        email?: string | null | undefined;
+        birthdate?: Date | null | undefined;
+        gender?: "other" | "male" | "female" | "prefer_not_to_say" | null | undefined;
+        avatarUrl?: string | null | undefined;
+        preferredBranchId?: number | null | undefined;
+        address?: string | null | undefined;
+        city?: string | null | undefined;
+        loyaltyTier?: "bronze" | "silver" | "gold" | "platinum" | undefined;
+        totalSpent?: string | undefined;
+        visitCount?: number | undefined;
+    }>>;
+}, "strip", zod.ZodTypeAny, {
+    success?: boolean | undefined;
+    customer?: {
+        id?: number | undefined;
+        name?: string | undefined;
+        isActive?: boolean | undefined;
+        createdAt?: Date | undefined;
+        phone?: string | undefined;
+        points?: number | undefined;
+        email?: string | null | undefined;
+        birthdate?: Date | null | undefined;
+        gender?: "other" | "male" | "female" | "prefer_not_to_say" | null | undefined;
+        avatarUrl?: string | null | undefined;
+        preferredBranchId?: number | null | undefined;
+        address?: string | null | undefined;
+        city?: string | null | undefined;
+        loyaltyTier?: "bronze" | "silver" | "gold" | "platinum" | undefined;
+        totalSpent?: string | undefined;
+        visitCount?: number | undefined;
+    } | undefined;
+}, {
+    success?: boolean | undefined;
+    customer?: {
+        id?: number | undefined;
+        name?: string | undefined;
+        isActive?: boolean | undefined;
+        createdAt?: Date | undefined;
+        phone?: string | undefined;
+        points?: number | undefined;
+        email?: string | null | undefined;
+        birthdate?: Date | null | undefined;
+        gender?: "other" | "male" | "female" | "prefer_not_to_say" | null | undefined;
+        avatarUrl?: string | null | undefined;
+        preferredBranchId?: number | null | undefined;
+        address?: string | null | undefined;
+        city?: string | null | undefined;
+        loyaltyTier?: "bronze" | "silver" | "gold" | "platinum" | undefined;
+        totalSpent?: string | undefined;
+        visitCount?: number | undefined;
+    } | undefined;
+}>;
+/**
+ * @summary Login with phone + PIN
+ */
+export declare const MobileLoginBody: zod.ZodObject<{
+    phone: zod.ZodString;
+    pin: zod.ZodString;
+}, "strip", zod.ZodTypeAny, {
+    pin: string;
+    phone: string;
+}, {
+    pin: string;
+    phone: string;
+}>;
+export declare const MobileLoginResponse: zod.ZodObject<{
+    customer: zod.ZodOptional<zod.ZodObject<{
+        id: zod.ZodOptional<zod.ZodNumber>;
+        name: zod.ZodOptional<zod.ZodString>;
+        phone: zod.ZodOptional<zod.ZodString>;
+        email: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
+        birthdate: zod.ZodOptional<zod.ZodNullable<zod.ZodDate>>;
+        gender: zod.ZodOptional<zod.ZodNullable<zod.ZodEnum<["male", "female", "other", "prefer_not_to_say"]>>>;
+        avatarUrl: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
+        preferredBranchId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
+        address: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
+        city: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
+        loyaltyTier: zod.ZodOptional<zod.ZodEnum<["bronze", "silver", "gold", "platinum"]>>;
+        points: zod.ZodOptional<zod.ZodNumber>;
+        totalSpent: zod.ZodOptional<zod.ZodString>;
+        visitCount: zod.ZodOptional<zod.ZodNumber>;
+        isActive: zod.ZodOptional<zod.ZodBoolean>;
+        createdAt: zod.ZodOptional<zod.ZodDate>;
+    }, "strip", zod.ZodTypeAny, {
+        id?: number | undefined;
+        name?: string | undefined;
+        isActive?: boolean | undefined;
+        createdAt?: Date | undefined;
+        phone?: string | undefined;
+        points?: number | undefined;
+        email?: string | null | undefined;
+        birthdate?: Date | null | undefined;
+        gender?: "other" | "male" | "female" | "prefer_not_to_say" | null | undefined;
+        avatarUrl?: string | null | undefined;
+        preferredBranchId?: number | null | undefined;
+        address?: string | null | undefined;
+        city?: string | null | undefined;
+        loyaltyTier?: "bronze" | "silver" | "gold" | "platinum" | undefined;
+        totalSpent?: string | undefined;
+        visitCount?: number | undefined;
+    }, {
+        id?: number | undefined;
+        name?: string | undefined;
+        isActive?: boolean | undefined;
+        createdAt?: Date | undefined;
+        phone?: string | undefined;
+        points?: number | undefined;
+        email?: string | null | undefined;
+        birthdate?: Date | null | undefined;
+        gender?: "other" | "male" | "female" | "prefer_not_to_say" | null | undefined;
+        avatarUrl?: string | null | undefined;
+        preferredBranchId?: number | null | undefined;
+        address?: string | null | undefined;
+        city?: string | null | undefined;
+        loyaltyTier?: "bronze" | "silver" | "gold" | "platinum" | undefined;
+        totalSpent?: string | undefined;
+        visitCount?: number | undefined;
+    }>>;
+}, "strip", zod.ZodTypeAny, {
+    customer?: {
+        id?: number | undefined;
+        name?: string | undefined;
+        isActive?: boolean | undefined;
+        createdAt?: Date | undefined;
+        phone?: string | undefined;
+        points?: number | undefined;
+        email?: string | null | undefined;
+        birthdate?: Date | null | undefined;
+        gender?: "other" | "male" | "female" | "prefer_not_to_say" | null | undefined;
+        avatarUrl?: string | null | undefined;
+        preferredBranchId?: number | null | undefined;
+        address?: string | null | undefined;
+        city?: string | null | undefined;
+        loyaltyTier?: "bronze" | "silver" | "gold" | "platinum" | undefined;
+        totalSpent?: string | undefined;
+        visitCount?: number | undefined;
+    } | undefined;
+}, {
+    customer?: {
+        id?: number | undefined;
+        name?: string | undefined;
+        isActive?: boolean | undefined;
+        createdAt?: Date | undefined;
+        phone?: string | undefined;
+        points?: number | undefined;
+        email?: string | null | undefined;
+        birthdate?: Date | null | undefined;
+        gender?: "other" | "male" | "female" | "prefer_not_to_say" | null | undefined;
+        avatarUrl?: string | null | undefined;
+        preferredBranchId?: number | null | undefined;
+        address?: string | null | undefined;
+        city?: string | null | undefined;
+        loyaltyTier?: "bronze" | "silver" | "gold" | "platinum" | undefined;
+        totalSpent?: string | undefined;
+        visitCount?: number | undefined;
+    } | undefined;
+}>;
+/**
+ * @summary Get current customer
+ */
+export declare const MobileMeResponse: zod.ZodObject<{
+    customer: zod.ZodOptional<zod.ZodObject<{
+        id: zod.ZodOptional<zod.ZodNumber>;
+        name: zod.ZodOptional<zod.ZodString>;
+        phone: zod.ZodOptional<zod.ZodString>;
+        email: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
+        birthdate: zod.ZodOptional<zod.ZodNullable<zod.ZodDate>>;
+        gender: zod.ZodOptional<zod.ZodNullable<zod.ZodEnum<["male", "female", "other", "prefer_not_to_say"]>>>;
+        avatarUrl: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
+        preferredBranchId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
+        address: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
+        city: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
+        loyaltyTier: zod.ZodOptional<zod.ZodEnum<["bronze", "silver", "gold", "platinum"]>>;
+        points: zod.ZodOptional<zod.ZodNumber>;
+        totalSpent: zod.ZodOptional<zod.ZodString>;
+        visitCount: zod.ZodOptional<zod.ZodNumber>;
+        isActive: zod.ZodOptional<zod.ZodBoolean>;
+        createdAt: zod.ZodOptional<zod.ZodDate>;
+    }, "strip", zod.ZodTypeAny, {
+        id?: number | undefined;
+        name?: string | undefined;
+        isActive?: boolean | undefined;
+        createdAt?: Date | undefined;
+        phone?: string | undefined;
+        points?: number | undefined;
+        email?: string | null | undefined;
+        birthdate?: Date | null | undefined;
+        gender?: "other" | "male" | "female" | "prefer_not_to_say" | null | undefined;
+        avatarUrl?: string | null | undefined;
+        preferredBranchId?: number | null | undefined;
+        address?: string | null | undefined;
+        city?: string | null | undefined;
+        loyaltyTier?: "bronze" | "silver" | "gold" | "platinum" | undefined;
+        totalSpent?: string | undefined;
+        visitCount?: number | undefined;
+    }, {
+        id?: number | undefined;
+        name?: string | undefined;
+        isActive?: boolean | undefined;
+        createdAt?: Date | undefined;
+        phone?: string | undefined;
+        points?: number | undefined;
+        email?: string | null | undefined;
+        birthdate?: Date | null | undefined;
+        gender?: "other" | "male" | "female" | "prefer_not_to_say" | null | undefined;
+        avatarUrl?: string | null | undefined;
+        preferredBranchId?: number | null | undefined;
+        address?: string | null | undefined;
+        city?: string | null | undefined;
+        loyaltyTier?: "bronze" | "silver" | "gold" | "platinum" | undefined;
+        totalSpent?: string | undefined;
+        visitCount?: number | undefined;
+    }>>;
+}, "strip", zod.ZodTypeAny, {
+    customer?: {
+        id?: number | undefined;
+        name?: string | undefined;
+        isActive?: boolean | undefined;
+        createdAt?: Date | undefined;
+        phone?: string | undefined;
+        points?: number | undefined;
+        email?: string | null | undefined;
+        birthdate?: Date | null | undefined;
+        gender?: "other" | "male" | "female" | "prefer_not_to_say" | null | undefined;
+        avatarUrl?: string | null | undefined;
+        preferredBranchId?: number | null | undefined;
+        address?: string | null | undefined;
+        city?: string | null | undefined;
+        loyaltyTier?: "bronze" | "silver" | "gold" | "platinum" | undefined;
+        totalSpent?: string | undefined;
+        visitCount?: number | undefined;
+    } | undefined;
+}, {
+    customer?: {
+        id?: number | undefined;
+        name?: string | undefined;
+        isActive?: boolean | undefined;
+        createdAt?: Date | undefined;
+        phone?: string | undefined;
+        points?: number | undefined;
+        email?: string | null | undefined;
+        birthdate?: Date | null | undefined;
+        gender?: "other" | "male" | "female" | "prefer_not_to_say" | null | undefined;
+        avatarUrl?: string | null | undefined;
+        preferredBranchId?: number | null | undefined;
+        address?: string | null | undefined;
+        city?: string | null | undefined;
+        loyaltyTier?: "bronze" | "silver" | "gold" | "platinum" | undefined;
+        totalSpent?: string | undefined;
+        visitCount?: number | undefined;
+    } | undefined;
+}>;
+/**
+ * @summary Update customer profile
+ */
+export declare const MobileUpdateProfileBody: zod.ZodObject<{
+    name: zod.ZodOptional<zod.ZodString>;
+    email: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
+    birthdate: zod.ZodOptional<zod.ZodNullable<zod.ZodDate>>;
+    gender: zod.ZodOptional<zod.ZodNullable<zod.ZodEnum<["male", "female", "other", "prefer_not_to_say"]>>>;
+    avatarUrl: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
+    preferredBranchId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
+    address: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
+    city: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
+}, "strip", zod.ZodTypeAny, {
+    name?: string | undefined;
+    email?: string | null | undefined;
+    birthdate?: Date | null | undefined;
+    gender?: "other" | "male" | "female" | "prefer_not_to_say" | null | undefined;
+    avatarUrl?: string | null | undefined;
+    preferredBranchId?: number | null | undefined;
+    address?: string | null | undefined;
+    city?: string | null | undefined;
+}, {
+    name?: string | undefined;
+    email?: string | null | undefined;
+    birthdate?: Date | null | undefined;
+    gender?: "other" | "male" | "female" | "prefer_not_to_say" | null | undefined;
+    avatarUrl?: string | null | undefined;
+    preferredBranchId?: number | null | undefined;
+    address?: string | null | undefined;
+    city?: string | null | undefined;
+}>;
+export declare const MobileUpdateProfileResponse: zod.ZodObject<{
+    customer: zod.ZodOptional<zod.ZodObject<{
+        id: zod.ZodOptional<zod.ZodNumber>;
+        name: zod.ZodOptional<zod.ZodString>;
+        phone: zod.ZodOptional<zod.ZodString>;
+        email: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
+        birthdate: zod.ZodOptional<zod.ZodNullable<zod.ZodDate>>;
+        gender: zod.ZodOptional<zod.ZodNullable<zod.ZodEnum<["male", "female", "other", "prefer_not_to_say"]>>>;
+        avatarUrl: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
+        preferredBranchId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
+        address: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
+        city: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
+        loyaltyTier: zod.ZodOptional<zod.ZodEnum<["bronze", "silver", "gold", "platinum"]>>;
+        points: zod.ZodOptional<zod.ZodNumber>;
+        totalSpent: zod.ZodOptional<zod.ZodString>;
+        visitCount: zod.ZodOptional<zod.ZodNumber>;
+        isActive: zod.ZodOptional<zod.ZodBoolean>;
+        createdAt: zod.ZodOptional<zod.ZodDate>;
+    }, "strip", zod.ZodTypeAny, {
+        id?: number | undefined;
+        name?: string | undefined;
+        isActive?: boolean | undefined;
+        createdAt?: Date | undefined;
+        phone?: string | undefined;
+        points?: number | undefined;
+        email?: string | null | undefined;
+        birthdate?: Date | null | undefined;
+        gender?: "other" | "male" | "female" | "prefer_not_to_say" | null | undefined;
+        avatarUrl?: string | null | undefined;
+        preferredBranchId?: number | null | undefined;
+        address?: string | null | undefined;
+        city?: string | null | undefined;
+        loyaltyTier?: "bronze" | "silver" | "gold" | "platinum" | undefined;
+        totalSpent?: string | undefined;
+        visitCount?: number | undefined;
+    }, {
+        id?: number | undefined;
+        name?: string | undefined;
+        isActive?: boolean | undefined;
+        createdAt?: Date | undefined;
+        phone?: string | undefined;
+        points?: number | undefined;
+        email?: string | null | undefined;
+        birthdate?: Date | null | undefined;
+        gender?: "other" | "male" | "female" | "prefer_not_to_say" | null | undefined;
+        avatarUrl?: string | null | undefined;
+        preferredBranchId?: number | null | undefined;
+        address?: string | null | undefined;
+        city?: string | null | undefined;
+        loyaltyTier?: "bronze" | "silver" | "gold" | "platinum" | undefined;
+        totalSpent?: string | undefined;
+        visitCount?: number | undefined;
+    }>>;
+}, "strip", zod.ZodTypeAny, {
+    customer?: {
+        id?: number | undefined;
+        name?: string | undefined;
+        isActive?: boolean | undefined;
+        createdAt?: Date | undefined;
+        phone?: string | undefined;
+        points?: number | undefined;
+        email?: string | null | undefined;
+        birthdate?: Date | null | undefined;
+        gender?: "other" | "male" | "female" | "prefer_not_to_say" | null | undefined;
+        avatarUrl?: string | null | undefined;
+        preferredBranchId?: number | null | undefined;
+        address?: string | null | undefined;
+        city?: string | null | undefined;
+        loyaltyTier?: "bronze" | "silver" | "gold" | "platinum" | undefined;
+        totalSpent?: string | undefined;
+        visitCount?: number | undefined;
+    } | undefined;
+}, {
+    customer?: {
+        id?: number | undefined;
+        name?: string | undefined;
+        isActive?: boolean | undefined;
+        createdAt?: Date | undefined;
+        phone?: string | undefined;
+        points?: number | undefined;
+        email?: string | null | undefined;
+        birthdate?: Date | null | undefined;
+        gender?: "other" | "male" | "female" | "prefer_not_to_say" | null | undefined;
+        avatarUrl?: string | null | undefined;
+        preferredBranchId?: number | null | undefined;
+        address?: string | null | undefined;
+        city?: string | null | undefined;
+        loyaltyTier?: "bronze" | "silver" | "gold" | "platinum" | undefined;
+        totalSpent?: string | undefined;
+        visitCount?: number | undefined;
+    } | undefined;
+}>;
+/**
+ * @summary Change customer phone number
+ */
+export declare const MobileChangePhoneBody: zod.ZodObject<{
+    newPhone: zod.ZodString;
+}, "strip", zod.ZodTypeAny, {
+    newPhone: string;
+}, {
+    newPhone: string;
+}>;
+export declare const MobileChangePhoneResponse: zod.ZodObject<{
+    customer: zod.ZodOptional<zod.ZodObject<{
+        id: zod.ZodOptional<zod.ZodNumber>;
+        name: zod.ZodOptional<zod.ZodString>;
+        phone: zod.ZodOptional<zod.ZodString>;
+        email: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
+        birthdate: zod.ZodOptional<zod.ZodNullable<zod.ZodDate>>;
+        gender: zod.ZodOptional<zod.ZodNullable<zod.ZodEnum<["male", "female", "other", "prefer_not_to_say"]>>>;
+        avatarUrl: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
+        preferredBranchId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
+        address: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
+        city: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
+        loyaltyTier: zod.ZodOptional<zod.ZodEnum<["bronze", "silver", "gold", "platinum"]>>;
+        points: zod.ZodOptional<zod.ZodNumber>;
+        totalSpent: zod.ZodOptional<zod.ZodString>;
+        visitCount: zod.ZodOptional<zod.ZodNumber>;
+        isActive: zod.ZodOptional<zod.ZodBoolean>;
+        createdAt: zod.ZodOptional<zod.ZodDate>;
+    }, "strip", zod.ZodTypeAny, {
+        id?: number | undefined;
+        name?: string | undefined;
+        isActive?: boolean | undefined;
+        createdAt?: Date | undefined;
+        phone?: string | undefined;
+        points?: number | undefined;
+        email?: string | null | undefined;
+        birthdate?: Date | null | undefined;
+        gender?: "other" | "male" | "female" | "prefer_not_to_say" | null | undefined;
+        avatarUrl?: string | null | undefined;
+        preferredBranchId?: number | null | undefined;
+        address?: string | null | undefined;
+        city?: string | null | undefined;
+        loyaltyTier?: "bronze" | "silver" | "gold" | "platinum" | undefined;
+        totalSpent?: string | undefined;
+        visitCount?: number | undefined;
+    }, {
+        id?: number | undefined;
+        name?: string | undefined;
+        isActive?: boolean | undefined;
+        createdAt?: Date | undefined;
+        phone?: string | undefined;
+        points?: number | undefined;
+        email?: string | null | undefined;
+        birthdate?: Date | null | undefined;
+        gender?: "other" | "male" | "female" | "prefer_not_to_say" | null | undefined;
+        avatarUrl?: string | null | undefined;
+        preferredBranchId?: number | null | undefined;
+        address?: string | null | undefined;
+        city?: string | null | undefined;
+        loyaltyTier?: "bronze" | "silver" | "gold" | "platinum" | undefined;
+        totalSpent?: string | undefined;
+        visitCount?: number | undefined;
+    }>>;
+}, "strip", zod.ZodTypeAny, {
+    customer?: {
+        id?: number | undefined;
+        name?: string | undefined;
+        isActive?: boolean | undefined;
+        createdAt?: Date | undefined;
+        phone?: string | undefined;
+        points?: number | undefined;
+        email?: string | null | undefined;
+        birthdate?: Date | null | undefined;
+        gender?: "other" | "male" | "female" | "prefer_not_to_say" | null | undefined;
+        avatarUrl?: string | null | undefined;
+        preferredBranchId?: number | null | undefined;
+        address?: string | null | undefined;
+        city?: string | null | undefined;
+        loyaltyTier?: "bronze" | "silver" | "gold" | "platinum" | undefined;
+        totalSpent?: string | undefined;
+        visitCount?: number | undefined;
+    } | undefined;
+}, {
+    customer?: {
+        id?: number | undefined;
+        name?: string | undefined;
+        isActive?: boolean | undefined;
+        createdAt?: Date | undefined;
+        phone?: string | undefined;
+        points?: number | undefined;
+        email?: string | null | undefined;
+        birthdate?: Date | null | undefined;
+        gender?: "other" | "male" | "female" | "prefer_not_to_say" | null | undefined;
+        avatarUrl?: string | null | undefined;
+        preferredBranchId?: number | null | undefined;
+        address?: string | null | undefined;
+        city?: string | null | undefined;
+        loyaltyTier?: "bronze" | "silver" | "gold" | "platinum" | undefined;
+        totalSpent?: string | undefined;
+        visitCount?: number | undefined;
+    } | undefined;
+}>;
+/**
+ * @summary Change customer PIN
+ */
+export declare const MobileChangePinBody: zod.ZodObject<{
+    currentPin: zod.ZodOptional<zod.ZodString>;
+    newPin: zod.ZodString;
+}, "strip", zod.ZodTypeAny, {
+    newPin: string;
+    currentPin?: string | undefined;
+}, {
+    newPin: string;
+    currentPin?: string | undefined;
+}>;
+/**
+ * @summary Get customer loyalty points
+ */
+export declare const MobilePointsResponse: zod.ZodObject<{
+    points: zod.ZodOptional<zod.ZodNumber>;
+    totalSpent: zod.ZodOptional<zod.ZodString>;
+    visitCount: zod.ZodOptional<zod.ZodNumber>;
+}, "strip", zod.ZodTypeAny, {
+    points?: number | undefined;
+    totalSpent?: string | undefined;
+    visitCount?: number | undefined;
+}, {
+    points?: number | undefined;
+    totalSpent?: string | undefined;
+    visitCount?: number | undefined;
+}>;
+/**
+ * @summary List favorite drinks
+ */
+export declare const MobileListFavoritesResponse: zod.ZodObject<{
+    favorites: zod.ZodOptional<zod.ZodArray<zod.ZodObject<{
+        id: zod.ZodOptional<zod.ZodNumber>;
+        drinkId: zod.ZodOptional<zod.ZodNumber>;
+        createdAt: zod.ZodOptional<zod.ZodDate>;
+        drink: zod.ZodOptional<zod.ZodObject<{
+            id: zod.ZodOptional<zod.ZodNumber>;
+            name: zod.ZodOptional<zod.ZodString>;
+            description: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
+            category: zod.ZodOptional<zod.ZodString>;
+            basePrice: zod.ZodOptional<zod.ZodString>;
+            imageUrl: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
+            isCustomizable: zod.ZodOptional<zod.ZodBoolean>;
+        }, "strip", zod.ZodTypeAny, {
+            id?: number | undefined;
+            name?: string | undefined;
+            category?: string | undefined;
+            description?: string | null | undefined;
+            basePrice?: string | undefined;
+            imageUrl?: string | null | undefined;
+            isCustomizable?: boolean | undefined;
+        }, {
+            id?: number | undefined;
+            name?: string | undefined;
+            category?: string | undefined;
+            description?: string | null | undefined;
+            basePrice?: string | undefined;
+            imageUrl?: string | null | undefined;
+            isCustomizable?: boolean | undefined;
+        }>>;
+    }, "strip", zod.ZodTypeAny, {
+        id?: number | undefined;
+        createdAt?: Date | undefined;
+        drinkId?: number | undefined;
+        drink?: {
+            id?: number | undefined;
+            name?: string | undefined;
+            category?: string | undefined;
+            description?: string | null | undefined;
+            basePrice?: string | undefined;
+            imageUrl?: string | null | undefined;
+            isCustomizable?: boolean | undefined;
+        } | undefined;
+    }, {
+        id?: number | undefined;
+        createdAt?: Date | undefined;
+        drinkId?: number | undefined;
+        drink?: {
+            id?: number | undefined;
+            name?: string | undefined;
+            category?: string | undefined;
+            description?: string | null | undefined;
+            basePrice?: string | undefined;
+            imageUrl?: string | null | undefined;
+            isCustomizable?: boolean | undefined;
+        } | undefined;
+    }>, "many">>;
+}, "strip", zod.ZodTypeAny, {
+    favorites?: {
+        id?: number | undefined;
+        createdAt?: Date | undefined;
+        drinkId?: number | undefined;
+        drink?: {
+            id?: number | undefined;
+            name?: string | undefined;
+            category?: string | undefined;
+            description?: string | null | undefined;
+            basePrice?: string | undefined;
+            imageUrl?: string | null | undefined;
+            isCustomizable?: boolean | undefined;
+        } | undefined;
+    }[] | undefined;
+}, {
+    favorites?: {
+        id?: number | undefined;
+        createdAt?: Date | undefined;
+        drinkId?: number | undefined;
+        drink?: {
+            id?: number | undefined;
+            name?: string | undefined;
+            category?: string | undefined;
+            description?: string | null | undefined;
+            basePrice?: string | undefined;
+            imageUrl?: string | null | undefined;
+            isCustomizable?: boolean | undefined;
+        } | undefined;
+    }[] | undefined;
+}>;
+/**
+ * @summary Add a favorite drink
+ */
+export declare const MobileAddFavoriteBody: zod.ZodObject<{
+    drinkId: zod.ZodNumber;
+}, "strip", zod.ZodTypeAny, {
+    drinkId: number;
+}, {
+    drinkId: number;
+}>;
+/**
+ * @summary Remove a favorite drink
+ */
+export declare const MobileRemoveFavoriteParams: zod.ZodObject<{
+    drinkId: zod.ZodNumber;
+}, "strip", zod.ZodTypeAny, {
+    drinkId: number;
+}, {
+    drinkId: number;
+}>;
+/**
+ * @summary List saved customized drinks
+ */
+export declare const MobileListSavedDrinksResponse: zod.ZodObject<{
+    savedDrinks: zod.ZodOptional<zod.ZodArray<zod.ZodObject<{
+        id: zod.ZodOptional<zod.ZodNumber>;
+        drinkId: zod.ZodOptional<zod.ZodNumber>;
+        name: zod.ZodOptional<zod.ZodString>;
+        selections: zod.ZodOptional<zod.ZodArray<zod.ZodObject<{}, "passthrough", zod.ZodTypeAny, zod.objectOutputType<{}, zod.ZodTypeAny, "passthrough">, zod.objectInputType<{}, zod.ZodTypeAny, "passthrough">>, "many">>;
+        quantity: zod.ZodOptional<zod.ZodNumber>;
+        createdAt: zod.ZodOptional<zod.ZodDate>;
+        drink: zod.ZodOptional<zod.ZodObject<{
+            id: zod.ZodOptional<zod.ZodNumber>;
+            name: zod.ZodOptional<zod.ZodString>;
+            imageUrl: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
+            basePrice: zod.ZodOptional<zod.ZodString>;
+        }, "strip", zod.ZodTypeAny, {
+            id?: number | undefined;
+            name?: string | undefined;
+            basePrice?: string | undefined;
+            imageUrl?: string | null | undefined;
+        }, {
+            id?: number | undefined;
+            name?: string | undefined;
+            basePrice?: string | undefined;
+            imageUrl?: string | null | undefined;
+        }>>;
+    }, "strip", zod.ZodTypeAny, {
+        id?: number | undefined;
+        name?: string | undefined;
+        createdAt?: Date | undefined;
+        drinkId?: number | undefined;
+        selections?: zod.objectOutputType<{}, zod.ZodTypeAny, "passthrough">[] | undefined;
+        quantity?: number | undefined;
+        drink?: {
+            id?: number | undefined;
+            name?: string | undefined;
+            basePrice?: string | undefined;
+            imageUrl?: string | null | undefined;
+        } | undefined;
+    }, {
+        id?: number | undefined;
+        name?: string | undefined;
+        createdAt?: Date | undefined;
+        drinkId?: number | undefined;
+        selections?: zod.objectInputType<{}, zod.ZodTypeAny, "passthrough">[] | undefined;
+        quantity?: number | undefined;
+        drink?: {
+            id?: number | undefined;
+            name?: string | undefined;
+            basePrice?: string | undefined;
+            imageUrl?: string | null | undefined;
+        } | undefined;
+    }>, "many">>;
+}, "strip", zod.ZodTypeAny, {
+    savedDrinks?: {
+        id?: number | undefined;
+        name?: string | undefined;
+        createdAt?: Date | undefined;
+        drinkId?: number | undefined;
+        selections?: zod.objectOutputType<{}, zod.ZodTypeAny, "passthrough">[] | undefined;
+        quantity?: number | undefined;
+        drink?: {
+            id?: number | undefined;
+            name?: string | undefined;
+            basePrice?: string | undefined;
+            imageUrl?: string | null | undefined;
+        } | undefined;
+    }[] | undefined;
+}, {
+    savedDrinks?: {
+        id?: number | undefined;
+        name?: string | undefined;
+        createdAt?: Date | undefined;
+        drinkId?: number | undefined;
+        selections?: zod.objectInputType<{}, zod.ZodTypeAny, "passthrough">[] | undefined;
+        quantity?: number | undefined;
+        drink?: {
+            id?: number | undefined;
+            name?: string | undefined;
+            basePrice?: string | undefined;
+            imageUrl?: string | null | undefined;
+        } | undefined;
+    }[] | undefined;
+}>;
+/**
+ * @summary Save a customized drink
+ */
+export declare const MobileSaveDrinkBody: zod.ZodObject<{
+    drinkId: zod.ZodNumber;
+    name: zod.ZodOptional<zod.ZodString>;
+    selections: zod.ZodOptional<zod.ZodArray<zod.ZodObject<{}, "passthrough", zod.ZodTypeAny, zod.objectOutputType<{}, zod.ZodTypeAny, "passthrough">, zod.objectInputType<{}, zod.ZodTypeAny, "passthrough">>, "many">>;
+    quantity: zod.ZodOptional<zod.ZodNumber>;
+}, "strip", zod.ZodTypeAny, {
+    drinkId: number;
+    name?: string | undefined;
+    selections?: zod.objectOutputType<{}, zod.ZodTypeAny, "passthrough">[] | undefined;
+    quantity?: number | undefined;
+}, {
+    drinkId: number;
+    name?: string | undefined;
+    selections?: zod.objectInputType<{}, zod.ZodTypeAny, "passthrough">[] | undefined;
+    quantity?: number | undefined;
+}>;
+/**
+ * @summary Delete a saved drink
+ */
+export declare const MobileDeleteSavedDrinkParams: zod.ZodObject<{
+    id: zod.ZodNumber;
+}, "strip", zod.ZodTypeAny, {
+    id: number;
+}, {
+    id: number;
+}>;
+/**
+ * @summary List friends
+ */
+export declare const MobileListFriendsResponse: zod.ZodObject<{
+    friends: zod.ZodOptional<zod.ZodArray<zod.ZodObject<{
+        id: zod.ZodOptional<zod.ZodNumber>;
+        customerId: zod.ZodOptional<zod.ZodNumber>;
+        friendCustomerId: zod.ZodOptional<zod.ZodNumber>;
+        friendName: zod.ZodOptional<zod.ZodString>;
+        friendPhone: zod.ZodOptional<zod.ZodString>;
+        createdAt: zod.ZodOptional<zod.ZodDate>;
+    }, "strip", zod.ZodTypeAny, {
+        id?: number | undefined;
+        createdAt?: Date | undefined;
+        customerId?: number | undefined;
+        friendCustomerId?: number | undefined;
+        friendName?: string | undefined;
+        friendPhone?: string | undefined;
+    }, {
+        id?: number | undefined;
+        createdAt?: Date | undefined;
+        customerId?: number | undefined;
+        friendCustomerId?: number | undefined;
+        friendName?: string | undefined;
+        friendPhone?: string | undefined;
+    }>, "many">>;
+}, "strip", zod.ZodTypeAny, {
+    friends?: {
+        id?: number | undefined;
+        createdAt?: Date | undefined;
+        customerId?: number | undefined;
+        friendCustomerId?: number | undefined;
+        friendName?: string | undefined;
+        friendPhone?: string | undefined;
+    }[] | undefined;
+}, {
+    friends?: {
+        id?: number | undefined;
+        createdAt?: Date | undefined;
+        customerId?: number | undefined;
+        friendCustomerId?: number | undefined;
+        friendName?: string | undefined;
+        friendPhone?: string | undefined;
+    }[] | undefined;
+}>;
+/**
+ * @summary Add a friend by phone
+ */
+export declare const MobileAddFriendBody: zod.ZodObject<{
+    phone: zod.ZodString;
+}, "strip", zod.ZodTypeAny, {
+    phone: string;
+}, {
+    phone: string;
+}>;
+/**
+ * @summary Remove a friend
+ */
+export declare const MobileRemoveFriendParams: zod.ZodObject<{
+    id: zod.ZodNumber;
+}, "strip", zod.ZodTypeAny, {
+    id: number;
+}, {
+    id: number;
+}>;
+/**
+ * @summary List active branches
+ */
+export declare const MobileListBranchesResponse: zod.ZodObject<{
+    branches: zod.ZodOptional<zod.ZodArray<zod.ZodObject<{
+        id: zod.ZodNumber;
+        name: zod.ZodString;
+        location: zod.ZodOptional<zod.ZodString>;
+        isActive: zod.ZodOptional<zod.ZodBoolean>;
+        createdAt: zod.ZodOptional<zod.ZodDate>;
+    }, "strip", zod.ZodTypeAny, {
+        id: number;
+        name: string;
+        isActive?: boolean | undefined;
+        createdAt?: Date | undefined;
+        location?: string | undefined;
+    }, {
+        id: number;
+        name: string;
+        isActive?: boolean | undefined;
+        createdAt?: Date | undefined;
+        location?: string | undefined;
+    }>, "many">>;
+}, "strip", zod.ZodTypeAny, {
+    branches?: {
+        id: number;
+        name: string;
+        isActive?: boolean | undefined;
+        createdAt?: Date | undefined;
+        location?: string | undefined;
+    }[] | undefined;
+}, {
+    branches?: {
+        id: number;
+        name: string;
+        isActive?: boolean | undefined;
+        createdAt?: Date | undefined;
+        location?: string | undefined;
+    }[] | undefined;
+}>;
+/**
+ * @summary List active drink categories
+ */
+export declare const MobileListCategoriesResponse: zod.ZodObject<{
+    categories: zod.ZodOptional<zod.ZodArray<zod.ZodObject<{
+        id: zod.ZodOptional<zod.ZodNumber>;
+        name: zod.ZodOptional<zod.ZodString>;
+        sortOrder: zod.ZodOptional<zod.ZodNumber>;
+        isActive: zod.ZodOptional<zod.ZodBoolean>;
+        createdAt: zod.ZodOptional<zod.ZodDate>;
+    }, "strip", zod.ZodTypeAny, {
+        id?: number | undefined;
+        name?: string | undefined;
+        isActive?: boolean | undefined;
+        sortOrder?: number | undefined;
+        createdAt?: Date | undefined;
+    }, {
+        id?: number | undefined;
+        name?: string | undefined;
+        isActive?: boolean | undefined;
+        sortOrder?: number | undefined;
+        createdAt?: Date | undefined;
+    }>, "many">>;
+}, "strip", zod.ZodTypeAny, {
+    categories?: {
+        id?: number | undefined;
+        name?: string | undefined;
+        isActive?: boolean | undefined;
+        sortOrder?: number | undefined;
+        createdAt?: Date | undefined;
+    }[] | undefined;
+}, {
+    categories?: {
+        id?: number | undefined;
+        name?: string | undefined;
+        isActive?: boolean | undefined;
+        sortOrder?: number | undefined;
+        createdAt?: Date | undefined;
+    }[] | undefined;
+}>;
+/**
+ * @summary List my orders
+ */
+export declare const MobileListOrdersResponse: zod.ZodObject<{
+    orders: zod.ZodOptional<zod.ZodArray<zod.ZodObject<{
+        id: zod.ZodOptional<zod.ZodNumber>;
+        orderNumber: zod.ZodOptional<zod.ZodString>;
+        status: zod.ZodOptional<zod.ZodString>;
+        total: zod.ZodOptional<zod.ZodString>;
+        subtotal: zod.ZodOptional<zod.ZodString>;
+        discount: zod.ZodOptional<zod.ZodString>;
+        paymentMethod: zod.ZodOptional<zod.ZodString>;
+        source: zod.ZodOptional<zod.ZodString>;
+        branchId: zod.ZodOptional<zod.ZodNumber>;
+        branchName: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
+        createdAt: zod.ZodOptional<zod.ZodDate>;
+    }, "strip", zod.ZodTypeAny, {
+        status?: string | undefined;
+        id?: number | undefined;
+        branchId?: number | undefined;
+        createdAt?: Date | undefined;
+        total?: string | undefined;
+        source?: string | undefined;
+        orderNumber?: string | undefined;
+        subtotal?: string | undefined;
+        discount?: string | undefined;
+        paymentMethod?: string | undefined;
+        branchName?: string | null | undefined;
+    }, {
+        status?: string | undefined;
+        id?: number | undefined;
+        branchId?: number | undefined;
+        createdAt?: Date | undefined;
+        total?: string | undefined;
+        source?: string | undefined;
+        orderNumber?: string | undefined;
+        subtotal?: string | undefined;
+        discount?: string | undefined;
+        paymentMethod?: string | undefined;
+        branchName?: string | null | undefined;
+    }>, "many">>;
+}, "strip", zod.ZodTypeAny, {
+    orders?: {
+        status?: string | undefined;
+        id?: number | undefined;
+        branchId?: number | undefined;
+        createdAt?: Date | undefined;
+        total?: string | undefined;
+        source?: string | undefined;
+        orderNumber?: string | undefined;
+        subtotal?: string | undefined;
+        discount?: string | undefined;
+        paymentMethod?: string | undefined;
+        branchName?: string | null | undefined;
+    }[] | undefined;
+}, {
+    orders?: {
+        status?: string | undefined;
+        id?: number | undefined;
+        branchId?: number | undefined;
+        createdAt?: Date | undefined;
+        total?: string | undefined;
+        source?: string | undefined;
+        orderNumber?: string | undefined;
+        subtotal?: string | undefined;
+        discount?: string | undefined;
+        paymentMethod?: string | undefined;
+        branchName?: string | null | undefined;
+    }[] | undefined;
+}>;
+/**
+ * @summary Place an order (source=mobile)
+ */
+export declare const MobilePlaceOrderBody: zod.ZodObject<{
+    branchId: zod.ZodNumber;
+    items: zod.ZodArray<zod.ZodObject<{
+        drinkId: zod.ZodNumber;
+        quantity: zod.ZodOptional<zod.ZodNumber>;
+        selections: zod.ZodOptional<zod.ZodArray<zod.ZodObject<{}, "passthrough", zod.ZodTypeAny, zod.objectOutputType<{}, zod.ZodTypeAny, "passthrough">, zod.objectInputType<{}, zod.ZodTypeAny, "passthrough">>, "many">>;
+        specialNotes: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
+    }, "strip", zod.ZodTypeAny, {
+        drinkId: number;
+        selections?: zod.objectOutputType<{}, zod.ZodTypeAny, "passthrough">[] | undefined;
+        quantity?: number | undefined;
+        specialNotes?: string | null | undefined;
+    }, {
+        drinkId: number;
+        selections?: zod.objectInputType<{}, zod.ZodTypeAny, "passthrough">[] | undefined;
+        quantity?: number | undefined;
+        specialNotes?: string | null | undefined;
+    }>, "many">;
+    paymentMethod: zod.ZodOptional<zod.ZodEnum<["cash", "card", "wallet"]>>;
+    notes: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
+    discountCode: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
+}, "strip", zod.ZodTypeAny, {
+    branchId: number;
+    items: {
+        drinkId: number;
+        selections?: zod.objectOutputType<{}, zod.ZodTypeAny, "passthrough">[] | undefined;
+        quantity?: number | undefined;
+        specialNotes?: string | null | undefined;
+    }[];
+    paymentMethod?: "cash" | "card" | "wallet" | undefined;
+    notes?: string | null | undefined;
+    discountCode?: string | null | undefined;
+}, {
+    branchId: number;
+    items: {
+        drinkId: number;
+        selections?: zod.objectInputType<{}, zod.ZodTypeAny, "passthrough">[] | undefined;
+        quantity?: number | undefined;
+        specialNotes?: string | null | undefined;
+    }[];
+    paymentMethod?: "cash" | "card" | "wallet" | undefined;
+    notes?: string | null | undefined;
+    discountCode?: string | null | undefined;
+}>;
+/**
+ * @summary Get order detail
+ */
+export declare const MobileGetOrderParams: zod.ZodObject<{
+    id: zod.ZodNumber;
+}, "strip", zod.ZodTypeAny, {
+    id: number;
+}, {
+    id: number;
+}>;
+export declare const MobileGetOrderResponse: zod.ZodObject<{
+    order: zod.ZodOptional<zod.ZodObject<{
+        id: zod.ZodOptional<zod.ZodNumber>;
+        orderNumber: zod.ZodOptional<zod.ZodString>;
+        status: zod.ZodOptional<zod.ZodString>;
+        subtotal: zod.ZodOptional<zod.ZodNumber>;
+        discount: zod.ZodOptional<zod.ZodNumber>;
+        total: zod.ZodOptional<zod.ZodNumber>;
+        branchName: zod.ZodOptional<zod.ZodString>;
+        payments: zod.ZodOptional<zod.ZodArray<zod.ZodObject<{}, "passthrough", zod.ZodTypeAny, zod.objectOutputType<{}, zod.ZodTypeAny, "passthrough">, zod.objectInputType<{}, zod.ZodTypeAny, "passthrough">>, "many">>;
+        items: zod.ZodOptional<zod.ZodArray<zod.ZodObject<{}, "passthrough", zod.ZodTypeAny, zod.objectOutputType<{}, zod.ZodTypeAny, "passthrough">, zod.objectInputType<{}, zod.ZodTypeAny, "passthrough">>, "many">>;
+    }, "strip", zod.ZodTypeAny, {
+        status?: string | undefined;
+        id?: number | undefined;
+        total?: number | undefined;
+        orderNumber?: string | undefined;
+        subtotal?: number | undefined;
+        discount?: number | undefined;
+        items?: zod.objectOutputType<{}, zod.ZodTypeAny, "passthrough">[] | undefined;
+        branchName?: string | undefined;
+        payments?: zod.objectOutputType<{}, zod.ZodTypeAny, "passthrough">[] | undefined;
+    }, {
+        status?: string | undefined;
+        id?: number | undefined;
+        total?: number | undefined;
+        orderNumber?: string | undefined;
+        subtotal?: number | undefined;
+        discount?: number | undefined;
+        items?: zod.objectInputType<{}, zod.ZodTypeAny, "passthrough">[] | undefined;
+        branchName?: string | undefined;
+        payments?: zod.objectInputType<{}, zod.ZodTypeAny, "passthrough">[] | undefined;
+    }>>;
+}, "strip", zod.ZodTypeAny, {
+    order?: {
+        status?: string | undefined;
+        id?: number | undefined;
+        total?: number | undefined;
+        orderNumber?: string | undefined;
+        subtotal?: number | undefined;
+        discount?: number | undefined;
+        items?: zod.objectOutputType<{}, zod.ZodTypeAny, "passthrough">[] | undefined;
+        branchName?: string | undefined;
+        payments?: zod.objectOutputType<{}, zod.ZodTypeAny, "passthrough">[] | undefined;
+    } | undefined;
+}, {
+    order?: {
+        status?: string | undefined;
+        id?: number | undefined;
+        total?: number | undefined;
+        orderNumber?: string | undefined;
+        subtotal?: number | undefined;
+        discount?: number | undefined;
+        items?: zod.objectInputType<{}, zod.ZodTypeAny, "passthrough">[] | undefined;
+        branchName?: string | undefined;
+        payments?: zod.objectInputType<{}, zod.ZodTypeAny, "passthrough">[] | undefined;
+    } | undefined;
+}>;
+/**
+ * @summary Cancel an order
+ */
+export declare const MobileCancelOrderParams: zod.ZodObject<{
+    id: zod.ZodNumber;
+}, "strip", zod.ZodTypeAny, {
+    id: number;
+}, {
+    id: number;
+}>;
+export declare const MobileCancelOrderResponse: zod.ZodObject<{
+    order: zod.ZodOptional<zod.ZodObject<{
+        id: zod.ZodOptional<zod.ZodNumber>;
+        orderNumber: zod.ZodOptional<zod.ZodString>;
+        status: zod.ZodOptional<zod.ZodString>;
+        total: zod.ZodOptional<zod.ZodNumber>;
+    }, "strip", zod.ZodTypeAny, {
+        status?: string | undefined;
+        id?: number | undefined;
+        total?: number | undefined;
+        orderNumber?: string | undefined;
+    }, {
+        status?: string | undefined;
+        id?: number | undefined;
+        total?: number | undefined;
+        orderNumber?: string | undefined;
+    }>>;
+}, "strip", zod.ZodTypeAny, {
+    order?: {
+        status?: string | undefined;
+        id?: number | undefined;
+        total?: number | undefined;
+        orderNumber?: string | undefined;
+    } | undefined;
+}, {
+    order?: {
+        status?: string | undefined;
+        id?: number | undefined;
+        total?: number | undefined;
+        orderNumber?: string | undefined;
+    } | undefined;
+}>;
 //# sourceMappingURL=api.d.ts.map

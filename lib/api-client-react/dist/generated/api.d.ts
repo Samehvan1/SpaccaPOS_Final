@@ -1,5 +1,5 @@
 import type { QueryKey, UseMutationOptions, UseMutationResult, UseQueryOptions, UseQueryResult } from "@tanstack/react-query";
-import type { ActivityLog, Branch, CalculateDrinkPriceParams, CategorySales, CreateBranchBody, CreateDiscountBody, CreateDrinkBody, CreateIngredientBody, CreateIngredientOptionBody, CreateIngredientOptionParams, CreateOfferBody, CreateOrderBody, CreateUserBody, DashboardSummary, DeleteDiscountParams, DeleteDrinkParams, DeleteIngredientOptionParams, DeleteIngredientParams, DeleteUserParams, Discount, Drink, DrinkDetail, GetActiveOfferParams, GetActiveOrdersParams, GetCustomerPoints200, GetDashboardSummaryParams, GetDrinkParams, GetIngredientParams, GetLowStockIngredientsParams, GetOrderParams, GetSalesByCategoryParams, GetSettingsParams, GetTopDrinksParams, HealthStatus, Ingredient, IngredientDetail, IngredientOption, ListActivityLogsParams, ListDrinksParams, ListIngredientsParams, ListOrdersParams, ListStockMovementsParams, LoginBody, LoginResponse, MarkOrderItemReadyParams, Offer, Order, OrderDetail, Permission, PriceBreakdown, PriceCalculationBody, RestockBody, RestockIngredientParams, SaveOrderSignatureBody, Setting, StockAdjustmentBody, StockMovement, TopDrink, UpdateBranchBody, UpdateDiscountBody, UpdateDiscountParams, UpdateDrinkBody, UpdateDrinkParams, UpdateIngredientBody, UpdateIngredientOptionBody, UpdateIngredientOptionParams, UpdateIngredientParams, UpdateOfferBody, UpdateOrderStatusBody, UpdateOrderStatusParams, UpdateSettingsBody, UpdateUserBody, UpdateUserParams, User, UserDetail } from "./api.schemas";
+import type { ActivityLog, Branch, CalculateDrinkPriceParams, CategorySales, CreateBranchBody, CreateDiscountBody, CreateDrinkBody, CreateIngredientBody, CreateIngredientOptionBody, CreateIngredientOptionParams, CreateOfferBody, CreateOrderBody, CreateUserBody, DashboardSummary, DeleteDiscountParams, DeleteDrinkParams, DeleteIngredientOptionParams, DeleteIngredientParams, DeleteUserParams, Discount, Drink, DrinkDetail, GetActiveOfferParams, GetActiveOrdersParams, GetCustomerPoints200, GetDashboardSummaryParams, GetDrinkParams, GetIngredientParams, GetLowStockIngredientsParams, GetOrderParams, GetSalesByCategoryParams, GetSettingsParams, GetTopDrinksParams, HealthStatus, Ingredient, IngredientDetail, IngredientOption, ListActivityLogsParams, ListDrinksParams, ListIngredientsParams, ListOrdersParams, ListStockMovementsParams, LoginBody, LoginResponse, MarkOrderItemReadyParams, MobileAddFriendBody, MobileBranchesResponse, MobileCategoriesResponse, MobileChangePhoneBody, MobileChangePinBody, MobileCreatePinBody, MobileCreatePinResponse, MobileFavoriteBody, MobileFavoritesResponse, MobileFriendResponse, MobileFriendsResponse, MobileLoginBody, MobileLoginResponse, MobileMeResponse, MobileOrderDetailResponse, MobileOrderResponse, MobileOrdersResponse, MobilePlaceOrderBody, MobilePointsResponse, MobileRequestOtpBody, MobileRequestOtpResponse, MobileSaveDrinkBody, MobileSavedDrinkResponse, MobileSavedDrinksResponse, MobileUpdateProfileBody, MobileVerifyOtpBody, MobileVerifyOtpResponse, Offer, Order, OrderDetail, Permission, PriceBreakdown, PriceCalculationBody, RestockBody, RestockIngredientParams, SaveOrderSignatureBody, Setting, StockAdjustmentBody, StockMovement, TopDrink, UpdateBranchBody, UpdateDiscountBody, UpdateDiscountParams, UpdateDrinkBody, UpdateDrinkParams, UpdateIngredientBody, UpdateIngredientOptionBody, UpdateIngredientOptionParams, UpdateIngredientParams, UpdateOfferBody, UpdateOrderStatusBody, UpdateOrderStatusParams, UpdateSettingsBody, UpdateUserBody, UpdateUserParams, User, UserDetail } from "./api.schemas";
 import { customFetch } from "../custom-fetch";
 import type { ErrorType, BodyType } from "../custom-fetch";
 type AwaitedInput<T> = PromiseLike<T> | T;
@@ -1511,5 +1511,667 @@ export declare function useValidateDiscount<TData = Awaited<ReturnType<typeof va
 }): UseQueryResult<TData, TError> & {
     queryKey: QueryKey;
 };
+/**
+ * @summary Request an OTP for a phone number (login/register)
+ */
+export declare const getMobileRequestOtpUrl: () => string;
+export declare const mobileRequestOtp: (mobileRequestOtpBody: MobileRequestOtpBody, options?: RequestInit) => Promise<MobileRequestOtpResponse>;
+export declare const getMobileRequestOtpMutationOptions: <TError = ErrorType<void>, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof mobileRequestOtp>>, TError, {
+        data: BodyType<MobileRequestOtpBody>;
+    }, TContext>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseMutationOptions<Awaited<ReturnType<typeof mobileRequestOtp>>, TError, {
+    data: BodyType<MobileRequestOtpBody>;
+}, TContext>;
+export type MobileRequestOtpMutationResult = NonNullable<Awaited<ReturnType<typeof mobileRequestOtp>>>;
+export type MobileRequestOtpMutationBody = BodyType<MobileRequestOtpBody>;
+export type MobileRequestOtpMutationError = ErrorType<void>;
+/**
+ * @summary Request an OTP for a phone number (login/register)
+ */
+export declare const useMobileRequestOtp: <TError = ErrorType<void>, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof mobileRequestOtp>>, TError, {
+        data: BodyType<MobileRequestOtpBody>;
+    }, TContext>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseMutationResult<Awaited<ReturnType<typeof mobileRequestOtp>>, TError, {
+    data: BodyType<MobileRequestOtpBody>;
+}, TContext>;
+/**
+ * @summary Verify OTP and establish customer session
+ */
+export declare const getMobileVerifyOtpUrl: () => string;
+export declare const mobileVerifyOtp: (mobileVerifyOtpBody: MobileVerifyOtpBody, options?: RequestInit) => Promise<MobileVerifyOtpResponse>;
+export declare const getMobileVerifyOtpMutationOptions: <TError = ErrorType<void>, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof mobileVerifyOtp>>, TError, {
+        data: BodyType<MobileVerifyOtpBody>;
+    }, TContext>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseMutationOptions<Awaited<ReturnType<typeof mobileVerifyOtp>>, TError, {
+    data: BodyType<MobileVerifyOtpBody>;
+}, TContext>;
+export type MobileVerifyOtpMutationResult = NonNullable<Awaited<ReturnType<typeof mobileVerifyOtp>>>;
+export type MobileVerifyOtpMutationBody = BodyType<MobileVerifyOtpBody>;
+export type MobileVerifyOtpMutationError = ErrorType<void>;
+/**
+ * @summary Verify OTP and establish customer session
+ */
+export declare const useMobileVerifyOtp: <TError = ErrorType<void>, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof mobileVerifyOtp>>, TError, {
+        data: BodyType<MobileVerifyOtpBody>;
+    }, TContext>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseMutationResult<Awaited<ReturnType<typeof mobileVerifyOtp>>, TError, {
+    data: BodyType<MobileVerifyOtpBody>;
+}, TContext>;
+/**
+ * @summary Create or update the customer PIN
+ */
+export declare const getMobileCreatePinUrl: () => string;
+export declare const mobileCreatePin: (mobileCreatePinBody: MobileCreatePinBody, options?: RequestInit) => Promise<MobileCreatePinResponse>;
+export declare const getMobileCreatePinMutationOptions: <TError = ErrorType<unknown>, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof mobileCreatePin>>, TError, {
+        data: BodyType<MobileCreatePinBody>;
+    }, TContext>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseMutationOptions<Awaited<ReturnType<typeof mobileCreatePin>>, TError, {
+    data: BodyType<MobileCreatePinBody>;
+}, TContext>;
+export type MobileCreatePinMutationResult = NonNullable<Awaited<ReturnType<typeof mobileCreatePin>>>;
+export type MobileCreatePinMutationBody = BodyType<MobileCreatePinBody>;
+export type MobileCreatePinMutationError = ErrorType<unknown>;
+/**
+ * @summary Create or update the customer PIN
+ */
+export declare const useMobileCreatePin: <TError = ErrorType<unknown>, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof mobileCreatePin>>, TError, {
+        data: BodyType<MobileCreatePinBody>;
+    }, TContext>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseMutationResult<Awaited<ReturnType<typeof mobileCreatePin>>, TError, {
+    data: BodyType<MobileCreatePinBody>;
+}, TContext>;
+/**
+ * @summary Login with phone + PIN
+ */
+export declare const getMobileLoginUrl: () => string;
+export declare const mobileLogin: (mobileLoginBody: MobileLoginBody, options?: RequestInit) => Promise<MobileLoginResponse>;
+export declare const getMobileLoginMutationOptions: <TError = ErrorType<void>, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof mobileLogin>>, TError, {
+        data: BodyType<MobileLoginBody>;
+    }, TContext>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseMutationOptions<Awaited<ReturnType<typeof mobileLogin>>, TError, {
+    data: BodyType<MobileLoginBody>;
+}, TContext>;
+export type MobileLoginMutationResult = NonNullable<Awaited<ReturnType<typeof mobileLogin>>>;
+export type MobileLoginMutationBody = BodyType<MobileLoginBody>;
+export type MobileLoginMutationError = ErrorType<void>;
+/**
+ * @summary Login with phone + PIN
+ */
+export declare const useMobileLogin: <TError = ErrorType<void>, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof mobileLogin>>, TError, {
+        data: BodyType<MobileLoginBody>;
+    }, TContext>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseMutationResult<Awaited<ReturnType<typeof mobileLogin>>, TError, {
+    data: BodyType<MobileLoginBody>;
+}, TContext>;
+/**
+ * @summary Logout customer
+ */
+export declare const getMobileLogoutUrl: () => string;
+export declare const mobileLogout: (options?: RequestInit) => Promise<void>;
+export declare const getMobileLogoutMutationOptions: <TError = ErrorType<unknown>, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof mobileLogout>>, TError, void, TContext>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseMutationOptions<Awaited<ReturnType<typeof mobileLogout>>, TError, void, TContext>;
+export type MobileLogoutMutationResult = NonNullable<Awaited<ReturnType<typeof mobileLogout>>>;
+export type MobileLogoutMutationError = ErrorType<unknown>;
+/**
+ * @summary Logout customer
+ */
+export declare const useMobileLogout: <TError = ErrorType<unknown>, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof mobileLogout>>, TError, void, TContext>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseMutationResult<Awaited<ReturnType<typeof mobileLogout>>, TError, void, TContext>;
+/**
+ * @summary Get current customer
+ */
+export declare const getMobileMeUrl: () => string;
+export declare const mobileMe: (options?: RequestInit) => Promise<MobileMeResponse>;
+export declare const getMobileMeQueryKey: () => readonly ["/api/mobile/auth/me"];
+export declare const getMobileMeQueryOptions: <TData = Awaited<ReturnType<typeof mobileMe>>, TError = ErrorType<void>>(options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof mobileMe>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseQueryOptions<Awaited<ReturnType<typeof mobileMe>>, TError, TData> & {
+    queryKey: QueryKey;
+};
+export type MobileMeQueryResult = NonNullable<Awaited<ReturnType<typeof mobileMe>>>;
+export type MobileMeQueryError = ErrorType<void>;
+/**
+ * @summary Get current customer
+ */
+export declare function useMobileMe<TData = Awaited<ReturnType<typeof mobileMe>>, TError = ErrorType<void>>(options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof mobileMe>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+};
+/**
+ * @summary Update customer profile
+ */
+export declare const getMobileUpdateProfileUrl: () => string;
+export declare const mobileUpdateProfile: (mobileUpdateProfileBody: MobileUpdateProfileBody, options?: RequestInit) => Promise<MobileMeResponse>;
+export declare const getMobileUpdateProfileMutationOptions: <TError = ErrorType<unknown>, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof mobileUpdateProfile>>, TError, {
+        data: BodyType<MobileUpdateProfileBody>;
+    }, TContext>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseMutationOptions<Awaited<ReturnType<typeof mobileUpdateProfile>>, TError, {
+    data: BodyType<MobileUpdateProfileBody>;
+}, TContext>;
+export type MobileUpdateProfileMutationResult = NonNullable<Awaited<ReturnType<typeof mobileUpdateProfile>>>;
+export type MobileUpdateProfileMutationBody = BodyType<MobileUpdateProfileBody>;
+export type MobileUpdateProfileMutationError = ErrorType<unknown>;
+/**
+ * @summary Update customer profile
+ */
+export declare const useMobileUpdateProfile: <TError = ErrorType<unknown>, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof mobileUpdateProfile>>, TError, {
+        data: BodyType<MobileUpdateProfileBody>;
+    }, TContext>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseMutationResult<Awaited<ReturnType<typeof mobileUpdateProfile>>, TError, {
+    data: BodyType<MobileUpdateProfileBody>;
+}, TContext>;
+/**
+ * @summary Delete customer account
+ */
+export declare const getMobileDeleteAccountUrl: () => string;
+export declare const mobileDeleteAccount: (options?: RequestInit) => Promise<void>;
+export declare const getMobileDeleteAccountMutationOptions: <TError = ErrorType<unknown>, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof mobileDeleteAccount>>, TError, void, TContext>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseMutationOptions<Awaited<ReturnType<typeof mobileDeleteAccount>>, TError, void, TContext>;
+export type MobileDeleteAccountMutationResult = NonNullable<Awaited<ReturnType<typeof mobileDeleteAccount>>>;
+export type MobileDeleteAccountMutationError = ErrorType<unknown>;
+/**
+ * @summary Delete customer account
+ */
+export declare const useMobileDeleteAccount: <TError = ErrorType<unknown>, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof mobileDeleteAccount>>, TError, void, TContext>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseMutationResult<Awaited<ReturnType<typeof mobileDeleteAccount>>, TError, void, TContext>;
+/**
+ * @summary Change customer phone number
+ */
+export declare const getMobileChangePhoneUrl: () => string;
+export declare const mobileChangePhone: (mobileChangePhoneBody: MobileChangePhoneBody, options?: RequestInit) => Promise<MobileMeResponse>;
+export declare const getMobileChangePhoneMutationOptions: <TError = ErrorType<void>, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof mobileChangePhone>>, TError, {
+        data: BodyType<MobileChangePhoneBody>;
+    }, TContext>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseMutationOptions<Awaited<ReturnType<typeof mobileChangePhone>>, TError, {
+    data: BodyType<MobileChangePhoneBody>;
+}, TContext>;
+export type MobileChangePhoneMutationResult = NonNullable<Awaited<ReturnType<typeof mobileChangePhone>>>;
+export type MobileChangePhoneMutationBody = BodyType<MobileChangePhoneBody>;
+export type MobileChangePhoneMutationError = ErrorType<void>;
+/**
+ * @summary Change customer phone number
+ */
+export declare const useMobileChangePhone: <TError = ErrorType<void>, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof mobileChangePhone>>, TError, {
+        data: BodyType<MobileChangePhoneBody>;
+    }, TContext>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseMutationResult<Awaited<ReturnType<typeof mobileChangePhone>>, TError, {
+    data: BodyType<MobileChangePhoneBody>;
+}, TContext>;
+/**
+ * @summary Change customer PIN
+ */
+export declare const getMobileChangePinUrl: () => string;
+export declare const mobileChangePin: (mobileChangePinBody: MobileChangePinBody, options?: RequestInit) => Promise<void>;
+export declare const getMobileChangePinMutationOptions: <TError = ErrorType<unknown>, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof mobileChangePin>>, TError, {
+        data: BodyType<MobileChangePinBody>;
+    }, TContext>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseMutationOptions<Awaited<ReturnType<typeof mobileChangePin>>, TError, {
+    data: BodyType<MobileChangePinBody>;
+}, TContext>;
+export type MobileChangePinMutationResult = NonNullable<Awaited<ReturnType<typeof mobileChangePin>>>;
+export type MobileChangePinMutationBody = BodyType<MobileChangePinBody>;
+export type MobileChangePinMutationError = ErrorType<unknown>;
+/**
+ * @summary Change customer PIN
+ */
+export declare const useMobileChangePin: <TError = ErrorType<unknown>, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof mobileChangePin>>, TError, {
+        data: BodyType<MobileChangePinBody>;
+    }, TContext>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseMutationResult<Awaited<ReturnType<typeof mobileChangePin>>, TError, {
+    data: BodyType<MobileChangePinBody>;
+}, TContext>;
+/**
+ * @summary Deactivate customer account
+ */
+export declare const getMobileDeactivateUrl: () => string;
+export declare const mobileDeactivate: (options?: RequestInit) => Promise<void>;
+export declare const getMobileDeactivateMutationOptions: <TError = ErrorType<unknown>, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof mobileDeactivate>>, TError, void, TContext>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseMutationOptions<Awaited<ReturnType<typeof mobileDeactivate>>, TError, void, TContext>;
+export type MobileDeactivateMutationResult = NonNullable<Awaited<ReturnType<typeof mobileDeactivate>>>;
+export type MobileDeactivateMutationError = ErrorType<unknown>;
+/**
+ * @summary Deactivate customer account
+ */
+export declare const useMobileDeactivate: <TError = ErrorType<unknown>, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof mobileDeactivate>>, TError, void, TContext>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseMutationResult<Awaited<ReturnType<typeof mobileDeactivate>>, TError, void, TContext>;
+/**
+ * @summary Get customer loyalty points
+ */
+export declare const getMobilePointsUrl: () => string;
+export declare const mobilePoints: (options?: RequestInit) => Promise<MobilePointsResponse>;
+export declare const getMobilePointsQueryKey: () => readonly ["/api/mobile/points"];
+export declare const getMobilePointsQueryOptions: <TData = Awaited<ReturnType<typeof mobilePoints>>, TError = ErrorType<unknown>>(options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof mobilePoints>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseQueryOptions<Awaited<ReturnType<typeof mobilePoints>>, TError, TData> & {
+    queryKey: QueryKey;
+};
+export type MobilePointsQueryResult = NonNullable<Awaited<ReturnType<typeof mobilePoints>>>;
+export type MobilePointsQueryError = ErrorType<unknown>;
+/**
+ * @summary Get customer loyalty points
+ */
+export declare function useMobilePoints<TData = Awaited<ReturnType<typeof mobilePoints>>, TError = ErrorType<unknown>>(options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof mobilePoints>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+};
+/**
+ * @summary List favorite drinks
+ */
+export declare const getMobileListFavoritesUrl: () => string;
+export declare const mobileListFavorites: (options?: RequestInit) => Promise<MobileFavoritesResponse>;
+export declare const getMobileListFavoritesQueryKey: () => readonly ["/api/mobile/favorites"];
+export declare const getMobileListFavoritesQueryOptions: <TData = Awaited<ReturnType<typeof mobileListFavorites>>, TError = ErrorType<unknown>>(options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof mobileListFavorites>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseQueryOptions<Awaited<ReturnType<typeof mobileListFavorites>>, TError, TData> & {
+    queryKey: QueryKey;
+};
+export type MobileListFavoritesQueryResult = NonNullable<Awaited<ReturnType<typeof mobileListFavorites>>>;
+export type MobileListFavoritesQueryError = ErrorType<unknown>;
+/**
+ * @summary List favorite drinks
+ */
+export declare function useMobileListFavorites<TData = Awaited<ReturnType<typeof mobileListFavorites>>, TError = ErrorType<unknown>>(options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof mobileListFavorites>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+};
+/**
+ * @summary Add a favorite drink
+ */
+export declare const getMobileAddFavoriteUrl: () => string;
+export declare const mobileAddFavorite: (mobileFavoriteBody: MobileFavoriteBody, options?: RequestInit) => Promise<void>;
+export declare const getMobileAddFavoriteMutationOptions: <TError = ErrorType<unknown>, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof mobileAddFavorite>>, TError, {
+        data: BodyType<MobileFavoriteBody>;
+    }, TContext>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseMutationOptions<Awaited<ReturnType<typeof mobileAddFavorite>>, TError, {
+    data: BodyType<MobileFavoriteBody>;
+}, TContext>;
+export type MobileAddFavoriteMutationResult = NonNullable<Awaited<ReturnType<typeof mobileAddFavorite>>>;
+export type MobileAddFavoriteMutationBody = BodyType<MobileFavoriteBody>;
+export type MobileAddFavoriteMutationError = ErrorType<unknown>;
+/**
+ * @summary Add a favorite drink
+ */
+export declare const useMobileAddFavorite: <TError = ErrorType<unknown>, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof mobileAddFavorite>>, TError, {
+        data: BodyType<MobileFavoriteBody>;
+    }, TContext>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseMutationResult<Awaited<ReturnType<typeof mobileAddFavorite>>, TError, {
+    data: BodyType<MobileFavoriteBody>;
+}, TContext>;
+/**
+ * @summary Remove a favorite drink
+ */
+export declare const getMobileRemoveFavoriteUrl: (drinkId: number) => string;
+export declare const mobileRemoveFavorite: (drinkId: number, options?: RequestInit) => Promise<void>;
+export declare const getMobileRemoveFavoriteMutationOptions: <TError = ErrorType<unknown>, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof mobileRemoveFavorite>>, TError, {
+        drinkId: number;
+    }, TContext>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseMutationOptions<Awaited<ReturnType<typeof mobileRemoveFavorite>>, TError, {
+    drinkId: number;
+}, TContext>;
+export type MobileRemoveFavoriteMutationResult = NonNullable<Awaited<ReturnType<typeof mobileRemoveFavorite>>>;
+export type MobileRemoveFavoriteMutationError = ErrorType<unknown>;
+/**
+ * @summary Remove a favorite drink
+ */
+export declare const useMobileRemoveFavorite: <TError = ErrorType<unknown>, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof mobileRemoveFavorite>>, TError, {
+        drinkId: number;
+    }, TContext>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseMutationResult<Awaited<ReturnType<typeof mobileRemoveFavorite>>, TError, {
+    drinkId: number;
+}, TContext>;
+/**
+ * @summary List saved customized drinks
+ */
+export declare const getMobileListSavedDrinksUrl: () => string;
+export declare const mobileListSavedDrinks: (options?: RequestInit) => Promise<MobileSavedDrinksResponse>;
+export declare const getMobileListSavedDrinksQueryKey: () => readonly ["/api/mobile/saved-drinks"];
+export declare const getMobileListSavedDrinksQueryOptions: <TData = Awaited<ReturnType<typeof mobileListSavedDrinks>>, TError = ErrorType<unknown>>(options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof mobileListSavedDrinks>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseQueryOptions<Awaited<ReturnType<typeof mobileListSavedDrinks>>, TError, TData> & {
+    queryKey: QueryKey;
+};
+export type MobileListSavedDrinksQueryResult = NonNullable<Awaited<ReturnType<typeof mobileListSavedDrinks>>>;
+export type MobileListSavedDrinksQueryError = ErrorType<unknown>;
+/**
+ * @summary List saved customized drinks
+ */
+export declare function useMobileListSavedDrinks<TData = Awaited<ReturnType<typeof mobileListSavedDrinks>>, TError = ErrorType<unknown>>(options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof mobileListSavedDrinks>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+};
+/**
+ * @summary Save a customized drink
+ */
+export declare const getMobileSaveDrinkUrl: () => string;
+export declare const mobileSaveDrink: (mobileSaveDrinkBody: MobileSaveDrinkBody, options?: RequestInit) => Promise<MobileSavedDrinkResponse>;
+export declare const getMobileSaveDrinkMutationOptions: <TError = ErrorType<unknown>, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof mobileSaveDrink>>, TError, {
+        data: BodyType<MobileSaveDrinkBody>;
+    }, TContext>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseMutationOptions<Awaited<ReturnType<typeof mobileSaveDrink>>, TError, {
+    data: BodyType<MobileSaveDrinkBody>;
+}, TContext>;
+export type MobileSaveDrinkMutationResult = NonNullable<Awaited<ReturnType<typeof mobileSaveDrink>>>;
+export type MobileSaveDrinkMutationBody = BodyType<MobileSaveDrinkBody>;
+export type MobileSaveDrinkMutationError = ErrorType<unknown>;
+/**
+ * @summary Save a customized drink
+ */
+export declare const useMobileSaveDrink: <TError = ErrorType<unknown>, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof mobileSaveDrink>>, TError, {
+        data: BodyType<MobileSaveDrinkBody>;
+    }, TContext>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseMutationResult<Awaited<ReturnType<typeof mobileSaveDrink>>, TError, {
+    data: BodyType<MobileSaveDrinkBody>;
+}, TContext>;
+/**
+ * @summary Delete a saved drink
+ */
+export declare const getMobileDeleteSavedDrinkUrl: (id: number) => string;
+export declare const mobileDeleteSavedDrink: (id: number, options?: RequestInit) => Promise<void>;
+export declare const getMobileDeleteSavedDrinkMutationOptions: <TError = ErrorType<unknown>, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof mobileDeleteSavedDrink>>, TError, {
+        id: number;
+    }, TContext>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseMutationOptions<Awaited<ReturnType<typeof mobileDeleteSavedDrink>>, TError, {
+    id: number;
+}, TContext>;
+export type MobileDeleteSavedDrinkMutationResult = NonNullable<Awaited<ReturnType<typeof mobileDeleteSavedDrink>>>;
+export type MobileDeleteSavedDrinkMutationError = ErrorType<unknown>;
+/**
+ * @summary Delete a saved drink
+ */
+export declare const useMobileDeleteSavedDrink: <TError = ErrorType<unknown>, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof mobileDeleteSavedDrink>>, TError, {
+        id: number;
+    }, TContext>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseMutationResult<Awaited<ReturnType<typeof mobileDeleteSavedDrink>>, TError, {
+    id: number;
+}, TContext>;
+/**
+ * @summary List friends
+ */
+export declare const getMobileListFriendsUrl: () => string;
+export declare const mobileListFriends: (options?: RequestInit) => Promise<MobileFriendsResponse>;
+export declare const getMobileListFriendsQueryKey: () => readonly ["/api/mobile/friends"];
+export declare const getMobileListFriendsQueryOptions: <TData = Awaited<ReturnType<typeof mobileListFriends>>, TError = ErrorType<unknown>>(options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof mobileListFriends>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseQueryOptions<Awaited<ReturnType<typeof mobileListFriends>>, TError, TData> & {
+    queryKey: QueryKey;
+};
+export type MobileListFriendsQueryResult = NonNullable<Awaited<ReturnType<typeof mobileListFriends>>>;
+export type MobileListFriendsQueryError = ErrorType<unknown>;
+/**
+ * @summary List friends
+ */
+export declare function useMobileListFriends<TData = Awaited<ReturnType<typeof mobileListFriends>>, TError = ErrorType<unknown>>(options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof mobileListFriends>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+};
+/**
+ * @summary Add a friend by phone
+ */
+export declare const getMobileAddFriendUrl: () => string;
+export declare const mobileAddFriend: (mobileAddFriendBody: MobileAddFriendBody, options?: RequestInit) => Promise<MobileFriendResponse>;
+export declare const getMobileAddFriendMutationOptions: <TError = ErrorType<void>, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof mobileAddFriend>>, TError, {
+        data: BodyType<MobileAddFriendBody>;
+    }, TContext>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseMutationOptions<Awaited<ReturnType<typeof mobileAddFriend>>, TError, {
+    data: BodyType<MobileAddFriendBody>;
+}, TContext>;
+export type MobileAddFriendMutationResult = NonNullable<Awaited<ReturnType<typeof mobileAddFriend>>>;
+export type MobileAddFriendMutationBody = BodyType<MobileAddFriendBody>;
+export type MobileAddFriendMutationError = ErrorType<void>;
+/**
+ * @summary Add a friend by phone
+ */
+export declare const useMobileAddFriend: <TError = ErrorType<void>, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof mobileAddFriend>>, TError, {
+        data: BodyType<MobileAddFriendBody>;
+    }, TContext>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseMutationResult<Awaited<ReturnType<typeof mobileAddFriend>>, TError, {
+    data: BodyType<MobileAddFriendBody>;
+}, TContext>;
+/**
+ * @summary Remove a friend
+ */
+export declare const getMobileRemoveFriendUrl: (id: number) => string;
+export declare const mobileRemoveFriend: (id: number, options?: RequestInit) => Promise<void>;
+export declare const getMobileRemoveFriendMutationOptions: <TError = ErrorType<unknown>, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof mobileRemoveFriend>>, TError, {
+        id: number;
+    }, TContext>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseMutationOptions<Awaited<ReturnType<typeof mobileRemoveFriend>>, TError, {
+    id: number;
+}, TContext>;
+export type MobileRemoveFriendMutationResult = NonNullable<Awaited<ReturnType<typeof mobileRemoveFriend>>>;
+export type MobileRemoveFriendMutationError = ErrorType<unknown>;
+/**
+ * @summary Remove a friend
+ */
+export declare const useMobileRemoveFriend: <TError = ErrorType<unknown>, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof mobileRemoveFriend>>, TError, {
+        id: number;
+    }, TContext>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseMutationResult<Awaited<ReturnType<typeof mobileRemoveFriend>>, TError, {
+    id: number;
+}, TContext>;
+/**
+ * @summary List active branches
+ */
+export declare const getMobileListBranchesUrl: () => string;
+export declare const mobileListBranches: (options?: RequestInit) => Promise<MobileBranchesResponse>;
+export declare const getMobileListBranchesQueryKey: () => readonly ["/api/mobile/branches"];
+export declare const getMobileListBranchesQueryOptions: <TData = Awaited<ReturnType<typeof mobileListBranches>>, TError = ErrorType<unknown>>(options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof mobileListBranches>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseQueryOptions<Awaited<ReturnType<typeof mobileListBranches>>, TError, TData> & {
+    queryKey: QueryKey;
+};
+export type MobileListBranchesQueryResult = NonNullable<Awaited<ReturnType<typeof mobileListBranches>>>;
+export type MobileListBranchesQueryError = ErrorType<unknown>;
+/**
+ * @summary List active branches
+ */
+export declare function useMobileListBranches<TData = Awaited<ReturnType<typeof mobileListBranches>>, TError = ErrorType<unknown>>(options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof mobileListBranches>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+};
+/**
+ * @summary List active drink categories
+ */
+export declare const getMobileListCategoriesUrl: () => string;
+export declare const mobileListCategories: (options?: RequestInit) => Promise<MobileCategoriesResponse>;
+export declare const getMobileListCategoriesQueryKey: () => readonly ["/api/mobile/categories"];
+export declare const getMobileListCategoriesQueryOptions: <TData = Awaited<ReturnType<typeof mobileListCategories>>, TError = ErrorType<unknown>>(options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof mobileListCategories>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseQueryOptions<Awaited<ReturnType<typeof mobileListCategories>>, TError, TData> & {
+    queryKey: QueryKey;
+};
+export type MobileListCategoriesQueryResult = NonNullable<Awaited<ReturnType<typeof mobileListCategories>>>;
+export type MobileListCategoriesQueryError = ErrorType<unknown>;
+/**
+ * @summary List active drink categories
+ */
+export declare function useMobileListCategories<TData = Awaited<ReturnType<typeof mobileListCategories>>, TError = ErrorType<unknown>>(options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof mobileListCategories>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+};
+/**
+ * @summary List my orders
+ */
+export declare const getMobileListOrdersUrl: () => string;
+export declare const mobileListOrders: (options?: RequestInit) => Promise<MobileOrdersResponse>;
+export declare const getMobileListOrdersQueryKey: () => readonly ["/api/mobile/orders"];
+export declare const getMobileListOrdersQueryOptions: <TData = Awaited<ReturnType<typeof mobileListOrders>>, TError = ErrorType<unknown>>(options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof mobileListOrders>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseQueryOptions<Awaited<ReturnType<typeof mobileListOrders>>, TError, TData> & {
+    queryKey: QueryKey;
+};
+export type MobileListOrdersQueryResult = NonNullable<Awaited<ReturnType<typeof mobileListOrders>>>;
+export type MobileListOrdersQueryError = ErrorType<unknown>;
+/**
+ * @summary List my orders
+ */
+export declare function useMobileListOrders<TData = Awaited<ReturnType<typeof mobileListOrders>>, TError = ErrorType<unknown>>(options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof mobileListOrders>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+};
+/**
+ * @summary Place an order (source=mobile)
+ */
+export declare const getMobilePlaceOrderUrl: () => string;
+export declare const mobilePlaceOrder: (mobilePlaceOrderBody: MobilePlaceOrderBody, options?: RequestInit) => Promise<MobileOrderResponse>;
+export declare const getMobilePlaceOrderMutationOptions: <TError = ErrorType<unknown>, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof mobilePlaceOrder>>, TError, {
+        data: BodyType<MobilePlaceOrderBody>;
+    }, TContext>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseMutationOptions<Awaited<ReturnType<typeof mobilePlaceOrder>>, TError, {
+    data: BodyType<MobilePlaceOrderBody>;
+}, TContext>;
+export type MobilePlaceOrderMutationResult = NonNullable<Awaited<ReturnType<typeof mobilePlaceOrder>>>;
+export type MobilePlaceOrderMutationBody = BodyType<MobilePlaceOrderBody>;
+export type MobilePlaceOrderMutationError = ErrorType<unknown>;
+/**
+ * @summary Place an order (source=mobile)
+ */
+export declare const useMobilePlaceOrder: <TError = ErrorType<unknown>, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof mobilePlaceOrder>>, TError, {
+        data: BodyType<MobilePlaceOrderBody>;
+    }, TContext>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseMutationResult<Awaited<ReturnType<typeof mobilePlaceOrder>>, TError, {
+    data: BodyType<MobilePlaceOrderBody>;
+}, TContext>;
+/**
+ * @summary Get order detail
+ */
+export declare const getMobileGetOrderUrl: (id: number) => string;
+export declare const mobileGetOrder: (id: number, options?: RequestInit) => Promise<MobileOrderDetailResponse>;
+export declare const getMobileGetOrderQueryKey: (id: number) => readonly [`/api/mobile/orders/${number}`];
+export declare const getMobileGetOrderQueryOptions: <TData = Awaited<ReturnType<typeof mobileGetOrder>>, TError = ErrorType<void>>(id: number, options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof mobileGetOrder>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseQueryOptions<Awaited<ReturnType<typeof mobileGetOrder>>, TError, TData> & {
+    queryKey: QueryKey;
+};
+export type MobileGetOrderQueryResult = NonNullable<Awaited<ReturnType<typeof mobileGetOrder>>>;
+export type MobileGetOrderQueryError = ErrorType<void>;
+/**
+ * @summary Get order detail
+ */
+export declare function useMobileGetOrder<TData = Awaited<ReturnType<typeof mobileGetOrder>>, TError = ErrorType<void>>(id: number, options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof mobileGetOrder>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+};
+/**
+ * @summary Cancel an order
+ */
+export declare const getMobileCancelOrderUrl: (id: number) => string;
+export declare const mobileCancelOrder: (id: number, options?: RequestInit) => Promise<MobileOrderResponse>;
+export declare const getMobileCancelOrderMutationOptions: <TError = ErrorType<void>, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof mobileCancelOrder>>, TError, {
+        id: number;
+    }, TContext>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseMutationOptions<Awaited<ReturnType<typeof mobileCancelOrder>>, TError, {
+    id: number;
+}, TContext>;
+export type MobileCancelOrderMutationResult = NonNullable<Awaited<ReturnType<typeof mobileCancelOrder>>>;
+export type MobileCancelOrderMutationError = ErrorType<void>;
+/**
+ * @summary Cancel an order
+ */
+export declare const useMobileCancelOrder: <TError = ErrorType<void>, TContext = unknown>(options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof mobileCancelOrder>>, TError, {
+        id: number;
+    }, TContext>;
+    request?: SecondParameter<typeof customFetch>;
+}) => UseMutationResult<Awaited<ReturnType<typeof mobileCancelOrder>>, TError, {
+    id: number;
+}, TContext>;
 export {};
 //# sourceMappingURL=api.d.ts.map

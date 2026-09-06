@@ -86,6 +86,7 @@ export const ListDrinksResponseItem = zod.object({
   defaultPrice: zod.number().optional(),
   imageUrl: zod.string().nullable(),
   isActive: zod.boolean(),
+  isFeatured: zod.boolean().optional(),
   prepTimeSeconds: zod.number(),
   cupSizeMl: zod.number().nullish(),
   cupIngredientId: zod.number().nullish(),
@@ -108,6 +109,7 @@ export const CreateDrinkBody = zod.object({
   basePrice: zod.number(),
   imageUrl: zod.string().optional(),
   isActive: zod.boolean().optional(),
+  isFeatured: zod.boolean().optional(),
   prepTimeSeconds: zod.number().optional(),
   kitchenStation: zod.string().optional(),
   categoryId: zod.number().optional(),
@@ -152,6 +154,7 @@ export const GetDrinkResponse = zod
     defaultPrice: zod.number().optional(),
     imageUrl: zod.string().nullable(),
     isActive: zod.boolean(),
+    isFeatured: zod.boolean().optional(),
     prepTimeSeconds: zod.number(),
     cupSizeMl: zod.number().nullish(),
     cupIngredientId: zod.number().nullish(),
@@ -200,6 +203,7 @@ export const UpdateDrinkBody = zod.object({
   basePrice: zod.number().optional(),
   imageUrl: zod.string().optional(),
   isActive: zod.boolean().optional(),
+  isFeatured: zod.boolean().optional(),
   prepTimeSeconds: zod.number().optional(),
   kitchenStation: zod.string().optional(),
   categoryId: zod.number().optional(),
@@ -217,6 +221,7 @@ export const UpdateDrinkResponse = zod.object({
   defaultPrice: zod.number().optional(),
   imageUrl: zod.string().nullable(),
   isActive: zod.boolean(),
+  isFeatured: zod.boolean().optional(),
   prepTimeSeconds: zod.number(),
   cupSizeMl: zod.number().nullish(),
   cupIngredientId: zod.number().nullish(),
@@ -1742,4 +1747,481 @@ export const ValidateDiscountResponse = zod.object({
   isActive: zod.boolean(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
+});
+
+/**
+ * @summary Request an OTP for a phone number (login/register)
+ */
+export const MobileRequestOtpBody = zod.object({
+  phone: zod.string(),
+});
+
+export const MobileRequestOtpResponse = zod.object({
+  success: zod.boolean().optional(),
+  message: zod.string().optional(),
+  devOtp: zod
+    .string()
+    .optional()
+    .describe("Development-only OTP (remove in production)"),
+  expiresIn: zod.number().optional(),
+});
+
+/**
+ * @summary Verify OTP and establish customer session
+ */
+export const MobileVerifyOtpBody = zod.object({
+  phone: zod.string(),
+  otp: zod.string(),
+  name: zod.string().optional().describe("Optional name for new registrations"),
+});
+
+export const MobileVerifyOtpResponse = zod.object({
+  customer: zod
+    .object({
+      id: zod.number().optional(),
+      name: zod.string().optional(),
+      phone: zod.string().optional(),
+      email: zod.string().nullish(),
+      birthdate: zod.coerce.date().nullish(),
+      gender: zod
+        .enum(["male", "female", "other", "prefer_not_to_say"])
+        .nullish(),
+      avatarUrl: zod.string().nullish(),
+      preferredBranchId: zod.number().nullish(),
+      address: zod.string().nullish(),
+      city: zod.string().nullish(),
+      loyaltyTier: zod
+        .enum(["bronze", "silver", "gold", "platinum"])
+        .optional(),
+      points: zod.number().optional(),
+      totalSpent: zod.string().optional(),
+      visitCount: zod.number().optional(),
+      isActive: zod.boolean().optional(),
+      createdAt: zod.coerce.date().optional(),
+    })
+    .optional(),
+  hasPin: zod.boolean().optional(),
+});
+
+/**
+ * @summary Create or update the customer PIN
+ */
+export const MobileCreatePinBody = zod.object({
+  pin: zod.string().describe("4-6 digit PIN"),
+});
+
+export const MobileCreatePinResponse = zod.object({
+  success: zod.boolean().optional(),
+  customer: zod
+    .object({
+      id: zod.number().optional(),
+      name: zod.string().optional(),
+      phone: zod.string().optional(),
+      email: zod.string().nullish(),
+      birthdate: zod.coerce.date().nullish(),
+      gender: zod
+        .enum(["male", "female", "other", "prefer_not_to_say"])
+        .nullish(),
+      avatarUrl: zod.string().nullish(),
+      preferredBranchId: zod.number().nullish(),
+      address: zod.string().nullish(),
+      city: zod.string().nullish(),
+      loyaltyTier: zod
+        .enum(["bronze", "silver", "gold", "platinum"])
+        .optional(),
+      points: zod.number().optional(),
+      totalSpent: zod.string().optional(),
+      visitCount: zod.number().optional(),
+      isActive: zod.boolean().optional(),
+      createdAt: zod.coerce.date().optional(),
+    })
+    .optional(),
+});
+
+/**
+ * @summary Login with phone + PIN
+ */
+export const MobileLoginBody = zod.object({
+  phone: zod.string(),
+  pin: zod.string(),
+});
+
+export const MobileLoginResponse = zod.object({
+  customer: zod
+    .object({
+      id: zod.number().optional(),
+      name: zod.string().optional(),
+      phone: zod.string().optional(),
+      email: zod.string().nullish(),
+      birthdate: zod.coerce.date().nullish(),
+      gender: zod
+        .enum(["male", "female", "other", "prefer_not_to_say"])
+        .nullish(),
+      avatarUrl: zod.string().nullish(),
+      preferredBranchId: zod.number().nullish(),
+      address: zod.string().nullish(),
+      city: zod.string().nullish(),
+      loyaltyTier: zod
+        .enum(["bronze", "silver", "gold", "platinum"])
+        .optional(),
+      points: zod.number().optional(),
+      totalSpent: zod.string().optional(),
+      visitCount: zod.number().optional(),
+      isActive: zod.boolean().optional(),
+      createdAt: zod.coerce.date().optional(),
+    })
+    .optional(),
+});
+
+/**
+ * @summary Get current customer
+ */
+export const MobileMeResponse = zod.object({
+  customer: zod
+    .object({
+      id: zod.number().optional(),
+      name: zod.string().optional(),
+      phone: zod.string().optional(),
+      email: zod.string().nullish(),
+      birthdate: zod.coerce.date().nullish(),
+      gender: zod
+        .enum(["male", "female", "other", "prefer_not_to_say"])
+        .nullish(),
+      avatarUrl: zod.string().nullish(),
+      preferredBranchId: zod.number().nullish(),
+      address: zod.string().nullish(),
+      city: zod.string().nullish(),
+      loyaltyTier: zod
+        .enum(["bronze", "silver", "gold", "platinum"])
+        .optional(),
+      points: zod.number().optional(),
+      totalSpent: zod.string().optional(),
+      visitCount: zod.number().optional(),
+      isActive: zod.boolean().optional(),
+      createdAt: zod.coerce.date().optional(),
+    })
+    .optional(),
+});
+
+/**
+ * @summary Update customer profile
+ */
+export const MobileUpdateProfileBody = zod.object({
+  name: zod.string().optional(),
+  email: zod.string().nullish(),
+  birthdate: zod.coerce.date().nullish(),
+  gender: zod.enum(["male", "female", "other", "prefer_not_to_say"]).nullish(),
+  avatarUrl: zod.string().nullish(),
+  preferredBranchId: zod.number().nullish(),
+  address: zod.string().nullish(),
+  city: zod.string().nullish(),
+});
+
+export const MobileUpdateProfileResponse = zod.object({
+  customer: zod
+    .object({
+      id: zod.number().optional(),
+      name: zod.string().optional(),
+      phone: zod.string().optional(),
+      email: zod.string().nullish(),
+      birthdate: zod.coerce.date().nullish(),
+      gender: zod
+        .enum(["male", "female", "other", "prefer_not_to_say"])
+        .nullish(),
+      avatarUrl: zod.string().nullish(),
+      preferredBranchId: zod.number().nullish(),
+      address: zod.string().nullish(),
+      city: zod.string().nullish(),
+      loyaltyTier: zod
+        .enum(["bronze", "silver", "gold", "platinum"])
+        .optional(),
+      points: zod.number().optional(),
+      totalSpent: zod.string().optional(),
+      visitCount: zod.number().optional(),
+      isActive: zod.boolean().optional(),
+      createdAt: zod.coerce.date().optional(),
+    })
+    .optional(),
+});
+
+/**
+ * @summary Change customer phone number
+ */
+export const MobileChangePhoneBody = zod.object({
+  newPhone: zod.string(),
+});
+
+export const MobileChangePhoneResponse = zod.object({
+  customer: zod
+    .object({
+      id: zod.number().optional(),
+      name: zod.string().optional(),
+      phone: zod.string().optional(),
+      email: zod.string().nullish(),
+      birthdate: zod.coerce.date().nullish(),
+      gender: zod
+        .enum(["male", "female", "other", "prefer_not_to_say"])
+        .nullish(),
+      avatarUrl: zod.string().nullish(),
+      preferredBranchId: zod.number().nullish(),
+      address: zod.string().nullish(),
+      city: zod.string().nullish(),
+      loyaltyTier: zod
+        .enum(["bronze", "silver", "gold", "platinum"])
+        .optional(),
+      points: zod.number().optional(),
+      totalSpent: zod.string().optional(),
+      visitCount: zod.number().optional(),
+      isActive: zod.boolean().optional(),
+      createdAt: zod.coerce.date().optional(),
+    })
+    .optional(),
+});
+
+/**
+ * @summary Change customer PIN
+ */
+export const MobileChangePinBody = zod.object({
+  currentPin: zod.string().optional(),
+  newPin: zod.string(),
+});
+
+/**
+ * @summary Get customer loyalty points
+ */
+export const MobilePointsResponse = zod.object({
+  points: zod.number().optional(),
+  totalSpent: zod.string().optional(),
+  visitCount: zod.number().optional(),
+});
+
+/**
+ * @summary List favorite drinks
+ */
+export const MobileListFavoritesResponse = zod.object({
+  favorites: zod
+    .array(
+      zod.object({
+        id: zod.number().optional(),
+        drinkId: zod.number().optional(),
+        createdAt: zod.coerce.date().optional(),
+        drink: zod
+          .object({
+            id: zod.number().optional(),
+            name: zod.string().optional(),
+            description: zod.string().nullish(),
+            category: zod.string().optional(),
+            basePrice: zod.string().optional(),
+            imageUrl: zod.string().nullish(),
+            isCustomizable: zod.boolean().optional(),
+          })
+          .optional(),
+      }),
+    )
+    .optional(),
+});
+
+/**
+ * @summary Add a favorite drink
+ */
+export const MobileAddFavoriteBody = zod.object({
+  drinkId: zod.number(),
+});
+
+/**
+ * @summary Remove a favorite drink
+ */
+export const MobileRemoveFavoriteParams = zod.object({
+  drinkId: zod.coerce.number(),
+});
+
+/**
+ * @summary List saved customized drinks
+ */
+export const MobileListSavedDrinksResponse = zod.object({
+  savedDrinks: zod
+    .array(
+      zod.object({
+        id: zod.number().optional(),
+        drinkId: zod.number().optional(),
+        name: zod.string().optional(),
+        selections: zod.array(zod.object({}).passthrough()).optional(),
+        quantity: zod.number().optional(),
+        createdAt: zod.coerce.date().optional(),
+        drink: zod
+          .object({
+            id: zod.number().optional(),
+            name: zod.string().optional(),
+            imageUrl: zod.string().nullish(),
+            basePrice: zod.string().optional(),
+          })
+          .optional(),
+      }),
+    )
+    .optional(),
+});
+
+/**
+ * @summary Save a customized drink
+ */
+export const MobileSaveDrinkBody = zod.object({
+  drinkId: zod.number(),
+  name: zod.string().optional(),
+  selections: zod.array(zod.object({}).passthrough()).optional(),
+  quantity: zod.number().optional(),
+});
+
+/**
+ * @summary Delete a saved drink
+ */
+export const MobileDeleteSavedDrinkParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+/**
+ * @summary List friends
+ */
+export const MobileListFriendsResponse = zod.object({
+  friends: zod
+    .array(
+      zod.object({
+        id: zod.number().optional(),
+        customerId: zod.number().optional(),
+        friendCustomerId: zod.number().optional(),
+        friendName: zod.string().optional(),
+        friendPhone: zod.string().optional(),
+        createdAt: zod.coerce.date().optional(),
+      }),
+    )
+    .optional(),
+});
+
+/**
+ * @summary Add a friend by phone
+ */
+export const MobileAddFriendBody = zod.object({
+  phone: zod.string(),
+});
+
+/**
+ * @summary Remove a friend
+ */
+export const MobileRemoveFriendParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+/**
+ * @summary List active branches
+ */
+export const MobileListBranchesResponse = zod.object({
+  branches: zod
+    .array(
+      zod.object({
+        id: zod.number(),
+        name: zod.string(),
+        location: zod.string().optional(),
+        isActive: zod.boolean().optional(),
+        createdAt: zod.coerce.date().optional(),
+      }),
+    )
+    .optional(),
+});
+
+/**
+ * @summary List active drink categories
+ */
+export const MobileListCategoriesResponse = zod.object({
+  categories: zod
+    .array(
+      zod.object({
+        id: zod.number().optional(),
+        name: zod.string().optional(),
+        sortOrder: zod.number().optional(),
+        isActive: zod.boolean().optional(),
+        createdAt: zod.coerce.date().optional(),
+      }),
+    )
+    .optional(),
+});
+
+/**
+ * @summary List my orders
+ */
+export const MobileListOrdersResponse = zod.object({
+  orders: zod
+    .array(
+      zod.object({
+        id: zod.number().optional(),
+        orderNumber: zod.string().optional(),
+        status: zod.string().optional(),
+        total: zod.string().optional(),
+        subtotal: zod.string().optional(),
+        discount: zod.string().optional(),
+        paymentMethod: zod.string().optional(),
+        source: zod.string().optional(),
+        branchId: zod.number().optional(),
+        branchName: zod.string().nullish(),
+        createdAt: zod.coerce.date().optional(),
+      }),
+    )
+    .optional(),
+});
+
+/**
+ * @summary Place an order (source=mobile)
+ */
+export const MobilePlaceOrderBody = zod.object({
+  branchId: zod.number(),
+  items: zod.array(
+    zod.object({
+      drinkId: zod.number(),
+      quantity: zod.number().optional(),
+      selections: zod.array(zod.object({}).passthrough()).optional(),
+      specialNotes: zod.string().nullish(),
+    }),
+  ),
+  paymentMethod: zod.enum(["cash", "card", "wallet"]).optional(),
+  notes: zod.string().nullish(),
+  discountCode: zod.string().nullish(),
+});
+
+/**
+ * @summary Get order detail
+ */
+export const MobileGetOrderParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const MobileGetOrderResponse = zod.object({
+  order: zod
+    .object({
+      id: zod.number().optional(),
+      orderNumber: zod.string().optional(),
+      status: zod.string().optional(),
+      subtotal: zod.number().optional(),
+      discount: zod.number().optional(),
+      total: zod.number().optional(),
+      branchName: zod.string().optional(),
+      payments: zod.array(zod.object({}).passthrough()).optional(),
+      items: zod.array(zod.object({}).passthrough()).optional(),
+    })
+    .optional(),
+});
+
+/**
+ * @summary Cancel an order
+ */
+export const MobileCancelOrderParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const MobileCancelOrderResponse = zod.object({
+  order: zod
+    .object({
+      id: zod.number().optional(),
+      orderNumber: zod.string().optional(),
+      status: zod.string().optional(),
+      total: zod.number().optional(),
+    })
+    .optional(),
 });

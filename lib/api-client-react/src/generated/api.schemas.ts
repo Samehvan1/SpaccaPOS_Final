@@ -840,6 +840,309 @@ export interface UpdateOfferBody {
   excludedDrinkIds?: number[];
 }
 
+export type MobileCustomerGender =
+  | (typeof MobileCustomerGender)[keyof typeof MobileCustomerGender]
+  | null;
+
+export const MobileCustomerGender = {
+  male: "male",
+  female: "female",
+  other: "other",
+  prefer_not_to_say: "prefer_not_to_say",
+} as const;
+
+export type MobileCustomerLoyaltyTier =
+  (typeof MobileCustomerLoyaltyTier)[keyof typeof MobileCustomerLoyaltyTier];
+
+export const MobileCustomerLoyaltyTier = {
+  bronze: "bronze",
+  silver: "silver",
+  gold: "gold",
+  platinum: "platinum",
+} as const;
+
+export interface MobileCustomer {
+  id?: number;
+  name?: string;
+  phone?: string;
+  email?: string | null;
+  birthdate?: string | null;
+  gender?: MobileCustomerGender;
+  avatarUrl?: string | null;
+  preferredBranchId?: number | null;
+  address?: string | null;
+  city?: string | null;
+  loyaltyTier?: MobileCustomerLoyaltyTier;
+  points?: number;
+  totalSpent?: string;
+  visitCount?: number;
+  isActive?: boolean;
+  createdAt?: string;
+}
+
+export interface MobileRequestOtpBody {
+  phone: string;
+}
+
+export interface MobileRequestOtpResponse {
+  success?: boolean;
+  message?: string;
+  /** Development-only OTP (remove in production) */
+  devOtp?: string;
+  expiresIn?: number;
+}
+
+export interface MobileVerifyOtpBody {
+  phone: string;
+  otp: string;
+  /** Optional name for new registrations */
+  name?: string;
+}
+
+export interface MobileVerifyOtpResponse {
+  customer?: MobileCustomer;
+  hasPin?: boolean;
+}
+
+export interface MobileCreatePinBody {
+  /** 4-6 digit PIN */
+  pin: string;
+}
+
+export interface MobileCreatePinResponse {
+  success?: boolean;
+  customer?: MobileCustomer;
+}
+
+export interface MobileLoginBody {
+  phone: string;
+  pin: string;
+}
+
+export interface MobileLoginResponse {
+  customer?: MobileCustomer;
+}
+
+export interface MobileMeResponse {
+  customer?: MobileCustomer;
+}
+
+export type MobileUpdateProfileBodyGender =
+  | (typeof MobileUpdateProfileBodyGender)[keyof typeof MobileUpdateProfileBodyGender]
+  | null;
+
+export const MobileUpdateProfileBodyGender = {
+  male: "male",
+  female: "female",
+  other: "other",
+  prefer_not_to_say: "prefer_not_to_say",
+} as const;
+
+export interface MobileUpdateProfileBody {
+  name?: string;
+  email?: string | null;
+  birthdate?: string | null;
+  gender?: MobileUpdateProfileBodyGender;
+  avatarUrl?: string | null;
+  preferredBranchId?: number | null;
+  address?: string | null;
+  city?: string | null;
+}
+
+export interface MobileChangePhoneBody {
+  newPhone: string;
+}
+
+export interface MobileChangePinBody {
+  currentPin?: string;
+  newPin: string;
+}
+
+export interface MobilePointsResponse {
+  points?: number;
+  totalSpent?: string;
+  visitCount?: number;
+}
+
+export type MobileFavoriteDrink = {
+  id?: number;
+  name?: string;
+  description?: string | null;
+  category?: string;
+  basePrice?: string;
+  imageUrl?: string | null;
+  isCustomizable?: boolean;
+};
+
+export interface MobileFavorite {
+  id?: number;
+  drinkId?: number;
+  createdAt?: string;
+  drink?: MobileFavoriteDrink;
+}
+
+export interface MobileFavoritesResponse {
+  favorites?: MobileFavorite[];
+}
+
+export interface MobileFavoriteBody {
+  drinkId: number;
+}
+
+export type MobileSavedDrinkSelectionsItem = { [key: string]: unknown };
+
+export type MobileSavedDrinkDrink = {
+  id?: number;
+  name?: string;
+  imageUrl?: string | null;
+  basePrice?: string;
+};
+
+export interface MobileSavedDrink {
+  id?: number;
+  drinkId?: number;
+  name?: string;
+  selections?: MobileSavedDrinkSelectionsItem[];
+  quantity?: number;
+  createdAt?: string;
+  drink?: MobileSavedDrinkDrink;
+}
+
+export interface MobileSavedDrinksResponse {
+  savedDrinks?: MobileSavedDrink[];
+}
+
+export type MobileSaveDrinkBodySelectionsItem = { [key: string]: unknown };
+
+export interface MobileSaveDrinkBody {
+  drinkId: number;
+  name?: string;
+  selections?: MobileSaveDrinkBodySelectionsItem[];
+  quantity?: number;
+}
+
+export interface MobileSavedDrinkResponse {
+  savedDrink?: MobileSavedDrink;
+}
+
+export interface MobileFriend {
+  id?: number;
+  customerId?: number;
+  friendCustomerId?: number;
+  friendName?: string;
+  friendPhone?: string;
+  createdAt?: string;
+}
+
+export interface MobileFriendsResponse {
+  friends?: MobileFriend[];
+}
+
+export interface MobileAddFriendBody {
+  phone: string;
+}
+
+export interface MobileFriendResponse {
+  friend?: MobileFriend;
+}
+
+export interface MobileBranchesResponse {
+  branches?: Branch[];
+}
+
+export interface DrinkCategory {
+  id?: number;
+  name?: string;
+  sortOrder?: number;
+  isActive?: boolean;
+  createdAt?: string;
+}
+
+export interface MobileCategoriesResponse {
+  categories?: DrinkCategory[];
+}
+
+export interface MobileOrderSummary {
+  id?: number;
+  orderNumber?: string;
+  status?: string;
+  total?: string;
+  subtotal?: string;
+  discount?: string;
+  paymentMethod?: string;
+  source?: string;
+  branchId?: number;
+  branchName?: string | null;
+  createdAt?: string;
+}
+
+export interface MobileOrdersResponse {
+  orders?: MobileOrderSummary[];
+}
+
+export type MobilePlaceOrderBodyItemsItemSelectionsItem = {
+  [key: string]: unknown;
+};
+
+export type MobilePlaceOrderBodyItemsItem = {
+  drinkId: number;
+  quantity?: number;
+  selections?: MobilePlaceOrderBodyItemsItemSelectionsItem[];
+  specialNotes?: string | null;
+};
+
+export type MobilePlaceOrderBodyPaymentMethod =
+  (typeof MobilePlaceOrderBodyPaymentMethod)[keyof typeof MobilePlaceOrderBodyPaymentMethod];
+
+export const MobilePlaceOrderBodyPaymentMethod = {
+  cash: "cash",
+  card: "card",
+  wallet: "wallet",
+} as const;
+
+export interface MobilePlaceOrderBody {
+  branchId: number;
+  items: MobilePlaceOrderBodyItemsItem[];
+  paymentMethod?: MobilePlaceOrderBodyPaymentMethod;
+  notes?: string | null;
+  discountCode?: string | null;
+}
+
+export type MobileOrderResponseOrder = {
+  id?: number;
+  orderNumber?: string;
+  status?: string;
+  total?: number;
+};
+
+export interface MobileOrderResponse {
+  order?: MobileOrderResponseOrder;
+}
+
+export type MobileOrderDetailResponseOrderPaymentsItem = {
+  [key: string]: unknown;
+};
+
+export type MobileOrderDetailResponseOrderItemsItem = {
+  [key: string]: unknown;
+};
+
+export type MobileOrderDetailResponseOrder = {
+  id?: number;
+  orderNumber?: string;
+  status?: string;
+  subtotal?: number;
+  discount?: number;
+  total?: number;
+  branchName?: string;
+  payments?: MobileOrderDetailResponseOrderPaymentsItem[];
+  items?: MobileOrderDetailResponseOrderItemsItem[];
+};
+
+export interface MobileOrderDetailResponse {
+  order?: MobileOrderDetailResponseOrder;
+}
+
 export type ListDrinksParams = {
   category?: string;
   active?: boolean;

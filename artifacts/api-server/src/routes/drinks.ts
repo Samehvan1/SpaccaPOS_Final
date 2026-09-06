@@ -734,6 +734,7 @@ router.post("/drinks", requirePermission("catalog:manage"), async (req, res): Pr
       basePrice: String(drinkData.basePrice),
       imageUrl: drinkData.imageUrl ?? null,
       isActive: drinkData.isActive ?? true,
+      isFeatured: (drinkData as any).isFeatured ?? false,
       prepTimeSeconds: drinkData.prepTimeSeconds ?? 180,
       kitchenStation: drinkData.kitchenStation?.toLowerCase().replace(/\s+/g, '-') ?? "main",
       kitchenStationId: (drinkData as any).kitchenStationId ?? null,
@@ -826,6 +827,7 @@ router.patch("/drinks/:id", requirePermission("catalog:manage"), async (req, res
   if (parsed.data.basePrice !== undefined) updateData.basePrice = String(parsed.data.basePrice);
   if (parsed.data.imageUrl !== undefined) updateData.imageUrl = parsed.data.imageUrl;
   if (parsed.data.isActive !== undefined) updateData.isActive = parsed.data.isActive;
+  if ((parsed.data as any).isFeatured !== undefined) updateData.isFeatured = (parsed.data as any).isFeatured;
   if (parsed.data.prepTimeSeconds !== undefined) updateData.prepTimeSeconds = parsed.data.prepTimeSeconds;
   if (parsed.data.kitchenStation !== undefined) {
     updateData.kitchenStation = parsed.data.kitchenStation.toLowerCase().replace(/\s+/g, '-');

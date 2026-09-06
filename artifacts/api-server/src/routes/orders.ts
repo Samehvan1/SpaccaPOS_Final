@@ -209,6 +209,15 @@ export function getDayOfYear(date: Date): number {
   return dayOfYear;
 }
 
+export function getCairoYear(date: Date): number {
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Africa/Cairo",
+    year: "numeric"
+  });
+  const parts = formatter.formatToParts(date);
+  return parseInt(parts.find(p => p.type === 'year')!.value, 10);
+}
+
 export function getCairoStartOfDay(date: Date): Date {
   const formatter = new Intl.DateTimeFormat("en-US", {
     timeZone: "Africa/Cairo",
@@ -232,16 +241,19 @@ export function getCairoStartOfDay(date: Date): Date {
   return utcMidnight;
 }
 
-async function generateOrderNumber(tx: any, branchId: number): Promise<string> {
+export async function generateOrderNumber(tx: any, branchId: number): Promise<string> {
   // Acquire a lock on the branch row to serialize order number generation and prevent collisions
-  await tx
-    .select({ id: branchesTable.id })
+  const [branch] = await tx
+    .select({ id: branchesTable.id, code: branchesTable.code })
     .from(branchesTable)
     .where(eq(branchesTable.id, branchId))
     .for("update");
 
+  const branchCode = branch?.code ?? String(branchId);
+
   const now = new Date();
   const dayOfYear = getDayOfYear(now);
+  const yearShort = getCairoYear(now) - 2000;
   const todayStart = getCairoStartOfDay(now);
 
   const existingOrders = await tx
@@ -250,19 +262,12 @@ async function generateOrderNumber(tx: any, branchId: number): Promise<string> {
     .where(and(eq(ordersTable.branchId, branchId), gte(ordersTable.createdAt, todayStart)));
 
   let maxSerial = 0;
-  const newPrefix = `${branchId}-${dayOfYear}`;
-  const oldPrefix = `${dayOfYear}`;
+  const newPrefix = `${branchCode}-${yearShort}${dayOfYear}`;
 
   for (const o of existingOrders) {
     const numStr = o.orderNumber;
     if (numStr.startsWith(newPrefix)) {
       const serialStr = numStr.slice(newPrefix.length);
-      const serialPart = parseInt(serialStr, 10);
-      if (!isNaN(serialPart) && serialPart > maxSerial) {
-        maxSerial = serialPart;
-      }
-    } else if (numStr.startsWith(oldPrefix) && !numStr.includes("-")) {
-      const serialStr = numStr.slice(oldPrefix.length);
       const serialPart = parseInt(serialStr, 10);
       if (!isNaN(serialPart) && serialPart > maxSerial) {
         maxSerial = serialPart;

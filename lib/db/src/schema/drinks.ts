@@ -30,6 +30,7 @@ export const drinksTable = pgTable("drinks", {
   imageUrl: text("image_url"),
   sortOrder: integer("sort_order").notNull().default(0),
   isActive: boolean("is_active").notNull().default(true),
+  isFeatured: boolean("is_featured").notNull().default(false),
   prepTimeSeconds: integer("prep_time_seconds").notNull().default(180),
   cupSizeMl: integer("cup_size_ml"),
   cupIngredientId: integer("cup_ingredient_id").references(() => ingredientsTable.id, { onDelete: "set null" }),
@@ -42,6 +43,7 @@ export const drinksTable = pgTable("drinks", {
   return {
     categoryIdIdx: index("drinks_category_id_idx").on(table.categoryId),
     isActiveIdx: index("drinks_is_active_idx").on(table.isActive),
+    isFeaturedIdx: index("drinks_is_featured_idx").on(table.isFeatured),
   };
 });
 

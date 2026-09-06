@@ -467,7 +467,6 @@ export const UpdateOfferBody = api.UpdateOfferBody.extend({
 });
 export type UpdateOfferBody = Infer<typeof UpdateOfferBody>;
 
-
 // Product Drink Discounts
 export const ProductDrinkDiscount = z.object({
   id: z.number(),
@@ -497,8 +496,12 @@ export const CreateProductDrinkDiscountBody = z.object({
   startDate: z.string().nullable().optional(),
   endDate: z.string().nullable().optional(),
 });
-export type CreateProductDrinkDiscountBody = Infer<typeof CreateProductDrinkDiscountBody>;
+export type CreateProductDrinkDiscountBody = Infer<
+  typeof CreateProductDrinkDiscountBody
+>;
 
-export const UpdateProductDrinkDiscountBody = CreateProductDrinkDiscountBody.partial();
-export type UpdateProductDrinkDiscountBody = Infer<typeof UpdateProductDrinkDiscountBody>;
-
+export const UpdateProductDrinkDiscountBody =
+  CreateProductDrinkDiscountBody.partial();
+export type UpdateProductDrinkDiscountBody = Infer<
+  typeof UpdateProductDrinkDiscountBody
+>;

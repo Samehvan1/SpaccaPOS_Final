@@ -1,4 +1,4 @@
-import { pgTable, serial, text, varchar, timestamp, boolean } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, varchar, timestamp, boolean, doublePrecision } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -8,6 +8,8 @@ export const branchesTable = pgTable("branches", {
   code: varchar("code", { length: 20 }).unique().notNull(), // e.g. "MAIN", "BRANCH-01"
   address: text("address"),
   phone: varchar("phone", { length: 20 }),
+  latitude: doublePrecision("latitude"),
+  longitude: doublePrecision("longitude"),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),

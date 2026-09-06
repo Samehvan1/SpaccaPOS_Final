@@ -22,6 +22,7 @@ export * from "./partners";
 export * from "./shift-close";
 export * from "./manufacturing";
 export * from "./product-discounts";
+export * from "./mobile";
 
 
 

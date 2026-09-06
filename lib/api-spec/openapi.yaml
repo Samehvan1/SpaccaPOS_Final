@@ -27,6 +27,8 @@ tags:
     description: Discount and coupon management
   - name: customers
     description: Customer and loyalty management
+  - name: mobile
+    description: Customer mobile app API (OTP/PIN auth, profile, favorites, saved drinks, friends, orders)
 
 paths:
   /healthz:
@@ -1312,6 +1314,431 @@ paths:
         "404":
           description: Invalid code
 
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Customer Mobile App API
+  # ─────────────────────────────────────────────────────────────────────────────
+
+  /mobile/auth/request-otp:
+    post:
+      operationId: mobileRequestOtp
+      tags: [mobile]
+      summary: Request an OTP for a phone number (login/register)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MobileRequestOtpBody"
+      responses:
+        "200":
+          description: OTP sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MobileRequestOtpResponse"
+        "429":
+          description: Too many requests
+
+  /mobile/auth/verify-otp:
+    post:
+      operationId: mobileVerifyOtp
+      tags: [mobile]
+      summary: Verify OTP and establish customer session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MobileVerifyOtpBody"
+      responses:
+        "200":
+          description: Verified
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MobileVerifyOtpResponse"
+        "401":
+          description: Invalid or expired OTP
+
+  /mobile/auth/create-pin:
+    post:
+      operationId: mobileCreatePin
+      tags: [mobile]
+      summary: Create or update the customer PIN
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MobileCreatePinBody"
+      responses:
+        "200":
+          description: PIN saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MobileCreatePinResponse"
+
+  /mobile/auth/login:
+    post:
+      operationId: mobileLogin
+      tags: [mobile]
+      summary: Login with phone + PIN
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MobileLoginBody"
+      responses:
+        "200":
+          description: Logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MobileLoginResponse"
+        "401":
+          description: Invalid phone or PIN
+
+  /mobile/auth/logout:
+    post:
+      operationId: mobileLogout
+      tags: [mobile]
+      summary: Logout customer
+      responses:
+        "204":
+          description: Logged out
+
+  /mobile/auth/me:
+    get:
+      operationId: mobileMe
+      tags: [mobile]
+      summary: Get current customer
+      responses:
+        "200":
+          description: Current customer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MobileMeResponse"
+        "401":
+          description: Not authenticated
+
+  /mobile/me:
+    patch:
+      operationId: mobileUpdateProfile
+      tags: [mobile]
+      summary: Update customer profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MobileUpdateProfileBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MobileMeResponse"
+    delete:
+      operationId: mobileDeleteAccount
+      tags: [mobile]
+      summary: Delete customer account
+      responses:
+        "204":
+          description: Deleted
+
+  /mobile/me/change-phone:
+    post:
+      operationId: mobileChangePhone
+      tags: [mobile]
+      summary: Change customer phone number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MobileChangePhoneBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MobileMeResponse"
+        "409":
+          description: Phone already in use
+
+  /mobile/me/change-pin:
+    post:
+      operationId: mobileChangePin
+      tags: [mobile]
+      summary: Change customer PIN
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MobileChangePinBody"
+      responses:
+        "200":
+          description: PIN changed
+
+  /mobile/me/deactivate:
+    post:
+      operationId: mobileDeactivate
+      tags: [mobile]
+      summary: Deactivate customer account
+      responses:
+        "200":
+          description: Deactivated
+
+  /mobile/points:
+    get:
+      operationId: mobilePoints
+      tags: [mobile]
+      summary: Get customer loyalty points
+      responses:
+        "200":
+          description: Points
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MobilePointsResponse"
+
+  /mobile/favorites:
+    get:
+      operationId: mobileListFavorites
+      tags: [mobile]
+      summary: List favorite drinks
+      responses:
+        "200":
+          description: Favorites
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MobileFavoritesResponse"
+    post:
+      operationId: mobileAddFavorite
+      tags: [mobile]
+      summary: Add a favorite drink
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MobileFavoriteBody"
+      responses:
+        "201":
+          description: Added
+
+  /mobile/favorites/{drinkId}:
+    delete:
+      operationId: mobileRemoveFavorite
+      tags: [mobile]
+      summary: Remove a favorite drink
+      parameters:
+        - in: path
+          name: drinkId
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Removed
+
+  /mobile/saved-drinks:
+    get:
+      operationId: mobileListSavedDrinks
+      tags: [mobile]
+      summary: List saved customized drinks
+      responses:
+        "200":
+          description: Saved drinks
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MobileSavedDrinksResponse"
+    post:
+      operationId: mobileSaveDrink
+      tags: [mobile]
+      summary: Save a customized drink
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MobileSaveDrinkBody"
+      responses:
+        "201":
+          description: Saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MobileSavedDrinkResponse"
+
+  /mobile/saved-drinks/{id}:
+    delete:
+      operationId: mobileDeleteSavedDrink
+      tags: [mobile]
+      summary: Delete a saved drink
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /mobile/friends:
+    get:
+      operationId: mobileListFriends
+      tags: [mobile]
+      summary: List friends
+      responses:
+        "200":
+          description: Friends
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MobileFriendsResponse"
+    post:
+      operationId: mobileAddFriend
+      tags: [mobile]
+      summary: Add a friend by phone
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MobileAddFriendBody"
+      responses:
+        "201":
+          description: Added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MobileFriendResponse"
+        "404":
+          description: No account found
+
+  /mobile/friends/{id}:
+    delete:
+      operationId: mobileRemoveFriend
+      tags: [mobile]
+      summary: Remove a friend
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Removed
+
+  /mobile/branches:
+    get:
+      operationId: mobileListBranches
+      tags: [mobile]
+      summary: List active branches
+      responses:
+        "200":
+          description: Branches
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MobileBranchesResponse"
+
+  /mobile/categories:
+    get:
+      operationId: mobileListCategories
+      tags: [mobile]
+      summary: List active drink categories
+      responses:
+        "200":
+          description: Categories
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MobileCategoriesResponse"
+
+  /mobile/orders:
+    get:
+      operationId: mobileListOrders
+      tags: [mobile]
+      summary: List my orders
+      responses:
+        "200":
+          description: Orders
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MobileOrdersResponse"
+    post:
+      operationId: mobilePlaceOrder
+      tags: [mobile]
+      summary: Place an order (source=mobile)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MobilePlaceOrderBody"
+      responses:
+        "201":
+          description: Order placed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MobileOrderResponse"
+
+  /mobile/orders/{id}:
+    get:
+      operationId: mobileGetOrder
+      tags: [mobile]
+      summary: Get order detail
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Order detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MobileOrderDetailResponse"
+        "404":
+          description: Order not found
+
+  /mobile/orders/{id}/cancel:
+    post:
+      operationId: mobileCancelOrder
+      tags: [mobile]
+      summary: Cancel an order
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Cancelled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MobileOrderResponse"
+        "400":
+          description: Order cannot be cancelled
+
 components:
   schemas:
     HealthStatus:
@@ -1738,6 +2165,8 @@ components:
           type: ["string", "null"]
         isActive:
           type: boolean
+        isFeatured:
+          type: boolean
         prepTimeSeconds:
           type: integer
         cupSizeMl:
@@ -1794,6 +2223,8 @@ components:
         imageUrl:
           type: string
         isActive:
+          type: boolean
+        isFeatured:
           type: boolean
         prepTimeSeconds:
           type: integer
@@ -1852,6 +2283,8 @@ components:
         imageUrl:
           type: string
         isActive:
+          type: boolean
+        isFeatured:
           type: boolean
         prepTimeSeconds:
           type: integer
@@ -2596,4 +3029,472 @@ components:
           type: array
           items:
             type: integer
+
+    # ── Mobile app schemas ────────────────────────────────────────────────────
+
+    MobileCustomer:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+          nullable: true
+        birthdate:
+          type: string
+          format: date
+          nullable: true
+        gender:
+          type: string
+          enum: [male, female, other, prefer_not_to_say]
+          nullable: true
+        avatarUrl:
+          type: string
+          nullable: true
+        preferredBranchId:
+          type: integer
+          nullable: true
+        address:
+          type: string
+          nullable: true
+        city:
+          type: string
+          nullable: true
+        loyaltyTier:
+          type: string
+          enum: [bronze, silver, gold, platinum]
+        points:
+          type: integer
+        totalSpent:
+          type: string
+        visitCount:
+          type: integer
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    MobileRequestOtpBody:
+      type: object
+      required: [phone]
+      properties:
+        phone:
+          type: string
+
+    MobileRequestOtpResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        devOtp:
+          type: string
+          description: Development-only OTP (remove in production)
+        expiresIn:
+          type: integer
+
+    MobileVerifyOtpBody:
+      type: object
+      required: [phone, otp]
+      properties:
+        phone:
+          type: string
+        otp:
+          type: string
+        name:
+          type: string
+          description: Optional name for new registrations
+
+    MobileVerifyOtpResponse:
+      type: object
+      properties:
+        customer:
+          $ref: "#/components/schemas/MobileCustomer"
+        hasPin:
+          type: boolean
+
+    MobileCreatePinBody:
+      type: object
+      required: [pin]
+      properties:
+        pin:
+          type: string
+          description: 4-6 digit PIN
+
+    MobileCreatePinResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        customer:
+          $ref: "#/components/schemas/MobileCustomer"
+
+    MobileLoginBody:
+      type: object
+      required: [phone, pin]
+      properties:
+        phone:
+          type: string
+        pin:
+          type: string
+
+    MobileLoginResponse:
+      type: object
+      properties:
+        customer:
+          $ref: "#/components/schemas/MobileCustomer"
+
+    MobileMeResponse:
+      type: object
+      properties:
+        customer:
+          $ref: "#/components/schemas/MobileCustomer"
+
+    MobileUpdateProfileBody:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          nullable: true
+        birthdate:
+          type: string
+          format: date
+          nullable: true
+        gender:
+          type: string
+          enum: [male, female, other, prefer_not_to_say]
+          nullable: true
+        avatarUrl:
+          type: string
+          nullable: true
+        preferredBranchId:
+          type: integer
+          nullable: true
+        address:
+          type: string
+          nullable: true
+        city:
+          type: string
+          nullable: true
+
+    MobileChangePhoneBody:
+      type: object
+      required: [newPhone]
+      properties:
+        newPhone:
+          type: string
+
+    MobileChangePinBody:
+      type: object
+      required: [newPin]
+      properties:
+        currentPin:
+          type: string
+        newPin:
+          type: string
+
+    MobilePointsResponse:
+      type: object
+      properties:
+        points:
+          type: integer
+        totalSpent:
+          type: string
+        visitCount:
+          type: integer
+
+    MobileFavorite:
+      type: object
+      properties:
+        id:
+          type: integer
+        drinkId:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        drink:
+          type: object
+          properties:
+            id:
+              type: integer
+            name:
+              type: string
+            description:
+              type: string
+              nullable: true
+            category:
+              type: string
+            basePrice:
+              type: string
+            imageUrl:
+              type: string
+              nullable: true
+            isCustomizable:
+              type: boolean
+
+    MobileFavoritesResponse:
+      type: object
+      properties:
+        favorites:
+          type: array
+          items:
+            $ref: "#/components/schemas/MobileFavorite"
+
+    MobileFavoriteBody:
+      type: object
+      required: [drinkId]
+      properties:
+        drinkId:
+          type: integer
+
+    MobileSavedDrink:
+      type: object
+      properties:
+        id:
+          type: integer
+        drinkId:
+          type: integer
+        name:
+          type: string
+        selections:
+          type: array
+          items:
+            type: object
+        quantity:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        drink:
+          type: object
+          properties:
+            id:
+              type: integer
+            name:
+              type: string
+            imageUrl:
+              type: string
+              nullable: true
+            basePrice:
+              type: string
+
+    MobileSavedDrinksResponse:
+      type: object
+      properties:
+        savedDrinks:
+          type: array
+          items:
+            $ref: "#/components/schemas/MobileSavedDrink"
+
+    MobileSaveDrinkBody:
+      type: object
+      required: [drinkId]
+      properties:
+        drinkId:
+          type: integer
+        name:
+          type: string
+        selections:
+          type: array
+          items:
+            type: object
+        quantity:
+          type: integer
+
+    MobileSavedDrinkResponse:
+      type: object
+      properties:
+        savedDrink:
+          $ref: "#/components/schemas/MobileSavedDrink"
+
+    MobileFriend:
+      type: object
+      properties:
+        id:
+          type: integer
+        customerId:
+          type: integer
+        friendCustomerId:
+          type: integer
+        friendName:
+          type: string
+        friendPhone:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    MobileFriendsResponse:
+      type: object
+      properties:
+        friends:
+          type: array
+          items:
+            $ref: "#/components/schemas/MobileFriend"
+
+    MobileAddFriendBody:
+      type: object
+      required: [phone]
+      properties:
+        phone:
+          type: string
+
+    MobileFriendResponse:
+      type: object
+      properties:
+        friend:
+          $ref: "#/components/schemas/MobileFriend"
+
+    MobileBranchesResponse:
+      type: object
+      properties:
+        branches:
+          type: array
+          items:
+            $ref: "#/components/schemas/Branch"
+
+    MobileCategoriesResponse:
+      type: object
+      properties:
+        categories:
+          type: array
+          items:
+            $ref: "#/components/schemas/DrinkCategory"
+
+    DrinkCategory:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        sortOrder:
+          type: integer
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    MobileOrderSummary:
+      type: object
+      properties:
+        id:
+          type: integer
+        orderNumber:
+          type: string
+        status:
+          type: string
+        total:
+          type: string
+        subtotal:
+          type: string
+        discount:
+          type: string
+        paymentMethod:
+          type: string
+        source:
+          type: string
+        branchId:
+          type: integer
+        branchName:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+    MobileOrdersResponse:
+      type: object
+      properties:
+        orders:
+          type: array
+          items:
+            $ref: "#/components/schemas/MobileOrderSummary"
+
+    MobilePlaceOrderBody:
+      type: object
+      required: [branchId, items]
+      properties:
+        branchId:
+          type: integer
+        items:
+          type: array
+          items:
+            type: object
+            required: [drinkId]
+            properties:
+              drinkId:
+                type: integer
+              quantity:
+                type: integer
+              selections:
+                type: array
+                items:
+                  type: object
+              specialNotes:
+                type: string
+                nullable: true
+        paymentMethod:
+          type: string
+          enum: [cash, card, wallet]
+        notes:
+          type: string
+          nullable: true
+        discountCode:
+          type: string
+          nullable: true
+
+    MobileOrderResponse:
+      type: object
+      properties:
+        order:
+          type: object
+          properties:
+            id:
+              type: integer
+            orderNumber:
+              type: string
+            status:
+              type: string
+            total:
+              type: number
+
+    MobileOrderDetailResponse:
+      type: object
+      properties:
+        order:
+          type: object
+          properties:
+            id:
+              type: integer
+            orderNumber:
+              type: string
+            status:
+              type: string
+            subtotal:
+              type: number
+            discount:
+              type: number
+            total:
+              type: number
+            branchName:
+              type: string
+            payments:
+              type: array
+              items:
+                type: object
+            items:
+              type: array
+              items:
+                type: object
 

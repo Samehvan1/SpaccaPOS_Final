@@ -14,6 +14,7 @@ export interface CreateDrinkBody {
   basePrice: number;
   imageUrl?: string;
   isActive?: boolean;
+  isFeatured?: boolean;
   prepTimeSeconds?: number;
   kitchenStation?: string;
   categoryId?: number;

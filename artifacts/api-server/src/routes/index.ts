@@ -17,6 +17,7 @@ import productDiscountsRouter from "./product-discounts";
 import offersRouter from "./offers";
 
 import customersRouter from "./customers";
+import mobileRouter from "./mobile";
 import tagsRouter from "./tags";
 import cashierSessionsRouter from "./cashier-sessions";
 import adminRouter from "./admin";
@@ -57,6 +58,7 @@ router.use(discountsRouter);
 router.use(productDiscountsRouter);
 router.use(offersRouter);
 router.use(customersRouter);
+router.use(mobileRouter);
 
 router.use(tagsRouter);
 router.use(cashierSessionsRouter);

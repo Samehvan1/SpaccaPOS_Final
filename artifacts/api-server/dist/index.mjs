@@ -48,8 +48,8 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 // ../../node_modules/.pnpm/dotenv@17.4.2/node_modules/dotenv/lib/main.js
 var require_main = __commonJS({
   "../../node_modules/.pnpm/dotenv@17.4.2/node_modules/dotenv/lib/main.js"(exports, module) {
-    var fs8 = __require("fs");
-    var path7 = __require("path");
+    var fs9 = __require("fs");
+    var path8 = __require("path");
     var os = __require("os");
     var crypto3 = __require("crypto");
     var TIPS = [
@@ -180,7 +180,7 @@ var require_main = __commonJS({
       if (options && options.path && options.path.length > 0) {
         if (Array.isArray(options.path)) {
           for (const filepath of options.path) {
-            if (fs8.existsSync(filepath)) {
+            if (fs9.existsSync(filepath)) {
               possibleVaultPath = filepath.endsWith(".vault") ? filepath : `${filepath}.vault`;
             }
           }
@@ -188,15 +188,15 @@ var require_main = __commonJS({
           possibleVaultPath = options.path.endsWith(".vault") ? options.path : `${options.path}.vault`;
         }
       } else {
-        possibleVaultPath = path7.resolve(process.cwd(), ".env.vault");
+        possibleVaultPath = path8.resolve(process.cwd(), ".env.vault");
       }
-      if (fs8.existsSync(possibleVaultPath)) {
+      if (fs9.existsSync(possibleVaultPath)) {
         return possibleVaultPath;
       }
       return null;
     }
     function _resolveHome(envPath) {
-      return envPath[0] === "~" ? path7.join(os.homedir(), envPath.slice(1)) : envPath;
+      return envPath[0] === "~" ? path8.join(os.homedir(), envPath.slice(1)) : envPath;
     }
     function _configVault(options) {
       const debug = parseBoolean(process.env.DOTENV_CONFIG_DEBUG || options && options.debug);
@@ -213,7 +213,7 @@ var require_main = __commonJS({
       return { parsed };
     }
     function configDotenv(options) {
-      const dotenvPath = path7.resolve(process.cwd(), ".env");
+      const dotenvPath = path8.resolve(process.cwd(), ".env");
       let encoding = "utf8";
       let processEnv = process.env;
       if (options && options.processEnv != null) {
@@ -241,13 +241,13 @@ var require_main = __commonJS({
       }
       let lastError;
       const parsedAll = {};
-      for (const path8 of optionPaths) {
+      for (const path9 of optionPaths) {
         try {
-          const parsed = DotenvModule.parse(fs8.readFileSync(path8, { encoding }));
+          const parsed = DotenvModule.parse(fs9.readFileSync(path9, { encoding }));
           DotenvModule.populate(parsedAll, parsed, options);
         } catch (e) {
           if (debug) {
-            _debug(`failed to load ${path8} ${e.message}`);
+            _debug(`failed to load ${path9} ${e.message}`);
           }
           lastError = e;
         }
@@ -260,7 +260,7 @@ var require_main = __commonJS({
         const shortPaths = [];
         for (const filePath of optionPaths) {
           try {
-            const relative = path7.relative(process.cwd(), filePath);
+            const relative = path8.relative(process.cwd(), filePath);
             shortPaths.push(relative);
           } catch (e) {
             if (debug) {
@@ -15521,11 +15521,11 @@ var require_mime_types = __commonJS({
       }
       return exts[0];
     }
-    function lookup(path7) {
-      if (!path7 || typeof path7 !== "string") {
+    function lookup(path8) {
+      if (!path8 || typeof path8 !== "string") {
         return false;
       }
-      var extension2 = extname("x." + path7).toLowerCase().slice(1);
+      var extension2 = extname("x." + path8).toLowerCase().slice(1);
       if (!extension2) {
         return false;
       }
@@ -18997,13 +18997,13 @@ var require_view = __commonJS({
   "../../node_modules/.pnpm/express@5.2.1/node_modules/express/lib/view.js"(exports, module) {
     "use strict";
     var debug = require_src()("express:view");
-    var path7 = __require("node:path");
-    var fs8 = __require("node:fs");
-    var dirname2 = path7.dirname;
-    var basename = path7.basename;
-    var extname = path7.extname;
-    var join = path7.join;
-    var resolve2 = path7.resolve;
+    var path8 = __require("node:path");
+    var fs9 = __require("node:fs");
+    var dirname2 = path8.dirname;
+    var basename = path8.basename;
+    var extname = path8.extname;
+    var join = path8.join;
+    var resolve2 = path8.resolve;
     module.exports = View2;
     function View2(name, options) {
       var opts = options || {};
@@ -19032,17 +19032,17 @@ var require_view = __commonJS({
       this.path = this.lookup(fileName);
     }
     View2.prototype.lookup = function lookup(name) {
-      var path8;
+      var path9;
       var roots = [].concat(this.root);
       debug('lookup "%s"', name);
-      for (var i = 0; i < roots.length && !path8; i++) {
+      for (var i = 0; i < roots.length && !path9; i++) {
         var root = roots[i];
         var loc = resolve2(root, name);
         var dir = dirname2(loc);
         var file2 = basename(loc);
-        path8 = this.resolve(dir, file2);
+        path9 = this.resolve(dir, file2);
       }
-      return path8;
+      return path9;
     };
     View2.prototype.render = function render(options, callback) {
       var sync = true;
@@ -19064,21 +19064,21 @@ var require_view = __commonJS({
     };
     View2.prototype.resolve = function resolve3(dir, file2) {
       var ext = this.ext;
-      var path8 = join(dir, file2);
-      var stat = tryStat(path8);
+      var path9 = join(dir, file2);
+      var stat = tryStat(path9);
       if (stat && stat.isFile()) {
-        return path8;
+        return path9;
       }
-      path8 = join(dir, basename(file2, ext), "index" + ext);
-      stat = tryStat(path8);
+      path9 = join(dir, basename(file2, ext), "index" + ext);
+      stat = tryStat(path9);
       if (stat && stat.isFile()) {
-        return path8;
+        return path9;
       }
     };
-    function tryStat(path8) {
-      debug('stat "%s"', path8);
+    function tryStat(path9) {
+      debug('stat "%s"', path9);
       try {
-        return fs8.statSync(path8);
+        return fs9.statSync(path9);
       } catch (e) {
         return void 0;
       }
@@ -20276,15 +20276,15 @@ var require_dist = __commonJS({
           if (token.type === endType)
             break;
           if (token.type === "char" || token.type === "escape") {
-            let path7 = token.value;
+            let path8 = token.value;
             let cur = tokens[pos];
             while (cur.type === "char" || cur.type === "escape") {
-              path7 += cur.value;
+              path8 += cur.value;
               cur = tokens[++pos];
             }
             output.push({
               type: "text",
-              value: encodePath(path7)
+              value: encodePath(path8)
             });
             continue;
           }
@@ -20308,16 +20308,16 @@ var require_dist = __commonJS({
       }
       return new TokenData(consumeUntil("end"), str);
     }
-    function compile(path7, options = {}) {
+    function compile(path8, options = {}) {
       const { encode = encodeURIComponent, delimiter = DEFAULT_DELIMITER } = options;
-      const data = typeof path7 === "object" ? path7 : parse3(path7, options);
+      const data = typeof path8 === "object" ? path8 : parse3(path8, options);
       const fn = tokensToFunction(data.tokens, delimiter, encode);
-      return function path8(params = {}) {
-        const [path9, ...missing] = fn(params);
+      return function path9(params = {}) {
+        const [path10, ...missing] = fn(params);
         if (missing.length) {
           throw new TypeError(`Missing parameters: ${missing.join(", ")}`);
         }
-        return path9;
+        return path10;
       };
     }
     function tokensToFunction(tokens, delimiter, encode) {
@@ -20373,9 +20373,9 @@ var require_dist = __commonJS({
         return [encodeValue(value)];
       };
     }
-    function match(path7, options = {}) {
+    function match(path8, options = {}) {
       const { decode = decodeURIComponent, delimiter = DEFAULT_DELIMITER } = options;
-      const { regexp, keys } = pathToRegexp(path7, options);
+      const { regexp, keys } = pathToRegexp(path8, options);
       const decoders = keys.map((key) => {
         if (decode === false)
           return NOOP_VALUE;
@@ -20387,7 +20387,7 @@ var require_dist = __commonJS({
         const m = regexp.exec(input);
         if (!m)
           return false;
-        const path8 = m[0];
+        const path9 = m[0];
         const params = /* @__PURE__ */ Object.create(null);
         for (let i = 1; i < m.length; i++) {
           if (m[i] === void 0)
@@ -20396,15 +20396,15 @@ var require_dist = __commonJS({
           const decoder = decoders[i - 1];
           params[key.name] = decoder(m[i]);
         }
-        return { path: path8, params };
+        return { path: path9, params };
       };
     }
-    function pathToRegexp(path7, options = {}) {
+    function pathToRegexp(path8, options = {}) {
       const { delimiter = DEFAULT_DELIMITER, end = true, sensitive = false, trailing = true } = options;
       const keys = [];
       const flags = sensitive ? "" : "i";
       const sources = [];
-      for (const input of pathsToArray(path7, [])) {
+      for (const input of pathsToArray(path8, [])) {
         const data = typeof input === "object" ? input : parse3(input, options);
         for (const tokens of flatten(data.tokens, 0, [])) {
           sources.push(toRegExpSource(tokens, delimiter, keys, data.originalPath));
@@ -20534,18 +20534,18 @@ var require_layer = __commonJS({
     var TRAILING_SLASH_REGEXP = /\/+$/;
     var MATCHING_GROUP_REGEXP = /\((?:\?<(.*?)>)?(?!\?)/g;
     module.exports = Layer;
-    function Layer(path7, options, fn) {
+    function Layer(path8, options, fn) {
       if (!(this instanceof Layer)) {
-        return new Layer(path7, options, fn);
+        return new Layer(path8, options, fn);
       }
-      debug("new %o", path7);
+      debug("new %o", path8);
       const opts = options || {};
       this.handle = fn;
       this.keys = [];
       this.name = fn.name || "<anonymous>";
       this.params = void 0;
       this.path = void 0;
-      this.slash = path7 === "/" && opts.end === false;
+      this.slash = path8 === "/" && opts.end === false;
       function matcher(_path) {
         if (_path instanceof RegExp) {
           const keys = [];
@@ -20584,7 +20584,7 @@ var require_layer = __commonJS({
           decode: decodeParam
         });
       }
-      this.matchers = Array.isArray(path7) ? path7.map(matcher) : [matcher(path7)];
+      this.matchers = Array.isArray(path8) ? path8.map(matcher) : [matcher(path8)];
     }
     Layer.prototype.handleError = function handleError(error40, req, res, next) {
       const fn = this.handle;
@@ -20624,9 +20624,9 @@ var require_layer = __commonJS({
         next(err);
       }
     };
-    Layer.prototype.match = function match(path7) {
+    Layer.prototype.match = function match(path8) {
       let match2;
-      if (path7 != null) {
+      if (path8 != null) {
         if (this.slash) {
           this.params = {};
           this.path = "";
@@ -20634,7 +20634,7 @@ var require_layer = __commonJS({
         }
         let i = 0;
         while (!match2 && i < this.matchers.length) {
-          match2 = this.matchers[i](path7);
+          match2 = this.matchers[i](path8);
           i++;
         }
       }
@@ -20662,13 +20662,13 @@ var require_layer = __commonJS({
         throw err;
       }
     }
-    function loosen(path7) {
-      if (path7 instanceof RegExp || path7 === "/") {
-        return path7;
+    function loosen(path8) {
+      if (path8 instanceof RegExp || path8 === "/") {
+        return path8;
       }
-      return Array.isArray(path7) ? path7.map(function(p) {
+      return Array.isArray(path8) ? path8.map(function(p) {
         return loosen(p);
-      }) : String(path7).replace(TRAILING_SLASH_REGEXP, "");
+      }) : String(path8).replace(TRAILING_SLASH_REGEXP, "");
     }
   }
 });
@@ -20684,9 +20684,9 @@ var require_route = __commonJS({
     var flatten = Array.prototype.flat;
     var methods = METHODS.map((method) => method.toLowerCase());
     module.exports = Route;
-    function Route(path7) {
-      debug("new %o", path7);
-      this.path = path7;
+    function Route(path8) {
+      debug("new %o", path8);
+      this.path = path8;
       this.stack = [];
       this.methods = /* @__PURE__ */ Object.create(null);
     }
@@ -20807,27 +20807,27 @@ var require_router = __commonJS({
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var methods = METHODS.map((method) => method.toLowerCase());
-    module.exports = Router29;
+    module.exports = Router30;
     module.exports.Route = Route;
-    function Router29(options) {
-      if (!(this instanceof Router29)) {
-        return new Router29(options);
+    function Router30(options) {
+      if (!(this instanceof Router30)) {
+        return new Router30(options);
       }
       const opts = options || {};
-      function router24(req, res, next) {
-        router24.handle(req, res, next);
+      function router25(req, res, next) {
+        router25.handle(req, res, next);
       }
-      Object.setPrototypeOf(router24, this);
-      router24.caseSensitive = opts.caseSensitive;
-      router24.mergeParams = opts.mergeParams;
-      router24.params = {};
-      router24.strict = opts.strict;
-      router24.stack = [];
-      return router24;
+      Object.setPrototypeOf(router25, this);
+      router25.caseSensitive = opts.caseSensitive;
+      router25.mergeParams = opts.mergeParams;
+      router25.params = {};
+      router25.strict = opts.strict;
+      router25.stack = [];
+      return router25;
     }
-    Router29.prototype = function() {
+    Router30.prototype = function() {
     };
-    Router29.prototype.param = function param(name, fn) {
+    Router30.prototype.param = function param(name, fn) {
       if (!name) {
         throw new TypeError("argument name is required");
       }
@@ -20847,7 +20847,7 @@ var require_router = __commonJS({
       params.push(fn);
       return this;
     };
-    Router29.prototype.handle = function handle(req, res, callback) {
+    Router30.prototype.handle = function handle(req, res, callback) {
       if (!callback) {
         throw new TypeError("argument callback is required");
       }
@@ -20894,8 +20894,8 @@ var require_router = __commonJS({
         if (++sync > 100) {
           return setImmediate(next, err);
         }
-        const path7 = getPathname(req);
-        if (path7 == null) {
+        const path8 = getPathname(req);
+        if (path8 == null) {
           return done(layerError);
         }
         let layer;
@@ -20903,7 +20903,7 @@ var require_router = __commonJS({
         let route;
         while (match !== true && idx < stack.length) {
           layer = stack[idx++];
-          match = matchLayer(layer, path7);
+          match = matchLayer(layer, path8);
           route = layer.route;
           if (typeof match !== "boolean") {
             layerError = layerError || match;
@@ -20941,18 +20941,18 @@ var require_router = __commonJS({
           } else if (route) {
             layer.handleRequest(req, res, next);
           } else {
-            trimPrefix(layer, layerError, layerPath, path7);
+            trimPrefix(layer, layerError, layerPath, path8);
           }
           sync = 0;
         });
       }
-      function trimPrefix(layer, layerError, layerPath, path7) {
+      function trimPrefix(layer, layerError, layerPath, path8) {
         if (layerPath.length !== 0) {
-          if (layerPath !== path7.substring(0, layerPath.length)) {
+          if (layerPath !== path8.substring(0, layerPath.length)) {
             next(layerError);
             return;
           }
-          const c = path7[layerPath.length];
+          const c = path8[layerPath.length];
           if (c && c !== "/") {
             next(layerError);
             return;
@@ -20974,9 +20974,9 @@ var require_router = __commonJS({
         }
       }
     };
-    Router29.prototype.use = function use(handler) {
+    Router30.prototype.use = function use(handler) {
       let offset = 0;
-      let path7 = "/";
+      let path8 = "/";
       if (typeof handler !== "function") {
         let arg = handler;
         while (Array.isArray(arg) && arg.length !== 0) {
@@ -20984,7 +20984,7 @@ var require_router = __commonJS({
         }
         if (typeof arg !== "function") {
           offset = 1;
-          path7 = handler;
+          path8 = handler;
         }
       }
       const callbacks = flatten.call(slice.call(arguments, offset), Infinity);
@@ -20996,8 +20996,8 @@ var require_router = __commonJS({
         if (typeof fn !== "function") {
           throw new TypeError("argument handler must be a function");
         }
-        debug("use %o %s", path7, fn.name || "<anonymous>");
-        const layer = new Layer(path7, {
+        debug("use %o %s", path8, fn.name || "<anonymous>");
+        const layer = new Layer(path8, {
           sensitive: this.caseSensitive,
           strict: false,
           end: false
@@ -21007,9 +21007,9 @@ var require_router = __commonJS({
       }
       return this;
     };
-    Router29.prototype.route = function route(path7) {
-      const route2 = new Route(path7);
-      const layer = new Layer(path7, {
+    Router30.prototype.route = function route(path8) {
+      const route2 = new Route(path8);
+      const layer = new Layer(path8, {
         sensitive: this.caseSensitive,
         strict: this.strict,
         end: true
@@ -21022,8 +21022,8 @@ var require_router = __commonJS({
       return route2;
     };
     methods.concat("all").forEach(function(method) {
-      Router29.prototype[method] = function(path7) {
-        const route = this.route(path7);
+      Router30.prototype[method] = function(path8) {
+        const route = this.route(path8);
         route[method].apply(route, slice.call(arguments, 1));
         return this;
       };
@@ -21052,9 +21052,9 @@ var require_router = __commonJS({
       const fqdnIndex = url2.substring(0, pathLength).indexOf("://");
       return fqdnIndex !== -1 ? url2.substring(0, url2.indexOf("/", 3 + fqdnIndex)) : void 0;
     }
-    function matchLayer(layer, path7) {
+    function matchLayer(layer, path8) {
       try {
-        return layer.match(path7);
+        return layer.match(path8);
       } catch (err) {
         return err;
       }
@@ -21205,13 +21205,13 @@ var require_application = __commonJS({
     var compileTrust = require_utils3().compileTrust;
     var resolve2 = __require("node:path").resolve;
     var once = require_once();
-    var Router29 = require_router();
+    var Router30 = require_router();
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var app2 = exports = module.exports = {};
     var trustProxyDefaultSymbol = "@@symbol:trust_proxy_default";
     app2.init = function init() {
-      var router24 = null;
+      var router25 = null;
       this.cache = /* @__PURE__ */ Object.create(null);
       this.engines = /* @__PURE__ */ Object.create(null);
       this.settings = /* @__PURE__ */ Object.create(null);
@@ -21220,13 +21220,13 @@ var require_application = __commonJS({
         configurable: true,
         enumerable: true,
         get: function getrouter() {
-          if (router24 === null) {
-            router24 = new Router29({
+          if (router25 === null) {
+            router25 = new Router30({
               caseSensitive: this.enabled("case sensitive routing"),
               strict: this.enabled("strict routing")
             });
           }
-          return router24;
+          return router25;
         }
       });
     };
@@ -21282,7 +21282,7 @@ var require_application = __commonJS({
     };
     app2.use = function use(fn) {
       var offset = 0;
-      var path7 = "/";
+      var path8 = "/";
       if (typeof fn !== "function") {
         var arg = fn;
         while (Array.isArray(arg) && arg.length !== 0) {
@@ -21290,22 +21290,22 @@ var require_application = __commonJS({
         }
         if (typeof arg !== "function") {
           offset = 1;
-          path7 = fn;
+          path8 = fn;
         }
       }
       var fns = flatten.call(slice.call(arguments, offset), Infinity);
       if (fns.length === 0) {
         throw new TypeError("app.use() requires a middleware function");
       }
-      var router24 = this.router;
+      var router25 = this.router;
       fns.forEach(function(fn2) {
         if (!fn2 || !fn2.handle || !fn2.set) {
-          return router24.use(path7, fn2);
+          return router25.use(path8, fn2);
         }
-        debug(".use app under %s", path7);
-        fn2.mountpath = path7;
+        debug(".use app under %s", path8);
+        fn2.mountpath = path8;
         fn2.parent = this;
-        router24.use(path7, function mounted_app(req, res, next) {
+        router25.use(path8, function mounted_app(req, res, next) {
           var orig = req.app;
           fn2.handle(req, res, function(err) {
             Object.setPrototypeOf(req, orig.request);
@@ -21317,8 +21317,8 @@ var require_application = __commonJS({
       }, this);
       return this;
     };
-    app2.route = function route(path7) {
-      return this.router.route(path7);
+    app2.route = function route(path8) {
+      return this.router.route(path8);
     };
     app2.engine = function engine(ext, fn) {
       if (typeof fn !== "function") {
@@ -21361,7 +21361,7 @@ var require_application = __commonJS({
       }
       return this;
     };
-    app2.path = function path7() {
+    app2.path = function path8() {
       return this.parent ? this.parent.path() + this.mountpath : "";
     };
     app2.enabled = function enabled(setting) {
@@ -21377,17 +21377,17 @@ var require_application = __commonJS({
       return this.set(setting, false);
     };
     methods.forEach(function(method) {
-      app2[method] = function(path7) {
+      app2[method] = function(path8) {
         if (method === "get" && arguments.length === 1) {
-          return this.set(path7);
+          return this.set(path8);
         }
-        var route = this.route(path7);
+        var route = this.route(path8);
         route[method].apply(route, slice.call(arguments, 1));
         return this;
       };
     });
-    app2.all = function all(path7) {
-      var route = this.route(path7);
+    app2.all = function all(path8) {
+      var route = this.route(path8);
       var args = slice.call(arguments, 1);
       for (var i = 0; i < methods.length; i++) {
         route[methods[i]].apply(route, args);
@@ -22297,7 +22297,7 @@ var require_request = __commonJS({
       var subdomains2 = !isIP(hostname2) ? hostname2.split(".").reverse() : [hostname2];
       return subdomains2.slice(offset);
     });
-    defineGetter(req, "path", function path7() {
+    defineGetter(req, "path", function path8() {
       return parse3(this).pathname;
     });
     defineGetter(req, "host", function host() {
@@ -22704,32 +22704,32 @@ var require_send = __commonJS({
     var escapeHtml = require_escape_html();
     var etag = require_etag();
     var fresh = require_fresh();
-    var fs8 = __require("fs");
+    var fs9 = __require("fs");
     var mime = require_mime_types();
     var ms = require_ms();
     var onFinished = require_on_finished();
     var parseRange = require_range_parser();
-    var path7 = __require("path");
+    var path8 = __require("path");
     var statuses = require_statuses();
     var Stream = __require("stream");
     var util2 = __require("util");
-    var extname = path7.extname;
-    var join = path7.join;
-    var normalize = path7.normalize;
-    var resolve2 = path7.resolve;
-    var sep = path7.sep;
+    var extname = path8.extname;
+    var join = path8.join;
+    var normalize = path8.normalize;
+    var resolve2 = path8.resolve;
+    var sep = path8.sep;
     var BYTES_RANGE_REGEXP = /^ *bytes=/;
     var MAX_MAXAGE = 60 * 60 * 24 * 365 * 1e3;
     var UP_PATH_REGEXP = /(?:^|[\\/])\.\.(?:[\\/]|$)/;
     module.exports = send;
-    function send(req, path8, options) {
-      return new SendStream(req, path8, options);
+    function send(req, path9, options) {
+      return new SendStream(req, path9, options);
     }
-    function SendStream(req, path8, options) {
+    function SendStream(req, path9, options) {
       Stream.call(this);
       var opts = options || {};
       this.options = opts;
-      this.path = path8;
+      this.path = path9;
       this.req = req;
       this._acceptRanges = opts.acceptRanges !== void 0 ? Boolean(opts.acceptRanges) : true;
       this._cacheControl = opts.cacheControl !== void 0 ? Boolean(opts.cacheControl) : true;
@@ -22843,10 +22843,10 @@ var require_send = __commonJS({
       var lastModified = this.res.getHeader("Last-Modified");
       return parseHttpDate(lastModified) <= parseHttpDate(ifRange);
     };
-    SendStream.prototype.redirect = function redirect(path8) {
+    SendStream.prototype.redirect = function redirect(path9) {
       var res = this.res;
       if (hasListeners(this, "directory")) {
-        this.emit("directory", res, path8);
+        this.emit("directory", res, path9);
         return;
       }
       if (this.hasTrailingSlash()) {
@@ -22866,38 +22866,38 @@ var require_send = __commonJS({
     SendStream.prototype.pipe = function pipe2(res) {
       var root = this._root;
       this.res = res;
-      var path8 = decode(this.path);
-      if (path8 === -1) {
+      var path9 = decode(this.path);
+      if (path9 === -1) {
         this.error(400);
         return res;
       }
-      if (~path8.indexOf("\0")) {
+      if (~path9.indexOf("\0")) {
         this.error(400);
         return res;
       }
       var parts;
       if (root !== null) {
-        if (path8) {
-          path8 = normalize("." + sep + path8);
+        if (path9) {
+          path9 = normalize("." + sep + path9);
         }
-        if (UP_PATH_REGEXP.test(path8)) {
-          debug('malicious path "%s"', path8);
+        if (UP_PATH_REGEXP.test(path9)) {
+          debug('malicious path "%s"', path9);
           this.error(403);
           return res;
         }
-        parts = path8.split(sep);
-        path8 = normalize(join(root, path8));
+        parts = path9.split(sep);
+        path9 = normalize(join(root, path9));
       } else {
-        if (UP_PATH_REGEXP.test(path8)) {
-          debug('malicious path "%s"', path8);
+        if (UP_PATH_REGEXP.test(path9)) {
+          debug('malicious path "%s"', path9);
           this.error(403);
           return res;
         }
-        parts = normalize(path8).split(sep);
-        path8 = resolve2(path8);
+        parts = normalize(path9).split(sep);
+        path9 = resolve2(path9);
       }
       if (containsDotFile(parts)) {
-        debug('%s dotfile "%s"', this._dotfiles, path8);
+        debug('%s dotfile "%s"', this._dotfiles, path9);
         switch (this._dotfiles) {
           case "allow":
             break;
@@ -22911,13 +22911,13 @@ var require_send = __commonJS({
         }
       }
       if (this._index.length && this.hasTrailingSlash()) {
-        this.sendIndex(path8);
+        this.sendIndex(path9);
         return res;
       }
-      this.sendFile(path8);
+      this.sendFile(path9);
       return res;
     };
-    SendStream.prototype.send = function send2(path8, stat) {
+    SendStream.prototype.send = function send2(path9, stat) {
       var len = stat.size;
       var options = this.options;
       var opts = {};
@@ -22929,9 +22929,9 @@ var require_send = __commonJS({
         this.headersAlreadySent();
         return;
       }
-      debug('pipe "%s"', path8);
-      this.setHeader(path8, stat);
-      this.type(path8);
+      debug('pipe "%s"', path9);
+      this.setHeader(path9, stat);
+      this.type(path9);
       if (this.isConditionalGET()) {
         if (this.isPreconditionFailure()) {
           this.error(412);
@@ -22980,30 +22980,30 @@ var require_send = __commonJS({
         res.end();
         return;
       }
-      this.stream(path8, opts);
+      this.stream(path9, opts);
     };
-    SendStream.prototype.sendFile = function sendFile(path8) {
+    SendStream.prototype.sendFile = function sendFile(path9) {
       var i = 0;
       var self2 = this;
-      debug('stat "%s"', path8);
-      fs8.stat(path8, function onstat(err, stat) {
-        var pathEndsWithSep = path8[path8.length - 1] === sep;
-        if (err && err.code === "ENOENT" && !extname(path8) && !pathEndsWithSep) {
+      debug('stat "%s"', path9);
+      fs9.stat(path9, function onstat(err, stat) {
+        var pathEndsWithSep = path9[path9.length - 1] === sep;
+        if (err && err.code === "ENOENT" && !extname(path9) && !pathEndsWithSep) {
           return next(err);
         }
         if (err) return self2.onStatError(err);
-        if (stat.isDirectory()) return self2.redirect(path8);
+        if (stat.isDirectory()) return self2.redirect(path9);
         if (pathEndsWithSep) return self2.error(404);
-        self2.emit("file", path8, stat);
-        self2.send(path8, stat);
+        self2.emit("file", path9, stat);
+        self2.send(path9, stat);
       });
       function next(err) {
         if (self2._extensions.length <= i) {
           return err ? self2.onStatError(err) : self2.error(404);
         }
-        var p = path8 + "." + self2._extensions[i++];
+        var p = path9 + "." + self2._extensions[i++];
         debug('stat "%s"', p);
-        fs8.stat(p, function(err2, stat) {
+        fs9.stat(p, function(err2, stat) {
           if (err2) return next(err2);
           if (stat.isDirectory()) return next();
           self2.emit("file", p, stat);
@@ -23011,7 +23011,7 @@ var require_send = __commonJS({
         });
       }
     };
-    SendStream.prototype.sendIndex = function sendIndex(path8) {
+    SendStream.prototype.sendIndex = function sendIndex(path9) {
       var i = -1;
       var self2 = this;
       function next(err) {
@@ -23019,9 +23019,9 @@ var require_send = __commonJS({
           if (err) return self2.onStatError(err);
           return self2.error(404);
         }
-        var p = join(path8, self2._index[i]);
+        var p = join(path9, self2._index[i]);
         debug('stat "%s"', p);
-        fs8.stat(p, function(err2, stat) {
+        fs9.stat(p, function(err2, stat) {
           if (err2) return next(err2);
           if (stat.isDirectory()) return next();
           self2.emit("file", p, stat);
@@ -23030,10 +23030,10 @@ var require_send = __commonJS({
       }
       next();
     };
-    SendStream.prototype.stream = function stream(path8, options) {
+    SendStream.prototype.stream = function stream(path9, options) {
       var self2 = this;
       var res = this.res;
-      var stream2 = fs8.createReadStream(path8, options);
+      var stream2 = fs9.createReadStream(path9, options);
       this.emit("stream", stream2);
       stream2.pipe(res);
       function cleanup() {
@@ -23048,17 +23048,17 @@ var require_send = __commonJS({
         self2.emit("end");
       });
     };
-    SendStream.prototype.type = function type(path8) {
+    SendStream.prototype.type = function type(path9) {
       var res = this.res;
       if (res.getHeader("Content-Type")) return;
-      var ext = extname(path8);
+      var ext = extname(path9);
       var type2 = mime.contentType(ext) || "application/octet-stream";
       debug("content-type %s", type2);
       res.setHeader("Content-Type", type2);
     };
-    SendStream.prototype.setHeader = function setHeader(path8, stat) {
+    SendStream.prototype.setHeader = function setHeader(path9, stat) {
       var res = this.res;
-      this.emit("headers", res, path8, stat);
+      this.emit("headers", res, path9, stat);
       if (this._acceptRanges && !res.getHeader("Accept-Ranges")) {
         debug("accept ranges");
         res.setHeader("Accept-Ranges", "bytes");
@@ -23116,9 +23116,9 @@ var require_send = __commonJS({
       }
       return err instanceof Error ? createError(status, err, { expose: false }) : createError(status, err);
     }
-    function decode(path8) {
+    function decode(path9) {
       try {
-        return decodeURIComponent(path8);
+        return decodeURIComponent(path9);
       } catch (err) {
         return -1;
       }
@@ -23262,7 +23262,7 @@ var require_response = __commonJS({
     var http = __require("node:http");
     var onFinished = require_on_finished();
     var mime = require_mime_types();
-    var path7 = __require("node:path");
+    var path8 = __require("node:path");
     var pathIsAbsolute = __require("node:path").isAbsolute;
     var statuses = require_statuses();
     var sign = require_cookie_signature().sign;
@@ -23271,8 +23271,8 @@ var require_response = __commonJS({
     var setCharset = require_utils3().setCharset;
     var cookie = require_cookie();
     var send = require_send();
-    var extname = path7.extname;
-    var resolve2 = path7.resolve;
+    var extname = path8.extname;
+    var resolve2 = path8.resolve;
     var vary = require_vary();
     var { Buffer: Buffer2 } = __require("node:buffer");
     var res = Object.create(http.ServerResponse.prototype);
@@ -23418,26 +23418,26 @@ var require_response = __commonJS({
       this.type("txt");
       return this.send(body);
     };
-    res.sendFile = function sendFile(path8, options, callback) {
+    res.sendFile = function sendFile(path9, options, callback) {
       var done = callback;
       var req = this.req;
       var res2 = this;
       var next = req.next;
       var opts = options || {};
-      if (!path8) {
+      if (!path9) {
         throw new TypeError("path argument is required to res.sendFile");
       }
-      if (typeof path8 !== "string") {
+      if (typeof path9 !== "string") {
         throw new TypeError("path must be a string to res.sendFile");
       }
       if (typeof options === "function") {
         done = options;
         opts = {};
       }
-      if (!opts.root && !pathIsAbsolute(path8)) {
+      if (!opts.root && !pathIsAbsolute(path9)) {
         throw new TypeError("path must be absolute or specify root to res.sendFile");
       }
-      var pathname = encodeURI(path8);
+      var pathname = encodeURI(path9);
       opts.etag = this.app.enabled("etag");
       var file2 = send(req, pathname, opts);
       sendfile(res2, file2, opts, function(err) {
@@ -23448,7 +23448,7 @@ var require_response = __commonJS({
         }
       });
     };
-    res.download = function download(path8, filename, options, callback) {
+    res.download = function download(path9, filename, options, callback) {
       var done = callback;
       var name = filename;
       var opts = options || null;
@@ -23465,7 +23465,7 @@ var require_response = __commonJS({
         opts = filename;
       }
       var headers = {
-        "Content-Disposition": contentDisposition(name || path8)
+        "Content-Disposition": contentDisposition(name || path9)
       };
       if (opts && opts.headers) {
         var keys = Object.keys(opts.headers);
@@ -23478,7 +23478,7 @@ var require_response = __commonJS({
       }
       opts = Object.create(opts);
       opts.headers = headers;
-      var fullPath = !opts.root ? resolve2(path8) : path8;
+      var fullPath = !opts.root ? resolve2(path9) : path9;
       return this.sendFile(fullPath, opts, done);
     };
     res.contentType = res.type = function contentType(type) {
@@ -23761,11 +23761,11 @@ var require_serve_static = __commonJS({
         }
         var forwardError = !fallthrough;
         var originalUrl = parseUrl.original(req);
-        var path7 = parseUrl(req).pathname;
-        if (path7 === "/" && originalUrl.pathname.substr(-1) !== "/") {
-          path7 = "";
+        var path8 = parseUrl(req).pathname;
+        if (path8 === "/" && originalUrl.pathname.substr(-1) !== "/") {
+          path8 = "";
         }
-        var stream = send(req, path7, opts);
+        var stream = send(req, path8, opts);
         stream.on("directory", onDirectory);
         if (setHeaders) {
           stream.on("headers", setHeaders);
@@ -23832,7 +23832,7 @@ var require_express = __commonJS({
     var EventEmitter = __require("node:events").EventEmitter;
     var mixin = require_merge_descriptors();
     var proto = require_application();
-    var Router29 = require_router();
+    var Router30 = require_router();
     var req = require_request();
     var res = require_response();
     exports = module.exports = createApplication;
@@ -23854,8 +23854,8 @@ var require_express = __commonJS({
     exports.application = proto;
     exports.request = req;
     exports.response = res;
-    exports.Route = Router29.Route;
-    exports.Router = Router29;
+    exports.Route = Router30.Route;
+    exports.Router = Router30;
     exports.json = bodyParser.json;
     exports.raw = bodyParser.raw;
     exports.static = require_serve_static();
@@ -24413,8 +24413,8 @@ var require_req = __commonJS({
       if (req.originalUrl) {
         _req.url = req.originalUrl;
       } else {
-        const path7 = req.path;
-        _req.url = typeof path7 === "string" ? path7 : req.url ? req.url.path || req.url : void 0;
+        const path8 = req.path;
+        _req.url = typeof path8 === "string" ? path8 : req.url ? req.url.path || req.url : void 0;
       }
       if (req.query) {
         _req.query = req.query;
@@ -24579,14 +24579,14 @@ var require_redact = __commonJS({
       }
       return obj;
     }
-    function parsePath(path7) {
+    function parsePath(path8) {
       const parts = [];
       let current = "";
       let inBrackets = false;
       let inQuotes = false;
       let quoteChar = "";
-      for (let i = 0; i < path7.length; i++) {
-        const char2 = path7[i];
+      for (let i = 0; i < path8.length; i++) {
+        const char2 = path8[i];
         if (!inBrackets && char2 === ".") {
           if (current) {
             parts.push(current);
@@ -24717,10 +24717,10 @@ var require_redact = __commonJS({
       return current;
     }
     function redactPaths(obj, paths, censor, remove = false) {
-      for (const path7 of paths) {
-        const parts = parsePath(path7);
+      for (const path8 of paths) {
+        const parts = parsePath(path8);
         if (parts.includes("*")) {
-          redactWildcardPath(obj, parts, censor, path7, remove);
+          redactWildcardPath(obj, parts, censor, path8, remove);
         } else {
           if (remove) {
             removeKey(obj, parts);
@@ -24805,8 +24805,8 @@ var require_redact = __commonJS({
           }
         } else {
           if (afterWildcard.includes("*")) {
-            const wrappedCensor = typeof censor === "function" ? (value, path7) => {
-              const fullPath = [...pathArray.slice(0, pathLength), ...path7];
+            const wrappedCensor = typeof censor === "function" ? (value, path8) => {
+              const fullPath = [...pathArray.slice(0, pathLength), ...path8];
               return censor(value, fullPath);
             } : censor;
             redactWildcardPath(current, afterWildcard, wrappedCensor, originalPath, remove);
@@ -24841,8 +24841,8 @@ var require_redact = __commonJS({
         return null;
       }
       const pathStructure = /* @__PURE__ */ new Map();
-      for (const path7 of pathsToClone) {
-        const parts = parsePath(path7);
+      for (const path8 of pathsToClone) {
+        const parts = parsePath(path8);
         let current = pathStructure;
         for (let i = 0; i < parts.length; i++) {
           const part = parts[i];
@@ -24894,24 +24894,24 @@ var require_redact = __commonJS({
       }
       return cloneSelectively(obj, pathStructure);
     }
-    function validatePath(path7) {
-      if (typeof path7 !== "string") {
+    function validatePath(path8) {
+      if (typeof path8 !== "string") {
         throw new Error("Paths must be (non-empty) strings");
       }
-      if (path7 === "") {
+      if (path8 === "") {
         throw new Error("Invalid redaction path ()");
       }
-      if (path7.includes("..")) {
-        throw new Error(`Invalid redaction path (${path7})`);
+      if (path8.includes("..")) {
+        throw new Error(`Invalid redaction path (${path8})`);
       }
-      if (path7.includes(",")) {
-        throw new Error(`Invalid redaction path (${path7})`);
+      if (path8.includes(",")) {
+        throw new Error(`Invalid redaction path (${path8})`);
       }
       let bracketCount = 0;
       let inQuotes = false;
       let quoteChar = "";
-      for (let i = 0; i < path7.length; i++) {
-        const char2 = path7[i];
+      for (let i = 0; i < path8.length; i++) {
+        const char2 = path8[i];
         if ((char2 === '"' || char2 === "'") && bracketCount > 0) {
           if (!inQuotes) {
             inQuotes = true;
@@ -24925,20 +24925,20 @@ var require_redact = __commonJS({
         } else if (char2 === "]" && !inQuotes) {
           bracketCount--;
           if (bracketCount < 0) {
-            throw new Error(`Invalid redaction path (${path7})`);
+            throw new Error(`Invalid redaction path (${path8})`);
           }
         }
       }
       if (bracketCount !== 0) {
-        throw new Error(`Invalid redaction path (${path7})`);
+        throw new Error(`Invalid redaction path (${path8})`);
       }
     }
     function validatePaths(paths) {
       if (!Array.isArray(paths)) {
         throw new TypeError("paths must be an array");
       }
-      for (const path7 of paths) {
-        validatePath(path7);
+      for (const path8 of paths) {
+        validatePath(path8);
       }
     }
     function slowRedact(options = {}) {
@@ -25106,8 +25106,8 @@ var require_redaction = __commonJS({
         if (shape[k] === null) {
           o[k] = (value) => topCensor(value, [k]);
         } else {
-          const wrappedCensor = typeof censor === "function" ? (value, path7) => {
-            return censor(value, [k, ...path7]);
+          const wrappedCensor = typeof censor === "function" ? (value, path8) => {
+            return censor(value, [k, ...path8]);
           } : censor;
           o[k] = Redact({
             paths: shape[k],
@@ -25325,10 +25325,10 @@ var require_atomic_sleep = __commonJS({
 var require_sonic_boom = __commonJS({
   "../../node_modules/.pnpm/sonic-boom@4.2.1/node_modules/sonic-boom/index.js"(exports, module) {
     "use strict";
-    var fs8 = __require("fs");
+    var fs9 = __require("fs");
     var EventEmitter = __require("events");
     var inherits = __require("util").inherits;
-    var path7 = __require("path");
+    var path8 = __require("path");
     var sleep = require_atomic_sleep();
     var assert2 = __require("assert");
     var BUSY_WRITE_TIMEOUT = 100;
@@ -25382,20 +25382,20 @@ var require_sonic_boom = __commonJS({
       const mode = sonic.mode;
       if (sonic.sync) {
         try {
-          if (sonic.mkdir) fs8.mkdirSync(path7.dirname(file2), { recursive: true });
-          const fd = fs8.openSync(file2, flags, mode);
+          if (sonic.mkdir) fs9.mkdirSync(path8.dirname(file2), { recursive: true });
+          const fd = fs9.openSync(file2, flags, mode);
           fileOpened(null, fd);
         } catch (err) {
           fileOpened(err);
           throw err;
         }
       } else if (sonic.mkdir) {
-        fs8.mkdir(path7.dirname(file2), { recursive: true }, (err) => {
+        fs9.mkdir(path8.dirname(file2), { recursive: true }, (err) => {
           if (err) return fileOpened(err);
-          fs8.open(file2, flags, mode, fileOpened);
+          fs9.open(file2, flags, mode, fileOpened);
         });
       } else {
-        fs8.open(file2, flags, mode, fileOpened);
+        fs9.open(file2, flags, mode, fileOpened);
       }
     }
     function SonicBoom(opts) {
@@ -25436,8 +25436,8 @@ var require_sonic_boom = __commonJS({
         this.flush = flushBuffer;
         this.flushSync = flushBufferSync;
         this._actualWrite = actualWriteBuffer;
-        fsWriteSync = () => fs8.writeSync(this.fd, this._writingBuf);
-        fsWrite = () => fs8.write(this.fd, this._writingBuf, this.release);
+        fsWriteSync = () => fs9.writeSync(this.fd, this._writingBuf);
+        fsWrite = () => fs9.write(this.fd, this._writingBuf, this.release);
       } else if (contentMode === void 0 || contentMode === kContentModeUtf8) {
         this._writingBuf = "";
         this.write = write;
@@ -25446,15 +25446,15 @@ var require_sonic_boom = __commonJS({
         this._actualWrite = actualWrite;
         fsWriteSync = () => {
           if (Buffer.isBuffer(this._writingBuf)) {
-            return fs8.writeSync(this.fd, this._writingBuf);
+            return fs9.writeSync(this.fd, this._writingBuf);
           }
-          return fs8.writeSync(this.fd, this._writingBuf, "utf8");
+          return fs9.writeSync(this.fd, this._writingBuf, "utf8");
         };
         fsWrite = () => {
           if (Buffer.isBuffer(this._writingBuf)) {
-            return fs8.write(this.fd, this._writingBuf, this.release);
+            return fs9.write(this.fd, this._writingBuf, this.release);
           }
-          return fs8.write(this.fd, this._writingBuf, "utf8", this.release);
+          return fs9.write(this.fd, this._writingBuf, "utf8", this.release);
         };
       } else {
         throw new Error(`SonicBoom supports "${kContentModeUtf8}" and "${kContentModeBuffer}", but passed ${contentMode}`);
@@ -25511,7 +25511,7 @@ var require_sonic_boom = __commonJS({
           }
         }
         if (this._fsync) {
-          fs8.fsyncSync(this.fd);
+          fs9.fsyncSync(this.fd);
         }
         const len = this._len;
         if (this._reopening) {
@@ -25625,7 +25625,7 @@ var require_sonic_boom = __commonJS({
       const onDrain = () => {
         if (!this._fsync) {
           try {
-            fs8.fsync(this.fd, (err) => {
+            fs9.fsync(this.fd, (err) => {
               this._flushPending = false;
               cb(err);
             });
@@ -25727,7 +25727,7 @@ var require_sonic_boom = __commonJS({
       const fd = this.fd;
       this.once("ready", () => {
         if (fd !== this.fd) {
-          fs8.close(fd, (err) => {
+          fs9.close(fd, (err) => {
             if (err) {
               return this.emit("error", err);
             }
@@ -25776,7 +25776,7 @@ var require_sonic_boom = __commonJS({
           buf = this._bufs[0];
         }
         try {
-          const n = Buffer.isBuffer(buf) ? fs8.writeSync(this.fd, buf) : fs8.writeSync(this.fd, buf, "utf8");
+          const n = Buffer.isBuffer(buf) ? fs9.writeSync(this.fd, buf) : fs9.writeSync(this.fd, buf, "utf8");
           const releasedBufObj = releaseWritingBuf(buf, this._len, n);
           buf = releasedBufObj.writingBuf;
           this._len = releasedBufObj.len;
@@ -25792,7 +25792,7 @@ var require_sonic_boom = __commonJS({
         }
       }
       try {
-        fs8.fsyncSync(this.fd);
+        fs9.fsyncSync(this.fd);
       } catch {
       }
     }
@@ -25813,7 +25813,7 @@ var require_sonic_boom = __commonJS({
           buf = mergeBuf(this._bufs[0], this._lens[0]);
         }
         try {
-          const n = fs8.writeSync(this.fd, buf);
+          const n = fs9.writeSync(this.fd, buf);
           buf = buf.subarray(n);
           this._len = Math.max(this._len - n, 0);
           if (buf.length <= 0) {
@@ -25841,13 +25841,13 @@ var require_sonic_boom = __commonJS({
       this._writingBuf = this._writingBuf.length ? this._writingBuf : this._bufs.shift() || "";
       if (this.sync) {
         try {
-          const written = Buffer.isBuffer(this._writingBuf) ? fs8.writeSync(this.fd, this._writingBuf) : fs8.writeSync(this.fd, this._writingBuf, "utf8");
+          const written = Buffer.isBuffer(this._writingBuf) ? fs9.writeSync(this.fd, this._writingBuf) : fs9.writeSync(this.fd, this._writingBuf, "utf8");
           release(null, written);
         } catch (err) {
           release(err);
         }
       } else {
-        fs8.write(this.fd, this._writingBuf, release);
+        fs9.write(this.fd, this._writingBuf, release);
       }
     }
     function actualWriteBuffer() {
@@ -25856,7 +25856,7 @@ var require_sonic_boom = __commonJS({
       this._writingBuf = this._writingBuf.length ? this._writingBuf : mergeBuf(this._bufs.shift(), this._lens.shift());
       if (this.sync) {
         try {
-          const written = fs8.writeSync(this.fd, this._writingBuf);
+          const written = fs9.writeSync(this.fd, this._writingBuf);
           release(null, written);
         } catch (err) {
           release(err);
@@ -25865,7 +25865,7 @@ var require_sonic_boom = __commonJS({
         if (kCopyBuffer) {
           this._writingBuf = Buffer.from(this._writingBuf);
         }
-        fs8.write(this.fd, this._writingBuf, release);
+        fs9.write(this.fd, this._writingBuf, release);
       }
     }
     function actualClose(sonic) {
@@ -25881,12 +25881,12 @@ var require_sonic_boom = __commonJS({
       sonic._lens = [];
       assert2(typeof sonic.fd === "number", `sonic.fd must be a number, got ${typeof sonic.fd}`);
       try {
-        fs8.fsync(sonic.fd, closeWrapped);
+        fs9.fsync(sonic.fd, closeWrapped);
       } catch {
       }
       function closeWrapped() {
         if (sonic.fd !== 1 && sonic.fd !== 2) {
-          fs8.close(sonic.fd, done);
+          fs9.close(sonic.fd, done);
         } else {
           done();
         }
@@ -28250,9 +28250,9 @@ var require_pino = __commonJS({
   "../../node_modules/.pnpm/pino@9.14.0/node_modules/pino/pino.js"(exports, module) {
     function pinoBundlerAbsolutePath(p) {
       try {
-        const path7 = __require("path");
+        const path8 = __require("path");
         const outputDir = globalThis.__dirname;
-        return path7.resolve(outputDir, p.replace(/^\.\//, ""));
+        return path8.resolve(outputDir, p.replace(/^\.\//, ""));
       } catch (e) {
         const f = new Function("p", "return new URL(p, import.meta.url).pathname");
         return f(p);
@@ -29147,8 +29147,8 @@ var require_node2 = __commonJS({
           }
           break;
         case "FILE":
-          var fs8 = __require("fs");
-          stream2 = new fs8.SyncWriteStream(fd2, { autoClose: false });
+          var fs9 = __require("fs");
+          stream2 = new fs9.SyncWriteStream(fd2, { autoClose: false });
           stream2._type = "fs";
           break;
         case "PIPE":
@@ -31734,15 +31734,15 @@ var require_pg_connection_string = __commonJS({
       if (config3.sslcert || config3.sslkey || config3.sslrootcert || config3.sslmode) {
         config3.ssl = {};
       }
-      const fs8 = config3.sslcert || config3.sslkey || config3.sslrootcert ? __require("fs") : null;
+      const fs9 = config3.sslcert || config3.sslkey || config3.sslrootcert ? __require("fs") : null;
       if (config3.sslcert) {
-        config3.ssl.cert = fs8.readFileSync(config3.sslcert).toString();
+        config3.ssl.cert = fs9.readFileSync(config3.sslcert).toString();
       }
       if (config3.sslkey) {
-        config3.ssl.key = fs8.readFileSync(config3.sslkey).toString();
+        config3.ssl.key = fs9.readFileSync(config3.sslkey).toString();
       }
       if (config3.sslrootcert) {
-        config3.ssl.ca = fs8.readFileSync(config3.sslrootcert).toString();
+        config3.ssl.ca = fs9.readFileSync(config3.sslrootcert).toString();
       }
       if (options.useLibpqCompat && config3.uselibpqcompat) {
         throw new Error("Both useLibpqCompat and uselibpqcompat are set. Please use only one of them.");
@@ -33507,7 +33507,7 @@ var require_split2 = __commonJS({
 var require_helper = __commonJS({
   "../../node_modules/.pnpm/pgpass@1.0.5/node_modules/pgpass/lib/helper.js"(exports, module) {
     "use strict";
-    var path7 = __require("path");
+    var path8 = __require("path");
     var Stream = __require("stream").Stream;
     var split = require_split2();
     var util2 = __require("util");
@@ -33546,7 +33546,7 @@ var require_helper = __commonJS({
     };
     module.exports.getFileName = function(rawEnv) {
       var env = rawEnv || process.env;
-      var file2 = env.PGPASSFILE || (isWin ? path7.join(env.APPDATA || "./", "postgresql", "pgpass.conf") : path7.join(env.HOME || "./", ".pgpass"));
+      var file2 = env.PGPASSFILE || (isWin ? path8.join(env.APPDATA || "./", "postgresql", "pgpass.conf") : path8.join(env.HOME || "./", ".pgpass"));
       return file2;
     };
     module.exports.usePgPass = function(stats, fname) {
@@ -33678,16 +33678,16 @@ var require_helper = __commonJS({
 var require_lib4 = __commonJS({
   "../../node_modules/.pnpm/pgpass@1.0.5/node_modules/pgpass/lib/index.js"(exports, module) {
     "use strict";
-    var path7 = __require("path");
-    var fs8 = __require("fs");
+    var path8 = __require("path");
+    var fs9 = __require("fs");
     var helper = require_helper();
     module.exports = function(connInfo, cb) {
       var file2 = helper.getFileName();
-      fs8.stat(file2, function(err, stat) {
+      fs9.stat(file2, function(err, stat) {
         if (err || !helper.usePgPass(stat, file2)) {
           return cb(void 0);
         }
-        var st = fs8.createReadStream(file2);
+        var st = fs9.createReadStream(file2);
         helper.getPassword(connInfo, st, cb);
       });
     };
@@ -35312,8 +35312,8 @@ var require_connect_pg_simple = __commonJS({
           const res = await this._asyncQuery("SELECT to_regclass($1::text)", [quotedTable], true);
           if (res && res["to_regclass"] === null) {
             const pathModule = __require("node:path");
-            const fs8 = __require("node:fs").promises;
-            const tableDefString = await fs8.readFile(pathModule.resolve(__dirname, "./table.sql"), "utf8");
+            const fs9 = __require("node:fs").promises;
+            const tableDefString = await fs9.readFile(pathModule.resolve(__dirname, "./table.sql"), "utf8");
             const tableDefModified = tableDefString.replaceAll('"session"', quotedTable);
             await this._asyncQuery(tableDefModified, [], true);
           }
@@ -37086,7 +37086,7 @@ var init_selection_proxy = __esm({
 function mapResultRow(columns, row, joinsNotNullableMap) {
   const nullifyMap = {};
   const result = columns.reduce(
-    (result2, { path: path7, field }, columnIndex) => {
+    (result2, { path: path8, field }, columnIndex) => {
       let decoder;
       if (is(field, Column)) {
         decoder = field;
@@ -37098,8 +37098,8 @@ function mapResultRow(columns, row, joinsNotNullableMap) {
         decoder = field.sql.decoder;
       }
       let node = result2;
-      for (const [pathChunkIndex, pathChunk] of path7.entries()) {
-        if (pathChunkIndex < path7.length - 1) {
+      for (const [pathChunkIndex, pathChunk] of path8.entries()) {
+        if (pathChunkIndex < path8.length - 1) {
           if (!(pathChunk in node)) {
             node[pathChunk] = {};
           }
@@ -37107,8 +37107,8 @@ function mapResultRow(columns, row, joinsNotNullableMap) {
         } else {
           const rawValue = row[columnIndex];
           const value = node[pathChunk] = rawValue === null ? null : decoder.mapFromDriverValue(rawValue);
-          if (joinsNotNullableMap && is(field, Column) && path7.length === 2) {
-            const objectName = path7[0];
+          if (joinsNotNullableMap && is(field, Column) && path8.length === 2) {
+            const objectName = path8[0];
             if (!(objectName in nullifyMap)) {
               nullifyMap[objectName] = value === null ? getTableName(field.table) : false;
             } else if (typeof nullifyMap[objectName] === "string" && nullifyMap[objectName] !== getTableName(field.table)) {
@@ -44168,10 +44168,10 @@ function assignProp(target, prop, value) {
     configurable: true
   });
 }
-function getElementAtPath(obj, path7) {
-  if (!path7)
+function getElementAtPath(obj, path8) {
+  if (!path8)
     return obj;
-  return path7.reduce((acc, key) => acc?.[key], obj);
+  return path8.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -44420,11 +44420,11 @@ function aborted(x, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path7, issues) {
+function prefixIssues(path8, issues) {
   return issues.map((iss) => {
     var _a;
     (_a = iss).path ?? (_a.path = []);
-    iss.path.unshift(path7);
+    iss.path.unshift(path8);
     return iss;
   });
 }
@@ -44613,7 +44613,7 @@ function treeifyError(error40, _mapper) {
     return issue2.message;
   };
   const result = { errors: [] };
-  const processError = (error41, path7 = []) => {
+  const processError = (error41, path8 = []) => {
     var _a, _b;
     for (const issue2 of error41.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
@@ -44623,7 +44623,7 @@ function treeifyError(error40, _mapper) {
       } else if (issue2.code === "invalid_element") {
         processError({ issues: issue2.issues }, issue2.path);
       } else {
-        const fullpath = [...path7, ...issue2.path];
+        const fullpath = [...path8, ...issue2.path];
         if (fullpath.length === 0) {
           result.errors.push(mapper(issue2));
           continue;
@@ -44653,9 +44653,9 @@ function treeifyError(error40, _mapper) {
   processError(error40);
   return result;
 }
-function toDotPath(path7) {
+function toDotPath(path8) {
   const segs = [];
-  for (const seg of path7) {
+  for (const seg of path8) {
     if (typeof seg === "number")
       segs.push(`[${seg}]`);
     else if (typeof seg === "symbol")
@@ -55870,6 +55870,8 @@ var init_branches = __esm({
       // e.g. "MAIN", "BRANCH-01"
       address: text("address"),
       phone: varchar("phone", { length: 20 }),
+      latitude: doublePrecision("latitude"),
+      longitude: doublePrecision("longitude"),
       isActive: boolean("is_active").notNull().default(true),
       createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
       updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => /* @__PURE__ */ new Date())
@@ -56046,6 +56048,7 @@ var init_drinks = __esm({
       imageUrl: text("image_url"),
       sortOrder: integer("sort_order").notNull().default(0),
       isActive: boolean("is_active").notNull().default(true),
+      isFeatured: boolean("is_featured").notNull().default(false),
       prepTimeSeconds: integer("prep_time_seconds").notNull().default(180),
       cupSizeMl: integer("cup_size_ml"),
       cupIngredientId: integer("cup_ingredient_id").references(() => ingredientsTable.id, { onDelete: "set null" }),
@@ -56057,7 +56060,8 @@ var init_drinks = __esm({
     }, (table) => {
       return {
         categoryIdIdx: index("drinks_category_id_idx").on(table.categoryId),
-        isActiveIdx: index("drinks_is_active_idx").on(table.isActive)
+        isActiveIdx: index("drinks_is_active_idx").on(table.isActive),
+        isFeaturedIdx: index("drinks_is_featured_idx").on(table.isFeatured)
       };
     });
     drinkIngredientSlotsTable = pgTable("drink_ingredient_slots", {
@@ -56643,6 +56647,28 @@ var init_customers = __esm({
       email: text("email"),
       passwordHash: text("password_hash"),
       // Optional if created from POS
+      pin: varchar("pin", { length: 60 }),
+      // Mobile app PIN (bcrypt hash, optional)
+      otp: text("otp"),
+      // Mobile app OTP code (temporary)
+      otpExpiresAt: timestamp("otp_expires_at", { withTimezone: true }),
+      // OTP expiry
+      // ── Extended customer profile (mobile app) ──
+      birthdate: date("birthdate"),
+      // Customer date of birth
+      gender: text("gender", { enum: ["male", "female", "other", "prefer_not_to_say"] }),
+      // Customer gender
+      avatarUrl: text("avatar_url"),
+      // Profile avatar image URL
+      preferredBranchId: integer("preferred_branch_id"),
+      // Preferred branch (set in app)
+      address: text("address"),
+      // Customer address
+      city: text("city"),
+      // Customer city
+      loyaltyTier: text("loyalty_tier", { enum: ["bronze", "silver", "gold", "platinum"] }).notNull().default("bronze"),
+      // Loyalty tier
+      // ── Loyalty / stats ──
       points: integer("points").notNull().default(0),
       totalSpent: numeric("total_spent", { precision: 12, scale: 2 }).notNull().default("0"),
       visitCount: integer("visit_count").notNull().default(0),
@@ -56962,6 +56988,65 @@ var init_product_discounts = __esm({
   }
 });
 
+// ../../lib/db/src/schema/mobile.ts
+var customerFavoritesTable, customerSavedDrinksTable, customerFriendsTable;
+var init_mobile = __esm({
+  "../../lib/db/src/schema/mobile.ts"() {
+    "use strict";
+    init_pg_core();
+    init_customers();
+    init_drinks();
+    customerFavoritesTable = pgTable(
+      "customer_favorites",
+      {
+        id: serial("id").primaryKey(),
+        customerId: integer("customer_id").notNull().references(() => customersTable.id, { onDelete: "cascade" }),
+        drinkId: integer("drink_id").notNull().references(() => drinksTable.id, { onDelete: "cascade" }),
+        createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+      },
+      (table) => ({
+        customerDrinkIdx: uniqueIndex("customer_favorites_customer_drink_idx").on(table.customerId, table.drinkId),
+        customerIdx: index("customer_favorites_customer_idx").on(table.customerId)
+      })
+    );
+    customerSavedDrinksTable = pgTable(
+      "customer_saved_drinks",
+      {
+        id: serial("id").primaryKey(),
+        customerId: integer("customer_id").notNull().references(() => customersTable.id, { onDelete: "cascade" }),
+        drinkId: integer("drink_id").notNull().references(() => drinksTable.id, { onDelete: "cascade" }),
+        name: text("name").notNull(),
+        // User-provided name for the saved drink
+        selections: jsonb("selections").notNull().default([]),
+        // Array of customization selections
+        quantity: integer("quantity").notNull().default(1),
+        createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+        updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => /* @__PURE__ */ new Date())
+      },
+      (table) => ({
+        customerIdx: index("customer_saved_drinks_customer_idx").on(table.customerId)
+      })
+    );
+    customerFriendsTable = pgTable(
+      "customer_friends",
+      {
+        id: serial("id").primaryKey(),
+        customerId: integer("customer_id").notNull().references(() => customersTable.id, { onDelete: "cascade" }),
+        friendCustomerId: integer("friend_customer_id").notNull().references(() => customersTable.id, { onDelete: "cascade" }),
+        friendName: text("friend_name").notNull(),
+        // Snapshot of friend's name at add time
+        friendPhone: text("friend_phone").notNull(),
+        // Snapshot of friend's phone
+        createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+      },
+      (table) => ({
+        customerFriendIdx: uniqueIndex("customer_friends_customer_friend_idx").on(table.customerId, table.friendCustomerId),
+        customerIdx: index("customer_friends_customer_idx").on(table.customerId)
+      })
+    );
+  }
+});
+
 // ../../lib/db/src/schema/index.ts
 var schema_exports = {};
 __export(schema_exports, {
@@ -56974,6 +57059,9 @@ __export(schema_exports, {
   branchStockTable: () => branchStockTable,
   branchesTable: () => branchesTable,
   cashierSessionsTable: () => cashierSessionsTable,
+  customerFavoritesTable: () => customerFavoritesTable,
+  customerFriendsTable: () => customerFriendsTable,
+  customerSavedDrinksTable: () => customerSavedDrinksTable,
   customerTagsTable: () => customerTagsTable,
   customersTable: () => customersTable,
   discountTagsTable: () => discountTagsTable,
@@ -57097,6 +57185,7 @@ var init_schema2 = __esm({
     init_shift_close();
     init_manufacturing();
     init_product_discounts();
+    init_mobile();
   }
 });
 
@@ -57159,6 +57248,9 @@ __export(src_exports, {
   branchStockTable: () => branchStockTable,
   branchesTable: () => branchesTable,
   cashierSessionsTable: () => cashierSessionsTable,
+  customerFavoritesTable: () => customerFavoritesTable,
+  customerFriendsTable: () => customerFriendsTable,
+  customerSavedDrinksTable: () => customerSavedDrinksTable,
   customerTagsTable: () => customerTagsTable,
   customersTable: () => customersTable,
   db: () => db,
@@ -66006,11 +66098,11 @@ var require_mime_types2 = __commonJS({
       }
       return exts[0];
     }
-    function lookup(path7) {
-      if (!path7 || typeof path7 !== "string") {
+    function lookup(path8) {
+      if (!path8 || typeof path8 !== "string") {
         return false;
       }
-      var extension2 = extname("x." + path7).toLowerCase().substr(1);
+      var extension2 = extname("x." + path8).toLowerCase().substr(1);
       if (!extension2) {
         return false;
       }
@@ -66519,19 +66611,19 @@ var require_utils6 = __commonJS({
       if (decode)
         return decode(data, hint);
     }
-    function basename(path7) {
-      if (typeof path7 !== "string")
+    function basename(path8) {
+      if (typeof path8 !== "string")
         return "";
-      for (let i = path7.length - 1; i >= 0; --i) {
-        switch (path7.charCodeAt(i)) {
+      for (let i = path8.length - 1; i >= 0; --i) {
+        switch (path8.charCodeAt(i)) {
           case 47:
           // '/'
           case 92:
-            path7 = path7.slice(i + 1);
-            return path7 === ".." || path7 === "." ? "" : path7;
+            path8 = path8.slice(i + 1);
+            return path8 === ".." || path8 === "." ? "" : path8;
         }
       }
-      return path7 === ".." || path7 === "." ? "" : path7;
+      return path8 === ".." || path8 === "." ? "" : path8;
     }
     var TOKEN = [
       0,
@@ -70374,9 +70466,9 @@ var require_make_middleware = __commonJS({
 // ../../node_modules/.pnpm/multer@2.1.1/node_modules/multer/storage/disk.js
 var require_disk = __commonJS({
   "../../node_modules/.pnpm/multer@2.1.1/node_modules/multer/storage/disk.js"(exports, module) {
-    var fs8 = __require("fs");
+    var fs9 = __require("fs");
     var os = __require("os");
-    var path7 = __require("path");
+    var path8 = __require("path");
     var crypto3 = __require("crypto");
     function getFilename(req, file2, cb) {
       crypto3.randomBytes(16, function(err, raw) {
@@ -70389,7 +70481,7 @@ var require_disk = __commonJS({
     function DiskStorage(opts) {
       this.getFilename = opts.filename || getFilename;
       if (typeof opts.destination === "string") {
-        fs8.mkdirSync(opts.destination, { recursive: true });
+        fs9.mkdirSync(opts.destination, { recursive: true });
         this.getDestination = function($0, $1, cb) {
           cb(null, opts.destination);
         };
@@ -70403,8 +70495,8 @@ var require_disk = __commonJS({
         if (err) return cb(err);
         that.getFilename(req, file2, function(err2, filename) {
           if (err2) return cb(err2);
-          var finalPath = path7.join(destination, filename);
-          var outStream = fs8.createWriteStream(finalPath);
+          var finalPath = path8.join(destination, filename);
+          var outStream = fs9.createWriteStream(finalPath);
           file2.stream.pipe(outStream);
           outStream.on("error", cb);
           outStream.on("finish", function() {
@@ -70419,11 +70511,11 @@ var require_disk = __commonJS({
       });
     };
     DiskStorage.prototype._removeFile = function _removeFile(req, file2, cb) {
-      var path8 = file2.path;
+      var path9 = file2.path;
       delete file2.destination;
       delete file2.filename;
       delete file2.path;
-      fs8.unlink(path8, cb);
+      fs9.unlink(path9, cb);
     };
     module.exports = function(opts) {
       return new DiskStorage(opts);
@@ -73866,7 +73958,7 @@ var require_multer = __commonJS({
       }
       return makeMiddleware(setup.bind(this));
     };
-    function multer2(options) {
+    function multer3(options) {
       if (options === void 0) {
         return new Multer({});
       }
@@ -73875,7 +73967,7 @@ var require_multer = __commonJS({
       }
       throw new TypeError("Expected object for argument options");
     }
-    module.exports = multer2;
+    module.exports = multer3;
     module.exports.diskStorage = diskStorage;
     module.exports.memoryStorage = memoryStorage;
     module.exports.MulterError = MulterError;
@@ -74213,23 +74305,23 @@ var __dirname2 = dirname(__filename);
 (0, import_dotenv.config)({ path: resolve(__dirname2, "../../../.env") });
 
 // src/index.ts
-import path6 from "path";
-import fs7 from "fs";
+import path7 from "path";
+import fs8 from "fs";
 import { exec as exec2 } from "child_process";
 
 // src/app.ts
-var import_express29 = __toESM(require_express2(), 1);
+var import_express30 = __toESM(require_express2(), 1);
 var import_cors = __toESM(require_lib3(), 1);
 var import_pino_http = __toESM(require_logger(), 1);
 var import_express_session = __toESM(require_express_session(), 1);
 var import_connect_pg_simple = __toESM(require_connect_pg_simple(), 1);
 init_src();
-import path5 from "path";
-import fs6 from "fs";
+import path6 from "path";
+import fs7 from "fs";
 import { fileURLToPath as fileURLToPath3 } from "url";
 
 // src/routes/index.ts
-var import_express28 = __toESM(require_express2(), 1);
+var import_express29 = __toESM(require_express2(), 1);
 
 // src/routes/health.ts
 var import_express = __toESM(require_express2(), 1);
@@ -74712,8 +74804,8 @@ function getErrorMap2() {
 
 // ../../node_modules/.pnpm/zod@3.25.76/node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
-  const { data, path: path7, errorMaps, issueData } = params;
-  const fullPath = [...path7, ...issueData.path || []];
+  const { data, path: path8, errorMaps, issueData } = params;
+  const fullPath = [...path8, ...issueData.path || []];
   const fullIssue = {
     ...issueData,
     path: fullPath
@@ -74829,11 +74921,11 @@ var errorUtil;
 
 // ../../node_modules/.pnpm/zod@3.25.76/node_modules/zod/v3/types.js
 var ParseInputLazyPath = class {
-  constructor(parent, value, path7, key) {
+  constructor(parent, value, path8, key) {
     this._cachedPath = [];
     this.parent = parent;
     this.data = value;
-    this._path = path7;
+    this._path = path8;
     this._key = key;
   }
   get path() {
@@ -78334,6 +78426,7 @@ var ListDrinksResponseItem = objectType({
   defaultPrice: numberType().optional(),
   imageUrl: stringType().nullable(),
   isActive: booleanType(),
+  isFeatured: booleanType().optional(),
   prepTimeSeconds: numberType(),
   cupSizeMl: numberType().nullish(),
   cupIngredientId: numberType().nullish(),
@@ -78352,6 +78445,7 @@ var CreateDrinkBody = objectType({
   basePrice: numberType(),
   imageUrl: stringType().optional(),
   isActive: booleanType().optional(),
+  isFeatured: booleanType().optional(),
   prepTimeSeconds: numberType().optional(),
   kitchenStation: stringType().optional(),
   categoryId: numberType().optional(),
@@ -78387,6 +78481,7 @@ var GetDrinkResponse = objectType({
   defaultPrice: numberType().optional(),
   imageUrl: stringType().nullable(),
   isActive: booleanType(),
+  isFeatured: booleanType().optional(),
   prepTimeSeconds: numberType(),
   cupSizeMl: numberType().nullish(),
   cupIngredientId: numberType().nullish(),
@@ -78428,6 +78523,7 @@ var UpdateDrinkBody = objectType({
   basePrice: numberType().optional(),
   imageUrl: stringType().optional(),
   isActive: booleanType().optional(),
+  isFeatured: booleanType().optional(),
   prepTimeSeconds: numberType().optional(),
   kitchenStation: stringType().optional(),
   categoryId: numberType().optional(),
@@ -78444,6 +78540,7 @@ var UpdateDrinkResponse = objectType({
   defaultPrice: numberType().optional(),
   imageUrl: stringType().nullable(),
   isActive: booleanType(),
+  isFeatured: booleanType().optional(),
   prepTimeSeconds: numberType(),
   cupSizeMl: numberType().nullish(),
   cupIngredientId: numberType().nullish(),
@@ -79641,6 +79738,367 @@ var ValidateDiscountResponse = objectType({
   createdAt: stringType(),
   updatedAt: stringType()
 });
+var MobileRequestOtpBody = objectType({
+  phone: stringType()
+});
+var MobileRequestOtpResponse = objectType({
+  success: booleanType().optional(),
+  message: stringType().optional(),
+  devOtp: stringType().optional().describe("Development-only OTP (remove in production)"),
+  expiresIn: numberType().optional()
+});
+var MobileVerifyOtpBody = objectType({
+  phone: stringType(),
+  otp: stringType(),
+  name: stringType().optional().describe("Optional name for new registrations")
+});
+var MobileVerifyOtpResponse = objectType({
+  customer: objectType({
+    id: numberType().optional(),
+    name: stringType().optional(),
+    phone: stringType().optional(),
+    email: stringType().nullish(),
+    birthdate: coerce.date().nullish(),
+    gender: enumType(["male", "female", "other", "prefer_not_to_say"]).nullish(),
+    avatarUrl: stringType().nullish(),
+    preferredBranchId: numberType().nullish(),
+    address: stringType().nullish(),
+    city: stringType().nullish(),
+    loyaltyTier: enumType(["bronze", "silver", "gold", "platinum"]).optional(),
+    points: numberType().optional(),
+    totalSpent: stringType().optional(),
+    visitCount: numberType().optional(),
+    isActive: booleanType().optional(),
+    createdAt: coerce.date().optional()
+  }).optional(),
+  hasPin: booleanType().optional()
+});
+var MobileCreatePinBody = objectType({
+  pin: stringType().describe("4-6 digit PIN")
+});
+var MobileCreatePinResponse = objectType({
+  success: booleanType().optional(),
+  customer: objectType({
+    id: numberType().optional(),
+    name: stringType().optional(),
+    phone: stringType().optional(),
+    email: stringType().nullish(),
+    birthdate: coerce.date().nullish(),
+    gender: enumType(["male", "female", "other", "prefer_not_to_say"]).nullish(),
+    avatarUrl: stringType().nullish(),
+    preferredBranchId: numberType().nullish(),
+    address: stringType().nullish(),
+    city: stringType().nullish(),
+    loyaltyTier: enumType(["bronze", "silver", "gold", "platinum"]).optional(),
+    points: numberType().optional(),
+    totalSpent: stringType().optional(),
+    visitCount: numberType().optional(),
+    isActive: booleanType().optional(),
+    createdAt: coerce.date().optional()
+  }).optional()
+});
+var MobileLoginBody = objectType({
+  phone: stringType(),
+  pin: stringType()
+});
+var MobileLoginResponse = objectType({
+  customer: objectType({
+    id: numberType().optional(),
+    name: stringType().optional(),
+    phone: stringType().optional(),
+    email: stringType().nullish(),
+    birthdate: coerce.date().nullish(),
+    gender: enumType(["male", "female", "other", "prefer_not_to_say"]).nullish(),
+    avatarUrl: stringType().nullish(),
+    preferredBranchId: numberType().nullish(),
+    address: stringType().nullish(),
+    city: stringType().nullish(),
+    loyaltyTier: enumType(["bronze", "silver", "gold", "platinum"]).optional(),
+    points: numberType().optional(),
+    totalSpent: stringType().optional(),
+    visitCount: numberType().optional(),
+    isActive: booleanType().optional(),
+    createdAt: coerce.date().optional()
+  }).optional()
+});
+var MobileMeResponse = objectType({
+  customer: objectType({
+    id: numberType().optional(),
+    name: stringType().optional(),
+    phone: stringType().optional(),
+    email: stringType().nullish(),
+    birthdate: coerce.date().nullish(),
+    gender: enumType(["male", "female", "other", "prefer_not_to_say"]).nullish(),
+    avatarUrl: stringType().nullish(),
+    preferredBranchId: numberType().nullish(),
+    address: stringType().nullish(),
+    city: stringType().nullish(),
+    loyaltyTier: enumType(["bronze", "silver", "gold", "platinum"]).optional(),
+    points: numberType().optional(),
+    totalSpent: stringType().optional(),
+    visitCount: numberType().optional(),
+    isActive: booleanType().optional(),
+    createdAt: coerce.date().optional()
+  }).optional()
+});
+var MobileUpdateProfileBody = objectType({
+  name: stringType().optional(),
+  email: stringType().nullish(),
+  birthdate: coerce.date().nullish(),
+  gender: enumType(["male", "female", "other", "prefer_not_to_say"]).nullish(),
+  avatarUrl: stringType().nullish(),
+  preferredBranchId: numberType().nullish(),
+  address: stringType().nullish(),
+  city: stringType().nullish()
+});
+var MobileUpdateProfileResponse = objectType({
+  customer: objectType({
+    id: numberType().optional(),
+    name: stringType().optional(),
+    phone: stringType().optional(),
+    email: stringType().nullish(),
+    birthdate: coerce.date().nullish(),
+    gender: enumType(["male", "female", "other", "prefer_not_to_say"]).nullish(),
+    avatarUrl: stringType().nullish(),
+    preferredBranchId: numberType().nullish(),
+    address: stringType().nullish(),
+    city: stringType().nullish(),
+    loyaltyTier: enumType(["bronze", "silver", "gold", "platinum"]).optional(),
+    points: numberType().optional(),
+    totalSpent: stringType().optional(),
+    visitCount: numberType().optional(),
+    isActive: booleanType().optional(),
+    createdAt: coerce.date().optional()
+  }).optional()
+});
+var MobileChangePhoneBody = objectType({
+  newPhone: stringType()
+});
+var MobileChangePhoneResponse = objectType({
+  customer: objectType({
+    id: numberType().optional(),
+    name: stringType().optional(),
+    phone: stringType().optional(),
+    email: stringType().nullish(),
+    birthdate: coerce.date().nullish(),
+    gender: enumType(["male", "female", "other", "prefer_not_to_say"]).nullish(),
+    avatarUrl: stringType().nullish(),
+    preferredBranchId: numberType().nullish(),
+    address: stringType().nullish(),
+    city: stringType().nullish(),
+    loyaltyTier: enumType(["bronze", "silver", "gold", "platinum"]).optional(),
+    points: numberType().optional(),
+    totalSpent: stringType().optional(),
+    visitCount: numberType().optional(),
+    isActive: booleanType().optional(),
+    createdAt: coerce.date().optional()
+  }).optional()
+});
+var MobileChangePinBody = objectType({
+  currentPin: stringType().optional(),
+  newPin: stringType()
+});
+var MobilePointsResponse = objectType({
+  points: numberType().optional(),
+  totalSpent: stringType().optional(),
+  visitCount: numberType().optional()
+});
+var MobileListFavoritesResponse = objectType({
+  favorites: arrayType(
+    objectType({
+      id: numberType().optional(),
+      drinkId: numberType().optional(),
+      createdAt: coerce.date().optional(),
+      drink: objectType({
+        id: numberType().optional(),
+        name: stringType().optional(),
+        description: stringType().nullish(),
+        category: stringType().optional(),
+        basePrice: stringType().optional(),
+        imageUrl: stringType().nullish(),
+        isCustomizable: booleanType().optional()
+      }).optional()
+    })
+  ).optional()
+});
+var MobileAddFavoriteBody = objectType({
+  drinkId: numberType()
+});
+var MobileRemoveFavoriteParams = objectType({
+  drinkId: coerce.number()
+});
+var MobileListSavedDrinksResponse = objectType({
+  savedDrinks: arrayType(
+    objectType({
+      id: numberType().optional(),
+      drinkId: numberType().optional(),
+      name: stringType().optional(),
+      selections: arrayType(objectType({}).passthrough()).optional(),
+      quantity: numberType().optional(),
+      createdAt: coerce.date().optional(),
+      drink: objectType({
+        id: numberType().optional(),
+        name: stringType().optional(),
+        imageUrl: stringType().nullish(),
+        basePrice: stringType().optional()
+      }).optional()
+    })
+  ).optional()
+});
+var MobileSaveDrinkBody = objectType({
+  drinkId: numberType(),
+  name: stringType().optional(),
+  selections: arrayType(objectType({}).passthrough()).optional(),
+  quantity: numberType().optional()
+});
+var MobileDeleteSavedDrinkParams = objectType({
+  id: coerce.number()
+});
+var MobileListFriendsResponse = objectType({
+  friends: arrayType(
+    objectType({
+      id: numberType().optional(),
+      customerId: numberType().optional(),
+      friendCustomerId: numberType().optional(),
+      friendName: stringType().optional(),
+      friendPhone: stringType().optional(),
+      createdAt: coerce.date().optional()
+    })
+  ).optional()
+});
+var MobileAddFriendBody = objectType({
+  phone: stringType()
+});
+var MobileRemoveFriendParams = objectType({
+  id: coerce.number()
+});
+var MobileListBranchesResponse = objectType({
+  branches: arrayType(
+    objectType({
+      id: numberType(),
+      name: stringType(),
+      location: stringType().optional(),
+      isActive: booleanType().optional(),
+      createdAt: coerce.date().optional()
+    })
+  ).optional()
+});
+var MobileListCategoriesResponse = objectType({
+  categories: arrayType(
+    objectType({
+      id: numberType().optional(),
+      name: stringType().optional(),
+      sortOrder: numberType().optional(),
+      isActive: booleanType().optional(),
+      createdAt: coerce.date().optional()
+    })
+  ).optional()
+});
+var MobileListOrdersResponse = objectType({
+  orders: arrayType(
+    objectType({
+      id: numberType().optional(),
+      orderNumber: stringType().optional(),
+      status: stringType().optional(),
+      total: stringType().optional(),
+      subtotal: stringType().optional(),
+      discount: stringType().optional(),
+      paymentMethod: stringType().optional(),
+      source: stringType().optional(),
+      branchId: numberType().optional(),
+      branchName: stringType().nullish(),
+      createdAt: coerce.date().optional()
+    })
+  ).optional()
+});
+var MobilePlaceOrderBody = objectType({
+  branchId: numberType(),
+  items: arrayType(
+    objectType({
+      drinkId: numberType(),
+      quantity: numberType().optional(),
+      selections: arrayType(objectType({}).passthrough()).optional(),
+      specialNotes: stringType().nullish()
+    })
+  ),
+  paymentMethod: enumType(["cash", "card", "wallet"]).optional(),
+  notes: stringType().nullish(),
+  discountCode: stringType().nullish()
+});
+var MobileGetOrderParams = objectType({
+  id: coerce.number()
+});
+var MobileGetOrderResponse = objectType({
+  order: objectType({
+    id: numberType().optional(),
+    orderNumber: stringType().optional(),
+    status: stringType().optional(),
+    subtotal: numberType().optional(),
+    discount: numberType().optional(),
+    total: numberType().optional(),
+    branchName: stringType().optional(),
+    payments: arrayType(objectType({}).passthrough()).optional(),
+    items: arrayType(objectType({}).passthrough()).optional()
+  }).optional()
+});
+var MobileCancelOrderParams = objectType({
+  id: coerce.number()
+});
+var MobileCancelOrderResponse = objectType({
+  order: objectType({
+    id: numberType().optional(),
+    orderNumber: stringType().optional(),
+    status: stringType().optional(),
+    total: numberType().optional()
+  }).optional()
+});
+
+// ../../lib/api-zod/src/permissions.ts
+var ALL_PERMISSIONS = {
+  // Admin & Security
+  "admin:view": { name: "Access Admin Hub" },
+  "users:view": { name: "View Users" },
+  "users:create": { name: "Create Users" },
+  "users:update": { name: "Update Users" },
+  "users:delete": { name: "Delete Users" },
+  "roles:view": { name: "View Roles" },
+  "roles:manage": { name: "Manage Roles" },
+  // POS, Cashier & Kitchen Operations
+  "pos:view": { name: "Access POS" },
+  "pos:create_order": { name: "Create Orders" },
+  "pos:apply_discount": { name: "Apply Discount" },
+  "kitchen:view": { name: "Access Kitchen" },
+  "kitchen:mark_ready": { name: "Mark Ready" },
+  "orders:pickup": { name: "Access Pickup" },
+  // Cashier Operations
+  "cashier:view": { name: "Cashier View" },
+  "cashier:approve_order": { name: "Approve Order" },
+  "cashier:cancel_order": { name: "Cancel Order" },
+  "cashier:refund_order": { name: "Refund Order" },
+  "cashier:close_session": { name: "Close Session" },
+  "cashier:view_reports": { name: "View Cashier Reports" },
+  // Catalog & Drinks
+  "catalog:view": { name: "View Catalog" },
+  "catalog:manage": { name: "Manage Catalog" },
+  "drinks:manage": { name: "Manage Drink Availability" },
+  // Inventory, Stock & Audits
+  "inventory:view": { name: "View Inventory" },
+  "inventory:manage": { name: "Manage Inventory" },
+  "inventory:adjust": { name: "Adjust Stock" },
+  "inventory:audit_approve": { name: "Approve Stock Audits" },
+  // Purchases & Suppliers
+  "purchases:view": { name: "View Purchases & Suppliers" },
+  "purchases:manage": { name: "Manage Purchases & Suppliers" },
+  // Finance, Discounts & Reports
+  "reports:view": { name: "View Reports" },
+  "discounts:view": { name: "View Discounts" },
+  "discounts:manage": { name: "Manage Discounts" },
+  // Infrastructure, Settings & Partners
+  "branches:manage": { name: "Manage Branches" },
+  "settings:manage": { name: "Manage Settings" },
+  "partners:view": { name: "View Aggregator Partners" },
+  "partners:manage": { name: "Manage Aggregator Partners" }
+};
 
 // ../../lib/api-zod/src/index.ts
 var HealthCheckResponse2 = HealthCheckResponse;
@@ -81964,11 +82422,14 @@ function requirePermission(permissionKey) {
       }
     }
     if (!permissions.includes(permissionKey)) {
-      console.log(`[Permission] DENIED: User ${userId} (Role: ${userRole}) lacks '${permissionKey}'`);
+      const permObj = ALL_PERMISSIONS[permissionKey];
+      const permName = permObj?.name || permissionKey;
+      console.log(`[Permission] DENIED: User ${userId} (Role: ${userRole}) lacks '${permissionKey}' (${permName})`);
       res.status(403).json({
-        error: `Insufficient permissions: '${permissionKey}' required`,
+        error: `Access Denied: Missing permission '${permName}' (${permissionKey})`,
         role: userRole,
-        permission: permissionKey
+        permission: permissionKey,
+        permissionName: permName
       });
       return;
     }
@@ -82559,6 +83020,10 @@ async function calculateDrinkData(drinkId, selections, branchId = null, partnerI
     totalCost,
     costBreakdown
   };
+}
+async function getStandardProductPrice(drinkId, branchId = null, partnerId = null) {
+  const data = await calculateDrinkData(drinkId, [], branchId, partnerId);
+  return Number((data.totalPrice || 0).toFixed(2));
 }
 async function getProductCost(drinkId, branchId = null, partnerId = null) {
   const data = await calculateDrinkData(drinkId, [], branchId, partnerId);
@@ -83196,6 +83661,7 @@ router3.post("/drinks", requirePermission("catalog:manage"), async (req, res) =>
     basePrice: String(drinkData.basePrice),
     imageUrl: drinkData.imageUrl ?? null,
     isActive: drinkData.isActive ?? true,
+    isFeatured: drinkData.isFeatured ?? false,
     prepTimeSeconds: drinkData.prepTimeSeconds ?? 180,
     kitchenStation: drinkData.kitchenStation?.toLowerCase().replace(/\s+/g, "-") ?? "main",
     kitchenStationId: drinkData.kitchenStationId ?? null
@@ -83272,6 +83738,7 @@ router3.patch("/drinks/:id", requirePermission("catalog:manage"), async (req, re
   if (parsed.data.basePrice !== void 0) updateData.basePrice = String(parsed.data.basePrice);
   if (parsed.data.imageUrl !== void 0) updateData.imageUrl = parsed.data.imageUrl;
   if (parsed.data.isActive !== void 0) updateData.isActive = parsed.data.isActive;
+  if (parsed.data.isFeatured !== void 0) updateData.isFeatured = parsed.data.isFeatured;
   if (parsed.data.prepTimeSeconds !== void 0) updateData.prepTimeSeconds = parsed.data.prepTimeSeconds;
   if (parsed.data.kitchenStation !== void 0) {
     updateData.kitchenStation = parsed.data.kitchenStation.toLowerCase().replace(/\s+/g, "-");
@@ -84662,6 +85129,14 @@ function getDayOfYear(date6) {
   }
   return dayOfYear;
 }
+function getCairoYear(date6) {
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Africa/Cairo",
+    year: "numeric"
+  });
+  const parts = formatter.formatToParts(date6);
+  return parseInt(parts.find((p) => p.type === "year").value, 10);
+}
 function getCairoStartOfDay(date6) {
   const formatter = new Intl.DateTimeFormat("en-US", {
     timeZone: "Africa/Cairo",
@@ -84683,24 +85158,19 @@ function getCairoStartOfDay(date6) {
   return utcMidnight;
 }
 async function generateOrderNumber(tx, branchId) {
-  await tx.select({ id: branchesTable.id }).from(branchesTable).where(eq(branchesTable.id, branchId)).for("update");
+  const [branch] = await tx.select({ id: branchesTable.id, code: branchesTable.code }).from(branchesTable).where(eq(branchesTable.id, branchId)).for("update");
+  const branchCode = branch?.code ?? String(branchId);
   const now = /* @__PURE__ */ new Date();
   const dayOfYear = getDayOfYear(now);
+  const yearShort = getCairoYear(now) - 2e3;
   const todayStart = getCairoStartOfDay(now);
   const existingOrders = await tx.select({ orderNumber: ordersTable.orderNumber }).from(ordersTable).where(and(eq(ordersTable.branchId, branchId), gte(ordersTable.createdAt, todayStart)));
   let maxSerial = 0;
-  const newPrefix = `${branchId}-${dayOfYear}`;
-  const oldPrefix = `${dayOfYear}`;
+  const newPrefix = `${branchCode}-${yearShort}${dayOfYear}`;
   for (const o of existingOrders) {
     const numStr = o.orderNumber;
     if (numStr.startsWith(newPrefix)) {
       const serialStr = numStr.slice(newPrefix.length);
-      const serialPart = parseInt(serialStr, 10);
-      if (!isNaN(serialPart) && serialPart > maxSerial) {
-        maxSerial = serialPart;
-      }
-    } else if (numStr.startsWith(oldPrefix) && !numStr.includes("-")) {
-      const serialStr = numStr.slice(oldPrefix.length);
       const serialPart = parseInt(serialStr, 10);
       if (!isNaN(serialPart) && serialPart > maxSerial) {
         maxSerial = serialPart;
@@ -85929,6 +86399,29 @@ function subDays(date6, amount) {
 // src/routes/stock.ts
 init_src();
 var router6 = (0, import_express6.Router)();
+async function getIngredientIdsForCategory(categoryId) {
+  const drinks = await db.select({ id: drinksTable.id, cupIngredientId: drinksTable.cupIngredientId }).from(drinksTable).where(eq(drinksTable.categoryId, categoryId));
+  const drinkIds = drinks.map((d) => d.id);
+  const ingredientIdSet = /* @__PURE__ */ new Set();
+  for (const d of drinks) {
+    if (d.cupIngredientId) ingredientIdSet.add(d.cupIngredientId);
+  }
+  if (drinkIds.length > 0) {
+    const directSlots = await db.select({ ingredientId: drinkIngredientSlotsTable.ingredientId }).from(drinkIngredientSlotsTable).where(and(inArray(drinkIngredientSlotsTable.drinkId, drinkIds), isNotNull(drinkIngredientSlotsTable.ingredientId)));
+    for (const s of directSlots) {
+      if (s.ingredientId) ingredientIdSet.add(s.ingredientId);
+    }
+    const typeSlots = await db.select({ inventoryIngredientId: ingredientTypesTable.inventoryIngredientId }).from(drinkIngredientSlotsTable).innerJoin(ingredientTypesTable, eq(drinkIngredientSlotsTable.ingredientTypeId, ingredientTypesTable.id)).where(and(inArray(drinkIngredientSlotsTable.drinkId, drinkIds), isNotNull(ingredientTypesTable.inventoryIngredientId)));
+    for (const ts of typeSlots) {
+      if (ts.inventoryIngredientId) ingredientIdSet.add(ts.inventoryIngredientId);
+    }
+    const slotOptions = await db.select({ inventoryIngredientId: ingredientTypesTable.inventoryIngredientId }).from(drinkSlotTypeOptionsTable).innerJoin(ingredientTypesTable, eq(drinkSlotTypeOptionsTable.ingredientTypeId, ingredientTypesTable.id)).innerJoin(drinkIngredientSlotsTable, eq(drinkSlotTypeOptionsTable.slotId, drinkIngredientSlotsTable.id)).where(and(inArray(drinkIngredientSlotsTable.drinkId, drinkIds), isNotNull(ingredientTypesTable.inventoryIngredientId)));
+    for (const so of slotOptions) {
+      if (so.inventoryIngredientId) ingredientIdSet.add(so.inventoryIngredientId);
+    }
+  }
+  return Array.from(ingredientIdSet);
+}
 router6.get("/stock/movements", async (req, res) => {
   const params = ListStockMovementsQueryParams2.safeParse(req.query);
   const sessionUser = req.session;
@@ -85938,6 +86431,24 @@ router6.get("/stock/movements", async (req, res) => {
   const conditions = [];
   if (targetBranchId) {
     conditions.push(eq(stockMovementsTable.branchId, targetBranchId));
+  }
+  const reqType = req.query.ingredientType && req.query.ingredientType !== "all" ? req.query.ingredientType : null;
+  const reqCategory = req.query.categoryId && req.query.categoryId !== "all" ? parseInt(req.query.categoryId) : null;
+  if (reqType || reqCategory) {
+    const filterIngConditions = [eq(ingredientsTable.isActive, true)];
+    if (reqType) filterIngConditions.push(eq(ingredientsTable.ingredientType, reqType));
+    if (reqCategory) {
+      const cIds = await getIngredientIdsForCategory(reqCategory);
+      if (cIds.length > 0) filterIngConditions.push(inArray(ingredientsTable.id, cIds));
+      else filterIngConditions.push(sql`1=0`);
+    }
+    const matchingIngs = await db.select({ id: ingredientsTable.id }).from(ingredientsTable).where(and(...filterIngConditions));
+    const matchingIds = matchingIngs.map((i) => i.id);
+    if (matchingIds.length > 0) {
+      conditions.push(inArray(stockMovementsTable.ingredientId, matchingIds));
+    } else {
+      conditions.push(sql`1=0`);
+    }
   }
   if (params.success) {
     if (params.data.ingredientId) {
@@ -85974,6 +86485,178 @@ router6.get("/stock/movements", async (req, res) => {
       })))
     )
   );
+});
+router6.get("/stock/movement-summary", async (req, res) => {
+  try {
+    const sessionUser = req.session;
+    const isAdmin = sessionUser?.role === "admin" || sessionUser?.role === "supervisor";
+    const sessionBranchId = sessionUser?.branchId;
+    const targetBranchId = req.query.branchId && req.query.branchId !== "all" ? parseInt(req.query.branchId) : isAdmin && (req.query.branchId === "all" || !req.query.branchId) ? null : sessionBranchId;
+    const targetIngredientId = req.query.ingredientId && req.query.ingredientId !== "all" ? parseInt(req.query.ingredientId) : null;
+    const targetIngredientType = req.query.ingredientType && req.query.ingredientType !== "all" ? req.query.ingredientType : null;
+    const targetCategoryId = req.query.categoryId && req.query.categoryId !== "all" ? parseInt(req.query.categoryId) : null;
+    const startDateStr = req.query.startDate;
+    const endDateStr = req.query.endDate;
+    const start = startDateStr ? startOfDay2(new Date(startDateStr)) : startOfDay2(/* @__PURE__ */ new Date());
+    const end = endDateStr ? endOfDay2(new Date(endDateStr)) : endOfDay2(/* @__PURE__ */ new Date());
+    const ingConditions = [eq(ingredientsTable.isActive, true)];
+    if (targetIngredientId) {
+      ingConditions.push(eq(ingredientsTable.id, targetIngredientId));
+    }
+    if (targetIngredientType) {
+      ingConditions.push(eq(ingredientsTable.ingredientType, targetIngredientType));
+    }
+    if (targetCategoryId) {
+      const categoryIngredientIds = await getIngredientIdsForCategory(targetCategoryId);
+      if (categoryIngredientIds.length > 0) {
+        ingConditions.push(inArray(ingredientsTable.id, categoryIngredientIds));
+      } else {
+        ingConditions.push(sql`1=0`);
+      }
+    }
+    const ingredients = await db.select().from(ingredientsTable).where(and(...ingConditions));
+    const stockConditions = [];
+    if (targetBranchId) {
+      stockConditions.push(eq(branchStockTable.branchId, targetBranchId));
+    }
+    if (targetIngredientId) {
+      stockConditions.push(eq(branchStockTable.ingredientId, targetIngredientId));
+    }
+    const branchStocks = await db.select({
+      ingredientId: branchStockTable.ingredientId,
+      stockQuantity: branchStockTable.stockQuantity
+    }).from(branchStockTable).where(stockConditions.length ? and(...stockConditions) : void 0);
+    const currentStockMap = /* @__PURE__ */ new Map();
+    for (const s of branchStocks) {
+      const prev = currentStockMap.get(s.ingredientId) || 0;
+      currentStockMap.set(s.ingredientId, prev + (parseFloat(String(s.stockQuantity || "0")) || 0));
+    }
+    const sinceStartConditions = [
+      gte(stockMovementsTable.createdAt, start)
+    ];
+    if (targetBranchId) {
+      sinceStartConditions.push(eq(stockMovementsTable.branchId, targetBranchId));
+    }
+    if (targetIngredientId) {
+      sinceStartConditions.push(eq(stockMovementsTable.ingredientId, targetIngredientId));
+    }
+    const movementsSinceStart = await db.select({
+      ingredientId: stockMovementsTable.ingredientId,
+      netQuantity: sum(stockMovementsTable.quantity)
+    }).from(stockMovementsTable).where(and(...sinceStartConditions)).groupBy(stockMovementsTable.ingredientId);
+    const netSinceStartMap = /* @__PURE__ */ new Map();
+    for (const m of movementsSinceStart) {
+      netSinceStartMap.set(m.ingredientId, parseFloat(String(m.netQuantity || "0")) || 0);
+    }
+    const periodConditions = [
+      gte(stockMovementsTable.createdAt, start),
+      lte(stockMovementsTable.createdAt, end)
+    ];
+    if (targetBranchId) {
+      periodConditions.push(eq(stockMovementsTable.branchId, targetBranchId));
+    }
+    if (targetIngredientId) {
+      periodConditions.push(eq(stockMovementsTable.ingredientId, targetIngredientId));
+    }
+    const periodMovements = await db.select({
+      ingredientId: stockMovementsTable.ingredientId,
+      movementType: stockMovementsTable.movementType,
+      quantity: stockMovementsTable.quantity
+    }).from(stockMovementsTable).where(and(...periodConditions));
+    const periodMovementsMap = /* @__PURE__ */ new Map();
+    for (const pm of periodMovements) {
+      let list = periodMovementsMap.get(pm.ingredientId);
+      if (!list) {
+        list = [];
+        periodMovementsMap.set(pm.ingredientId, list);
+      }
+      list.push(pm);
+    }
+    const results = ingredients.map((ing) => {
+      const currentStock = currentStockMap.get(ing.id) || 0;
+      const netSinceStart = netSinceStartMap.get(ing.id) || 0;
+      const openingStock = currentStock - netSinceStart;
+      const pMovements = periodMovementsMap.get(ing.id) || [];
+      let saleQty = 0;
+      let calibrationQty = 0;
+      let testQty = 0;
+      let wasteQty = 0;
+      let mfgConsumeQty = 0;
+      let mfgProduceQty = 0;
+      let adjPos = 0;
+      let adjNeg = 0;
+      let adjNet = 0;
+      let restockPos = 0;
+      let restockNeg = 0;
+      let restockNet = 0;
+      let totalIn = 0;
+      let totalOut = 0;
+      for (const m of pMovements) {
+        const qty = parseFloat(String(m.quantity || "0")) || 0;
+        const absQty = Math.abs(qty);
+        if (m.movementType === "sale") {
+          saleQty += absQty;
+        } else if (m.movementType === "calibration") {
+          calibrationQty += absQty;
+        } else if (m.movementType === "testing") {
+          testQty += absQty;
+        } else if (m.movementType === "waste") {
+          wasteQty += absQty;
+        } else if (m.movementType === "manufacture_consume") {
+          mfgConsumeQty += absQty;
+        } else if (m.movementType === "manufacture_produce") {
+          mfgProduceQty += absQty;
+        } else if (m.movementType === "restock") {
+          restockNet += qty;
+          if (qty > 0) restockPos += qty;
+          else if (qty < 0) restockNeg += absQty;
+        } else if (m.movementType === "adjustment") {
+          adjNet += qty;
+          if (qty > 0) adjPos += qty;
+          else if (qty < 0) adjNeg += absQty;
+        } else {
+          adjNet += qty;
+          if (qty > 0) adjPos += qty;
+          else if (qty < 0) adjNeg += absQty;
+        }
+        if (qty > 0) totalIn += absQty;
+        else if (qty < 0) totalOut += absQty;
+      }
+      const netChange = totalIn - totalOut;
+      const closingStock = openingStock + netChange;
+      return {
+        ingredientId: ing.id,
+        ingredientName: ing.name,
+        unit: ing.unit,
+        currentStock,
+        openingStock,
+        saleQty,
+        calibrationQty,
+        testQty,
+        wasteQty,
+        mfgConsumeQty,
+        mfgProduceQty,
+        adjPos,
+        adjNeg,
+        adjNet,
+        restockPos,
+        restockNeg,
+        restockNet,
+        totalOut,
+        totalIn,
+        netChange,
+        closingStock,
+        movementCount: pMovements.length
+      };
+    });
+    const filteredResults = targetIngredientId ? results : results.filter(
+      (r) => Math.abs(r.currentStock) > 1e-4 || Math.abs(r.openingStock) > 1e-4 || r.movementCount > 0 || r.totalIn > 0 || r.totalOut > 0
+    );
+    res.json(serializeDates(filteredResults));
+  } catch (err) {
+    console.error("GET /stock/movement-summary error:", err);
+    res.status(500).json({ error: err?.message || "Failed to load stock movement summary" });
+  }
 });
 router6.post("/stock/adjustments", async (req, res) => {
   const parsed = CreateStockAdjustmentBody2.safeParse(req.body);
@@ -88558,9 +89241,9 @@ router16.post("/customers/login", async (req, res) => {
       res.status(401).json({ error: "Invalid phone or password" });
       return;
     }
-    const { password_hash, ...safeCustomer } = customer;
-    req.session.customerId = safeCustomer.id;
-    req.session.save(() => res.json({ customer: safeCustomer }));
+    const { password_hash, ...safeCustomer2 } = customer;
+    req.session.customerId = safeCustomer2.id;
+    req.session.save(() => res.json({ customer: safeCustomer2 }));
   } catch (e) {
     console.error("[customers/login] error:", e?.message);
     res.status(500).json({ error: "Login failed" });
@@ -88939,12 +89622,1073 @@ router16.get("/customers/points/:phone", async (req, res) => {
 });
 var customers_default = router16;
 
-// src/routes/tags.ts
+// src/routes/mobile.ts
 var import_express18 = __toESM(require_express2(), 1);
 init_drizzle_orm();
+var import_multer2 = __toESM(require_multer(), 1);
 init_src();
+import path4 from "path";
+import fs5 from "fs";
+init_sse();
 var router17 = (0, import_express18.Router)();
-router17.get("/admin/tags", requirePermission("admin:view"), async (req, res) => {
+var otpRequestLimiter = new RateLimiter(10 * 60 * 1e3, 5);
+var otpVerifyLimiter = new RateLimiter(10 * 60 * 1e3, 10);
+var pinLoginLimiter = new RateLimiter(15 * 60 * 1e3, 10);
+function getCustomerId2(req) {
+  return req.session?.customerId ?? null;
+}
+function requireCustomer(req, res) {
+  const customerId = getCustomerId2(req);
+  if (!customerId) {
+    res.status(401).json({ error: "Not authenticated" });
+    return null;
+  }
+  return customerId;
+}
+function generateOtp() {
+  return String(Math.floor(1e5 + Math.random() * 9e5));
+}
+async function getCustomerById(id) {
+  const [customer] = await db.select().from(customersTable).where(eq(customersTable.id, id)).limit(1);
+  return customer;
+}
+function safeCustomer(c) {
+  if (!c) return null;
+  const { passwordHash, otp, otpExpiresAt, ...safe } = c;
+  return safe;
+}
+async function getDefaultBaristaId() {
+  const [user] = await db.select({ id: usersTable.id }).from(usersTable).where(eq(usersTable.isActive, true)).orderBy(usersTable.id).limit(1);
+  return user?.id ?? 1;
+}
+router17.post("/mobile/auth/request-otp", async (req, res) => {
+  const { phone } = req.body ?? {};
+  if (!phone || typeof phone !== "string" || phone.trim().length < 4) {
+    res.status(400).json({ error: "Valid phone number is required" });
+    return;
+  }
+  const cleanPhone = phone.trim();
+  if (otpRequestLimiter.isLimitExceeded(`otp:${cleanPhone}`)) {
+    res.status(429).json({ error: "Too many OTP requests. Please try again in 10 minutes." });
+    return;
+  }
+  const [existing] = await db.select().from(customersTable).where(eq(customersTable.phone, cleanPhone)).limit(1);
+  if (existing?.pin) {
+    res.json({ success: true, message: "Registered", hasPin: true });
+    return;
+  }
+  const otp = generateOtp();
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1e3);
+  if (existing) {
+    await db.update(customersTable).set({ otp, otpExpiresAt: expiresAt, updatedAt: /* @__PURE__ */ new Date() }).where(eq(customersTable.id, existing.id));
+  } else {
+    await db.insert(customersTable).values({
+      name: cleanPhone,
+      // placeholder name until registration completes
+      phone: cleanPhone,
+      otp,
+      otpExpiresAt: expiresAt
+    });
+  }
+  console.log(`[mobile] OTP for ${cleanPhone}: ${otp}`);
+  res.json({ success: true, message: "OTP sent", devOtp: otp, expiresIn: 600, hasPin: false });
+});
+router17.post("/mobile/auth/verify-otp", async (req, res) => {
+  const { phone, otp, name } = req.body ?? {};
+  if (!phone || !otp) {
+    res.status(400).json({ error: "Phone and OTP are required" });
+    return;
+  }
+  const cleanPhone = phone.trim();
+  if (otpVerifyLimiter.isLimitExceeded(`otp-verify:${cleanPhone}`)) {
+    res.status(429).json({ error: "Too many verification attempts. Please try again in 10 minutes." });
+    return;
+  }
+  const [customer] = await db.select().from(customersTable).where(eq(customersTable.phone, cleanPhone)).limit(1);
+  if (!customer || !customer.otp || customer.otp !== String(otp).trim()) {
+    res.status(401).json({ error: "Invalid OTP" });
+    return;
+  }
+  if (customer.otpExpiresAt && new Date(customer.otpExpiresAt) < /* @__PURE__ */ new Date()) {
+    res.status(401).json({ error: "OTP has expired. Please request a new one." });
+    return;
+  }
+  const isNewRegistration = customer.name === customer.phone;
+  const finalName = isNewRegistration && name && typeof name === "string" && name.trim().length >= 2 ? name.trim() : customer.name;
+  const [updated] = await db.update(customersTable).set({ name: finalName, otp: null, otpExpiresAt: null, updatedAt: /* @__PURE__ */ new Date() }).where(eq(customersTable.id, customer.id)).returning();
+  req.session.customerId = updated.id;
+  req.session.save(() => {
+    res.json({ customer: safeCustomer(updated), hasPin: !!updated.pin });
+  });
+});
+router17.post("/mobile/auth/create-pin", async (req, res) => {
+  const customerId = requireCustomer(req, res);
+  if (!customerId) return;
+  const { pin } = req.body ?? {};
+  if (!pin || typeof pin !== "string" || !/^\d{4,6}$/.test(pin)) {
+    res.status(400).json({ error: "PIN must be 4-6 digits" });
+    return;
+  }
+  const hashedPin = await bcryptjs_default.hash(pin, 10);
+  const [updated] = await db.update(customersTable).set({ pin: hashedPin, updatedAt: /* @__PURE__ */ new Date() }).where(eq(customersTable.id, customerId)).returning();
+  res.json({ success: true, customer: safeCustomer(updated) });
+});
+router17.post("/mobile/auth/login", async (req, res) => {
+  const { phone, pin } = req.body ?? {};
+  if (!phone || !pin) {
+    res.status(400).json({ error: "Phone and PIN are required" });
+    return;
+  }
+  const cleanPhone = phone.trim();
+  if (pinLoginLimiter.isLimitExceeded(`pin-login:${cleanPhone}`)) {
+    res.status(429).json({ error: "Too many login attempts. Please try again in 15 minutes." });
+    return;
+  }
+  const [customer] = await db.select().from(customersTable).where(and(eq(customersTable.phone, cleanPhone), eq(customersTable.isActive, true))).limit(1);
+  if (!customer || !customer.pin) {
+    res.status(401).json({ error: "Invalid phone or PIN" });
+    return;
+  }
+  const isValid2 = await bcryptjs_default.compare(String(pin), customer.pin);
+  if (!isValid2) {
+    res.status(401).json({ error: "Invalid phone or PIN" });
+    return;
+  }
+  req.session.customerId = customer.id;
+  req.session.save(() => {
+    res.json({ customer: safeCustomer(customer) });
+  });
+});
+router17.post("/mobile/auth/logout", async (req, res) => {
+  delete req.session.customerId;
+  req.session.save(() => res.sendStatus(204));
+});
+router17.get("/mobile/auth/me", async (req, res) => {
+  const customerId = requireCustomer(req, res);
+  if (!customerId) return;
+  const customer = await getCustomerById(customerId);
+  if (!customer) {
+    res.status(401).json({ error: "Customer not found" });
+    return;
+  }
+  res.json({ customer: safeCustomer(customer) });
+});
+router17.patch("/mobile/me", async (req, res) => {
+  const customerId = requireCustomer(req, res);
+  if (!customerId) return;
+  const { name, email: email3, birthdate, gender, avatarUrl, preferredBranchId, address, city } = req.body ?? {};
+  const updateData = { updatedAt: /* @__PURE__ */ new Date() };
+  if (name && typeof name === "string" && name.trim().length >= 2) updateData.name = name.trim();
+  if (email3 !== void 0) updateData.email = email3 ? email3.trim() : null;
+  if (birthdate !== void 0) updateData.birthdate = birthdate ? new Date(birthdate) : null;
+  if (gender !== void 0) updateData.gender = gender || null;
+  if (avatarUrl !== void 0) updateData.avatarUrl = avatarUrl || null;
+  if (preferredBranchId !== void 0) updateData.preferredBranchId = preferredBranchId || null;
+  if (address !== void 0) updateData.address = address || null;
+  if (city !== void 0) updateData.city = city || null;
+  const [updated] = await db.update(customersTable).set(updateData).where(eq(customersTable.id, customerId)).returning();
+  res.json({ customer: safeCustomer(updated) });
+});
+var customerUploadsDir = process.env.UPLOADS_DIR ? path4.resolve(process.env.UPLOADS_DIR) : path4.resolve(process.cwd(), "uploads");
+if (!fs5.existsSync(customerUploadsDir)) fs5.mkdirSync(customerUploadsDir, { recursive: true });
+var avatarStorage = import_multer2.default.diskStorage({
+  destination: (_req, _file2, cb) => cb(null, customerUploadsDir),
+  filename: (_req, file2, cb) => {
+    const ext = path4.extname(file2.originalname);
+    cb(null, `avatar-${Date.now()}${ext}`);
+  }
+});
+var avatarUpload = (0, import_multer2.default)({ storage: avatarStorage, limits: { fileSize: 5 * 1024 * 1024 } });
+router17.post("/mobile/me/avatar", async (req, res) => {
+  const customerId = requireCustomer(req, res);
+  if (!customerId) return;
+  avatarUpload.single("avatar")(req, res, async (err) => {
+    if (err) {
+      if (err instanceof import_multer2.default.MulterError && err.code === "LIMIT_FILE_SIZE") {
+        res.status(413).json({ error: "Image too large. Maximum 5MB allowed." });
+        return;
+      }
+      res.status(400).json({ error: err.message || "Failed to upload avatar" });
+      return;
+    }
+    if (!req.file) {
+      res.status(400).json({ error: "No image file provided" });
+      return;
+    }
+    const avatarUrl = `/uploads/${req.file.filename}`;
+    const [updated] = await db.update(customersTable).set({ avatarUrl, updatedAt: /* @__PURE__ */ new Date() }).where(eq(customersTable.id, customerId)).returning();
+    res.json({ customer: safeCustomer(updated) });
+  });
+});
+router17.post("/mobile/me/change-phone", async (req, res) => {
+  const customerId = requireCustomer(req, res);
+  if (!customerId) return;
+  const { newPhone } = req.body ?? {};
+  if (!newPhone || typeof newPhone !== "string" || newPhone.trim().length < 4) {
+    res.status(400).json({ error: "Valid new phone number is required" });
+    return;
+  }
+  const cleanPhone = newPhone.trim();
+  const [existing] = await db.select().from(customersTable).where(eq(customersTable.phone, cleanPhone)).limit(1);
+  if (existing && existing.id !== customerId) {
+    res.status(409).json({ error: "Phone number already in use" });
+    return;
+  }
+  const [updated] = await db.update(customersTable).set({ phone: cleanPhone, updatedAt: /* @__PURE__ */ new Date() }).where(eq(customersTable.id, customerId)).returning();
+  res.json({ customer: safeCustomer(updated) });
+});
+router17.post("/mobile/me/change-pin", async (req, res) => {
+  const customerId = requireCustomer(req, res);
+  if (!customerId) return;
+  const { currentPin, newPin } = req.body ?? {};
+  if (!newPin || typeof newPin !== "string" || !/^\d{4,6}$/.test(newPin)) {
+    res.status(400).json({ error: "New PIN must be 4-6 digits" });
+    return;
+  }
+  const customer = await getCustomerById(customerId);
+  if (customer?.pin) {
+    const valid = await bcryptjs_default.compare(String(currentPin ?? ""), customer.pin);
+    if (!valid) {
+      res.status(401).json({ error: "Current PIN is incorrect" });
+      return;
+    }
+  }
+  const hashedPin = await bcryptjs_default.hash(newPin, 10);
+  await db.update(customersTable).set({ pin: hashedPin, updatedAt: /* @__PURE__ */ new Date() }).where(eq(customersTable.id, customerId));
+  res.json({ success: true });
+});
+router17.post("/mobile/me/deactivate", async (req, res) => {
+  const customerId = requireCustomer(req, res);
+  if (!customerId) return;
+  await db.update(customersTable).set({ isActive: false, updatedAt: /* @__PURE__ */ new Date() }).where(eq(customersTable.id, customerId));
+  delete req.session.customerId;
+  req.session.save(() => res.json({ success: true }));
+});
+router17.delete("/mobile/me", async (req, res) => {
+  const customerId = requireCustomer(req, res);
+  if (!customerId) return;
+  await db.delete(customersTable).where(eq(customersTable.id, customerId));
+  delete req.session.customerId;
+  req.session.save(() => res.sendStatus(204));
+});
+router17.get("/mobile/points", async (req, res) => {
+  const customerId = requireCustomer(req, res);
+  if (!customerId) return;
+  const customer = await getCustomerById(customerId);
+  res.json({ points: customer?.points ?? 0, totalSpent: customer?.totalSpent ?? "0", visitCount: customer?.visitCount ?? 0 });
+});
+router17.get("/mobile/discounts", async (req, res) => {
+  const customerId = requireCustomer(req, res);
+  if (!customerId) return;
+  const customer = await getCustomerById(customerId);
+  if (!customer) {
+    res.json({ discounts: [] });
+    return;
+  }
+  const customerTagsRes = await db.execute(sql`
+    SELECT tag_id FROM customer_tags WHERE customer_id = ${customer.id}
+  `);
+  const customerTagIds = customerTagsRes.rows.map((r) => r.tag_id);
+  const activeDiscounts = await db.select().from(discountsTable).where(eq(discountsTable.isActive, true));
+  const discountTagsRes = await db.execute(sql`
+    SELECT discount_id, tag_id FROM discount_tags
+  `);
+  const discountTagsMap = {};
+  for (const r of discountTagsRes.rows) {
+    if (!discountTagsMap[r.discount_id]) discountTagsMap[r.discount_id] = [];
+    discountTagsMap[r.discount_id].push(r.tag_id);
+  }
+  const applicable = [];
+  for (const d of activeDiscounts) {
+    let isApplicable = false;
+    let reason = "";
+    if (customer.discountId === d.id) {
+      isApplicable = true;
+      reason = "Customer-assigned discount";
+    } else if (d.isFirstOrder && (customer.visitCount || 0) === 0) {
+      isApplicable = true;
+      reason = "First order promotion";
+    } else {
+      const associatedTagIds = discountTagsMap[d.id] || [];
+      if (associatedTagIds.some((tagId) => customerTagIds.includes(tagId))) {
+        isApplicable = true;
+        reason = "Group tag discount";
+      }
+    }
+    if (isApplicable) {
+      applicable.push({ id: d.id, code: d.code, type: d.type, value: parseFloat(d.value), isTaxable: d.isTaxable ?? false, reason });
+    }
+  }
+  res.json({ discounts: applicable });
+});
+router17.get("/mobile/offers", async (req, res) => {
+  const branchId = req.query.branchId ? parseInt(req.query.branchId) : null;
+  const offers = await db.select().from(offersTable).where(eq(offersTable.isActive, true));
+  const matchingOffers = [];
+  for (const o of offers) {
+    const offerBranches = await db.select().from(offersBranchesTable).where(eq(offersBranchesTable.offerId, o.id));
+    const offerPartners = await db.select().from(offersPartnersTable).where(eq(offersPartnersTable.offerId, o.id));
+    const branchIds = offerBranches.map((b) => b.branchId);
+    const partnerIds = offerPartners.map((p) => p.partnerId);
+    if (branchId && branchIds.length > 0 && !branchIds.includes(branchId)) continue;
+    if (!(o.applyToStore ?? true)) continue;
+    const applicableRows = await db.select().from(offersApplicableDrinksTable).where(eq(offersApplicableDrinksTable.offerId, o.id));
+    const rewardRows = await db.select().from(offersRewardDrinksTable).where(eq(offersRewardDrinksTable.offerId, o.id));
+    const excludedRows = await db.select().from(offersExcludedDrinksTable).where(eq(offersExcludedDrinksTable.offerId, o.id));
+    matchingOffers.push({
+      id: o.id,
+      name: o.name,
+      buyAmount: o.buyAmount,
+      freeAmount: o.freeAmount,
+      promoLabel: o.promoLabel,
+      applyToStore: o.applyToStore,
+      applyToAllPartners: o.applyToAllPartners,
+      branchIds,
+      partnerIds,
+      applicableDrinkIds: applicableRows.map((r) => r.drinkId),
+      rewardDrinkIds: rewardRows.map((r) => r.drinkId),
+      excludedDrinkIds: excludedRows.map((r) => r.drinkId)
+    });
+  }
+  res.json(matchingOffers);
+});
+router17.get("/mobile/discounts/validate/:code", async (req, res) => {
+  const code = req.params.code.trim();
+  const [discount] = await db.select().from(discountsTable).where(eq(discountsTable.code, code)).limit(1);
+  if (discount && discount.isActive) {
+    res.json({ valid: true, discount: { id: discount.id, code: discount.code, type: discount.type, value: parseFloat(discount.value), isTaxable: discount.isTaxable ?? false } });
+  } else {
+    res.json({ valid: false, error: "Invalid or inactive discount code" });
+  }
+});
+router17.get("/mobile/favorites", async (req, res) => {
+  const customerId = requireCustomer(req, res);
+  if (!customerId) return;
+  const favorites = await db.select({
+    id: customerFavoritesTable.id,
+    drinkId: customerFavoritesTable.drinkId,
+    createdAt: customerFavoritesTable.createdAt,
+    drink: {
+      id: drinksTable.id,
+      name: drinksTable.name,
+      description: drinksTable.description,
+      category: drinksTable.category,
+      basePrice: drinksTable.basePrice,
+      imageUrl: drinksTable.imageUrl,
+      isCustomizable: drinksTable.isCustomizable
+    }
+  }).from(customerFavoritesTable).innerJoin(drinksTable, eq(customerFavoritesTable.drinkId, drinksTable.id)).where(eq(customerFavoritesTable.customerId, customerId)).orderBy(desc(customerFavoritesTable.createdAt));
+  res.json({ favorites: serializeDates(favorites) });
+});
+router17.post("/mobile/favorites", async (req, res) => {
+  const customerId = requireCustomer(req, res);
+  if (!customerId) return;
+  const { drinkId } = req.body ?? {};
+  if (!drinkId) {
+    res.status(400).json({ error: "drinkId is required" });
+    return;
+  }
+  const [drink] = await db.select().from(drinksTable).where(eq(drinksTable.id, drinkId)).limit(1);
+  if (!drink) {
+    res.status(404).json({ error: "Drink not found" });
+    return;
+  }
+  const [existing] = await db.select().from(customerFavoritesTable).where(and(eq(customerFavoritesTable.customerId, customerId), eq(customerFavoritesTable.drinkId, drinkId))).limit(1);
+  if (!existing) {
+    await db.insert(customerFavoritesTable).values({ customerId, drinkId });
+  }
+  res.status(201).json({ success: true });
+});
+router17.delete("/mobile/favorites/:drinkId", async (req, res) => {
+  const customerId = requireCustomer(req, res);
+  if (!customerId) return;
+  const drinkId = parseInt(req.params.drinkId);
+  await db.delete(customerFavoritesTable).where(and(eq(customerFavoritesTable.customerId, customerId), eq(customerFavoritesTable.drinkId, drinkId)));
+  res.sendStatus(204);
+});
+router17.get("/mobile/saved-drinks", async (req, res) => {
+  const customerId = requireCustomer(req, res);
+  if (!customerId) return;
+  const saved = await db.select({
+    id: customerSavedDrinksTable.id,
+    drinkId: customerSavedDrinksTable.drinkId,
+    name: customerSavedDrinksTable.name,
+    selections: customerSavedDrinksTable.selections,
+    quantity: customerSavedDrinksTable.quantity,
+    createdAt: customerSavedDrinksTable.createdAt,
+    drink: {
+      id: drinksTable.id,
+      name: drinksTable.name,
+      imageUrl: drinksTable.imageUrl,
+      basePrice: drinksTable.basePrice
+    }
+  }).from(customerSavedDrinksTable).innerJoin(drinksTable, eq(customerSavedDrinksTable.drinkId, drinksTable.id)).where(eq(customerSavedDrinksTable.customerId, customerId)).orderBy(desc(customerSavedDrinksTable.createdAt));
+  res.json({ savedDrinks: serializeDates(saved) });
+});
+router17.post("/mobile/saved-drinks", async (req, res) => {
+  const customerId = requireCustomer(req, res);
+  if (!customerId) return;
+  const { drinkId, name, selections, quantity } = req.body ?? {};
+  if (!drinkId) {
+    res.status(400).json({ error: "drinkId is required" });
+    return;
+  }
+  const [drink] = await db.select().from(drinksTable).where(eq(drinksTable.id, drinkId)).limit(1);
+  if (!drink) {
+    res.status(404).json({ error: "Drink not found" });
+    return;
+  }
+  const [saved] = await db.insert(customerSavedDrinksTable).values({
+    customerId,
+    drinkId,
+    name: name && typeof name === "string" && name.trim() ? name.trim() : drink.name,
+    selections: Array.isArray(selections) ? selections : [],
+    quantity: quantity || 1
+  }).returning();
+  res.status(201).json({ savedDrink: serializeDates(saved) });
+});
+router17.delete("/mobile/saved-drinks/:id", async (req, res) => {
+  const customerId = requireCustomer(req, res);
+  if (!customerId) return;
+  const id = parseInt(req.params.id);
+  await db.delete(customerSavedDrinksTable).where(and(eq(customerSavedDrinksTable.id, id), eq(customerSavedDrinksTable.customerId, customerId)));
+  res.sendStatus(204);
+});
+router17.get("/mobile/friends", async (req, res) => {
+  const customerId = requireCustomer(req, res);
+  if (!customerId) return;
+  const friends = await db.select().from(customerFriendsTable).where(eq(customerFriendsTable.customerId, customerId)).orderBy(desc(customerFriendsTable.createdAt));
+  res.json({ friends: serializeDates(friends) });
+});
+router17.post("/mobile/friends", async (req, res) => {
+  const customerId = requireCustomer(req, res);
+  if (!customerId) return;
+  const { phone } = req.body ?? {};
+  if (!phone || typeof phone !== "string" || phone.trim().length < 4) {
+    res.status(400).json({ error: "Valid friend phone number is required" });
+    return;
+  }
+  const cleanPhone = phone.trim();
+  const me = await getCustomerById(customerId);
+  if (me && cleanPhone === me.phone) {
+    res.status(400).json({ error: "You cannot add yourself as a friend" });
+    return;
+  }
+  const [friend] = await db.select().from(customersTable).where(and(eq(customersTable.phone, cleanPhone), eq(customersTable.isActive, true))).limit(1);
+  if (!friend) {
+    res.status(404).json({ error: "No SPACCA account found with this phone number" });
+    return;
+  }
+  const [existing] = await db.select().from(customerFriendsTable).where(and(eq(customerFriendsTable.customerId, customerId), eq(customerFriendsTable.friendCustomerId, friend.id))).limit(1);
+  if (existing) {
+    res.status(409).json({ error: "Already friends" });
+    return;
+  }
+  const [added] = await db.insert(customerFriendsTable).values({ customerId, friendCustomerId: friend.id, friendName: friend.name, friendPhone: friend.phone }).returning();
+  res.status(201).json({ friend: serializeDates(added) });
+});
+router17.delete("/mobile/friends/:id", async (req, res) => {
+  const customerId = requireCustomer(req, res);
+  if (!customerId) return;
+  const id = parseInt(req.params.id);
+  await db.delete(customerFriendsTable).where(and(eq(customerFriendsTable.id, id), eq(customerFriendsTable.customerId, customerId)));
+  res.sendStatus(204);
+});
+router17.get("/mobile/branches", async (_req, res) => {
+  const branches = await db.select().from(branchesTable).where(eq(branchesTable.isActive, true)).orderBy(branchesTable.name);
+  res.json({ branches: serializeDates(branches) });
+});
+router17.get("/mobile/categories", async (req, res) => {
+  const since = req.query.since;
+  const sinceDate = since ? new Date(since) : null;
+  const validSince = sinceDate && !isNaN(sinceDate.getTime()) ? sinceDate : null;
+  const all = await db.select().from(drinkCategoriesTable).orderBy(drinkCategoriesTable.sortOrder);
+  const active = all.filter((c) => c.isActive);
+  const deletedIds = all.filter((c) => !c.isActive).map((c) => c.id);
+  let categories = active;
+  if (validSince) {
+    categories = active.filter((c) => new Date(c.createdAt) > validSince);
+  }
+  res.json({
+    categories: serializeDates(categories),
+    deletedIds,
+    serverNow: (/* @__PURE__ */ new Date()).toISOString()
+  });
+});
+router17.get("/mobile/categories/:id/drinks", async (req, res) => {
+  const categoryId = parseInt(req.params.id);
+  if (isNaN(categoryId)) {
+    res.status(400).json({ error: "Invalid category id" });
+    return;
+  }
+  const since = req.query.since;
+  const sinceDate = since ? new Date(since) : null;
+  const validSince = sinceDate && !isNaN(sinceDate.getTime()) ? sinceDate : null;
+  const all = await db.select().from(drinksTable).where(eq(drinksTable.categoryId, categoryId)).orderBy(drinksTable.sortOrder);
+  const active = all.filter((d) => d.isActive);
+  const deletedIds = all.filter((d) => !d.isActive).map((d) => d.id);
+  let changed = active;
+  if (validSince) {
+    changed = active.filter((d) => new Date(d.updatedAt ?? d.createdAt) > validSince);
+  }
+  const products = await Promise.all(
+    changed.map(async (d) => {
+      const price = await getStandardProductPrice(d.id);
+      return {
+        id: d.id,
+        name: d.name,
+        description: d.description,
+        imageUrl: d.imageUrl,
+        isCustomizable: d.isCustomizable,
+        price,
+        sortOrder: d.sortOrder
+      };
+    })
+  );
+  res.json({
+    products: serializeDates(products),
+    deletedIds,
+    serverNow: (/* @__PURE__ */ new Date()).toISOString()
+  });
+});
+async function buildMobileRecipeSlots(drinkId) {
+  const slots = await db.select().from(drinkIngredientSlotsTable).where(eq(drinkIngredientSlotsTable.drinkId, drinkId)).orderBy(asc(drinkIngredientSlotsTable.customerSortOrder), asc(drinkIngredientSlotsTable.sortOrder), asc(drinkIngredientSlotsTable.id));
+  const slotIds = slots.map((s) => s.id);
+  const templateIds = [...new Set(slots.map((s) => s.predefinedSlotId).filter((v) => v !== null))];
+  const [typeOptions, slotVolumes, ingredientOptions, volumes, types3, typeVolumes, predefinedSlots, templateTypeOptions, templateVolumes] = await Promise.all([
+    slotIds.length > 0 ? db.select().from(drinkSlotTypeOptionsTable).where(inArray(drinkSlotTypeOptionsTable.slotId, slotIds)) : Promise.resolve([]),
+    slotIds.length > 0 ? db.select().from(drinkSlotVolumesTable).where(inArray(drinkSlotVolumesTable.slotId, slotIds)) : Promise.resolve([]),
+    db.select().from(ingredientOptionsTable),
+    db.select().from(ingredientVolumesTable),
+    db.select().from(ingredientTypesTable),
+    db.select().from(ingredientTypeVolumesTable),
+    templateIds.length > 0 ? db.select().from(predefinedSlotsTable).where(inArray(predefinedSlotsTable.id, templateIds)) : Promise.resolve([]),
+    templateIds.length > 0 ? db.select().from(predefinedSlotTypeOptionsTable).where(inArray(predefinedSlotTypeOptionsTable.predefinedSlotId, templateIds)) : Promise.resolve([]),
+    templateIds.length > 0 ? db.select().from(predefinedSlotVolumesTable).where(inArray(predefinedSlotVolumesTable.predefinedSlotId, templateIds)) : Promise.resolve([])
+  ]);
+  const volumeMap = new Map(volumes.map((v) => [v.id, v]));
+  const typeMap = new Map(types3.map((t) => [t.id, t]));
+  const typeVolumeMap = new Map(typeVolumes.map((tv) => [tv.id, tv]));
+  const result = [];
+  for (const slot of slots) {
+    const template = slot.predefinedSlotId ? predefinedSlots.find((ps) => ps.id === slot.predefinedSlotId) : null;
+    let effectiveTypeOptions = typeOptions.filter((to) => to.slotId === slot.id);
+    if (effectiveTypeOptions.length === 0 && template) {
+      effectiveTypeOptions = templateTypeOptions.filter((tto) => tto.predefinedSlotId === template.id).map((tto) => ({
+        id: 0,
+        slotId: slot.id,
+        ingredientTypeId: tto.ingredientTypeId,
+        isDefault: tto.isDefault,
+        sortOrder: tto.sortOrder,
+        extraCost: tto.extraCost
+      }));
+    }
+    if (effectiveTypeOptions.length === 0 && slot.ingredientTypeId) {
+      effectiveTypeOptions = [{ id: 0, slotId: slot.id, ingredientTypeId: slot.ingredientTypeId, isDefault: true, sortOrder: 0, extraCost: null }];
+    }
+    if (effectiveTypeOptions.length > 0) {
+      const typedOptions = effectiveTypeOptions.map((to) => {
+        const ingType = typeMap.get(to.ingredientTypeId);
+        if (!ingType || ingType.isActive === false) return null;
+        const globalTypeVolumes = typeVolumes.filter(
+          (tv) => tv.ingredientTypeId === to.ingredientTypeId && tv.isActive !== false
+        );
+        const slotVolMap = new Map(slotVolumes.filter((sv) => sv.slotId === slot.id).map((sv) => [sv.typeVolumeId, sv]));
+        const templateVolMap = new Map(templateVolumes.filter((tv) => tv.predefinedSlotId === template?.id).map((tv) => [tv.typeVolumeId, tv]));
+        const volumesForType = globalTypeVolumes.map((tv) => {
+          const override = slotVolMap.get(tv.id);
+          const templateDef = templateVolMap.get(tv.id);
+          const vol = volumeMap.get(tv.volumeId);
+          const isEnabled = override?.isEnabled ?? templateDef?.isEnabled ?? true;
+          if (isEnabled === false) return null;
+          return {
+            typeVolumeId: tv.id,
+            volumeName: vol?.name ?? "",
+            extraCost: Number(override?.extraCost ?? templateDef?.extraCost ?? tv.extraCost ?? 0),
+            isDefault: override?.isDefault ?? templateDef?.isDefault ?? tv.isDefault ?? false,
+            isAvailable: true,
+            processedQty: Number(override?.processedQty ?? templateDef?.processedQty ?? tv.processedQty ?? vol?.processedQty ?? 0)
+          };
+        }).filter((v) => v !== null).sort((a, b) => (a.typeVolumeId ?? 0) - (b.typeVolumeId ?? 0));
+        return {
+          typeOptionId: to.id,
+          ingredientTypeId: to.ingredientTypeId,
+          typeName: ingType.name ?? "",
+          extraCost: Number(to.extraCost ?? ingType.extraCost ?? 0),
+          isDefault: to.isDefault ?? false,
+          processedQty: Number(to.processedQty ?? ingType.processedQty ?? 0),
+          volumes: volumesForType
+        };
+      }).filter((o) => o !== null && o.typeName !== "");
+      result.push({
+        slotId: slot.id,
+        slotLabel: slot.slotLabel || template?.slotLabel || "Option",
+        isRequired: slot.isRequired ?? template?.isRequired ?? false,
+        slotStyle: "typed",
+        customerSortOrder: slot.customerSortOrder ?? 1,
+        options: [],
+        typeOptions: typedOptions
+      });
+      continue;
+    }
+    if (slot.ingredientId) {
+      const ingredientOptionsForSlot = ingredientOptions.filter((o) => o.ingredientId === slot.ingredientId).sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0) || a.id - b.id);
+      result.push({
+        slotId: slot.id,
+        slotLabel: slot.slotLabel || "Option",
+        isRequired: slot.isRequired ?? false,
+        slotStyle: "legacy",
+        customerSortOrder: slot.customerSortOrder ?? 1,
+        ingredientId: slot.ingredientId,
+        options: ingredientOptionsForSlot.map((o) => ({
+          optionId: o.id,
+          label: o.label,
+          extraCost: Number(o.extraCost ?? 0),
+          isDefault: o.isDefault ?? false,
+          isAvailable: true,
+          processedQty: Number(o.processedQty ?? 0)
+        })),
+        typeOptions: []
+      });
+      continue;
+    }
+    result.push({
+      slotId: slot.id,
+      slotLabel: slot.slotLabel || "Option",
+      isRequired: slot.isRequired ?? false,
+      slotStyle: "legacy",
+      customerSortOrder: slot.customerSortOrder ?? 1,
+      options: [],
+      typeOptions: []
+    });
+  }
+  return result;
+}
+router17.get("/mobile/drinks/:id", async (req, res) => {
+  const id = parseInt(req.params.id);
+  if (isNaN(id)) {
+    res.status(400).json({ error: "Invalid drink id" });
+    return;
+  }
+  const [drink] = await db.select().from(drinksTable).where(eq(drinksTable.id, id)).limit(1);
+  if (!drink) {
+    res.status(404).json({ error: "Drink not found" });
+    return;
+  }
+  const price = await getStandardProductPrice(id);
+  const recipeSlots = await buildMobileRecipeSlots(id);
+  const ingredients = recipeSlots.map((slot) => {
+    let optionLabel = null;
+    let volumeLabel = null;
+    if (slot.slotStyle === "typed" && slot.typeOptions.length > 0) {
+      const defType = slot.typeOptions.find((to) => to.isDefault) ?? slot.typeOptions[0];
+      optionLabel = defType?.typeName ?? null;
+      const defVol = defType?.volumes?.find((v) => v.isDefault) ?? defType?.volumes?.[0];
+      volumeLabel = defVol?.volumeName ?? null;
+    } else if (slot.options.length > 0) {
+      const defOpt = slot.options.find((o) => o.isDefault) ?? slot.options[0];
+      optionLabel = defOpt?.label ?? null;
+    }
+    return {
+      slotLabel: slot.slotLabel,
+      name: optionLabel ?? slot.slotLabel,
+      optionLabel,
+      volumeLabel,
+      isRequired: slot.isRequired,
+      customerSortOrder: slot.customerSortOrder ?? 1
+    };
+  });
+  res.json({
+    drink: {
+      id: drink.id,
+      name: drink.name,
+      description: drink.description,
+      category: drink.category,
+      categoryId: drink.categoryId,
+      imageUrl: drink.imageUrl,
+      isCustomizable: drink.isCustomizable,
+      price,
+      cupSizeMl: drink.cupSizeMl
+    },
+    ingredients: serializeDates(ingredients),
+    slots: recipeSlots
+  });
+});
+router17.get("/mobile/orders", async (req, res) => {
+  const customerId = requireCustomer(req, res);
+  if (!customerId) return;
+  const customer = await getCustomerById(customerId);
+  if (!customer) {
+    res.json({ orders: [] });
+    return;
+  }
+  const orders = await db.select({
+    id: ordersTable.id,
+    orderNumber: ordersTable.orderNumber,
+    status: ordersTable.status,
+    total: ordersTable.total,
+    subtotal: ordersTable.subtotal,
+    discount: ordersTable.discount,
+    paymentMethod: ordersTable.paymentMethod,
+    source: ordersTable.source,
+    branchId: ordersTable.branchId,
+    createdAt: ordersTable.createdAt,
+    branchName: branchesTable.name
+  }).from(ordersTable).leftJoin(branchesTable, eq(ordersTable.branchId, branchesTable.id)).where(eq(ordersTable.customerPhone, customer.phone)).orderBy(desc(ordersTable.createdAt)).limit(50);
+  res.json({ orders: serializeDates(orders) });
+});
+router17.get("/mobile/orders/:id", async (req, res) => {
+  const customerId = requireCustomer(req, res);
+  if (!customerId) return;
+  const id = parseInt(req.params.id);
+  const customer = await getCustomerById(customerId);
+  if (!customer) {
+    res.status(404).json({ error: "Order not found" });
+    return;
+  }
+  const [order] = await db.select().from(ordersTable).where(and(eq(ordersTable.id, id), eq(ordersTable.customerPhone, customer.phone))).limit(1);
+  if (!order) {
+    res.status(404).json({ error: "Order not found" });
+    return;
+  }
+  const [items, payments, branch] = await Promise.all([
+    db.select().from(orderItemsTable).where(eq(orderItemsTable.orderId, order.id)),
+    db.select().from(orderPaymentsTable).where(eq(orderPaymentsTable.orderId, order.id)),
+    db.select().from(branchesTable).where(eq(branchesTable.id, order.branchId)).limit(1)
+  ]);
+  const itemIds = items.map((i) => i.id);
+  const customizations = itemIds.length > 0 ? await db.select().from(orderItemCustomizationsTable).where(inArray(orderItemCustomizationsTable.orderItemId, itemIds)) : [];
+  const custByItem = /* @__PURE__ */ new Map();
+  for (const c of customizations) {
+    const list = custByItem.get(c.orderItemId) ?? [];
+    list.push(c);
+    custByItem.set(c.orderItemId, list);
+  }
+  res.json({
+    order: serializeDates({
+      ...order,
+      subtotal: parseFloat(order.subtotal),
+      discount: parseFloat(order.discount),
+      total: parseFloat(order.total),
+      branchName: branch[0]?.name ?? "Unknown",
+      payments: payments.map((p) => ({ ...p, amount: parseFloat(p.amount) })),
+      items: items.map((i) => ({
+        ...i,
+        unitPrice: parseFloat(i.unitPrice),
+        lineTotal: parseFloat(i.lineTotal),
+        customizations: custByItem.get(i.id) ?? []
+      }))
+    })
+  });
+});
+router17.post("/mobile/orders", async (req, res) => {
+  const customerId = requireCustomer(req, res);
+  if (!customerId) return;
+  const customer = await getCustomerById(customerId);
+  if (!customer) {
+    res.status(401).json({ error: "Customer not found" });
+    return;
+  }
+  const { branchId, items, paymentMethod, notes, discountCode } = req.body ?? {};
+  if (!branchId || !Array.isArray(items) || items.length === 0) {
+    res.status(400).json({ error: "branchId and items are required" });
+    return;
+  }
+  const [branch] = await db.select().from(branchesTable).where(eq(branchesTable.id, branchId)).limit(1);
+  if (!branch) {
+    res.status(400).json({ error: "Branch not found" });
+    return;
+  }
+  let subtotal = 0;
+  const itemDetails = [];
+  for (const item of items) {
+    const calcData = await calculateDrinkData(item.drinkId, item.selections ?? [], branchId, null);
+    const customizations = calcData.customizations.map((c) => ({
+      ingredientId: c.ingredientId,
+      optionId: c.optionId,
+      typeVolumeId: c.typeVolumeId,
+      consumedQty: c.consumedQty * (item.quantity ?? 1),
+      producedQty: c.producedQty * (item.quantity ?? 1),
+      addedCost: c.addedCost,
+      slotLabel: c.slotLabel,
+      optionLabel: c.optionLabel,
+      baristaSortOrder: c.baristaSortOrder,
+      customerSortOrder: c.customerSortOrder
+    }));
+    const unitPrice = calcData.totalPrice;
+    const lineTotal = unitPrice * (item.quantity ?? 1);
+    subtotal += lineTotal;
+    itemDetails.push({
+      drinkId: item.drinkId,
+      drinkName: calcData.drink.name,
+      kitchenStation: calcData.drink.kitchenStation,
+      kitchenStationId: calcData.drink.kitchenStationId,
+      quantity: item.quantity ?? 1,
+      unitPrice,
+      lineTotal,
+      specialNotes: item.specialNotes ?? null,
+      customizations
+    });
+  }
+  const offersList = await db.select().from(offersTable).where(eq(offersTable.isActive, true));
+  const activeOffers = [];
+  for (const o of offersList) {
+    const offerBranches = await db.select().from(offersBranchesTable).where(eq(offersBranchesTable.offerId, o.id));
+    const oBranchIds = offerBranches.map((b) => b.branchId);
+    if (branchId && oBranchIds.length > 0 && !oBranchIds.includes(branchId)) continue;
+    if (!(o.applyToStore ?? true)) continue;
+    activeOffers.push(o);
+  }
+  let offerDiscountAmount = 0;
+  let offerIdToSave = null;
+  for (const activeOffer of activeOffers) {
+    const N = activeOffer.buyAmount;
+    const X = activeOffer.freeAmount;
+    const applicableRows = await db.select().from(offersApplicableDrinksTable).where(eq(offersApplicableDrinksTable.offerId, activeOffer.id));
+    const rewardRows = await db.select().from(offersRewardDrinksTable).where(eq(offersRewardDrinksTable.offerId, activeOffer.id));
+    const excludedRows = await db.select().from(offersExcludedDrinksTable).where(eq(offersExcludedDrinksTable.offerId, activeOffer.id));
+    const applicableDrinkIds = applicableRows.map((r) => r.drinkId);
+    const rewardDrinkIds = rewardRows.map((r) => r.drinkId);
+    const excludedDrinkIds = excludedRows.map((r) => r.drinkId);
+    const triggerItems = itemDetails.filter(
+      (item) => !excludedDrinkIds.includes(item.drinkId) && (applicableDrinkIds.length === 0 || applicableDrinkIds.includes(item.drinkId))
+    );
+    const rewardItems = itemDetails.filter(
+      (item) => !excludedDrinkIds.includes(item.drinkId) && (rewardDrinkIds.length === 0 || rewardDrinkIds.includes(item.drinkId))
+    );
+    const triggerQty = triggerItems.reduce((sum2, item) => sum2 + item.quantity, 0);
+    const isCrossList = applicableDrinkIds.length > 0 && rewardDrinkIds.length > 0 && !applicableDrinkIds.some((id) => rewardDrinkIds.includes(id));
+    let F = 0;
+    if (isCrossList) {
+      const maxEarned = Math.floor(triggerQty / N) * X;
+      const rewardQty = rewardItems.reduce((sum2, item) => sum2 + item.quantity, 0);
+      F = Math.min(maxEarned, rewardQty);
+    } else {
+      const M = triggerQty;
+      F = Math.floor(M / (N + X)) * X + Math.min(X, Math.max(0, M % (N + X) - N));
+    }
+    if (F > 0 && rewardItems.length > 0) {
+      const flatRewardPrices = rewardItems.flatMap(
+        (item) => Array.from({ length: item.quantity }).map(() => item.unitPrice)
+      ).sort((a, b) => a - b);
+      const itemsToDiscountCount = Math.min(F, flatRewardPrices.length);
+      if (itemsToDiscountCount > 0) {
+        if (!offerIdToSave) offerIdToSave = activeOffer.id;
+        for (let i = 0; i < itemsToDiscountCount; i++) {
+          offerDiscountAmount += flatRewardPrices[i];
+        }
+      }
+    }
+  }
+  let discountAmount = 0;
+  let discountId = null;
+  let discountCodeSaved = null;
+  let discountValue = null;
+  let discountType = null;
+  if (offerDiscountAmount > 0) {
+    discountAmount = 0;
+  } else {
+    let discountRow = null;
+    if (discountCode) {
+      const [row] = await db.select().from(discountsTable).where(eq(discountsTable.code, discountCode)).limit(1);
+      if (row && row.isActive) discountRow = row;
+    } else if (customer.discountId) {
+      const [row] = await db.select().from(discountsTable).where(eq(discountsTable.id, customer.discountId)).limit(1);
+      if (row && row.isActive) discountRow = row;
+    }
+    if (discountRow) {
+      discountId = discountRow.id;
+      discountCodeSaved = discountRow.code;
+      discountValue = parseFloat(discountRow.value);
+      discountType = discountRow.type;
+      const totalItemCount = itemDetails.reduce((sum2, item) => sum2 + item.quantity, 0);
+      const isTaxable = discountRow.isTaxable ?? false;
+      const baseForCalc = isTaxable ? subtotal : subtotal / 1.14;
+      if (discountRow.type === "percentage") {
+        discountAmount = baseForCalc * parseFloat(discountRow.value) / 100;
+      } else if (discountRow.type === "fixed") {
+        discountAmount = Math.min(parseFloat(discountRow.value), subtotal);
+      } else if (discountRow.type === "fixed_per_item") {
+        discountAmount = Math.min(parseFloat(discountRow.value) * totalItemCount, subtotal);
+      }
+    }
+  }
+  const total = Math.max(0, subtotal - (offerDiscountAmount > 0 ? offerDiscountAmount : discountAmount));
+  const baristaId = await getDefaultBaristaId();
+  const [order] = await db.transaction(async (tx) => {
+    const orderNumber = await generateOrderNumber(tx, branchId);
+    const [newOrder] = await tx.insert(ordersTable).values({
+      branchId,
+      orderNumber,
+      baristaId,
+      status: "pending",
+      customerName: customer.name,
+      customerPhone: customer.phone,
+      subtotal: String(subtotal),
+      discount: String(discountAmount),
+      discountId,
+      discountCode: discountCodeSaved,
+      discountValue: discountValue != null ? String(discountValue) : null,
+      discountType,
+      offerId: offerIdToSave,
+      offerDiscount: String(offerDiscountAmount),
+      total: String(total),
+      paymentMethod: paymentMethod || "card",
+      source: "mobile",
+      notes: notes ?? null
+    }).returning();
+    for (const item of itemDetails) {
+      const [orderItem] = await tx.insert(orderItemsTable).values({
+        orderId: newOrder.id,
+        drinkId: item.drinkId,
+        drinkName: item.drinkName,
+        quantity: item.quantity,
+        unitPrice: String(item.unitPrice),
+        lineTotal: String(item.lineTotal),
+        specialNotes: item.specialNotes,
+        kitchenStation: item.kitchenStation,
+        kitchenStationId: item.kitchenStationId
+      }).returning();
+      if (item.customizations.length > 0) {
+        await tx.insert(orderItemCustomizationsTable).values(
+          item.customizations.map((c) => ({
+            orderItemId: orderItem.id,
+            ingredientId: c.ingredientId ? Number(c.ingredientId) : null,
+            optionId: c.optionId ? Number(c.optionId) : null,
+            typeVolumeId: c.typeVolumeId ? Number(c.typeVolumeId) : null,
+            consumedQty: String(c.consumedQty || 0),
+            producedQty: String(c.producedQty || 0),
+            addedCost: String(c.addedCost || 0),
+            slotLabel: c.slotLabel,
+            optionLabel: c.optionLabel,
+            baristaSortOrder: c.baristaSortOrder,
+            customerSortOrder: c.customerSortOrder
+          }))
+        );
+      }
+    }
+    await tx.insert(orderPaymentsTable).values({
+      orderId: newOrder.id,
+      paymentMethod: paymentMethod || "card",
+      amount: String(total)
+    });
+    return [newOrder];
+  });
+  broadcastEvent("order_created", { orderId: order.id, orderNumber: order.orderNumber });
+  await logActivity(req, "CREATE_MOBILE_ORDER", "order", order.id, { total });
+  res.status(201).json({ order: serializeDates({ ...order, total: parseFloat(order.total) }) });
+});
+router17.post("/mobile/orders/:id/cancel", async (req, res) => {
+  const customerId = requireCustomer(req, res);
+  if (!customerId) return;
+  const id = parseInt(req.params.id);
+  const customer = await getCustomerById(customerId);
+  if (!customer) {
+    res.status(404).json({ error: "Order not found" });
+    return;
+  }
+  const [order] = await db.select().from(ordersTable).where(and(eq(ordersTable.id, id), eq(ordersTable.customerPhone, customer.phone))).limit(1);
+  if (!order) {
+    res.status(404).json({ error: "Order not found" });
+    return;
+  }
+  if (order.status !== "pending" && order.status !== "paid") {
+    res.status(400).json({ error: "Order can no longer be cancelled" });
+    return;
+  }
+  const [updated] = await db.update(ordersTable).set({ status: "cancelled", cancelledAt: /* @__PURE__ */ new Date(), updatedAt: /* @__PURE__ */ new Date() }).where(eq(ordersTable.id, id)).returning();
+  broadcastEvent("order_updated", { orderId: id });
+  res.json({ order: serializeDates(updated) });
+});
+router17.get("/mobile/home/featured", async (_req, res) => {
+  const featured = await db.select({
+    id: drinksTable.id,
+    name: drinksTable.name,
+    imageUrl: drinksTable.imageUrl,
+    basePrice: drinksTable.basePrice
+  }).from(drinksTable).where(and(eq(drinksTable.isFeatured, true), eq(drinksTable.isActive, true))).orderBy(drinksTable.sortOrder);
+  const products = await Promise.all(
+    featured.map(async (d) => {
+      const price = await getStandardProductPrice(d.id);
+      return {
+        id: d.id,
+        name: d.name,
+        image: d.imageUrl,
+        price: String(price),
+        isFeatured: true
+      };
+    })
+  );
+  res.json({ products: serializeDates(products) });
+});
+router17.get("/mobile/home/offers", async (req, res) => {
+  const branchId = req.query.branchId ? parseInt(req.query.branchId) : null;
+  const activeDiscounts = await db.select({
+    drinkId: productDrinkDiscountsTable.drinkId,
+    discountType: productDrinkDiscountsTable.discountType,
+    discountValue: productDrinkDiscountsTable.discountValue,
+    startDate: productDrinkDiscountsTable.startDate,
+    endDate: productDrinkDiscountsTable.endDate,
+    branchId: productDrinkDiscountsTable.branchId
+  }).from(productDrinkDiscountsTable).where(eq(productDrinkDiscountsTable.isActive, true));
+  const now = /* @__PURE__ */ new Date();
+  const relevantDiscounts = activeDiscounts.filter((d) => {
+    if (branchId && d.branchId !== null && d.branchId !== branchId) return false;
+    if (d.startDate && new Date(d.startDate) > now) return false;
+    if (d.endDate && new Date(d.endDate) < now) return false;
+    return true;
+  });
+  const drinkDiscountMap = /* @__PURE__ */ new Map();
+  for (const d of relevantDiscounts) {
+    const existing = drinkDiscountMap.get(d.drinkId);
+    if (!existing) {
+      drinkDiscountMap.set(d.drinkId, d);
+    } else if (d.branchId !== null && existing.branchId === null) {
+      drinkDiscountMap.set(d.drinkId, d);
+    }
+  }
+  const drinkIds = Array.from(drinkDiscountMap.keys());
+  if (drinkIds.length === 0) {
+    res.json({ products: [] });
+    return;
+  }
+  const drinks = await db.select().from(drinksTable).where(and(inArray(drinksTable.id, drinkIds), eq(drinksTable.isActive, true)));
+  const products = await Promise.all(
+    drinks.map(async (d) => {
+      const discount = drinkDiscountMap.get(d.id);
+      const originalPrice = await getStandardProductPrice(d.id);
+      let discountedPrice;
+      if (discount.discountType === "percentage") {
+        discountedPrice = originalPrice * (1 - parseFloat(String(discount.discountValue)) / 100);
+      } else if (discount.discountType === "fixed_amount") {
+        discountedPrice = originalPrice - parseFloat(String(discount.discountValue));
+      } else {
+        discountedPrice = parseFloat(String(discount.discountValue));
+      }
+      discountedPrice = Math.max(0, discountedPrice);
+      return {
+        id: d.id,
+        name: d.name,
+        image: d.imageUrl,
+        price: String(discountedPrice.toFixed(2)),
+        originalPrice: String(originalPrice.toFixed(2)),
+        onSale: true
+      };
+    })
+  );
+  res.json({ products: serializeDates(products) });
+});
+router17.get("/mobile/home/slider", async (_req, res) => {
+  res.json({ slider: [] });
+});
+var mobile_default = router17;
+
+// src/routes/tags.ts
+var import_express19 = __toESM(require_express2(), 1);
+init_drizzle_orm();
+init_src();
+var router18 = (0, import_express19.Router)();
+router18.get("/admin/tags", requirePermission("admin:view"), async (req, res) => {
   try {
     const tags = await db.select().from(tagsTable).orderBy(tagsTable.name);
     res.json({ tags });
@@ -88953,7 +90697,7 @@ router17.get("/admin/tags", requirePermission("admin:view"), async (req, res) =>
     res.status(500).json({ error: "Failed to list tags" });
   }
 });
-router17.post("/admin/tags", requirePermission("admin:view"), async (req, res) => {
+router18.post("/admin/tags", requirePermission("admin:view"), async (req, res) => {
   const { name, description } = req.body ?? {};
   if (!name || typeof name !== "string" || name.trim().length < 2) {
     res.status(400).json({ error: "Tag name must be at least 2 characters" });
@@ -88977,7 +90721,7 @@ router17.post("/admin/tags", requirePermission("admin:view"), async (req, res) =
     res.status(500).json({ error: "Failed to create tag: " + error40?.message });
   }
 });
-router17.patch("/admin/tags/:id", requirePermission("admin:view"), async (req, res) => {
+router18.patch("/admin/tags/:id", requirePermission("admin:view"), async (req, res) => {
   const id = parseInt(req.params.id);
   const { name, description } = req.body ?? {};
   if (name !== void 0 && (typeof name !== "string" || name.trim().length < 2)) {
@@ -89005,9 +90749,9 @@ router17.patch("/admin/tags/:id", requirePermission("admin:view"), async (req, r
     res.status(500).json({ error: "Failed to update tag: " + error40?.message });
   }
 });
-router17.get("/admin/tags/:id", requirePermission("admin:view"), async (req, res) => {
+router18.get("/admin/tags/:id", requirePermission("admin:view"), async (req, res) => {
 });
-router17.delete("/admin/tags/:id", requirePermission("admin:view"), async (req, res) => {
+router18.delete("/admin/tags/:id", requirePermission("admin:view"), async (req, res) => {
   const id = parseInt(req.params.id);
   try {
     const [deletedTag] = await db.delete(tagsTable).where(eq(tagsTable.id, id)).returning();
@@ -89022,19 +90766,19 @@ router17.delete("/admin/tags/:id", requirePermission("admin:view"), async (req, 
     res.status(500).json({ error: "Failed to delete tag: " + error40?.message });
   }
 });
-var tags_default = router17;
+var tags_default = router18;
 
 // src/routes/cashier-sessions.ts
-var import_express19 = __toESM(require_express2(), 1);
+var import_express20 = __toESM(require_express2(), 1);
 init_drizzle_orm();
 init_src();
-var router18 = (0, import_express19.Router)();
+var router19 = (0, import_express20.Router)();
 var cashierLoginLimiter = new RateLimiter(15 * 60 * 1e3, 10);
 var CashierLoginBody = external_exports2.object({
   username: external_exports2.string().min(1),
   password: external_exports2.string().min(1)
 });
-router18.post("/cashier/login", async (req, res) => {
+router19.post("/cashier/login", async (req, res) => {
   const ip = req.ip || "unknown-ip";
   const rateLimitKey = `cashier-login:${ip}`;
   if (cashierLoginLimiter.isLimitExceeded(rateLimitKey)) {
@@ -89096,7 +90840,7 @@ router18.post("/cashier/login", async (req, res) => {
     });
   });
 });
-router18.post("/cashier/end-session", requirePermission("cashier:close_session"), async (req, res) => {
+router19.post("/cashier/end-session", requirePermission("cashier:close_session"), async (req, res) => {
   const sessionId = req.session.cashierSessionId;
   if (!sessionId) {
     res.status(400).json({ error: "No active cashier session" });
@@ -89171,7 +90915,7 @@ router18.post("/cashier/end-session", requirePermission("cashier:close_session")
     });
   });
 });
-router18.get("/cashier/active", async (req, res) => {
+router19.get("/cashier/active", async (req, res) => {
   let sessionId = req.session.cashierSessionId;
   let userRole = req.session.role;
   const userId = req.session.userId;
@@ -89202,7 +90946,7 @@ router18.get("/cashier/active", async (req, res) => {
     startedAt: session2.startedAt
   });
 });
-router18.get("/cashier/performance/:cashierId", requirePermission("cashier:view_reports"), async (req, res) => {
+router19.get("/cashier/performance/:cashierId", requirePermission("cashier:view_reports"), async (req, res) => {
   const cashierId = parseInt(req.params.cashierId);
   if (isNaN(cashierId)) {
     res.status(400).json({ error: "Invalid cashierId" });
@@ -89289,7 +91033,7 @@ router18.get("/cashier/performance/:cashierId", requirePermission("cashier:view_
     avgOrderValue: completedOrders.length > 0 ? totalRevenue / completedOrders.length : 0
   });
 });
-router18.get("/cashier/sessions", requirePermission("cashier:view_reports"), async (req, res) => {
+router19.get("/cashier/sessions", requirePermission("cashier:view_reports"), async (req, res) => {
   const { cashierId, startDate, endDate } = req.query;
   const conditions = [];
   if (cashierId) conditions.push(eq(cashierSessionsTable.cashierId, parseInt(cashierId)));
@@ -89382,11 +91126,11 @@ router18.get("/cashier/sessions", requirePermission("cashier:view_reports"), asy
   });
   res.json(responseSessions);
 });
-router18.get("/cashier/list", requirePermission("cashier:view"), async (_req, res) => {
+router19.get("/cashier/list", requirePermission("cashier:view"), async (_req, res) => {
   const cashiers = await db.select({ id: usersTable.id, name: usersTable.name, role: usersTable.role }).from(usersTable).where(inArray(usersTable.role, ["cashier", "admin"]));
   res.json(cashiers);
 });
-router18.get("/cashier/sessions/:id/performance", requirePermission("cashier:view_reports"), async (req, res) => {
+router19.get("/cashier/sessions/:id/performance", requirePermission("cashier:view_reports"), async (req, res) => {
   const sessionId = parseInt(req.params.id);
   if (isNaN(sessionId)) {
     res.status(400).json({ error: "Invalid sessionId" });
@@ -89473,7 +91217,7 @@ router18.get("/cashier/sessions/:id/performance", requirePermission("cashier:vie
     closeRecord: closeRecord ?? null
   });
 });
-router18.get("/cashier/sessions/:id/report", requirePermission("cashier:view_reports"), async (req, res) => {
+router19.get("/cashier/sessions/:id/report", requirePermission("cashier:view_reports"), async (req, res) => {
   const sessionId = parseInt(req.params.id);
   if (isNaN(sessionId)) {
     res.status(400).json({ error: "Invalid sessionId" });
@@ -89624,7 +91368,7 @@ router18.get("/cashier/sessions/:id/report", requirePermission("cashier:view_rep
     }))
   });
 });
-router18.get("/cashier/sessions/orders", requirePermission("cashier:view_reports"), async (req, res) => {
+router19.get("/cashier/sessions/orders", requirePermission("cashier:view_reports"), async (req, res) => {
   const { cashierId, startDate, endDate, status, limit: limitStr, offset: offsetStr } = req.query;
   const limit = limitStr ? parseInt(limitStr, 10) : 50;
   const offset = offsetStr ? parseInt(offsetStr, 10) : 0;
@@ -89740,16 +91484,16 @@ router18.get("/cashier/sessions/orders", requirePermission("cashier:view_reports
   });
   res.json(serializeDates(serializedOrders));
 });
-var cashier_sessions_default = router18;
+var cashier_sessions_default = router19;
 
 // src/routes/admin.ts
-var import_express20 = __toESM(require_express2(), 1);
+var import_express21 = __toESM(require_express2(), 1);
 init_src();
 init_drizzle_orm();
 import { exec } from "child_process";
-import path4 from "path";
-import fs5 from "fs";
-var adminRouter = (0, import_express20.Router)();
+import path5 from "path";
+import fs6 from "fs";
+var adminRouter = (0, import_express21.Router)();
 adminRouter.get("/admin/activity-logs", requirePermission("admin:view"), async (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 50;
@@ -89858,10 +91602,10 @@ adminRouter.post("/admin/backup", requirePermission("settings:manage"), async (r
   try {
     const dbUrl = process.env.DATABASE_URL;
     if (!dbUrl) throw new Error("DATABASE_URL not set");
-    const backupsDir = path4.join(process.cwd(), "backups");
-    if (!fs5.existsSync(backupsDir)) fs5.mkdirSync(backupsDir);
+    const backupsDir = path5.join(process.cwd(), "backups");
+    if (!fs6.existsSync(backupsDir)) fs6.mkdirSync(backupsDir);
     const filename = `backup_${(/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-")}.sql`;
-    const filePath = path4.join(backupsDir, filename);
+    const filePath = path5.join(backupsDir, filename);
     const cmd = `pg_dump "${dbUrl}" -f "${filePath}"`;
     exec(cmd, (error40, stdout, stderr) => {
       if (error40) {
@@ -90068,14 +91812,14 @@ adminRouter.post("/admin/partner-prices", requirePermission("catalog:manage"), a
 var admin_default = adminRouter;
 
 // src/routes/stock-audits.ts
-var import_express21 = __toESM(require_express2(), 1);
+var import_express22 = __toESM(require_express2(), 1);
 init_drizzle_orm();
 init_src();
 init_cache2();
 init_pg_core();
 var approvedByUserTable = alias(usersTable, "approved_by_user");
-var router19 = (0, import_express21.Router)();
-router19.get("/stock-audits", requirePermission("inventory:manage"), async (req, res) => {
+var router20 = (0, import_express22.Router)();
+router20.get("/stock-audits", requirePermission("inventory:manage"), async (req, res) => {
   const sessionUser = req.session;
   const sessionBranchId = sessionUser.branchId;
   const isAdmin = sessionUser.role === "admin";
@@ -90098,7 +91842,7 @@ router19.get("/stock-audits", requirePermission("inventory:manage"), async (req,
   }).from(stockAuditsTable).leftJoin(usersTable, eq(stockAuditsTable.createdBy, usersTable.id)).leftJoin(approvedByUserTable, eq(stockAuditsTable.approvedBy, approvedByUserTable.id)).where(conditions.length > 0 ? and(...conditions) : void 0).orderBy(desc(stockAuditsTable.createdAt));
   res.json(serializeDates(audits));
 });
-router19.get("/stock-audits/:id", requirePermission("inventory:manage"), async (req, res) => {
+router20.get("/stock-audits/:id", requirePermission("inventory:manage"), async (req, res) => {
   const auditId = parseInt(req.params.id);
   const [audit] = await db.select({
     id: stockAuditsTable.id,
@@ -90137,12 +91881,13 @@ router19.get("/stock-audits/:id", requirePermission("inventory:manage"), async (
     }))
   }));
 });
-router19.post("/stock-audits", requirePermission("inventory:view"), async (req, res) => {
-  const { notes, items } = req.body;
+router20.post("/stock-audits", requirePermission("inventory:view"), async (req, res) => {
+  const { notes, items, branchId: bodyBranchId } = req.body;
   const sessionUser = req.session;
   const userId = sessionUser?.userId || 1;
-  const branchId = sessionUser?.branchId;
-  if (!branchId) {
+  const rawBranchId = bodyBranchId || sessionUser?.branchId;
+  const branchId = rawBranchId ? parseInt(String(rawBranchId)) : null;
+  if (!branchId || isNaN(branchId)) {
     res.status(400).json({ error: "Branch ID required for audit" });
     return;
   }
@@ -90181,7 +91926,7 @@ router19.post("/stock-audits", requirePermission("inventory:view"), async (req, 
     res.status(500).json({ error: err.message });
   }
 });
-router19.patch("/stock-audits/:id", requirePermission("inventory:manage"), async (req, res) => {
+router20.patch("/stock-audits/:id", requirePermission("inventory:manage"), async (req, res) => {
   const auditId = parseInt(req.params.id);
   const { items, notes } = req.body;
   try {
@@ -90204,7 +91949,7 @@ router19.patch("/stock-audits/:id", requirePermission("inventory:manage"), async
     res.status(500).json({ error: err.message });
   }
 });
-router19.post("/stock-audits/:id/approve", requirePermission("inventory:audit_approve"), async (req, res) => {
+router20.post("/stock-audits/:id/approve", requirePermission("inventory:audit_approve"), async (req, res) => {
   const auditId = parseInt(req.params.id);
   const userId = req.session.userId;
   try {
@@ -90263,7 +92008,7 @@ router19.post("/stock-audits/:id/approve", requirePermission("inventory:audit_ap
     res.status(500).json({ error: err.message });
   }
 });
-router19.post("/stock-audits/:id/reject", requirePermission("inventory:audit_approve"), async (req, res) => {
+router20.post("/stock-audits/:id/reject", requirePermission("inventory:audit_approve"), async (req, res) => {
   const auditId = parseInt(req.params.id);
   const userId = req.session.userId;
   await db.update(stockAuditsTable).set({
@@ -90277,13 +92022,13 @@ router19.post("/stock-audits/:id/reject", requirePermission("inventory:audit_app
   await logActivity(req, "REJECT_STOCK_AUDIT", "stock_audit", auditId);
   res.json({ success: true });
 });
-var stock_audits_default = router19;
+var stock_audits_default = router20;
 
 // src/routes/roles.ts
-var import_express22 = __toESM(require_express2(), 1);
+var import_express23 = __toESM(require_express2(), 1);
 init_src();
 init_drizzle_orm();
-var rolesRouter = (0, import_express22.Router)();
+var rolesRouter = (0, import_express23.Router)();
 rolesRouter.get("/", requirePermission("roles:view"), async (req, res) => {
   try {
     const allRoles = await db.select().from(rolesTable);
@@ -90421,15 +92166,15 @@ rolesRouter.delete("/permissions/:key", requirePermission("roles:manage"), async
 var roles_default = rolesRouter;
 
 // src/routes/branches.ts
-var import_express23 = __toESM(require_express2(), 1);
+var import_express24 = __toESM(require_express2(), 1);
 init_drizzle_orm();
 init_src();
-var router20 = (0, import_express23.Router)();
-router20.get("/", async (req, res) => {
+var router21 = (0, import_express24.Router)();
+router21.get("/", async (req, res) => {
   const branches = await db.select().from(branchesTable).orderBy(asc(branchesTable.name));
   res.json(branches);
 });
-router20.post("/", requirePermission("branches:manage"), async (req, res) => {
+router21.post("/", requirePermission("branches:manage"), async (req, res) => {
   const parsed = insertBranchSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -90438,7 +92183,7 @@ router20.post("/", requirePermission("branches:manage"), async (req, res) => {
   const [branch] = await db.insert(branchesTable).values(parsed.data).returning();
   res.status(201).json(branch);
 });
-router20.patch("/:id", requirePermission("branches:manage"), async (req, res) => {
+router21.patch("/:id", requirePermission("branches:manage"), async (req, res) => {
   const id = parseInt(req.params.id);
   if (isNaN(id)) {
     res.status(400).json({ error: "Invalid id" });
@@ -90456,7 +92201,7 @@ router20.patch("/:id", requirePermission("branches:manage"), async (req, res) =>
   }
   res.json(branch);
 });
-router20.delete("/:id", requirePermission("branches:manage"), async (req, res) => {
+router21.delete("/:id", requirePermission("branches:manage"), async (req, res) => {
   const id = parseInt(req.params.id);
   if (isNaN(id)) {
     res.status(400).json({ error: "Invalid id" });
@@ -90469,10 +92214,10 @@ router20.delete("/:id", requirePermission("branches:manage"), async (req, res) =
   }
   res.sendStatus(204);
 });
-var branches_default = router20;
+var branches_default = router21;
 
 // src/routes/finance.ts
-var import_express24 = __toESM(require_express2(), 1);
+var import_express25 = __toESM(require_express2(), 1);
 init_drizzle_orm();
 init_src();
 
@@ -90653,8 +92398,8 @@ function startOfDay3(d) {
 function endOfDay3(d) {
   return toCairoMidnight3(d, true);
 }
-var router21 = (0, import_express24.Router)();
-router21.get("/finance/inventory-usage", requirePermission("reports:view"), async (req, res) => {
+var router22 = (0, import_express25.Router)();
+router22.get("/finance/inventory-usage", requirePermission("reports:view"), async (req, res) => {
   const { startDate, endDate, branchId } = req.query;
   const targetBranchId = branchId && branchId !== "all" ? parseInt(branchId) : null;
   const start = startDate ? startOfDay3(parseLocalDate3(startDate)) : startOfDay3(subDays(/* @__PURE__ */ new Date(), 30));
@@ -90700,7 +92445,7 @@ router21.get("/finance/inventory-usage", requirePermission("reports:view"), asyn
   });
   res.json(report);
 });
-router21.get("/finance/pl-report", requirePermission("reports:view"), async (req, res) => {
+router22.get("/finance/pl-report", requirePermission("reports:view"), async (req, res) => {
   const { startDate, endDate, branchId } = req.query;
   const targetBranchId = branchId && branchId !== "all" ? parseInt(branchId) : null;
   const start = startDate ? startOfDay3(parseLocalDate3(startDate)) : startOfDay3(subDays(/* @__PURE__ */ new Date(), 30));
@@ -90772,7 +92517,7 @@ router21.get("/finance/pl-report", requirePermission("reports:view"), async (req
   });
   res.json(report);
 });
-router21.get("/finance/pl-by-day", requirePermission("reports:view"), async (req, res) => {
+router22.get("/finance/pl-by-day", requirePermission("reports:view"), async (req, res) => {
   const { startDate, endDate, branchId } = req.query;
   const targetBranchId = branchId && branchId !== "all" ? parseInt(branchId) : null;
   const start = startDate ? startOfDay3(parseLocalDate3(startDate)) : startOfDay3(subDays(/* @__PURE__ */ new Date(), 30));
@@ -90838,7 +92583,7 @@ router21.get("/finance/pl-by-day", requirePermission("reports:view"), async (req
   const sortedResult = Object.values(dailyStats).sort((a, b) => a.date.localeCompare(b.date));
   res.json(serializeDates(sortedResult));
 });
-router21.get("/finance/ingredient-recipes", requirePermission("reports:view"), async (req, res) => {
+router22.get("/finance/ingredient-recipes", requirePermission("reports:view"), async (req, res) => {
   const ingredients = await db.select().from(ingredientsTable);
   const [
     slots,
@@ -90970,7 +92715,7 @@ router21.get("/finance/ingredient-recipes", requirePermission("reports:view"), a
   });
   res.json(report);
 });
-router21.get("/finance/sales-items", requirePermission("reports:view"), async (req, res) => {
+router22.get("/finance/sales-items", requirePermission("reports:view"), async (req, res) => {
   const { startDate, endDate, branchId } = req.query;
   const targetBranchId = branchId && branchId !== "all" ? parseInt(branchId) : null;
   const start = startDate ? startOfDay3(parseLocalDate3(startDate)) : startOfDay3(subDays(/* @__PURE__ */ new Date(), 30));
@@ -91058,7 +92803,7 @@ router21.get("/finance/sales-items", requirePermission("reports:view"), async (r
   });
   res.json(serializeDates(report));
 });
-router21.get("/finance/sales-summary", requirePermission("reports:view"), async (req, res) => {
+router22.get("/finance/sales-summary", requirePermission("reports:view"), async (req, res) => {
   const { startDate, endDate, branchId, partnerId, source } = req.query;
   const targetBranchId = branchId && branchId !== "all" ? parseInt(branchId) : null;
   const start = startDate ? startOfDay3(parseLocalDate3(startDate)) : startOfDay3(subDays(/* @__PURE__ */ new Date(), 30));
@@ -91120,7 +92865,7 @@ router21.get("/finance/sales-summary", requirePermission("reports:view"), async 
     zeroRevenueRevenue: parseFloat(summary.zeroRevenueRevenue || "0")
   });
 });
-router21.get("/finance/customizations-report", requirePermission("reports:view"), async (req, res) => {
+router22.get("/finance/customizations-report", requirePermission("reports:view"), async (req, res) => {
   const { startDate, endDate, branchId } = req.query;
   const targetBranchId = branchId && branchId !== "all" ? parseInt(branchId) : null;
   const start = startDate ? startOfDay3(parseLocalDate3(startDate)) : startOfDay3(subDays(/* @__PURE__ */ new Date(), 30));
@@ -91156,7 +92901,7 @@ router21.get("/finance/customizations-report", requirePermission("reports:view")
   const report = rawCustoms.map((c) => analyzeCustomization(c, context)).filter(Boolean);
   res.json(serializeDates(report));
 });
-router21.get("/finance/customization-analytics", requirePermission("reports:view"), async (req, res) => {
+router22.get("/finance/customization-analytics", requirePermission("reports:view"), async (req, res) => {
   const { startDate, endDate, branchId } = req.query;
   const targetBranchId = branchId && branchId !== "all" ? parseInt(branchId) : null;
   const start = startDate ? startOfDay3(parseLocalDate3(startDate)) : startOfDay3(subDays(/* @__PURE__ */ new Date(), 30));
@@ -91237,7 +92982,7 @@ router21.get("/finance/customization-analytics", requirePermission("reports:view
     options: optionsReport
   });
 });
-router21.get("/finance/order-stats", requirePermission("reports:view"), async (req, res) => {
+router22.get("/finance/order-stats", requirePermission("reports:view"), async (req, res) => {
   const { startDate, endDate, branchId } = req.query;
   const start = startDate ? startOfDay3(parseLocalDate3(startDate)) : startOfDay3(subDays(/* @__PURE__ */ new Date(), 30));
   const end = endDate ? endOfDay3(parseLocalDate3(endDate)) : endOfDay3(/* @__PURE__ */ new Date());
@@ -91294,13 +93039,13 @@ router21.get("/finance/order-stats", requirePermission("reports:view"), async (r
     bySource: bySource.map((d) => ({ ...d, label: d.label || "pos", revenue: parseFloat(d.revenue || "0") }))
   });
 });
-var finance_default = router21;
+var finance_default = router22;
 
 // src/routes/suppliers.ts
-var import_express25 = __toESM(require_express2(), 1);
+var import_express26 = __toESM(require_express2(), 1);
 init_src();
 init_drizzle_orm();
-var suppliersRouter = (0, import_express25.Router)();
+var suppliersRouter = (0, import_express26.Router)();
 suppliersRouter.get("/purchases/suppliers", requirePermission("purchases:view"), async (req, res) => {
   try {
     const suppliers = await db.select().from(suppliersTable).orderBy(suppliersTable.name);
@@ -91385,10 +93130,10 @@ suppliersRouter.delete("/purchases/suppliers/:id", requirePermission("purchases:
 var suppliers_default = suppliersRouter;
 
 // src/routes/purchases.ts
-var import_express26 = __toESM(require_express2(), 1);
+var import_express27 = __toESM(require_express2(), 1);
 init_src();
 init_drizzle_orm();
-var purchasesRouter = (0, import_express26.Router)();
+var purchasesRouter = (0, import_express27.Router)();
 var formatPurchase = (p) => ({
   ...p,
   totalAmount: parseFloat(String(p.totalAmount || "0")),
@@ -91788,10 +93533,10 @@ purchasesRouter.delete("/purchases/:id", requirePermission("purchases:manage"), 
 var purchases_default = purchasesRouter;
 
 // src/routes/manufacturing.ts
-var import_express27 = __toESM(require_express2(), 1);
+var import_express28 = __toESM(require_express2(), 1);
 init_drizzle_orm();
 init_src();
-var router22 = (0, import_express27.Router)();
+var router23 = (0, import_express28.Router)();
 var SaveBomSchema = external_exports2.object({
   targetIngredientId: external_exports2.number().int().positive(),
   yieldQuantity: external_exports2.number().positive(),
@@ -91826,7 +93571,7 @@ var SubmitProcessSchema = external_exports2.object({
     })
   ).min(1, "At least one raw ingredient component is required")
 });
-router22.get("/boms", async (req, res) => {
+router23.get("/boms", async (req, res) => {
   try {
     const allBoms = await db.select({
       bom: bomsTable,
@@ -91886,7 +93631,7 @@ router22.get("/boms", async (req, res) => {
     res.status(500).json({ error: error40.message || "Failed to fetch BOM list" });
   }
 });
-router22.get("/boms/:targetIngredientId", async (req, res) => {
+router23.get("/boms/:targetIngredientId", async (req, res) => {
   try {
     const targetIngredientId = parseInt(req.params.targetIngredientId, 10);
     if (isNaN(targetIngredientId)) {
@@ -91944,7 +93689,7 @@ router22.get("/boms/:targetIngredientId", async (req, res) => {
     res.status(500).json({ error: error40.message || "Failed to fetch BOM details" });
   }
 });
-router22.post("/boms", async (req, res) => {
+router23.post("/boms", async (req, res) => {
   try {
     const parsed = SaveBomSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -92000,7 +93745,7 @@ router22.post("/boms", async (req, res) => {
     res.status(500).json({ error: error40.message || "Failed to save BOM formula" });
   }
 });
-router22.delete("/boms/:id", async (req, res) => {
+router23.delete("/boms/:id", async (req, res) => {
   try {
     const bomId = parseInt(req.params.id, 10);
     if (isNaN(bomId)) {
@@ -92014,7 +93759,7 @@ router22.delete("/boms/:id", async (req, res) => {
     res.status(500).json({ error: error40.message || "Failed to delete BOM formula" });
   }
 });
-router22.post("/process/calculate", async (req, res) => {
+router23.post("/process/calculate", async (req, res) => {
   try {
     const parsed = CalculateProcessSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -92086,7 +93831,7 @@ router22.post("/process/calculate", async (req, res) => {
     res.status(500).json({ error: error40.message || "Failed to calculate preparation process" });
   }
 });
-router22.post("/process/submit", async (req, res) => {
+router23.post("/process/submit", async (req, res) => {
   try {
     const parsed = SubmitProcessSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -92216,7 +93961,7 @@ router22.post("/process/submit", async (req, res) => {
     res.status(500).json({ error: error40.message || "Failed to submit preparation process" });
   }
 });
-router22.get("/runs", async (req, res) => {
+router23.get("/runs", async (req, res) => {
   try {
     const sessionUser = req.session;
     const isAdmin = sessionUser.role === "admin" || sessionUser.role === "supervisor";
@@ -92288,41 +94033,42 @@ router22.get("/runs", async (req, res) => {
     res.status(500).json({ error: error40.message || "Failed to fetch manufacturing runs history" });
   }
 });
-var manufacturing_default = router22;
+var manufacturing_default = router23;
 
 // src/routes/index.ts
 init_sse();
-var router23 = (0, import_express28.Router)();
-router23.get("/health-test", (req, res) => res.send("OK"));
-router23.use("/admin/branches", branches_default);
-router23.use(health_default);
-router23.use(auth_default);
-router23.use(drinks_default);
-router23.use(ingredients_default);
-router23.use(orders_default);
-router23.use(stock_default);
-router23.use(dashboard_default);
-router23.use(catalog_default);
-router23.use(drink_categories_default);
-router23.use(kitchen_stations_default);
-router23.use(settings_default);
-router23.use(predefined_slots_default);
-router23.use(users_default);
-router23.use(discounts_default);
-router23.use(product_discounts_default);
-router23.use(offers_default);
-router23.use(customers_default);
-router23.use(tags_default);
-router23.use(cashier_sessions_default);
-router23.use(admin_default);
-router23.use(stock_audits_default);
-router23.use("/roles", roles_default);
-router23.use(finance_default);
-router23.use(suppliers_default);
-router23.use(purchases_default);
-router23.use("/admin/manufacturing", manufacturing_default);
-router23.use("/manufacturing", manufacturing_default);
-router23.get("/events", (req, res) => {
+var router24 = (0, import_express29.Router)();
+router24.get("/health-test", (req, res) => res.send("OK"));
+router24.use("/admin/branches", branches_default);
+router24.use(health_default);
+router24.use(auth_default);
+router24.use(drinks_default);
+router24.use(ingredients_default);
+router24.use(orders_default);
+router24.use(stock_default);
+router24.use(dashboard_default);
+router24.use(catalog_default);
+router24.use(drink_categories_default);
+router24.use(kitchen_stations_default);
+router24.use(settings_default);
+router24.use(predefined_slots_default);
+router24.use(users_default);
+router24.use(discounts_default);
+router24.use(product_discounts_default);
+router24.use(offers_default);
+router24.use(customers_default);
+router24.use(mobile_default);
+router24.use(tags_default);
+router24.use(cashier_sessions_default);
+router24.use(admin_default);
+router24.use(stock_audits_default);
+router24.use("/roles", roles_default);
+router24.use(finance_default);
+router24.use(suppliers_default);
+router24.use(purchases_default);
+router24.use("/admin/manufacturing", manufacturing_default);
+router24.use("/manufacturing", manufacturing_default);
+router24.get("/events", (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache, no-transform");
   res.setHeader("X-Accel-Buffering", "no");
@@ -92331,7 +94077,7 @@ router23.get("/events", (req, res) => {
   res.write("event: connected\ndata: {}\n\n");
   addSseClient(res);
 });
-var routes_default = router23;
+var routes_default = router24;
 
 // src/lib/logger.ts
 var import_pino = __toESM(require_pino(), 1);
@@ -92353,7 +94099,7 @@ var logger = (0, import_pino.default)({
 
 // src/app.ts
 var PostgresStore = (0, import_connect_pg_simple.default)(import_express_session.default);
-var app = (0, import_express29.default)();
+var app = (0, import_express30.default)();
 app.set("json replacer", (_key2, value) => {
   if (value instanceof Date) return value.toISOString();
   return value;
@@ -92379,8 +94125,8 @@ app.use(
 );
 app.set("trust proxy", 1);
 app.use((0, import_cors.default)({ credentials: true, origin: true, exposedHeaders: ["X-Total-Count"] }));
-app.use(import_express29.default.json({ limit: "50mb" }));
-app.use(import_express29.default.urlencoded({ limit: "50mb", extended: true }));
+app.use(import_express30.default.json({ limit: "50mb" }));
+app.use(import_express30.default.urlencoded({ limit: "50mb", extended: true }));
 app.use(
   (0, import_express_session.default)({
     store: new PostgresStore({
@@ -92398,12 +94144,12 @@ app.use(
     }
   })
 );
-var uploadsDir2 = process.env.UPLOADS_DIR ? path5.resolve(process.env.UPLOADS_DIR) : path5.resolve(process.cwd(), "uploads");
-if (!fs6.existsSync(uploadsDir2)) {
-  fs6.mkdirSync(uploadsDir2, { recursive: true });
+var uploadsDir2 = process.env.UPLOADS_DIR ? path6.resolve(process.env.UPLOADS_DIR) : path6.resolve(process.cwd(), "uploads");
+if (!fs7.existsSync(uploadsDir2)) {
+  fs7.mkdirSync(uploadsDir2, { recursive: true });
 }
-app.use("/uploads", import_express29.default.static(uploadsDir2, { maxAge: "1d" }));
-app.use("/api/uploads", import_express29.default.static(uploadsDir2, { maxAge: "1d" }));
+app.use("/uploads", import_express30.default.static(uploadsDir2, { maxAge: "1d" }));
+app.use("/api/uploads", import_express30.default.static(uploadsDir2, { maxAge: "1d" }));
 app.use("/api", (req, res, next) => {
   res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
   res.setHeader("Pragma", "no-cache");
@@ -92411,7 +94157,7 @@ app.use("/api", (req, res, next) => {
   res.setHeader("Surrogate-Control", "no-store");
   next();
 });
-var currentDir = path5.dirname(fileURLToPath3(import.meta.url));
+var currentDir = path6.dirname(fileURLToPath3(import.meta.url));
 app.get(
   "/perf-test-dashboard",
   (req, res, next) => {
@@ -92425,7 +94171,7 @@ app.get(
   },
   requirePermission("admin:view"),
   (req, res) => {
-    res.sendFile(path5.resolve(currentDir, "./perf-test.html"));
+    res.sendFile(path6.resolve(currentDir, "./perf-test.html"));
   }
 );
 app.use("/api", routes_default);
@@ -92977,23 +94723,23 @@ function setupAutoBackup() {
   const performBackup = () => {
     const dbUrl = process.env.DATABASE_URL;
     if (!dbUrl) return;
-    const backupsDir = path6.join(process.cwd(), "backups");
-    if (!fs7.existsSync(backupsDir)) fs7.mkdirSync(backupsDir);
+    const backupsDir = path7.join(process.cwd(), "backups");
+    if (!fs8.existsSync(backupsDir)) fs8.mkdirSync(backupsDir);
     const filename = `autobackup_${(/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-")}.sql`;
-    const filePath = path6.join(backupsDir, filename);
+    const filePath = path7.join(backupsDir, filename);
     const cmd = `pg_dump "${dbUrl}" -f "${filePath}"`;
     exec2(cmd, (error40) => {
       if (error40) {
         logger.error({ err: error40 }, "Auto-backup failed");
       } else {
         logger.info({ filename }, "Auto-backup created");
-        const files = fs7.readdirSync(backupsDir);
+        const files = fs8.readdirSync(backupsDir);
         const now = Date.now();
         const maxAge = 7 * 24 * 60 * 60 * 1e3;
         files.forEach((file2) => {
-          const stats = fs7.statSync(path6.join(backupsDir, file2));
+          const stats = fs8.statSync(path7.join(backupsDir, file2));
           if (now - stats.mtimeMs > maxAge) {
-            fs7.unlinkSync(path6.join(backupsDir, file2));
+            fs8.unlinkSync(path7.join(backupsDir, file2));
           }
         });
       }

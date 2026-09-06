@@ -13,6 +13,7 @@ export interface UpdateDrinkBody {
   basePrice?: number;
   imageUrl?: string;
   isActive?: boolean;
+  isFeatured?: boolean;
   prepTimeSeconds?: number;
   kitchenStation?: string;
   categoryId?: number;

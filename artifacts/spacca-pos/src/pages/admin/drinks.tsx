@@ -44,6 +44,7 @@ type Drink = {
   defaultPrice?: number;
   cost?: number;
   isActive: boolean;
+  isFeatured?: boolean;
   prepTimeSeconds: number;
   kitchenStation?: string;
   sortOrder?: number;
@@ -91,6 +92,7 @@ export default function DrinksAdmin() {
   const [categoryId, setCategoryId] = useState<number | null>(null);
   const [basePrice, setBasePrice] = useState("");
   const [isActive, setIsActive] = useState(true);
+  const [isFeatured, setIsFeatured] = useState(false);
   const [prepTime, setPrepTime] = useState("120");
   const [kitchenStation, setKitchenStation] = useState("main-bar");
   const [sortOrder, setSortOrder] = useState("0");
@@ -306,6 +308,7 @@ export default function DrinksAdmin() {
     setCategoryId(null);
     setBasePrice("");
     setIsActive(true);
+    setIsFeatured(false);
     setPrepTime("120");
     setKitchenStation("main-bar");
     setSortOrder("0");
@@ -326,6 +329,7 @@ export default function DrinksAdmin() {
     setCategoryId(drink.categoryId ?? null);
     setBasePrice(String(drink.basePrice));
     setIsActive(drink.isActive);
+    setIsFeatured(drink.isFeatured ?? false);
     setPrepTime(String(drink.prepTimeSeconds));
     setKitchenStation(drink.kitchenStation ?? "main");
     setSortOrder(String(drink.sortOrder ?? 0));
@@ -352,6 +356,7 @@ export default function DrinksAdmin() {
       categoryId: categoryId ?? undefined,
       basePrice: parseFloat(basePrice),
       isActive,
+      isFeatured,
       prepTimeSeconds: parseInt(prepTime) || 120,
       kitchenStation,
       sortOrder: parseInt(sortOrder) || 0,
@@ -1178,6 +1183,12 @@ export default function DrinksAdmin() {
               <div className="flex items-center gap-3 pt-1">
                 <Switch id="d-active" checked={isActive} onCheckedChange={setIsActive} />
                 <Label htmlFor="d-active">{isActive ? "Active — visible on POS" : "Inactive — hidden from POS"}</Label>
+              </div>
+            )}
+            {mode === "edit" && (
+              <div className="flex items-center gap-3 pt-1">
+                <Switch id="d-featured" checked={isFeatured} onCheckedChange={setIsFeatured} />
+                <Label htmlFor="d-featured">{isFeatured ? "Featured — highlighted on mobile" : "Not featured"}</Label>
               </div>
             )}
           </div>
