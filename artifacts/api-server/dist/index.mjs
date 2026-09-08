@@ -20807,27 +20807,27 @@ var require_router = __commonJS({
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var methods = METHODS.map((method) => method.toLowerCase());
-    module.exports = Router30;
+    module.exports = Router31;
     module.exports.Route = Route;
-    function Router30(options) {
-      if (!(this instanceof Router30)) {
-        return new Router30(options);
+    function Router31(options) {
+      if (!(this instanceof Router31)) {
+        return new Router31(options);
       }
       const opts = options || {};
-      function router25(req, res, next) {
-        router25.handle(req, res, next);
+      function router26(req, res, next) {
+        router26.handle(req, res, next);
       }
-      Object.setPrototypeOf(router25, this);
-      router25.caseSensitive = opts.caseSensitive;
-      router25.mergeParams = opts.mergeParams;
-      router25.params = {};
-      router25.strict = opts.strict;
-      router25.stack = [];
-      return router25;
+      Object.setPrototypeOf(router26, this);
+      router26.caseSensitive = opts.caseSensitive;
+      router26.mergeParams = opts.mergeParams;
+      router26.params = {};
+      router26.strict = opts.strict;
+      router26.stack = [];
+      return router26;
     }
-    Router30.prototype = function() {
+    Router31.prototype = function() {
     };
-    Router30.prototype.param = function param(name, fn) {
+    Router31.prototype.param = function param(name, fn) {
       if (!name) {
         throw new TypeError("argument name is required");
       }
@@ -20847,7 +20847,7 @@ var require_router = __commonJS({
       params.push(fn);
       return this;
     };
-    Router30.prototype.handle = function handle(req, res, callback) {
+    Router31.prototype.handle = function handle(req, res, callback) {
       if (!callback) {
         throw new TypeError("argument callback is required");
       }
@@ -20974,7 +20974,7 @@ var require_router = __commonJS({
         }
       }
     };
-    Router30.prototype.use = function use(handler) {
+    Router31.prototype.use = function use(handler) {
       let offset = 0;
       let path8 = "/";
       if (typeof handler !== "function") {
@@ -21007,7 +21007,7 @@ var require_router = __commonJS({
       }
       return this;
     };
-    Router30.prototype.route = function route(path8) {
+    Router31.prototype.route = function route(path8) {
       const route2 = new Route(path8);
       const layer = new Layer(path8, {
         sensitive: this.caseSensitive,
@@ -21022,7 +21022,7 @@ var require_router = __commonJS({
       return route2;
     };
     methods.concat("all").forEach(function(method) {
-      Router30.prototype[method] = function(path8) {
+      Router31.prototype[method] = function(path8) {
         const route = this.route(path8);
         route[method].apply(route, slice.call(arguments, 1));
         return this;
@@ -21205,13 +21205,13 @@ var require_application = __commonJS({
     var compileTrust = require_utils3().compileTrust;
     var resolve2 = __require("node:path").resolve;
     var once = require_once();
-    var Router30 = require_router();
+    var Router31 = require_router();
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var app2 = exports = module.exports = {};
     var trustProxyDefaultSymbol = "@@symbol:trust_proxy_default";
     app2.init = function init() {
-      var router25 = null;
+      var router26 = null;
       this.cache = /* @__PURE__ */ Object.create(null);
       this.engines = /* @__PURE__ */ Object.create(null);
       this.settings = /* @__PURE__ */ Object.create(null);
@@ -21220,13 +21220,13 @@ var require_application = __commonJS({
         configurable: true,
         enumerable: true,
         get: function getrouter() {
-          if (router25 === null) {
-            router25 = new Router30({
+          if (router26 === null) {
+            router26 = new Router31({
               caseSensitive: this.enabled("case sensitive routing"),
               strict: this.enabled("strict routing")
             });
           }
-          return router25;
+          return router26;
         }
       });
     };
@@ -21297,15 +21297,15 @@ var require_application = __commonJS({
       if (fns.length === 0) {
         throw new TypeError("app.use() requires a middleware function");
       }
-      var router25 = this.router;
+      var router26 = this.router;
       fns.forEach(function(fn2) {
         if (!fn2 || !fn2.handle || !fn2.set) {
-          return router25.use(path8, fn2);
+          return router26.use(path8, fn2);
         }
         debug(".use app under %s", path8);
         fn2.mountpath = path8;
         fn2.parent = this;
-        router25.use(path8, function mounted_app(req, res, next) {
+        router26.use(path8, function mounted_app(req, res, next) {
           var orig = req.app;
           fn2.handle(req, res, function(err) {
             Object.setPrototypeOf(req, orig.request);
@@ -23832,7 +23832,7 @@ var require_express = __commonJS({
     var EventEmitter = __require("node:events").EventEmitter;
     var mixin = require_merge_descriptors();
     var proto = require_application();
-    var Router30 = require_router();
+    var Router31 = require_router();
     var req = require_request();
     var res = require_response();
     exports = module.exports = createApplication;
@@ -23854,8 +23854,8 @@ var require_express = __commonJS({
     exports.application = proto;
     exports.request = req;
     exports.response = res;
-    exports.Route = Router30.Route;
-    exports.Router = Router30;
+    exports.Route = Router31.Route;
+    exports.Router = Router31;
     exports.json = bodyParser.json;
     exports.raw = bodyParser.raw;
     exports.static = require_serve_static();
@@ -36340,10 +36340,10 @@ var init_subquery = __esm({
     init_entity();
     Subquery = class {
       static [entityKind] = "Subquery";
-      constructor(sql5, fields, alias2, isWith = false, usedTables = []) {
+      constructor(sql6, fields, alias2, isWith = false, usedTables = []) {
         this._ = {
           brand: "Subquery",
-          sql: sql5,
+          sql: sql6,
           selectedFields: fields,
           alias: alias2,
           isWith,
@@ -39558,19 +39558,19 @@ function extractTablesRelationalConfig(schema, configHelpers) {
       const relations2 = value.config(
         configHelpers(value.table)
       );
-      let primaryKey2;
+      let primaryKey3;
       for (const [relationName, relation] of Object.entries(relations2)) {
         if (tableName) {
           const tableConfig = tablesConfig[tableName];
           tableConfig.relations[relationName] = relation;
-          if (primaryKey2) {
-            tableConfig.primaryKey.push(...primaryKey2);
+          if (primaryKey3) {
+            tableConfig.primaryKey.push(...primaryKey3);
           }
         } else {
           if (!(dbName in relationsBuffer)) {
             relationsBuffer[dbName] = {
               relations: {},
-              primaryKey: primaryKey2
+              primaryKey: primaryKey3
             };
           }
           relationsBuffer[dbName].relations[relationName] = relation;
@@ -42967,10 +42967,10 @@ var init_raw = __esm({
     init_entity();
     init_query_promise();
     PgRaw = class extends QueryPromise {
-      constructor(execute, sql5, query, mapBatchResult) {
+      constructor(execute, sql6, query, mapBatchResult) {
         super();
         this.execute = execute;
-        this.sql = sql5;
+        this.sql = sql6;
         this.query = query;
         this.mapBatchResult = mapBatchResult;
       }
@@ -43290,8 +43290,8 @@ var init_db = __esm({
 });
 
 // ../../node_modules/.pnpm/drizzle-orm@0.45.1_@types+pg@8.18.0_pg@8.20.0/node_modules/drizzle-orm/cache/core/cache.js
-async function hashQuery(sql5, params) {
-  const dataToHash = `${sql5}-${JSON.stringify(params)}`;
+async function hashQuery(sql6, params) {
+  const dataToHash = `${sql6}-${JSON.stringify(params)}`;
   const encoder = new TextEncoder();
   const data = encoder.encode(dataToHash);
   const hashBuffer = await crypto.subtle.digest("SHA-256", data);
@@ -56395,6 +56395,7 @@ var init_orders = __esm({
       refundedAt: timestamp("refunded_at", { withTimezone: true }),
       refundedAmount: numeric("refunded_amount", { precision: 8, scale: 2 }),
       readyAt: timestamp("ready_at", { withTimezone: true }),
+      nutritionSummary: jsonb("nutrition_summary").$type(),
       createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
       updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => /* @__PURE__ */ new Date())
     }, (table) => {
@@ -57047,6 +57048,83 @@ var init_mobile = __esm({
   }
 });
 
+// ../../lib/db/src/schema/nutrition.ts
+var ingredientNutritionTable, customerNutritionGoalsTable, customerNutritionLogsTable, insertIngredientNutritionSchema, insertCustomerNutritionGoalsSchema, insertCustomerNutritionLogSchema;
+var init_nutrition = __esm({
+  "../../lib/db/src/schema/nutrition.ts"() {
+    "use strict";
+    init_pg_core();
+    init_drizzle_zod();
+    init_ingredients();
+    init_customers();
+    init_orders();
+    init_drinks();
+    ingredientNutritionTable = pgTable("ingredient_nutrition", {
+      ingredientId: integer("ingredient_id").primaryKey().references(() => ingredientsTable.id, { onDelete: "cascade" }),
+      servingSizeQty: numeric("serving_size_qty", { precision: 10, scale: 4 }).notNull().default("1"),
+      servingSizeUnit: text("serving_size_unit").notNull().default("unit"),
+      calories: numeric("calories", { precision: 10, scale: 2 }).notNull().default("0"),
+      protein: numeric("protein", { precision: 10, scale: 2 }).notNull().default("0"),
+      totalCarbs: numeric("total_carbs", { precision: 10, scale: 2 }).notNull().default("0"),
+      dietaryFiber: numeric("dietary_fiber", { precision: 10, scale: 2 }).notNull().default("0"),
+      totalSugars: numeric("total_sugars", { precision: 10, scale: 2 }).notNull().default("0"),
+      addedSugars: numeric("added_sugars", { precision: 10, scale: 2 }).notNull().default("0"),
+      totalFat: numeric("total_fat", { precision: 10, scale: 2 }).notNull().default("0"),
+      saturatedFat: numeric("saturated_fat", { precision: 10, scale: 2 }).notNull().default("0"),
+      transFat: numeric("trans_fat", { precision: 10, scale: 2 }).notNull().default("0"),
+      cholesterol: numeric("cholesterol", { precision: 10, scale: 2 }).notNull().default("0"),
+      sodium: numeric("sodium", { precision: 10, scale: 2 }).notNull().default("0"),
+      caffeine: numeric("caffeine", { precision: 10, scale: 2 }).notNull().default("0"),
+      allergens: jsonb("allergens").$type().notNull().default([]),
+      updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => /* @__PURE__ */ new Date())
+    });
+    customerNutritionGoalsTable = pgTable("customer_nutrition_goals", {
+      customerId: integer("customer_id").primaryKey().references(() => customersTable.id, { onDelete: "cascade" }),
+      dailyCalorieGoal: integer("daily_calorie_goal").notNull().default(2e3),
+      dailyCaffeineLimit: integer("daily_caffeine_limit").notNull().default(400),
+      dailySugarLimit: integer("daily_sugar_limit").notNull().default(50),
+      dailyProteinGoal: integer("daily_protein_goal").notNull().default(50),
+      dailyCarbLimit: integer("daily_carb_limit"),
+      dailyFatLimit: integer("daily_fat_limit"),
+      dietaryPreferences: jsonb("dietary_preferences").$type().notNull().default([]),
+      updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => /* @__PURE__ */ new Date())
+    });
+    customerNutritionLogsTable = pgTable("customer_nutrition_logs", {
+      id: serial("id").primaryKey(),
+      customerId: integer("customer_id").notNull().references(() => customersTable.id, { onDelete: "cascade" }),
+      orderId: integer("order_id").references(() => ordersTable.id, { onDelete: "set null" }),
+      orderItemId: integer("order_item_id").references(() => orderItemsTable.id, { onDelete: "set null" }),
+      drinkId: integer("drink_id").references(() => drinksTable.id, { onDelete: "set null" }),
+      drinkName: text("drink_name").notNull(),
+      quantity: integer("quantity").notNull().default(1),
+      consumedAt: timestamp("consumed_at", { withTimezone: true }).notNull().defaultNow(),
+      calories: numeric("calories", { precision: 10, scale: 2 }).notNull().default("0"),
+      protein: numeric("protein", { precision: 10, scale: 2 }).notNull().default("0"),
+      totalCarbs: numeric("total_carbs", { precision: 10, scale: 2 }).notNull().default("0"),
+      dietaryFiber: numeric("dietary_fiber", { precision: 10, scale: 2 }).notNull().default("0"),
+      totalSugars: numeric("total_sugars", { precision: 10, scale: 2 }).notNull().default("0"),
+      addedSugars: numeric("added_sugars", { precision: 10, scale: 2 }).notNull().default("0"),
+      totalFat: numeric("total_fat", { precision: 10, scale: 2 }).notNull().default("0"),
+      saturatedFat: numeric("saturated_fat", { precision: 10, scale: 2 }).notNull().default("0"),
+      transFat: numeric("trans_fat", { precision: 10, scale: 2 }).notNull().default("0"),
+      cholesterol: numeric("cholesterol", { precision: 10, scale: 2 }).notNull().default("0"),
+      sodium: numeric("sodium", { precision: 10, scale: 2 }).notNull().default("0"),
+      caffeine: numeric("caffeine", { precision: 10, scale: 2 }).notNull().default("0"),
+      allergens: jsonb("allergens").$type().notNull().default([]),
+      nutritionDetails: jsonb("nutrition_details").$type().notNull().default({}),
+      createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+    }, (table) => {
+      return {
+        customerConsumedIdx: index("customer_nutrition_logs_customer_consumed_idx").on(table.customerId, table.consumedAt),
+        orderIdIdx: index("customer_nutrition_logs_order_id_idx").on(table.orderId)
+      };
+    });
+    insertIngredientNutritionSchema = createInsertSchema(ingredientNutritionTable);
+    insertCustomerNutritionGoalsSchema = createInsertSchema(customerNutritionGoalsTable);
+    insertCustomerNutritionLogSchema = createInsertSchema(customerNutritionLogsTable).omit({ id: true, createdAt: true });
+  }
+});
+
 // ../../lib/db/src/schema/index.ts
 var schema_exports = {};
 __export(schema_exports, {
@@ -57061,6 +57139,8 @@ __export(schema_exports, {
   cashierSessionsTable: () => cashierSessionsTable,
   customerFavoritesTable: () => customerFavoritesTable,
   customerFriendsTable: () => customerFriendsTable,
+  customerNutritionGoalsTable: () => customerNutritionGoalsTable,
+  customerNutritionLogsTable: () => customerNutritionLogsTable,
   customerSavedDrinksTable: () => customerSavedDrinksTable,
   customerTagsTable: () => customerTagsTable,
   customersTable: () => customersTable,
@@ -57073,6 +57153,7 @@ __export(schema_exports, {
   drinksTable: () => drinksTable,
   ingredientCategoriesTable: () => ingredientCategoriesTable,
   ingredientConversionsTable: () => ingredientConversionsTable,
+  ingredientNutritionTable: () => ingredientNutritionTable,
   ingredientOptionsTable: () => ingredientOptionsTable,
   ingredientTypeVolumesTable: () => ingredientTypeVolumesTable,
   ingredientTypesTable: () => ingredientTypesTable,
@@ -57084,6 +57165,8 @@ __export(schema_exports, {
   insertBranchInventoryBatchSchema: () => insertBranchInventoryBatchSchema,
   insertBranchSchema: () => insertBranchSchema,
   insertBranchStockSchema: () => insertBranchStockSchema,
+  insertCustomerNutritionGoalsSchema: () => insertCustomerNutritionGoalsSchema,
+  insertCustomerNutritionLogSchema: () => insertCustomerNutritionLogSchema,
   insertDiscountSchema: () => insertDiscountSchema,
   insertDrinkCategorySchema: () => insertDrinkCategorySchema,
   insertDrinkSchema: () => insertDrinkSchema,
@@ -57092,6 +57175,7 @@ __export(schema_exports, {
   insertDrinkSlotVolumeSchema: () => insertDrinkSlotVolumeSchema,
   insertIngredientCategorySchema: () => insertIngredientCategorySchema,
   insertIngredientConversionSchema: () => insertIngredientConversionSchema,
+  insertIngredientNutritionSchema: () => insertIngredientNutritionSchema,
   insertIngredientOptionSchema: () => insertIngredientOptionSchema,
   insertIngredientSchema: () => insertIngredientSchema,
   insertIngredientTypeSchema: () => insertIngredientTypeSchema,
@@ -57186,6 +57270,7 @@ var init_schema2 = __esm({
     init_manufacturing();
     init_product_discounts();
     init_mobile();
+    init_nutrition();
   }
 });
 
@@ -57250,6 +57335,8 @@ __export(src_exports, {
   cashierSessionsTable: () => cashierSessionsTable,
   customerFavoritesTable: () => customerFavoritesTable,
   customerFriendsTable: () => customerFriendsTable,
+  customerNutritionGoalsTable: () => customerNutritionGoalsTable,
+  customerNutritionLogsTable: () => customerNutritionLogsTable,
   customerSavedDrinksTable: () => customerSavedDrinksTable,
   customerTagsTable: () => customerTagsTable,
   customersTable: () => customersTable,
@@ -57263,6 +57350,7 @@ __export(src_exports, {
   drinksTable: () => drinksTable,
   ingredientCategoriesTable: () => ingredientCategoriesTable,
   ingredientConversionsTable: () => ingredientConversionsTable,
+  ingredientNutritionTable: () => ingredientNutritionTable,
   ingredientOptionsTable: () => ingredientOptionsTable,
   ingredientTypeVolumesTable: () => ingredientTypeVolumesTable,
   ingredientTypesTable: () => ingredientTypesTable,
@@ -57274,6 +57362,8 @@ __export(src_exports, {
   insertBranchInventoryBatchSchema: () => insertBranchInventoryBatchSchema,
   insertBranchSchema: () => insertBranchSchema,
   insertBranchStockSchema: () => insertBranchStockSchema,
+  insertCustomerNutritionGoalsSchema: () => insertCustomerNutritionGoalsSchema,
+  insertCustomerNutritionLogSchema: () => insertCustomerNutritionLogSchema,
   insertDiscountSchema: () => insertDiscountSchema,
   insertDrinkCategorySchema: () => insertDrinkCategorySchema,
   insertDrinkSchema: () => insertDrinkSchema,
@@ -57282,6 +57372,7 @@ __export(src_exports, {
   insertDrinkSlotVolumeSchema: () => insertDrinkSlotVolumeSchema,
   insertIngredientCategorySchema: () => insertIngredientCategorySchema,
   insertIngredientConversionSchema: () => insertIngredientConversionSchema,
+  insertIngredientNutritionSchema: () => insertIngredientNutritionSchema,
   insertIngredientOptionSchema: () => insertIngredientOptionSchema,
   insertIngredientSchema: () => insertIngredientSchema,
   insertIngredientTypeSchema: () => insertIngredientTypeSchema,
@@ -74310,7 +74401,7 @@ import fs8 from "fs";
 import { exec as exec2 } from "child_process";
 
 // src/app.ts
-var import_express30 = __toESM(require_express2(), 1);
+var import_express31 = __toESM(require_express2(), 1);
 var import_cors = __toESM(require_lib3(), 1);
 var import_pino_http = __toESM(require_logger(), 1);
 var import_express_session = __toESM(require_express_session(), 1);
@@ -74321,7 +74412,7 @@ import fs7 from "fs";
 import { fileURLToPath as fileURLToPath3 } from "url";
 
 // src/routes/index.ts
-var import_express29 = __toESM(require_express2(), 1);
+var import_express30 = __toESM(require_express2(), 1);
 
 // src/routes/health.ts
 var import_express = __toESM(require_express2(), 1);
@@ -85005,6 +85096,170 @@ var ingredients_default = router4;
 var import_express5 = __toESM(require_express2(), 1);
 init_drizzle_orm();
 init_sse();
+
+// src/lib/nutrition-calculator.ts
+init_src();
+init_drizzle_orm();
+async function calculateCustomizationNutrition(customizations) {
+  const validReqs = customizations.filter((c) => c.ingredientId && c.consumedQty > 0);
+  const result = {
+    calories: 0,
+    protein: 0,
+    totalCarbs: 0,
+    dietaryFiber: 0,
+    totalSugars: 0,
+    addedSugars: 0,
+    totalFat: 0,
+    saturatedFat: 0,
+    transFat: 0,
+    cholesterol: 0,
+    sodium: 0,
+    caffeine: 0,
+    allergens: [],
+    ingredientBreakdown: []
+  };
+  if (validReqs.length === 0) return result;
+  const ingredientIds = [...new Set(validReqs.map((r) => r.ingredientId))];
+  const rows = await db.select({
+    ingredientId: ingredientsTable.id,
+    name: ingredientsTable.name,
+    unit: ingredientsTable.unit,
+    servingSizeQty: ingredientNutritionTable.servingSizeQty,
+    servingSizeUnit: ingredientNutritionTable.servingSizeUnit,
+    calories: ingredientNutritionTable.calories,
+    protein: ingredientNutritionTable.protein,
+    totalCarbs: ingredientNutritionTable.totalCarbs,
+    dietaryFiber: ingredientNutritionTable.dietaryFiber,
+    totalSugars: ingredientNutritionTable.totalSugars,
+    addedSugars: ingredientNutritionTable.addedSugars,
+    totalFat: ingredientNutritionTable.totalFat,
+    saturatedFat: ingredientNutritionTable.saturatedFat,
+    transFat: ingredientNutritionTable.transFat,
+    cholesterol: ingredientNutritionTable.cholesterol,
+    sodium: ingredientNutritionTable.sodium,
+    caffeine: ingredientNutritionTable.caffeine,
+    allergens: ingredientNutritionTable.allergens
+  }).from(ingredientsTable).leftJoin(ingredientNutritionTable, eq(ingredientNutritionTable.ingredientId, ingredientsTable.id)).where(inArray(ingredientsTable.id, ingredientIds));
+  const nutritionMap = new Map(rows.map((r) => [r.ingredientId, r]));
+  const allergenSet = /* @__PURE__ */ new Set();
+  for (const req of validReqs) {
+    const info = nutritionMap.get(req.ingredientId);
+    if (!info) continue;
+    const servingQty = info.servingSizeQty ? parseFloat(info.servingSizeQty) : 1;
+    const factor = servingQty > 0 ? req.consumedQty / servingQty : 0;
+    const cal = (info.calories ? parseFloat(info.calories) : 0) * factor;
+    const prot = (info.protein ? parseFloat(info.protein) : 0) * factor;
+    const carbs = (info.totalCarbs ? parseFloat(info.totalCarbs) : 0) * factor;
+    const fiber = (info.dietaryFiber ? parseFloat(info.dietaryFiber) : 0) * factor;
+    const sug = (info.totalSugars ? parseFloat(info.totalSugars) : 0) * factor;
+    const addSug = (info.addedSugars ? parseFloat(info.addedSugars) : 0) * factor;
+    const fat = (info.totalFat ? parseFloat(info.totalFat) : 0) * factor;
+    const satFat = (info.saturatedFat ? parseFloat(info.saturatedFat) : 0) * factor;
+    const trFat = (info.transFat ? parseFloat(info.transFat) : 0) * factor;
+    const chol = (info.cholesterol ? parseFloat(info.cholesterol) : 0) * factor;
+    const sod = (info.sodium ? parseFloat(info.sodium) : 0) * factor;
+    const caff = (info.caffeine ? parseFloat(info.caffeine) : 0) * factor;
+    result.calories += cal;
+    result.protein += prot;
+    result.totalCarbs += carbs;
+    result.dietaryFiber += fiber;
+    result.totalSugars += sug;
+    result.addedSugars += addSug;
+    result.totalFat += fat;
+    result.saturatedFat += satFat;
+    result.transFat += trFat;
+    result.cholesterol += chol;
+    result.sodium += sod;
+    result.caffeine += caff;
+    if (info.allergens && Array.isArray(info.allergens)) {
+      info.allergens.forEach((a) => allergenSet.add(a));
+    }
+    result.ingredientBreakdown.push({
+      ingredientId: req.ingredientId,
+      ingredientName: info.name,
+      consumedQty: req.consumedQty,
+      unit: info.unit,
+      calories: Math.round(cal * 10) / 10,
+      caffeine: Math.round(caff * 10) / 10,
+      totalSugars: Math.round(sug * 10) / 10,
+      protein: Math.round(prot * 10) / 10,
+      totalFat: Math.round(fat * 10) / 10,
+      totalCarbs: Math.round(carbs * 10) / 10
+    });
+  }
+  result.allergens = Array.from(allergenSet);
+  result.calories = Math.round(result.calories);
+  result.protein = Math.round(result.protein * 10) / 10;
+  result.totalCarbs = Math.round(result.totalCarbs * 10) / 10;
+  result.dietaryFiber = Math.round(result.dietaryFiber * 10) / 10;
+  result.totalSugars = Math.round(result.totalSugars * 10) / 10;
+  result.addedSugars = Math.round(result.addedSugars * 10) / 10;
+  result.totalFat = Math.round(result.totalFat * 10) / 10;
+  result.saturatedFat = Math.round(result.saturatedFat * 10) / 10;
+  result.transFat = Math.round(result.transFat * 10) / 10;
+  result.cholesterol = Math.round(result.cholesterol * 10) / 10;
+  result.sodium = Math.round(result.sodium * 10) / 10;
+  result.caffeine = Math.round(result.caffeine * 10) / 10;
+  return result;
+}
+async function logCustomerNutrition(customerId, orderId, items) {
+  if (!customerId || !items || items.length === 0) return;
+  try {
+    const [existingGoal] = await db.select({ customerId: customerNutritionGoalsTable.customerId }).from(customerNutritionGoalsTable).where(eq(customerNutritionGoalsTable.customerId, customerId)).limit(1);
+    if (!existingGoal) {
+      await db.insert(customerNutritionGoalsTable).values({
+        customerId,
+        dailyCalorieGoal: 2e3,
+        dailyCaffeineLimit: 400,
+        dailySugarLimit: 50,
+        dailyProteinGoal: 50,
+        dietaryPreferences: []
+      }).onConflictDoNothing();
+    }
+    for (const item of items) {
+      const qty = item.quantity || 1;
+      const n = item.nutritionSummary;
+      await db.insert(customerNutritionLogsTable).values({
+        customerId,
+        orderId: orderId || null,
+        orderItemId: item.orderItemId || null,
+        drinkId: item.drinkId || null,
+        drinkName: item.drinkName,
+        quantity: qty,
+        consumedAt: /* @__PURE__ */ new Date(),
+        calories: (n.calories * qty).toFixed(2),
+        protein: (n.protein * qty).toFixed(2),
+        totalCarbs: (n.totalCarbs * qty).toFixed(2),
+        dietaryFiber: (n.dietaryFiber * qty).toFixed(2),
+        totalSugars: (n.totalSugars * qty).toFixed(2),
+        addedSugars: (n.addedSugars * qty).toFixed(2),
+        totalFat: (n.totalFat * qty).toFixed(2),
+        saturatedFat: (n.saturatedFat * qty).toFixed(2),
+        transFat: (n.transFat * qty).toFixed(2),
+        cholesterol: (n.cholesterol * qty).toFixed(2),
+        sodium: (n.sodium * qty).toFixed(2),
+        caffeine: (n.caffeine * qty).toFixed(2),
+        allergens: n.allergens || [],
+        nutritionDetails: {
+          singleItemFacts: n,
+          totalLineFacts: {
+            calories: n.calories * qty,
+            protein: n.protein * qty,
+            totalCarbs: n.totalCarbs * qty,
+            totalSugars: n.totalSugars * qty,
+            totalFat: n.totalFat * qty,
+            caffeine: n.caffeine * qty
+          }
+        }
+      });
+    }
+    console.log(`[NutritionLog] Successfully logged ${items.length} item(s) for customer #${customerId}`);
+  } catch (err) {
+    console.error("[NutritionLog] Error logging customer nutrition:", err);
+  }
+}
+
+// src/routes/orders.ts
 init_src();
 function parseLocalDate(dateStr) {
   if (!dateStr) return /* @__PURE__ */ new Date();
@@ -85467,6 +85722,11 @@ router5.post("/orders", async (req, res) => {
         baristaSortOrder: c.baristaSortOrder,
         customerSortOrder: c.customerSortOrder
       }));
+      const singleItemCustomizations = calcData.customizations.map((c) => ({
+        ingredientId: c.ingredientId,
+        consumedQty: c.consumedQty
+      }));
+      const nutritionSummary = await calculateCustomizationNutrition(singleItemCustomizations);
       const unitPrice = calcData.totalPrice;
       const lineTotal = unitPrice * item.quantity;
       subtotal += lineTotal;
@@ -85479,7 +85739,8 @@ router5.post("/orders", async (req, res) => {
         unitPrice,
         lineTotal,
         specialNotes: item.specialNotes ?? null,
-        customizations
+        customizations,
+        nutritionSummary
       });
       console.log(`[KDS] Order Item: ${calcData.drink.name}, Assigned Station: ${calcData.drink.kitchenStation}`);
     } catch (e) {
@@ -85748,7 +86009,8 @@ router5.post("/orders", async (req, res) => {
             lineTotal: String(item.lineTotal),
             specialNotes: item.specialNotes,
             kitchenStation: item.kitchenStation,
-            kitchenStationId: item.kitchenStationId
+            kitchenStationId: item.kitchenStationId,
+            nutritionSummary: item.nutritionSummary
           }).returning();
           if (item.customizations.length > 0) {
             await tx.insert(orderItemCustomizationsTable).values(
@@ -85768,7 +86030,12 @@ router5.post("/orders", async (req, res) => {
               }))
             );
           }
-          currentSavedItems.push({ ...orderItem, customizations: item.customizations, kitchenStation: orderItem.kitchenStation });
+          currentSavedItems.push({
+            ...orderItem,
+            customizations: item.customizations,
+            kitchenStation: orderItem.kitchenStation,
+            nutritionSummary: item.nutritionSummary
+          });
         }
         const orderPayments = parsed.data.payments || [];
         if (orderPayments.length > 0) {
@@ -85795,6 +86062,23 @@ router5.post("/orders", async (req, res) => {
       });
       order = resTx.order;
       savedItems = resTx.savedItems;
+      if (parsed.data.customerPhone) {
+        try {
+          const [targetCust] = await db.select({ id: customersTable.id }).from(customersTable).where(eq(customersTable.phone, parsed.data.customerPhone.trim())).limit(1);
+          if (targetCust) {
+            const itemsToLog = savedItems.map((si) => ({
+              orderItemId: si.id,
+              drinkId: si.drinkId,
+              drinkName: si.drinkName,
+              quantity: si.quantity,
+              nutritionSummary: si.nutritionSummary
+            }));
+            await logCustomerNutrition(targetCust.id, order.id, itemsToLog);
+          }
+        } catch (nErr) {
+          console.error("[orders] Customer nutrition log error:", nErr);
+        }
+      }
       break;
     } catch (err) {
       if (err.message?.startsWith("INSUFFICIENT_POINTS:") || err.message?.startsWith("CUSTOMER_NOT_FOUND:") || err.message?.startsWith("PHONE_REQUIRED:")) {
@@ -89151,6 +89435,15 @@ async function ensureCustomersTable() {
     await db.execute(sql`
       ALTER TABLE customers ALTER COLUMN password_hash DROP NOT NULL;
     `);
+    await db.execute(sql`
+      ALTER TABLE customers ADD COLUMN IF NOT EXISTS avatar_url TEXT;
+    `);
+    await db.execute(sql`
+      ALTER TABLE customers ADD COLUMN IF NOT EXISTS otp TEXT;
+    `);
+    await db.execute(sql`
+      ALTER TABLE customers ADD COLUMN IF NOT EXISTS otp_expires_at TIMESTAMPTZ;
+    `);
     console.log("[customers] Table schema ready");
   } catch (e) {
     console.error("[customers] Table init error:", e);
@@ -89336,6 +89629,7 @@ router16.get("/admin/customers", requirePermission("admin:view"), async (req, re
   try {
     const customersRes = await db.execute(sql`
       SELECT c.id, c.name, c.phone, c.email, c.points, c.total_spent, c.visit_count, c.is_active, c.created_at, c.discount_id, c.notes,
+             c.avatar_url, c.otp, c.otp_expires_at,
              d.code AS discount_code, d.type AS discount_type, d.value AS discount_value
       FROM customers c
       LEFT JOIN discounts d ON c.discount_id = d.id
@@ -89356,6 +89650,9 @@ router16.get("/admin/customers", requirePermission("admin:view"), async (req, re
       isActive: c.is_active ?? true,
       createdAt: c.created_at,
       discountId: c.discount_id,
+      avatarUrl: c.avatar_url,
+      otp: c.otp,
+      otpExpiresAt: c.otp_expires_at,
       points: parseInt(c.points || 0),
       visit_count: parseInt(c.visit_count || 0),
       total_spent: parseFloat(c.total_spent || 0),
@@ -89369,7 +89666,7 @@ router16.get("/admin/customers", requirePermission("admin:view"), async (req, re
   }
 });
 router16.post("/admin/customers", requirePermission("admin:view"), async (req, res) => {
-  const { name, phone, email: email3, points, notes, isActive, discountId, tagIds } = req.body ?? {};
+  const { name, phone, email: email3, avatarUrl, otp, otpExpiresAt, points, notes, isActive, discountId, tagIds } = req.body ?? {};
   if (!name || typeof name !== "string" || name.trim().length < 2) {
     res.status(400).json({ error: "Name is required (at least 2 characters)" });
     return;
@@ -89387,11 +89684,16 @@ router16.post("/admin/customers", requirePermission("admin:view"), async (req, r
       res.status(409).json({ error: "Phone number already registered" });
       return;
     }
+    const cleanOtp = typeof otp === "string" && otp.trim() ? otp.trim() : null;
+    const cleanAvatarUrl = typeof avatarUrl === "string" && avatarUrl.trim() ? avatarUrl.trim() : null;
     const customer = await db.transaction(async (tx) => {
       const [cust] = await tx.insert(customersTable).values({
         name: cleanName,
         phone: cleanPhone,
         email: cleanEmail,
+        avatarUrl: cleanAvatarUrl,
+        otp: cleanOtp,
+        otpExpiresAt: cleanOtp ? otpExpiresAt ? new Date(otpExpiresAt) : new Date(Date.now() + 10 * 60 * 1e3) : null,
         points: points || 0,
         notes: notes || null,
         isActive: isActive ?? true,
@@ -89419,13 +89721,21 @@ router16.post("/admin/customers", requirePermission("admin:view"), async (req, r
 });
 router16.patch("/admin/customers/:id", requirePermission("admin:view"), async (req, res) => {
   const id = parseInt(req.params.id);
-  const { name, phone, email: email3, points, notes, isActive, discountId, tagIds } = req.body ?? {};
+  const { name, phone, email: email3, avatarUrl, otp, otpExpiresAt, points, notes, isActive, discountId, tagIds } = req.body ?? {};
   try {
     await db.transaction(async (tx) => {
       const updateData = {};
       if (name !== void 0) updateData.name = name.trim();
       if (phone !== void 0) updateData.phone = phone.trim();
       if (email3 !== void 0) updateData.email = email3 ? email3.trim() : null;
+      if (avatarUrl !== void 0) updateData.avatarUrl = avatarUrl ? avatarUrl.trim() : null;
+      if (otp !== void 0) {
+        const cleanOtp = typeof otp === "string" && otp.trim() ? otp.trim() : null;
+        updateData.otp = cleanOtp;
+        updateData.otpExpiresAt = cleanOtp ? otpExpiresAt ? new Date(otpExpiresAt) : new Date(Date.now() + 10 * 60 * 1e3) : null;
+      } else if (otpExpiresAt !== void 0) {
+        updateData.otpExpiresAt = otpExpiresAt ? new Date(otpExpiresAt) : null;
+      }
       if (points !== void 0) updateData.points = parseInt(points);
       if (notes !== void 0) updateData.notes = notes ? notes.trim() : null;
       if (isActive !== void 0) updateData.isActive = isActive;
@@ -90418,6 +90728,16 @@ router17.post("/mobile/orders", async (req, res) => {
     const unitPrice = calcData.totalPrice;
     const lineTotal = unitPrice * (item.quantity ?? 1);
     subtotal += lineTotal;
+    let nutritionSummary = null;
+    try {
+      const singleItemCustomizations = calcData.customizations.map((c) => ({
+        ingredientId: c.ingredientId,
+        consumedQty: c.consumedQty
+      }));
+      nutritionSummary = await calculateCustomizationNutrition(singleItemCustomizations);
+    } catch (nErr) {
+      console.error("[mobile] nutrition calc error:", nErr);
+    }
     itemDetails.push({
       drinkId: item.drinkId,
       drinkName: calcData.drink.name,
@@ -90427,7 +90747,8 @@ router17.post("/mobile/orders", async (req, res) => {
       unitPrice,
       lineTotal,
       specialNotes: item.specialNotes ?? null,
-      customizations
+      customizations,
+      nutritionSummary
     });
   }
   const offersList = await db.select().from(offersTable).where(eq(offersTable.isActive, true));
@@ -90576,6 +90897,20 @@ router17.post("/mobile/orders", async (req, res) => {
   });
   broadcastEvent("order_created", { orderId: order.id, orderNumber: order.orderNumber });
   await logActivity(req, "CREATE_MOBILE_ORDER", "order", order.id, { total });
+  try {
+    const itemsToLog = itemDetails.filter((si) => si.nutritionSummary).map((si) => ({
+      orderItemId: si.orderItemId ?? null,
+      drinkId: si.drinkId,
+      drinkName: si.drinkName,
+      quantity: si.quantity,
+      nutritionSummary: si.nutritionSummary
+    }));
+    if (itemsToLog.length > 0) {
+      await logCustomerNutrition(customer.id, order.id, itemsToLog);
+    }
+  } catch (nErr) {
+    console.error("[mobile] Customer nutrition log error:", nErr);
+  }
   res.status(201).json({ order: serializeDates({ ...order, total: parseFloat(order.total) }) });
 });
 router17.post("/mobile/orders/:id/cancel", async (req, res) => {
@@ -90592,7 +90927,7 @@ router17.post("/mobile/orders/:id/cancel", async (req, res) => {
     res.status(404).json({ error: "Order not found" });
     return;
   }
-  if (order.status !== "pending" && order.status !== "paid") {
+  if (order.status !== "pending") {
     res.status(400).json({ error: "Order can no longer be cancelled" });
     return;
   }
@@ -90681,14 +91016,560 @@ router17.get("/mobile/home/offers", async (req, res) => {
 router17.get("/mobile/home/slider", async (_req, res) => {
   res.json({ slider: [] });
 });
+router17.post("/mobile/nutrition/calculate", async (req, res) => {
+  const customerId = requireCustomer(req, res);
+  if (!customerId) return;
+  const { drinkId, selections } = req.body ?? {};
+  if (!drinkId) {
+    res.status(400).json({ error: "drinkId is required" });
+    return;
+  }
+  try {
+    const calcData = await calculateDrinkData(drinkId, selections ?? [], null, null);
+    const customizations = calcData.customizations.map((c) => ({
+      ingredientId: c.ingredientId,
+      consumedQty: c.consumedQty
+    }));
+    const nutrition = await calculateCustomizationNutrition(customizations);
+    res.json({ nutrition });
+  } catch (e) {
+    if (e.message === "Drink not found") {
+      res.status(404).json({ error: "Drink not found" });
+      return;
+    }
+    console.error("[mobile] nutrition calculate error:", e);
+    res.status(500).json({ error: "Failed to calculate nutrition" });
+  }
+});
+router17.get("/mobile/nutrition/summary", async (req, res) => {
+  const customerId = requireCustomer(req, res);
+  if (!customerId) return;
+  let [goals] = await db.select().from(customerNutritionGoalsTable).where(eq(customerNutritionGoalsTable.customerId, customerId)).limit(1);
+  if (!goals) {
+    goals = {
+      customerId,
+      dailyCalorieGoal: 2e3,
+      dailyCaffeineLimit: 400,
+      dailySugarLimit: 50,
+      dailyProteinGoal: 50,
+      dailyCarbLimit: null,
+      dailyFatLimit: null,
+      dietaryPreferences: [],
+      updatedAt: /* @__PURE__ */ new Date()
+    };
+  }
+  const now = /* @__PURE__ */ new Date();
+  const startOfDay4 = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+  const endOfDay4 = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+  const todayLogs = await db.select().from(customerNutritionLogsTable).where(
+    and(
+      eq(customerNutritionLogsTable.customerId, customerId),
+      gte(customerNutritionLogsTable.consumedAt, startOfDay4),
+      lte(customerNutritionLogsTable.consumedAt, endOfDay4)
+    )
+  );
+  const totals = {};
+  const allergensSet = /* @__PURE__ */ new Set();
+  for (const log of todayLogs) {
+    for (const key of ["calories", "protein", "totalCarbs", "dietaryFiber", "totalSugars", "addedSugars", "totalFat", "saturatedFat", "transFat", "cholesterol", "sodium", "caffeine"]) {
+      totals[key] = (totals[key] ?? 0) + parseFloat(log[key] || "0");
+    }
+    if (Array.isArray(log.allergens)) log.allergens.forEach((a) => allergensSet.add(a));
+  }
+  const round = (v) => Math.round(v * 10) / 10;
+  res.json({
+    goals,
+    today: {
+      calories: Math.round(totals.calories ?? 0),
+      protein: round(totals.protein ?? 0),
+      totalCarbs: round(totals.totalCarbs ?? 0),
+      dietaryFiber: round(totals.dietaryFiber ?? 0),
+      totalSugars: round(totals.totalSugars ?? 0),
+      addedSugars: round(totals.addedSugars ?? 0),
+      totalFat: round(totals.totalFat ?? 0),
+      saturatedFat: round(totals.saturatedFat ?? 0),
+      transFat: round(totals.transFat ?? 0),
+      cholesterol: round(totals.cholesterol ?? 0),
+      sodium: round(totals.sodium ?? 0),
+      caffeine: round(totals.caffeine ?? 0),
+      itemsCount: todayLogs.length,
+      allergensConsumed: Array.from(allergensSet)
+    }
+  });
+});
+router17.get("/mobile/nutrition/history", async (req, res) => {
+  const customerId = requireCustomer(req, res);
+  if (!customerId) return;
+  const period = req.query.period || "day";
+  if (!["day", "week", "month"].includes(period)) {
+    res.status(400).json({ error: "period must be day, week, or month" });
+    return;
+  }
+  const logs = await db.select().from(customerNutritionLogsTable).where(eq(customerNutritionLogsTable.customerId, customerId)).orderBy(desc(customerNutritionLogsTable.consumedAt));
+  const NUTRITION_KEYS = ["calories", "protein", "totalCarbs", "dietaryFiber", "totalSugars", "addedSugars", "totalFat", "saturatedFat", "transFat", "cholesterol", "sodium", "caffeine"];
+  const bucketKey = (d) => {
+    if (period === "day") {
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    }
+    if (period === "week") {
+      const date6 = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+      const dayNum = date6.getUTCDay() || 7;
+      date6.setUTCDate(date6.getUTCDate() + 4 - dayNum);
+      const yearStart = new Date(Date.UTC(date6.getUTCFullYear(), 0, 1));
+      const weekNo = Math.ceil(((date6.getTime() - yearStart.getTime()) / 864e5 + 1) / 7);
+      return `${date6.getUTCFullYear()}-W${String(weekNo).padStart(2, "0")}`;
+    }
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  };
+  const buckets = /* @__PURE__ */ new Map();
+  for (const log of logs) {
+    const consumed = new Date(log.consumedAt);
+    const key = bucketKey(consumed);
+    if (!buckets.has(key)) {
+      buckets.set(key, { label: key, start: consumed, totals: {}, itemsCount: 0, drinks: {} });
+    }
+    const bucket = buckets.get(key);
+    bucket.itemsCount += 1;
+    if (log.drinkName) bucket.drinks[log.drinkName] = (bucket.drinks[log.drinkName] ?? 0) + 1;
+    for (const k of NUTRITION_KEYS) {
+      bucket.totals[k] = (bucket.totals[k] ?? 0) + parseFloat(log[k] || "0");
+    }
+  }
+  const round = (v) => Math.round(v * 10) / 10;
+  const series = Array.from(buckets.values()).sort((a, b) => b.start.getTime() - a.start.getTime()).map((b) => {
+    const totals = {};
+    for (const k of NUTRITION_KEYS) totals[k] = round(b.totals[k] ?? 0);
+    return {
+      period: b.label,
+      start: b.start.toISOString(),
+      totals,
+      itemsCount: b.itemsCount,
+      drinks: b.drinks
+    };
+  });
+  res.json({ period, series });
+});
 var mobile_default = router17;
 
-// src/routes/tags.ts
+// src/routes/nutrition.ts
 var import_express19 = __toESM(require_express2(), 1);
+init_src();
+init_drizzle_orm();
+var router18 = (0, import_express19.Router)();
+async function ensureNutritionTables() {
+  try {
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS ingredient_nutrition (
+        ingredient_id     INTEGER PRIMARY KEY REFERENCES ingredients(id) ON DELETE CASCADE,
+        serving_size_qty  NUMERIC(10,4) NOT NULL DEFAULT 1,
+        serving_size_unit TEXT NOT NULL DEFAULT 'unit',
+        calories          NUMERIC(10,2) NOT NULL DEFAULT 0,
+        protein           NUMERIC(10,2) NOT NULL DEFAULT 0,
+        total_carbs       NUMERIC(10,2) NOT NULL DEFAULT 0,
+        dietary_fiber     NUMERIC(10,2) NOT NULL DEFAULT 0,
+        total_sugars      NUMERIC(10,2) NOT NULL DEFAULT 0,
+        added_sugars      NUMERIC(10,2) NOT NULL DEFAULT 0,
+        total_fat         NUMERIC(10,2) NOT NULL DEFAULT 0,
+        saturated_fat     NUMERIC(10,2) NOT NULL DEFAULT 0,
+        trans_fat         NUMERIC(10,2) NOT NULL DEFAULT 0,
+        cholesterol       NUMERIC(10,2) NOT NULL DEFAULT 0,
+        sodium            NUMERIC(10,2) NOT NULL DEFAULT 0,
+        caffeine          NUMERIC(10,2) NOT NULL DEFAULT 0,
+        allergens         JSONB NOT NULL DEFAULT '[]'::jsonb,
+        updated_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    `);
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS customer_nutrition_goals (
+        customer_id           INTEGER PRIMARY KEY REFERENCES customers(id) ON DELETE CASCADE,
+        daily_calorie_goal    INTEGER NOT NULL DEFAULT 2000,
+        daily_caffeine_limit  INTEGER NOT NULL DEFAULT 400,
+        daily_sugar_limit     INTEGER NOT NULL DEFAULT 50,
+        daily_protein_goal    INTEGER NOT NULL DEFAULT 50,
+        daily_carb_limit      INTEGER,
+        daily_fat_limit       INTEGER,
+        dietary_preferences   JSONB NOT NULL DEFAULT '[]'::jsonb,
+        updated_at            TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    `);
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS customer_nutrition_logs (
+        id                SERIAL PRIMARY KEY,
+        customer_id       INTEGER NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+        order_id          INTEGER REFERENCES orders(id) ON DELETE SET NULL,
+        order_item_id     INTEGER REFERENCES order_items(id) ON DELETE SET NULL,
+        drink_id          INTEGER REFERENCES drinks(id) ON DELETE SET NULL,
+        drink_name        TEXT NOT NULL,
+        quantity          INTEGER NOT NULL DEFAULT 1,
+        consumed_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        calories          NUMERIC(10,2) NOT NULL DEFAULT 0,
+        protein           NUMERIC(10,2) NOT NULL DEFAULT 0,
+        total_carbs       NUMERIC(10,2) NOT NULL DEFAULT 0,
+        dietary_fiber     NUMERIC(10,2) NOT NULL DEFAULT 0,
+        total_sugars      NUMERIC(10,2) NOT NULL DEFAULT 0,
+        added_sugars      NUMERIC(10,2) NOT NULL DEFAULT 0,
+        total_fat         NUMERIC(10,2) NOT NULL DEFAULT 0,
+        saturated_fat     NUMERIC(10,2) NOT NULL DEFAULT 0,
+        trans_fat         NUMERIC(10,2) NOT NULL DEFAULT 0,
+        cholesterol       NUMERIC(10,2) NOT NULL DEFAULT 0,
+        sodium            NUMERIC(10,2) NOT NULL DEFAULT 0,
+        caffeine          NUMERIC(10,2) NOT NULL DEFAULT 0,
+        allergens         JSONB NOT NULL DEFAULT '[]'::jsonb,
+        nutrition_details JSONB NOT NULL DEFAULT '{}'::jsonb,
+        created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    `);
+    await db.execute(sql`
+      ALTER TABLE order_items ADD COLUMN IF NOT EXISTS nutrition_summary JSONB;
+    `);
+    console.log("[nutrition] Tables schema ready");
+  } catch (e) {
+    console.error("[nutrition] Table init error:", e);
+  }
+}
+ensureNutritionTables();
+router18.get("/ingredients/:id/nutrition", async (req, res) => {
+  const ingredientId = parseInt(req.params.id, 10);
+  if (isNaN(ingredientId)) {
+    res.status(400).json({ error: "Invalid ingredient ID" });
+    return;
+  }
+  const [row] = await db.select().from(ingredientNutritionTable).where(eq(ingredientNutritionTable.ingredientId, ingredientId)).limit(1);
+  if (!row) {
+    const [ing] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, ingredientId)).limit(1);
+    if (!ing) {
+      res.status(404).json({ error: "Ingredient not found" });
+      return;
+    }
+    res.json({
+      ingredientId,
+      servingSizeQty: "1",
+      servingSizeUnit: ing.unit || "unit",
+      calories: "0",
+      protein: "0",
+      totalCarbs: "0",
+      dietaryFiber: "0",
+      totalSugars: "0",
+      addedSugars: "0",
+      totalFat: "0",
+      saturatedFat: "0",
+      transFat: "0",
+      cholesterol: "0",
+      sodium: "0",
+      caffeine: "0",
+      allergens: []
+    });
+    return;
+  }
+  res.json(row);
+});
+router18.put("/ingredients/:id/nutrition", async (req, res) => {
+  const ingredientId = parseInt(req.params.id, 10);
+  if (isNaN(ingredientId)) {
+    res.status(400).json({ error: "Invalid ingredient ID" });
+    return;
+  }
+  const {
+    servingSizeQty = "1",
+    servingSizeUnit = "unit",
+    calories = "0",
+    protein = "0",
+    totalCarbs = "0",
+    dietaryFiber = "0",
+    totalSugars = "0",
+    addedSugars = "0",
+    totalFat = "0",
+    saturatedFat = "0",
+    transFat = "0",
+    cholesterol = "0",
+    sodium = "0",
+    caffeine = "0",
+    allergens = []
+  } = req.body ?? {};
+  const cleanAllergens = Array.isArray(allergens) ? allergens.map((a) => String(a).toLowerCase().trim()) : [];
+  const values = {
+    ingredientId,
+    servingSizeQty: String(servingSizeQty),
+    servingSizeUnit: String(servingSizeUnit),
+    calories: String(calories),
+    protein: String(protein),
+    totalCarbs: String(totalCarbs),
+    dietaryFiber: String(dietaryFiber),
+    totalSugars: String(totalSugars),
+    addedSugars: String(addedSugars),
+    totalFat: String(totalFat),
+    saturatedFat: String(saturatedFat),
+    transFat: String(transFat),
+    cholesterol: String(cholesterol),
+    sodium: String(sodium),
+    caffeine: String(caffeine),
+    allergens: cleanAllergens
+  };
+  const [existing] = await db.select().from(ingredientNutritionTable).where(eq(ingredientNutritionTable.ingredientId, ingredientId)).limit(1);
+  if (existing) {
+    await db.update(ingredientNutritionTable).set(values).where(eq(ingredientNutritionTable.ingredientId, ingredientId));
+  } else {
+    await db.insert(ingredientNutritionTable).values(values);
+  }
+  res.json({ message: "Nutrition updated successfully", ...values });
+});
+router18.get("/ingredients-nutrition-list", async (_req, res) => {
+  const rows = await db.select({
+    ingredientId: ingredientsTable.id,
+    name: ingredientsTable.name,
+    ingredientType: ingredientsTable.ingredientType,
+    unit: ingredientsTable.unit,
+    servingSizeQty: ingredientNutritionTable.servingSizeQty,
+    servingSizeUnit: ingredientNutritionTable.servingSizeUnit,
+    calories: ingredientNutritionTable.calories,
+    protein: ingredientNutritionTable.protein,
+    totalCarbs: ingredientNutritionTable.totalCarbs,
+    totalSugars: ingredientNutritionTable.totalSugars,
+    totalFat: ingredientNutritionTable.totalFat,
+    caffeine: ingredientNutritionTable.caffeine,
+    allergens: ingredientNutritionTable.allergens
+  }).from(ingredientsTable).leftJoin(ingredientNutritionTable, eq(ingredientNutritionTable.ingredientId, ingredientsTable.id));
+  res.json(rows);
+});
+router18.post("/nutrition/calculate", async (req, res) => {
+  const { drinkId, selections = [], branchId = null } = req.body ?? {};
+  if (!drinkId || typeof drinkId !== "number") {
+    res.status(400).json({ error: "drinkId is required" });
+    return;
+  }
+  try {
+    const calcData = await calculateDrinkData(drinkId, selections, branchId, null);
+    const customizations = calcData.customizations.map((c) => ({
+      ingredientId: c.ingredientId,
+      consumedQty: c.consumedQty
+    }));
+    const nutritionFacts = await calculateCustomizationNutrition(customizations);
+    res.json({
+      drinkId,
+      drinkName: calcData.drink.name,
+      basePrice: calcData.totalPrice,
+      customizationsCount: calcData.customizations.length,
+      nutritionFacts
+    });
+  } catch (err) {
+    res.status(400).json({ error: err.message || "Failed to calculate drink nutrition" });
+  }
+});
+router18.get("/customers/:id/nutrition/summary", async (req, res) => {
+  const customerId = parseInt(req.params.id, 10);
+  if (isNaN(customerId)) {
+    res.status(400).json({ error: "Invalid customer ID" });
+    return;
+  }
+  let [goals] = await db.select().from(customerNutritionGoalsTable).where(eq(customerNutritionGoalsTable.customerId, customerId)).limit(1);
+  if (!goals) {
+    goals = {
+      customerId,
+      dailyCalorieGoal: 2e3,
+      dailyCaffeineLimit: 400,
+      dailySugarLimit: 50,
+      dailyProteinGoal: 50,
+      dailyCarbLimit: null,
+      dailyFatLimit: null,
+      dietaryPreferences: [],
+      updatedAt: /* @__PURE__ */ new Date()
+    };
+  }
+  const now = /* @__PURE__ */ new Date();
+  const startOfDay4 = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+  const endOfDay4 = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+  const startOf7Days = new Date(now.valueOf() - 7 * 24 * 60 * 60 * 1e3);
+  const todayLogs = await db.select().from(customerNutritionLogsTable).where(
+    and(
+      eq(customerNutritionLogsTable.customerId, customerId),
+      gte(customerNutritionLogsTable.consumedAt, startOfDay4),
+      lte(customerNutritionLogsTable.consumedAt, endOfDay4)
+    )
+  );
+  let todayCalories = 0;
+  let todayCaffeine = 0;
+  let todaySugars = 0;
+  let todayProtein = 0;
+  let todayCarbs = 0;
+  let todayFat = 0;
+  let todaySodium = 0;
+  const todayAllergensSet = /* @__PURE__ */ new Set();
+  for (const log of todayLogs) {
+    todayCalories += parseFloat(log.calories || "0");
+    todayCaffeine += parseFloat(log.caffeine || "0");
+    todaySugars += parseFloat(log.totalSugars || "0");
+    todayProtein += parseFloat(log.protein || "0");
+    todayCarbs += parseFloat(log.totalCarbs || "0");
+    todayFat += parseFloat(log.totalFat || "0");
+    todaySodium += parseFloat(log.sodium || "0");
+    if (Array.isArray(log.allergens)) {
+      log.allergens.forEach((a) => todayAllergensSet.add(a));
+    }
+  }
+  const weeklyLogs = await db.select().from(customerNutritionLogsTable).where(
+    and(
+      eq(customerNutritionLogsTable.customerId, customerId),
+      gte(customerNutritionLogsTable.consumedAt, startOf7Days)
+    )
+  );
+  let weeklyCalories = 0;
+  let weeklyCaffeine = 0;
+  let weeklySugars = 0;
+  let weeklyProtein = 0;
+  for (const log of weeklyLogs) {
+    weeklyCalories += parseFloat(log.calories || "0");
+    weeklyCaffeine += parseFloat(log.caffeine || "0");
+    weeklySugars += parseFloat(log.totalSugars || "0");
+    weeklyProtein += parseFloat(log.protein || "0");
+  }
+  res.json({
+    customerId,
+    goals,
+    today: {
+      calories: Math.round(todayCalories),
+      caffeine: Math.round(todayCaffeine * 10) / 10,
+      totalSugars: Math.round(todaySugars * 10) / 10,
+      protein: Math.round(todayProtein * 10) / 10,
+      totalCarbs: Math.round(todayCarbs * 10) / 10,
+      totalFat: Math.round(todayFat * 10) / 10,
+      sodium: Math.round(todaySodium * 10) / 10,
+      itemsCount: todayLogs.length,
+      allergensConsumed: Array.from(todayAllergensSet)
+    },
+    weekly: {
+      calories: Math.round(weeklyCalories),
+      caffeine: Math.round(weeklyCaffeine * 10) / 10,
+      totalSugars: Math.round(weeklySugars * 10) / 10,
+      protein: Math.round(weeklyProtein * 10) / 10,
+      avgDailyCalories: Math.round(weeklyCalories / 7),
+      avgDailyCaffeine: Math.round(weeklyCaffeine / 7 * 10) / 10,
+      itemsCount: weeklyLogs.length
+    }
+  });
+});
+router18.get("/customers/:id/nutrition/history", async (req, res) => {
+  const customerId = parseInt(req.params.id, 10);
+  if (isNaN(customerId)) {
+    res.status(400).json({ error: "Invalid customer ID" });
+    return;
+  }
+  const logs = await db.select().from(customerNutritionLogsTable).where(eq(customerNutritionLogsTable.customerId, customerId)).orderBy(desc(customerNutritionLogsTable.consumedAt)).limit(100);
+  res.json(logs);
+});
+router18.get("/customers/:id/nutrition/goals", async (req, res) => {
+  const customerId = parseInt(req.params.id, 10);
+  if (isNaN(customerId)) {
+    res.status(400).json({ error: "Invalid customer ID" });
+    return;
+  }
+  let [goals] = await db.select().from(customerNutritionGoalsTable).where(eq(customerNutritionGoalsTable.customerId, customerId)).limit(1);
+  if (!goals) {
+    goals = {
+      customerId,
+      dailyCalorieGoal: 2e3,
+      dailyCaffeineLimit: 400,
+      dailySugarLimit: 50,
+      dailyProteinGoal: 50,
+      dailyCarbLimit: null,
+      dailyFatLimit: null,
+      dietaryPreferences: [],
+      updatedAt: /* @__PURE__ */ new Date()
+    };
+  }
+  res.json(goals);
+});
+router18.put("/customers/:id/nutrition/goals", async (req, res) => {
+  const customerId = parseInt(req.params.id, 10);
+  if (isNaN(customerId)) {
+    res.status(400).json({ error: "Invalid customer ID" });
+    return;
+  }
+  const {
+    dailyCalorieGoal = 2e3,
+    dailyCaffeineLimit = 400,
+    dailySugarLimit = 50,
+    dailyProteinGoal = 50,
+    dailyCarbLimit = null,
+    dailyFatLimit = null,
+    dietaryPreferences = []
+  } = req.body ?? {};
+  const cleanPrefs = Array.isArray(dietaryPreferences) ? dietaryPreferences.map((p) => String(p).toLowerCase().trim()) : [];
+  const values = {
+    customerId,
+    dailyCalorieGoal: parseInt(dailyCalorieGoal, 10) || 2e3,
+    dailyCaffeineLimit: parseInt(dailyCaffeineLimit, 10) || 400,
+    dailySugarLimit: parseInt(dailySugarLimit, 10) || 50,
+    dailyProteinGoal: parseInt(dailyProteinGoal, 10) || 50,
+    dailyCarbLimit: dailyCarbLimit ? parseInt(dailyCarbLimit, 10) : null,
+    dailyFatLimit: dailyFatLimit ? parseInt(dailyFatLimit, 10) : null,
+    dietaryPreferences: cleanPrefs
+  };
+  const [existing] = await db.select().from(customerNutritionGoalsTable).where(eq(customerNutritionGoalsTable.customerId, customerId)).limit(1);
+  if (existing) {
+    await db.update(customerNutritionGoalsTable).set(values).where(eq(customerNutritionGoalsTable.customerId, customerId));
+  } else {
+    await db.insert(customerNutritionGoalsTable).values(values);
+  }
+  res.json({ message: "Goals updated successfully", ...values });
+});
+router18.get("/nutrition/reports", async (_req, res) => {
+  try {
+    const totalLogged = await db.execute(sql`
+      SELECT 
+        COUNT(*)::int as total_items,
+        SUM(calories)::numeric as total_calories,
+        SUM(caffeine)::numeric as total_caffeine,
+        SUM(total_sugars)::numeric as total_sugars,
+        SUM(protein)::numeric as total_protein
+      FROM customer_nutrition_logs
+    `);
+    const topCaffeine = await db.execute(sql`
+      SELECT 
+        drink_name,
+        COUNT(*)::int as times_ordered,
+        AVG(caffeine)::numeric as avg_caffeine,
+        AVG(calories)::numeric as avg_calories,
+        AVG(total_sugars)::numeric as avg_sugars
+      FROM customer_nutrition_logs
+      GROUP BY drink_name
+      ORDER BY avg_caffeine DESC
+      LIMIT 10
+    `);
+    const topSugars = await db.execute(sql`
+      SELECT 
+        drink_name,
+        COUNT(*)::int as times_ordered,
+        AVG(total_sugars)::numeric as avg_sugars,
+        AVG(calories)::numeric as avg_calories
+      FROM customer_nutrition_logs
+      GROUP BY drink_name
+      ORDER BY avg_sugars DESC
+      LIMIT 10
+    `);
+    const stats = totalLogged.rows[0] || {};
+    res.json({
+      summary: {
+        totalItemsLogged: stats.total_items || 0,
+        totalCaloriesServed: Math.round(parseFloat(stats.total_calories || "0")),
+        totalCaffeineGramsServed: Math.round(parseFloat(stats.total_caffeine || "0") / 1e3 * 10) / 10,
+        totalSugarKgServed: Math.round(parseFloat(stats.total_sugars || "0") / 1e3 * 10) / 10,
+        totalProteinKgServed: Math.round(parseFloat(stats.total_protein || "0") / 1e3 * 10) / 10
+      },
+      topCaffeinatedDrinks: topCaffeine.rows || [],
+      topSugaryDrinks: topSugars.rows || []
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message || "Failed to generate nutrition reports" });
+  }
+});
+var nutrition_default = router18;
+
+// src/routes/tags.ts
+var import_express20 = __toESM(require_express2(), 1);
 init_drizzle_orm();
 init_src();
-var router18 = (0, import_express19.Router)();
-router18.get("/admin/tags", requirePermission("admin:view"), async (req, res) => {
+var router19 = (0, import_express20.Router)();
+router19.get("/admin/tags", requirePermission("admin:view"), async (req, res) => {
   try {
     const tags = await db.select().from(tagsTable).orderBy(tagsTable.name);
     res.json({ tags });
@@ -90697,7 +91578,7 @@ router18.get("/admin/tags", requirePermission("admin:view"), async (req, res) =>
     res.status(500).json({ error: "Failed to list tags" });
   }
 });
-router18.post("/admin/tags", requirePermission("admin:view"), async (req, res) => {
+router19.post("/admin/tags", requirePermission("admin:view"), async (req, res) => {
   const { name, description } = req.body ?? {};
   if (!name || typeof name !== "string" || name.trim().length < 2) {
     res.status(400).json({ error: "Tag name must be at least 2 characters" });
@@ -90721,7 +91602,7 @@ router18.post("/admin/tags", requirePermission("admin:view"), async (req, res) =
     res.status(500).json({ error: "Failed to create tag: " + error40?.message });
   }
 });
-router18.patch("/admin/tags/:id", requirePermission("admin:view"), async (req, res) => {
+router19.patch("/admin/tags/:id", requirePermission("admin:view"), async (req, res) => {
   const id = parseInt(req.params.id);
   const { name, description } = req.body ?? {};
   if (name !== void 0 && (typeof name !== "string" || name.trim().length < 2)) {
@@ -90749,9 +91630,9 @@ router18.patch("/admin/tags/:id", requirePermission("admin:view"), async (req, r
     res.status(500).json({ error: "Failed to update tag: " + error40?.message });
   }
 });
-router18.get("/admin/tags/:id", requirePermission("admin:view"), async (req, res) => {
+router19.get("/admin/tags/:id", requirePermission("admin:view"), async (req, res) => {
 });
-router18.delete("/admin/tags/:id", requirePermission("admin:view"), async (req, res) => {
+router19.delete("/admin/tags/:id", requirePermission("admin:view"), async (req, res) => {
   const id = parseInt(req.params.id);
   try {
     const [deletedTag] = await db.delete(tagsTable).where(eq(tagsTable.id, id)).returning();
@@ -90766,19 +91647,19 @@ router18.delete("/admin/tags/:id", requirePermission("admin:view"), async (req, 
     res.status(500).json({ error: "Failed to delete tag: " + error40?.message });
   }
 });
-var tags_default = router18;
+var tags_default = router19;
 
 // src/routes/cashier-sessions.ts
-var import_express20 = __toESM(require_express2(), 1);
+var import_express21 = __toESM(require_express2(), 1);
 init_drizzle_orm();
 init_src();
-var router19 = (0, import_express20.Router)();
+var router20 = (0, import_express21.Router)();
 var cashierLoginLimiter = new RateLimiter(15 * 60 * 1e3, 10);
 var CashierLoginBody = external_exports2.object({
   username: external_exports2.string().min(1),
   password: external_exports2.string().min(1)
 });
-router19.post("/cashier/login", async (req, res) => {
+router20.post("/cashier/login", async (req, res) => {
   const ip = req.ip || "unknown-ip";
   const rateLimitKey = `cashier-login:${ip}`;
   if (cashierLoginLimiter.isLimitExceeded(rateLimitKey)) {
@@ -90840,7 +91721,7 @@ router19.post("/cashier/login", async (req, res) => {
     });
   });
 });
-router19.post("/cashier/end-session", requirePermission("cashier:close_session"), async (req, res) => {
+router20.post("/cashier/end-session", requirePermission("cashier:close_session"), async (req, res) => {
   const sessionId = req.session.cashierSessionId;
   if (!sessionId) {
     res.status(400).json({ error: "No active cashier session" });
@@ -90915,7 +91796,7 @@ router19.post("/cashier/end-session", requirePermission("cashier:close_session")
     });
   });
 });
-router19.get("/cashier/active", async (req, res) => {
+router20.get("/cashier/active", async (req, res) => {
   let sessionId = req.session.cashierSessionId;
   let userRole = req.session.role;
   const userId = req.session.userId;
@@ -90946,7 +91827,7 @@ router19.get("/cashier/active", async (req, res) => {
     startedAt: session2.startedAt
   });
 });
-router19.get("/cashier/performance/:cashierId", requirePermission("cashier:view_reports"), async (req, res) => {
+router20.get("/cashier/performance/:cashierId", requirePermission("cashier:view_reports"), async (req, res) => {
   const cashierId = parseInt(req.params.cashierId);
   if (isNaN(cashierId)) {
     res.status(400).json({ error: "Invalid cashierId" });
@@ -91033,7 +91914,7 @@ router19.get("/cashier/performance/:cashierId", requirePermission("cashier:view_
     avgOrderValue: completedOrders.length > 0 ? totalRevenue / completedOrders.length : 0
   });
 });
-router19.get("/cashier/sessions", requirePermission("cashier:view_reports"), async (req, res) => {
+router20.get("/cashier/sessions", requirePermission("cashier:view_reports"), async (req, res) => {
   const { cashierId, startDate, endDate } = req.query;
   const conditions = [];
   if (cashierId) conditions.push(eq(cashierSessionsTable.cashierId, parseInt(cashierId)));
@@ -91126,11 +92007,11 @@ router19.get("/cashier/sessions", requirePermission("cashier:view_reports"), asy
   });
   res.json(responseSessions);
 });
-router19.get("/cashier/list", requirePermission("cashier:view"), async (_req, res) => {
+router20.get("/cashier/list", requirePermission("cashier:view"), async (_req, res) => {
   const cashiers = await db.select({ id: usersTable.id, name: usersTable.name, role: usersTable.role }).from(usersTable).where(inArray(usersTable.role, ["cashier", "admin"]));
   res.json(cashiers);
 });
-router19.get("/cashier/sessions/:id/performance", requirePermission("cashier:view_reports"), async (req, res) => {
+router20.get("/cashier/sessions/:id/performance", requirePermission("cashier:view_reports"), async (req, res) => {
   const sessionId = parseInt(req.params.id);
   if (isNaN(sessionId)) {
     res.status(400).json({ error: "Invalid sessionId" });
@@ -91217,7 +92098,7 @@ router19.get("/cashier/sessions/:id/performance", requirePermission("cashier:vie
     closeRecord: closeRecord ?? null
   });
 });
-router19.get("/cashier/sessions/:id/report", requirePermission("cashier:view_reports"), async (req, res) => {
+router20.get("/cashier/sessions/:id/report", requirePermission("cashier:view_reports"), async (req, res) => {
   const sessionId = parseInt(req.params.id);
   if (isNaN(sessionId)) {
     res.status(400).json({ error: "Invalid sessionId" });
@@ -91368,7 +92249,7 @@ router19.get("/cashier/sessions/:id/report", requirePermission("cashier:view_rep
     }))
   });
 });
-router19.get("/cashier/sessions/orders", requirePermission("cashier:view_reports"), async (req, res) => {
+router20.get("/cashier/sessions/orders", requirePermission("cashier:view_reports"), async (req, res) => {
   const { cashierId, startDate, endDate, status, limit: limitStr, offset: offsetStr } = req.query;
   const limit = limitStr ? parseInt(limitStr, 10) : 50;
   const offset = offsetStr ? parseInt(offsetStr, 10) : 0;
@@ -91484,16 +92365,16 @@ router19.get("/cashier/sessions/orders", requirePermission("cashier:view_reports
   });
   res.json(serializeDates(serializedOrders));
 });
-var cashier_sessions_default = router19;
+var cashier_sessions_default = router20;
 
 // src/routes/admin.ts
-var import_express21 = __toESM(require_express2(), 1);
+var import_express22 = __toESM(require_express2(), 1);
 init_src();
 init_drizzle_orm();
 import { exec } from "child_process";
 import path5 from "path";
 import fs6 from "fs";
-var adminRouter = (0, import_express21.Router)();
+var adminRouter = (0, import_express22.Router)();
 adminRouter.get("/admin/activity-logs", requirePermission("admin:view"), async (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 50;
@@ -91812,14 +92693,14 @@ adminRouter.post("/admin/partner-prices", requirePermission("catalog:manage"), a
 var admin_default = adminRouter;
 
 // src/routes/stock-audits.ts
-var import_express22 = __toESM(require_express2(), 1);
+var import_express23 = __toESM(require_express2(), 1);
 init_drizzle_orm();
 init_src();
 init_cache2();
 init_pg_core();
 var approvedByUserTable = alias(usersTable, "approved_by_user");
-var router20 = (0, import_express22.Router)();
-router20.get("/stock-audits", requirePermission("inventory:manage"), async (req, res) => {
+var router21 = (0, import_express23.Router)();
+router21.get("/stock-audits", requirePermission("inventory:manage"), async (req, res) => {
   const sessionUser = req.session;
   const sessionBranchId = sessionUser.branchId;
   const isAdmin = sessionUser.role === "admin";
@@ -91842,7 +92723,7 @@ router20.get("/stock-audits", requirePermission("inventory:manage"), async (req,
   }).from(stockAuditsTable).leftJoin(usersTable, eq(stockAuditsTable.createdBy, usersTable.id)).leftJoin(approvedByUserTable, eq(stockAuditsTable.approvedBy, approvedByUserTable.id)).where(conditions.length > 0 ? and(...conditions) : void 0).orderBy(desc(stockAuditsTable.createdAt));
   res.json(serializeDates(audits));
 });
-router20.get("/stock-audits/:id", requirePermission("inventory:manage"), async (req, res) => {
+router21.get("/stock-audits/:id", requirePermission("inventory:manage"), async (req, res) => {
   const auditId = parseInt(req.params.id);
   const [audit] = await db.select({
     id: stockAuditsTable.id,
@@ -91881,7 +92762,7 @@ router20.get("/stock-audits/:id", requirePermission("inventory:manage"), async (
     }))
   }));
 });
-router20.post("/stock-audits", requirePermission("inventory:view"), async (req, res) => {
+router21.post("/stock-audits", requirePermission("inventory:view"), async (req, res) => {
   const { notes, items, branchId: bodyBranchId } = req.body;
   const sessionUser = req.session;
   const userId = sessionUser?.userId || 1;
@@ -91926,7 +92807,7 @@ router20.post("/stock-audits", requirePermission("inventory:view"), async (req, 
     res.status(500).json({ error: err.message });
   }
 });
-router20.patch("/stock-audits/:id", requirePermission("inventory:manage"), async (req, res) => {
+router21.patch("/stock-audits/:id", requirePermission("inventory:manage"), async (req, res) => {
   const auditId = parseInt(req.params.id);
   const { items, notes } = req.body;
   try {
@@ -91949,7 +92830,7 @@ router20.patch("/stock-audits/:id", requirePermission("inventory:manage"), async
     res.status(500).json({ error: err.message });
   }
 });
-router20.post("/stock-audits/:id/approve", requirePermission("inventory:audit_approve"), async (req, res) => {
+router21.post("/stock-audits/:id/approve", requirePermission("inventory:audit_approve"), async (req, res) => {
   const auditId = parseInt(req.params.id);
   const userId = req.session.userId;
   try {
@@ -92008,7 +92889,7 @@ router20.post("/stock-audits/:id/approve", requirePermission("inventory:audit_ap
     res.status(500).json({ error: err.message });
   }
 });
-router20.post("/stock-audits/:id/reject", requirePermission("inventory:audit_approve"), async (req, res) => {
+router21.post("/stock-audits/:id/reject", requirePermission("inventory:audit_approve"), async (req, res) => {
   const auditId = parseInt(req.params.id);
   const userId = req.session.userId;
   await db.update(stockAuditsTable).set({
@@ -92022,13 +92903,13 @@ router20.post("/stock-audits/:id/reject", requirePermission("inventory:audit_app
   await logActivity(req, "REJECT_STOCK_AUDIT", "stock_audit", auditId);
   res.json({ success: true });
 });
-var stock_audits_default = router20;
+var stock_audits_default = router21;
 
 // src/routes/roles.ts
-var import_express23 = __toESM(require_express2(), 1);
+var import_express24 = __toESM(require_express2(), 1);
 init_src();
 init_drizzle_orm();
-var rolesRouter = (0, import_express23.Router)();
+var rolesRouter = (0, import_express24.Router)();
 rolesRouter.get("/", requirePermission("roles:view"), async (req, res) => {
   try {
     const allRoles = await db.select().from(rolesTable);
@@ -92124,7 +93005,7 @@ rolesRouter.delete("/:key", requirePermission("roles:manage"), async (req, res) 
 });
 rolesRouter.get("/permissions/list", requirePermission("roles:view"), async (req, res) => {
   try {
-    const all = await db.select().from(permissionsTable);
+    const all = await db.select().from(permissionsTable).orderBy(permissionsTable.key);
     res.json(all);
   } catch (error40) {
     console.error("GET /permissions/list error:", error40?.message || error40);
@@ -92166,15 +93047,15 @@ rolesRouter.delete("/permissions/:key", requirePermission("roles:manage"), async
 var roles_default = rolesRouter;
 
 // src/routes/branches.ts
-var import_express24 = __toESM(require_express2(), 1);
+var import_express25 = __toESM(require_express2(), 1);
 init_drizzle_orm();
 init_src();
-var router21 = (0, import_express24.Router)();
-router21.get("/", async (req, res) => {
+var router22 = (0, import_express25.Router)();
+router22.get("/", async (req, res) => {
   const branches = await db.select().from(branchesTable).orderBy(asc(branchesTable.name));
   res.json(branches);
 });
-router21.post("/", requirePermission("branches:manage"), async (req, res) => {
+router22.post("/", requirePermission("branches:manage"), async (req, res) => {
   const parsed = insertBranchSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -92183,7 +93064,7 @@ router21.post("/", requirePermission("branches:manage"), async (req, res) => {
   const [branch] = await db.insert(branchesTable).values(parsed.data).returning();
   res.status(201).json(branch);
 });
-router21.patch("/:id", requirePermission("branches:manage"), async (req, res) => {
+router22.patch("/:id", requirePermission("branches:manage"), async (req, res) => {
   const id = parseInt(req.params.id);
   if (isNaN(id)) {
     res.status(400).json({ error: "Invalid id" });
@@ -92201,7 +93082,7 @@ router21.patch("/:id", requirePermission("branches:manage"), async (req, res) =>
   }
   res.json(branch);
 });
-router21.delete("/:id", requirePermission("branches:manage"), async (req, res) => {
+router22.delete("/:id", requirePermission("branches:manage"), async (req, res) => {
   const id = parseInt(req.params.id);
   if (isNaN(id)) {
     res.status(400).json({ error: "Invalid id" });
@@ -92214,10 +93095,10 @@ router21.delete("/:id", requirePermission("branches:manage"), async (req, res) =
   }
   res.sendStatus(204);
 });
-var branches_default = router21;
+var branches_default = router22;
 
 // src/routes/finance.ts
-var import_express25 = __toESM(require_express2(), 1);
+var import_express26 = __toESM(require_express2(), 1);
 init_drizzle_orm();
 init_src();
 
@@ -92398,8 +93279,8 @@ function startOfDay3(d) {
 function endOfDay3(d) {
   return toCairoMidnight3(d, true);
 }
-var router22 = (0, import_express25.Router)();
-router22.get("/finance/inventory-usage", requirePermission("reports:view"), async (req, res) => {
+var router23 = (0, import_express26.Router)();
+router23.get("/finance/inventory-usage", requirePermission("reports:view"), async (req, res) => {
   const { startDate, endDate, branchId } = req.query;
   const targetBranchId = branchId && branchId !== "all" ? parseInt(branchId) : null;
   const start = startDate ? startOfDay3(parseLocalDate3(startDate)) : startOfDay3(subDays(/* @__PURE__ */ new Date(), 30));
@@ -92445,7 +93326,7 @@ router22.get("/finance/inventory-usage", requirePermission("reports:view"), asyn
   });
   res.json(report);
 });
-router22.get("/finance/pl-report", requirePermission("reports:view"), async (req, res) => {
+router23.get("/finance/pl-report", requirePermission("reports:view"), async (req, res) => {
   const { startDate, endDate, branchId } = req.query;
   const targetBranchId = branchId && branchId !== "all" ? parseInt(branchId) : null;
   const start = startDate ? startOfDay3(parseLocalDate3(startDate)) : startOfDay3(subDays(/* @__PURE__ */ new Date(), 30));
@@ -92517,7 +93398,7 @@ router22.get("/finance/pl-report", requirePermission("reports:view"), async (req
   });
   res.json(report);
 });
-router22.get("/finance/pl-by-day", requirePermission("reports:view"), async (req, res) => {
+router23.get("/finance/pl-by-day", requirePermission("reports:view"), async (req, res) => {
   const { startDate, endDate, branchId } = req.query;
   const targetBranchId = branchId && branchId !== "all" ? parseInt(branchId) : null;
   const start = startDate ? startOfDay3(parseLocalDate3(startDate)) : startOfDay3(subDays(/* @__PURE__ */ new Date(), 30));
@@ -92583,7 +93464,7 @@ router22.get("/finance/pl-by-day", requirePermission("reports:view"), async (req
   const sortedResult = Object.values(dailyStats).sort((a, b) => a.date.localeCompare(b.date));
   res.json(serializeDates(sortedResult));
 });
-router22.get("/finance/ingredient-recipes", requirePermission("reports:view"), async (req, res) => {
+router23.get("/finance/ingredient-recipes", requirePermission("reports:view"), async (req, res) => {
   const ingredients = await db.select().from(ingredientsTable);
   const [
     slots,
@@ -92715,7 +93596,7 @@ router22.get("/finance/ingredient-recipes", requirePermission("reports:view"), a
   });
   res.json(report);
 });
-router22.get("/finance/sales-items", requirePermission("reports:view"), async (req, res) => {
+router23.get("/finance/sales-items", requirePermission("reports:view"), async (req, res) => {
   const { startDate, endDate, branchId } = req.query;
   const targetBranchId = branchId && branchId !== "all" ? parseInt(branchId) : null;
   const start = startDate ? startOfDay3(parseLocalDate3(startDate)) : startOfDay3(subDays(/* @__PURE__ */ new Date(), 30));
@@ -92803,7 +93684,7 @@ router22.get("/finance/sales-items", requirePermission("reports:view"), async (r
   });
   res.json(serializeDates(report));
 });
-router22.get("/finance/sales-summary", requirePermission("reports:view"), async (req, res) => {
+router23.get("/finance/sales-summary", requirePermission("reports:view"), async (req, res) => {
   const { startDate, endDate, branchId, partnerId, source } = req.query;
   const targetBranchId = branchId && branchId !== "all" ? parseInt(branchId) : null;
   const start = startDate ? startOfDay3(parseLocalDate3(startDate)) : startOfDay3(subDays(/* @__PURE__ */ new Date(), 30));
@@ -92865,7 +93746,7 @@ router22.get("/finance/sales-summary", requirePermission("reports:view"), async 
     zeroRevenueRevenue: parseFloat(summary.zeroRevenueRevenue || "0")
   });
 });
-router22.get("/finance/customizations-report", requirePermission("reports:view"), async (req, res) => {
+router23.get("/finance/customizations-report", requirePermission("reports:view"), async (req, res) => {
   const { startDate, endDate, branchId } = req.query;
   const targetBranchId = branchId && branchId !== "all" ? parseInt(branchId) : null;
   const start = startDate ? startOfDay3(parseLocalDate3(startDate)) : startOfDay3(subDays(/* @__PURE__ */ new Date(), 30));
@@ -92901,7 +93782,7 @@ router22.get("/finance/customizations-report", requirePermission("reports:view")
   const report = rawCustoms.map((c) => analyzeCustomization(c, context)).filter(Boolean);
   res.json(serializeDates(report));
 });
-router22.get("/finance/customization-analytics", requirePermission("reports:view"), async (req, res) => {
+router23.get("/finance/customization-analytics", requirePermission("reports:view"), async (req, res) => {
   const { startDate, endDate, branchId } = req.query;
   const targetBranchId = branchId && branchId !== "all" ? parseInt(branchId) : null;
   const start = startDate ? startOfDay3(parseLocalDate3(startDate)) : startOfDay3(subDays(/* @__PURE__ */ new Date(), 30));
@@ -92982,7 +93863,7 @@ router22.get("/finance/customization-analytics", requirePermission("reports:view
     options: optionsReport
   });
 });
-router22.get("/finance/order-stats", requirePermission("reports:view"), async (req, res) => {
+router23.get("/finance/order-stats", requirePermission("reports:view"), async (req, res) => {
   const { startDate, endDate, branchId } = req.query;
   const start = startDate ? startOfDay3(parseLocalDate3(startDate)) : startOfDay3(subDays(/* @__PURE__ */ new Date(), 30));
   const end = endDate ? endOfDay3(parseLocalDate3(endDate)) : endOfDay3(/* @__PURE__ */ new Date());
@@ -93039,13 +93920,13 @@ router22.get("/finance/order-stats", requirePermission("reports:view"), async (r
     bySource: bySource.map((d) => ({ ...d, label: d.label || "pos", revenue: parseFloat(d.revenue || "0") }))
   });
 });
-var finance_default = router22;
+var finance_default = router23;
 
 // src/routes/suppliers.ts
-var import_express26 = __toESM(require_express2(), 1);
+var import_express27 = __toESM(require_express2(), 1);
 init_src();
 init_drizzle_orm();
-var suppliersRouter = (0, import_express26.Router)();
+var suppliersRouter = (0, import_express27.Router)();
 suppliersRouter.get("/purchases/suppliers", requirePermission("purchases:view"), async (req, res) => {
   try {
     const suppliers = await db.select().from(suppliersTable).orderBy(suppliersTable.name);
@@ -93130,10 +94011,10 @@ suppliersRouter.delete("/purchases/suppliers/:id", requirePermission("purchases:
 var suppliers_default = suppliersRouter;
 
 // src/routes/purchases.ts
-var import_express27 = __toESM(require_express2(), 1);
+var import_express28 = __toESM(require_express2(), 1);
 init_src();
 init_drizzle_orm();
-var purchasesRouter = (0, import_express27.Router)();
+var purchasesRouter = (0, import_express28.Router)();
 var formatPurchase = (p) => ({
   ...p,
   totalAmount: parseFloat(String(p.totalAmount || "0")),
@@ -93533,10 +94414,10 @@ purchasesRouter.delete("/purchases/:id", requirePermission("purchases:manage"), 
 var purchases_default = purchasesRouter;
 
 // src/routes/manufacturing.ts
-var import_express28 = __toESM(require_express2(), 1);
+var import_express29 = __toESM(require_express2(), 1);
 init_drizzle_orm();
 init_src();
-var router23 = (0, import_express28.Router)();
+var router24 = (0, import_express29.Router)();
 var SaveBomSchema = external_exports2.object({
   targetIngredientId: external_exports2.number().int().positive(),
   yieldQuantity: external_exports2.number().positive(),
@@ -93571,7 +94452,7 @@ var SubmitProcessSchema = external_exports2.object({
     })
   ).min(1, "At least one raw ingredient component is required")
 });
-router23.get("/boms", async (req, res) => {
+router24.get("/boms", async (req, res) => {
   try {
     const allBoms = await db.select({
       bom: bomsTable,
@@ -93631,7 +94512,7 @@ router23.get("/boms", async (req, res) => {
     res.status(500).json({ error: error40.message || "Failed to fetch BOM list" });
   }
 });
-router23.get("/boms/:targetIngredientId", async (req, res) => {
+router24.get("/boms/:targetIngredientId", async (req, res) => {
   try {
     const targetIngredientId = parseInt(req.params.targetIngredientId, 10);
     if (isNaN(targetIngredientId)) {
@@ -93689,7 +94570,7 @@ router23.get("/boms/:targetIngredientId", async (req, res) => {
     res.status(500).json({ error: error40.message || "Failed to fetch BOM details" });
   }
 });
-router23.post("/boms", async (req, res) => {
+router24.post("/boms", async (req, res) => {
   try {
     const parsed = SaveBomSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -93745,7 +94626,7 @@ router23.post("/boms", async (req, res) => {
     res.status(500).json({ error: error40.message || "Failed to save BOM formula" });
   }
 });
-router23.delete("/boms/:id", async (req, res) => {
+router24.delete("/boms/:id", async (req, res) => {
   try {
     const bomId = parseInt(req.params.id, 10);
     if (isNaN(bomId)) {
@@ -93759,7 +94640,7 @@ router23.delete("/boms/:id", async (req, res) => {
     res.status(500).json({ error: error40.message || "Failed to delete BOM formula" });
   }
 });
-router23.post("/process/calculate", async (req, res) => {
+router24.post("/process/calculate", async (req, res) => {
   try {
     const parsed = CalculateProcessSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -93831,7 +94712,7 @@ router23.post("/process/calculate", async (req, res) => {
     res.status(500).json({ error: error40.message || "Failed to calculate preparation process" });
   }
 });
-router23.post("/process/submit", async (req, res) => {
+router24.post("/process/submit", async (req, res) => {
   try {
     const parsed = SubmitProcessSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -93961,7 +94842,7 @@ router23.post("/process/submit", async (req, res) => {
     res.status(500).json({ error: error40.message || "Failed to submit preparation process" });
   }
 });
-router23.get("/runs", async (req, res) => {
+router24.get("/runs", async (req, res) => {
   try {
     const sessionUser = req.session;
     const isAdmin = sessionUser.role === "admin" || sessionUser.role === "supervisor";
@@ -94033,42 +94914,43 @@ router23.get("/runs", async (req, res) => {
     res.status(500).json({ error: error40.message || "Failed to fetch manufacturing runs history" });
   }
 });
-var manufacturing_default = router23;
+var manufacturing_default = router24;
 
 // src/routes/index.ts
 init_sse();
-var router24 = (0, import_express29.Router)();
-router24.get("/health-test", (req, res) => res.send("OK"));
-router24.use("/admin/branches", branches_default);
-router24.use(health_default);
-router24.use(auth_default);
-router24.use(drinks_default);
-router24.use(ingredients_default);
-router24.use(orders_default);
-router24.use(stock_default);
-router24.use(dashboard_default);
-router24.use(catalog_default);
-router24.use(drink_categories_default);
-router24.use(kitchen_stations_default);
-router24.use(settings_default);
-router24.use(predefined_slots_default);
-router24.use(users_default);
-router24.use(discounts_default);
-router24.use(product_discounts_default);
-router24.use(offers_default);
-router24.use(customers_default);
-router24.use(mobile_default);
-router24.use(tags_default);
-router24.use(cashier_sessions_default);
-router24.use(admin_default);
-router24.use(stock_audits_default);
-router24.use("/roles", roles_default);
-router24.use(finance_default);
-router24.use(suppliers_default);
-router24.use(purchases_default);
-router24.use("/admin/manufacturing", manufacturing_default);
-router24.use("/manufacturing", manufacturing_default);
-router24.get("/events", (req, res) => {
+var router25 = (0, import_express30.Router)();
+router25.get("/health-test", (req, res) => res.send("OK"));
+router25.use("/admin/branches", branches_default);
+router25.use(health_default);
+router25.use(auth_default);
+router25.use(drinks_default);
+router25.use(ingredients_default);
+router25.use(orders_default);
+router25.use(stock_default);
+router25.use(dashboard_default);
+router25.use(catalog_default);
+router25.use(drink_categories_default);
+router25.use(kitchen_stations_default);
+router25.use(settings_default);
+router25.use(predefined_slots_default);
+router25.use(users_default);
+router25.use(discounts_default);
+router25.use(product_discounts_default);
+router25.use(offers_default);
+router25.use(customers_default);
+router25.use(mobile_default);
+router25.use(nutrition_default);
+router25.use(tags_default);
+router25.use(cashier_sessions_default);
+router25.use(admin_default);
+router25.use(stock_audits_default);
+router25.use("/roles", roles_default);
+router25.use(finance_default);
+router25.use(suppliers_default);
+router25.use(purchases_default);
+router25.use("/admin/manufacturing", manufacturing_default);
+router25.use("/manufacturing", manufacturing_default);
+router25.get("/events", (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache, no-transform");
   res.setHeader("X-Accel-Buffering", "no");
@@ -94077,7 +94959,7 @@ router24.get("/events", (req, res) => {
   res.write("event: connected\ndata: {}\n\n");
   addSseClient(res);
 });
-var routes_default = router24;
+var routes_default = router25;
 
 // src/lib/logger.ts
 var import_pino = __toESM(require_pino(), 1);
@@ -94099,7 +94981,7 @@ var logger = (0, import_pino.default)({
 
 // src/app.ts
 var PostgresStore = (0, import_connect_pg_simple.default)(import_express_session.default);
-var app = (0, import_express30.default)();
+var app = (0, import_express31.default)();
 app.set("json replacer", (_key2, value) => {
   if (value instanceof Date) return value.toISOString();
   return value;
@@ -94125,8 +95007,8 @@ app.use(
 );
 app.set("trust proxy", 1);
 app.use((0, import_cors.default)({ credentials: true, origin: true, exposedHeaders: ["X-Total-Count"] }));
-app.use(import_express30.default.json({ limit: "50mb" }));
-app.use(import_express30.default.urlencoded({ limit: "50mb", extended: true }));
+app.use(import_express31.default.json({ limit: "50mb" }));
+app.use(import_express31.default.urlencoded({ limit: "50mb", extended: true }));
 app.use(
   (0, import_express_session.default)({
     store: new PostgresStore({
@@ -94148,8 +95030,8 @@ var uploadsDir2 = process.env.UPLOADS_DIR ? path6.resolve(process.env.UPLOADS_DI
 if (!fs7.existsSync(uploadsDir2)) {
   fs7.mkdirSync(uploadsDir2, { recursive: true });
 }
-app.use("/uploads", import_express30.default.static(uploadsDir2, { maxAge: "1d" }));
-app.use("/api/uploads", import_express30.default.static(uploadsDir2, { maxAge: "1d" }));
+app.use("/uploads", import_express31.default.static(uploadsDir2, { maxAge: "1d" }));
+app.use("/api/uploads", import_express31.default.static(uploadsDir2, { maxAge: "1d" }));
 app.use("/api", (req, res, next) => {
   res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
   res.setHeader("Pragma", "no-cache");
@@ -94466,48 +95348,44 @@ async function seedIfEmpty() {
 init_src();
 init_drizzle_orm();
 var APP_PERMISSIONS = [
-  // Dashboard & Admin Hub
   { key: "admin:view", name: "View Admin Hub", description: "Access the administrative dashboard" },
-  // Users & Roles
-  { key: "users:view", name: "View Users", description: "List and view user details" },
-  { key: "users:create", name: "Create Users", description: "Add new staff members" },
-  { key: "users:update", name: "Update Users", description: "Edit staff details and permissions" },
-  { key: "users:delete", name: "Delete Users", description: "Remove staff members" },
-  { key: "roles:view", name: "View Roles", description: "List and view role details" },
-  { key: "roles:manage", name: "Manage Roles", description: "Create, update and delete roles" },
-  // POS & Kitchen
-  { key: "pos:view", name: "Access POS", description: "Open the Point of Sale terminal" },
-  { key: "pos:create_order", name: "Create Orders", description: "Place new orders in the system" },
-  { key: "kitchen:view", name: "Access Kitchen", description: "View and manage the kitchen production queue" },
-  { key: "kitchen:mark_ready", name: "Mark Ready", description: "Mark order items as ready for pickup" },
-  // Cashier Operations
-  { key: "cashier:view", name: "Cashier View", description: "Access the cashier dashboard and order list" },
+  { key: "branches:manage", name: "Manage Branches", description: "Add and edit branch locations" },
   { key: "cashier:approve_order", name: "Approve Order", description: "Finalize and approve orders for payment" },
   { key: "cashier:cancel_order", name: "Cancel Order", description: "Void or cancel pending orders" },
-  { key: "cashier:refund_order", name: "Refund Order", description: "Process refunds for completed orders" },
   { key: "cashier:close_session", name: "Close Session", description: "End a cashier shift and close the session" },
+  { key: "cashier:refund_order", name: "Refund Order", description: "Process refunds for completed orders" },
+  { key: "cashier:view", name: "Cashier View", description: "Access the cashier dashboard and order list" },
   { key: "cashier:view_reports", name: "View Cashier Reports", description: "View shift summaries and performance" },
-  { key: "pos:apply_discount", name: "Apply Discount", description: "Apply manual or coupon discounts to orders" },
-  // Catalog & Inventory
-  { key: "catalog:view", name: "View Catalog", description: "Browse drinks and categories" },
   { key: "catalog:manage", name: "Manage Catalog", description: "Create and edit drinks and categories" },
+  { key: "catalog:view", name: "View Catalog", description: "Browse drinks and categories" },
+  { key: "discounts:manage", name: "Manage Discounts", description: "Create and edit discount codes" },
+  { key: "discounts:view", name: "View Discounts", description: "View active discount codes" },
   { key: "drinks:manage", name: "Manage Drink Availability", description: "Manage branch and partner drink availability" },
-  { key: "inventory:view", name: "View Inventory", description: "Check stock levels and ingredients" },
-  { key: "inventory:manage", name: "Manage Inventory", description: "Update stock levels, conversions and ingredient options" },
   { key: "inventory:adjust", name: "Adjust Stock", description: "Restock and adjust inventory quantities" },
   { key: "inventory:audit_approve", name: "Approve Stock Audits", description: "Approve or reject stock audit reports and adjust stock levels" },
-  { key: "purchases:view", name: "View Purchases", description: "View purchases department, orders and suppliers" },
-  { key: "purchases:manage", name: "Manage Purchases", description: "Create purchase orders, receive orders, and record payments" },
-  // Finance & Reports
-  { key: "reports:view", name: "View Reports", description: "Access sales and performance reports" },
-  { key: "discounts:view", name: "View Discounts", description: "View active discount codes" },
-  { key: "discounts:manage", name: "Manage Discounts", description: "Create and edit discount codes" },
-  // Settings & Infrastructure
-  { key: "branches:manage", name: "Manage Branches", description: "Add and edit branch locations" },
-  { key: "settings:manage", name: "Manage Settings", description: "Change system-wide configurations" },
-  // Aggregator Partners (Talabat, Bread Fast, etc.)
+  { key: "inventory:manage", name: "Manage Inventory", description: "Update stock levels, conversions and ingredient options" },
+  { key: "inventory:view", name: "View Inventory", description: "Check stock levels and ingredients" },
+  { key: "kitchen:mark_ready", name: "Mark Ready", description: "Mark order items as ready for pickup" },
+  { key: "kitchen:view", name: "Access Kitchen", description: "View and manage the kitchen production queue" },
+  { key: "manufacturing:manage", name: "Manage Manufacturing", description: "Create BOM recipes and process production runs" },
+  { key: "manufacturing:view", name: "View Manufacturing", description: "View Bill of Materials and manufacturing runs" },
+  { key: "nutrition:manage", name: "Manage Nutrition", description: "Update ingredient nutrition facts and customer health goals" },
+  { key: "nutrition:view", name: "View Nutrition", description: "View nutrition facts, intake logs, and health reports" },
+  { key: "partners:manage", name: "Manage Partners", description: "Create, edit and delete aggregator partner platforms" },
   { key: "partners:view", name: "View Partners", description: "List and view aggregator partner platforms" },
-  { key: "partners:manage", name: "Manage Partners", description: "Create, edit and delete aggregator partner platforms" }
+  { key: "pos:apply_discount", name: "Apply Discount", description: "Apply manual or coupon discounts to orders" },
+  { key: "pos:create_order", name: "Create Orders", description: "Place new orders in the system" },
+  { key: "pos:view", name: "Access POS", description: "Open the Point of Sale terminal" },
+  { key: "purchases:manage", name: "Manage Purchases", description: "Create purchase orders, receive orders, and record payments" },
+  { key: "purchases:view", name: "View Purchases", description: "View purchases department, orders and suppliers" },
+  { key: "reports:view", name: "View Reports", description: "Access sales and performance reports" },
+  { key: "roles:manage", name: "Manage Roles", description: "Create, update and delete roles" },
+  { key: "roles:view", name: "View Roles", description: "List and view role details" },
+  { key: "settings:manage", name: "Manage Settings", description: "Change system-wide configurations" },
+  { key: "users:create", name: "Create Users", description: "Add new staff members" },
+  { key: "users:delete", name: "Delete Users", description: "Remove staff members" },
+  { key: "users:update", name: "Update Users", description: "Edit staff details and permissions" },
+  { key: "users:view", name: "View Users", description: "List and view user details" }
 ];
 var standardRoles = [
   { key: "admin", name: "Administrator" },
@@ -94541,13 +95419,16 @@ async function syncPermissions() {
         )
       ).limit(1);
       if (!existing) {
-        await db.insert(rolePermissionsTable).values({
-          roleKey,
-          permissionKey: pKey
-        });
+        await txInsertRolePermission(roleKey, pKey);
       }
     }
   };
+  async function txInsertRolePermission(roleKey, permissionKey) {
+    await db.insert(rolePermissionsTable).values({
+      roleKey,
+      permissionKey
+    }).onConflictDoNothing();
+  }
   await assignPermissions("admin", APP_PERMISSIONS.map((p) => p.key));
   await assignPermissions("cashier", [
     "pos:view",
@@ -94575,7 +95456,8 @@ async function syncPermissions() {
     "reports:view",
     "inventory:view",
     "cashier:view_reports",
-    "purchases:view"
+    "purchases:view",
+    "nutrition:view"
   ]);
   logger.info("Permissions sync complete.");
 }

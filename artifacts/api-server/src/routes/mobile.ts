@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, and, inArray, desc, asc, sql } from "drizzle-orm";
+import { eq, and, inArray, desc, asc, sql, gte, lte } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import multer from "multer";
 import path from "path";
@@ -40,6 +40,8 @@ import {
   customerTagsTable,
   discountTagsTable,
   productDrinkDiscountsTable,
+  customerNutritionLogsTable,
+  customerNutritionGoalsTable,
 } from "@workspace/db";
 import { serializeDates } from "../lib/serialize";
 import { broadcastEvent } from "../lib/sse";
@@ -47,6 +49,7 @@ import { logActivity } from "../lib/activity-logger";
 import { RateLimiter } from "./auth";
 import { generateOrderNumber } from "./orders";
 import { calculateDrinkData, getStandardProductPrice } from "../lib/price-calculator";
+import { calculateCustomizationNutrition, logCustomerNutrition } from "../lib/nutrition-calculator";
 
 const router: IRouter = Router();
 
@@ -1122,6 +1125,17 @@ router.post("/mobile/orders", async (req, res): Promise<void> => {
     const unitPrice = calcData.totalPrice;
     const lineTotal = unitPrice * (item.quantity ?? 1);
     subtotal += lineTotal;
+    // Compute nutrition per single drink unit (consumedQty already reflects quantity)
+    let nutritionSummary: any = null;
+    try {
+      const singleItemCustomizations = calcData.customizations.map((c: any) => ({
+        ingredientId: c.ingredientId,
+        consumedQty: c.consumedQty,
+      }));
+      nutritionSummary = await calculateCustomizationNutrition(singleItemCustomizations);
+    } catch (nErr) {
+      console.error("[mobile] nutrition calc error:", nErr);
+    }
     itemDetails.push({
       drinkId: item.drinkId,
       drinkName: calcData.drink.name,
@@ -1132,6 +1146,7 @@ router.post("/mobile/orders", async (req, res): Promise<void> => {
       lineTotal,
       specialNotes: item.specialNotes ?? null,
       customizations,
+      nutritionSummary,
     });
   }
 
@@ -1329,6 +1344,25 @@ router.post("/mobile/orders", async (req, res): Promise<void> => {
 
   broadcastEvent("order_created", { orderId: order.id, orderNumber: order.orderNumber });
   await logActivity(req, "CREATE_MOBILE_ORDER", "order", order.id, { total });
+
+  // �� Customer Nutrition Intake Logging �������������������������������������
+  try {
+    const itemsToLog = itemDetails
+      .filter((si) => si.nutritionSummary)
+      .map((si) => ({
+        orderItemId: si.orderItemId ?? null,
+        drinkId: si.drinkId,
+        drinkName: si.drinkName,
+        quantity: si.quantity,
+        nutritionSummary: si.nutritionSummary,
+      }));
+    if (itemsToLog.length > 0) {
+      await logCustomerNutrition(customer.id, order.id, itemsToLog);
+    }
+  } catch (nErr) {
+    console.error("[mobile] Customer nutrition log error:", nErr);
+  }
+
   res.status(201).json({ order: serializeDates({ ...order, total: parseFloat(order.total) }) });
 });
 
@@ -1474,6 +1508,171 @@ router.get("/mobile/home/offers", async (req, res): Promise<void> => {
 router.get("/mobile/home/slider", async (_req, res): Promise<void> => {
   // Placeholder: return empty slider until a banners table is added
   res.json({ slider: [] });
+});
+
+// �� Nutrition: Calculate for a drink selection (customize page) ������������
+router.post("/mobile/nutrition/calculate", async (req, res): Promise<void> => {
+  const customerId = requireCustomer(req, res);
+  if (!customerId) return;
+  const { drinkId, selections } = req.body ?? {};
+  if (!drinkId) {
+    res.status(400).json({ error: "drinkId is required" });
+    return;
+  }
+  try {
+    const calcData = await calculateDrinkData(drinkId, selections ?? [], null, null);
+    const customizations = calcData.customizations.map((c: any) => ({
+      ingredientId: c.ingredientId,
+      consumedQty: c.consumedQty,
+    }));
+    const nutrition = await calculateCustomizationNutrition(customizations);
+    res.json({ nutrition });
+  } catch (e: any) {
+    if (e.message === "Drink not found") {
+      res.status(404).json({ error: "Drink not found" });
+      return;
+    }
+    console.error("[mobile] nutrition calculate error:", e);
+    res.status(500).json({ error: "Failed to calculate nutrition" });
+  }
+});
+
+// �� Nutrition: Summary (today + goals) ������������������������������������
+router.get("/mobile/nutrition/summary", async (req, res): Promise<void> => {
+  const customerId = requireCustomer(req, res);
+  if (!customerId) return;
+
+  let [goals] = await db
+    .select()
+    .from(customerNutritionGoalsTable)
+    .where(eq(customerNutritionGoalsTable.customerId, customerId))
+    .limit(1);
+  if (!goals) {
+    goals = {
+      customerId,
+      dailyCalorieGoal: 2000,
+      dailyCaffeineLimit: 400,
+      dailySugarLimit: 50,
+      dailyProteinGoal: 50,
+      dailyCarbLimit: null,
+      dailyFatLimit: null,
+      dietaryPreferences: [],
+      updatedAt: new Date(),
+    };
+  }
+
+  const now = new Date();
+  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+  const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+
+  const todayLogs = await db
+    .select()
+    .from(customerNutritionLogsTable)
+    .where(
+      and(
+        eq(customerNutritionLogsTable.customerId, customerId),
+        gte(customerNutritionLogsTable.consumedAt, startOfDay),
+        lte(customerNutritionLogsTable.consumedAt, endOfDay)
+      )
+    );
+
+  const totals: Record<string, number> = {};
+  const allergensSet = new Set<string>();
+  for (const log of todayLogs) {
+    for (const key of ["calories", "protein", "totalCarbs", "dietaryFiber", "totalSugars", "addedSugars", "totalFat", "saturatedFat", "transFat", "cholesterol", "sodium", "caffeine"]) {
+      totals[key] = (totals[key] ?? 0) + parseFloat((log as any)[key] || "0");
+    }
+    if (Array.isArray(log.allergens)) log.allergens.forEach((a) => allergensSet.add(a));
+  }
+
+  const round = (v: number) => Math.round(v * 10) / 10;
+  res.json({
+    goals,
+    today: {
+      calories: Math.round(totals.calories ?? 0),
+      protein: round(totals.protein ?? 0),
+      totalCarbs: round(totals.totalCarbs ?? 0),
+      dietaryFiber: round(totals.dietaryFiber ?? 0),
+      totalSugars: round(totals.totalSugars ?? 0),
+      addedSugars: round(totals.addedSugars ?? 0),
+      totalFat: round(totals.totalFat ?? 0),
+      saturatedFat: round(totals.saturatedFat ?? 0),
+      transFat: round(totals.transFat ?? 0),
+      cholesterol: round(totals.cholesterol ?? 0),
+      sodium: round(totals.sodium ?? 0),
+      caffeine: round(totals.caffeine ?? 0),
+      itemsCount: todayLogs.length,
+      allergensConsumed: Array.from(allergensSet),
+    },
+  });
+});
+
+// �� Nutrition: History aggregated by day/week/month ������������������������
+router.get("/mobile/nutrition/history", async (req, res): Promise<void> => {
+  const customerId = requireCustomer(req, res);
+  if (!customerId) return;
+
+  const period = (req.query.period as string) || "day";
+  if (!["day", "week", "month"].includes(period)) {
+    res.status(400).json({ error: "period must be day, week, or month" });
+    return;
+  }
+
+  const logs = await db
+    .select()
+    .from(customerNutritionLogsTable)
+    .where(eq(customerNutritionLogsTable.customerId, customerId))
+    .orderBy(desc(customerNutritionLogsTable.consumedAt));
+
+  const NUTRITION_KEYS = ["calories", "protein", "totalCarbs", "dietaryFiber", "totalSugars", "addedSugars", "totalFat", "saturatedFat", "transFat", "cholesterol", "sodium", "caffeine"] as const;
+
+  const bucketKey = (d: Date): string => {
+    if (period === "day") {
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    }
+    if (period === "week") {
+      // ISO week (Monday start)
+      const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+      const dayNum = date.getUTCDay() || 7;
+      date.setUTCDate(date.getUTCDate() + 4 - dayNum);
+      const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+      const weekNo = Math.ceil((((date.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+      return `${date.getUTCFullYear()}-W${String(weekNo).padStart(2, "0")}`;
+    }
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  };
+
+  const buckets = new Map<string, { label: string; start: Date; totals: Record<string, number>; itemsCount: number; drinks: Record<string, number> }>();
+  for (const log of logs) {
+    const consumed = new Date(log.consumedAt);
+    const key = bucketKey(consumed);
+    if (!buckets.has(key)) {
+      buckets.set(key, { label: key, start: consumed, totals: {}, itemsCount: 0, drinks: {} });
+    }
+    const bucket = buckets.get(key)!;
+    bucket.itemsCount += 1;
+    if (log.drinkName) bucket.drinks[log.drinkName] = (bucket.drinks[log.drinkName] ?? 0) + 1;
+    for (const k of NUTRITION_KEYS) {
+      bucket.totals[k] = (bucket.totals[k] ?? 0) + parseFloat((log as any)[k] || "0");
+    }
+  }
+
+  const round = (v: number) => Math.round(v * 10) / 10;
+  const series = Array.from(buckets.values())
+    .sort((a, b) => b.start.getTime() - a.start.getTime())
+    .map((b) => {
+      const totals: Record<string, number> = {};
+      for (const k of NUTRITION_KEYS) totals[k] = round(b.totals[k] ?? 0);
+      return {
+        period: b.label,
+        start: b.start.toISOString(),
+        totals,
+        itemsCount: b.itemsCount,
+        drinks: b.drinks,
+      };
+    });
+
+  res.json({ period, series });
 });
 
 export default router;
