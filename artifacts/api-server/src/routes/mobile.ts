@@ -871,6 +871,7 @@ async function buildMobileRecipeSlots(drinkId: number): Promise<any[]> {
                 isDefault: override?.isDefault ?? templateDef?.isDefault ?? tv.isDefault ?? false,
                 isAvailable: true,
                 processedQty: Number(override?.processedQty ?? templateDef?.processedQty ?? tv.processedQty ?? vol?.processedQty ?? 0),
+                producedQty: Number(override?.producedQty ?? templateDef?.producedQty ?? tv.producedQty ?? vol?.producedQty ?? 0),
               };
             })
             .filter((v): v is NonNullable<typeof v> => v !== null)
@@ -884,6 +885,7 @@ async function buildMobileRecipeSlots(drinkId: number): Promise<any[]> {
             extraCost: Number(to.extraCost ?? ingType.extraCost ?? 0),
             isDefault: to.isDefault ?? false,
             processedQty: Number(to.processedQty ?? ingType.processedQty ?? 0),
+            producedQty: Number(to.producedQty ?? ingType.producedQty ?? 0),
             volumes: volumesForType,
           };
         })
@@ -895,6 +897,8 @@ async function buildMobileRecipeSlots(drinkId: number): Promise<any[]> {
         isRequired: slot.isRequired ?? template?.isRequired ?? false,
         slotStyle: "typed",
         customerSortOrder: slot.customerSortOrder ?? 1,
+        isDynamic: slot.isDynamic ?? template?.isDynamic ?? false,
+        affectsCupSize: slot.affectsCupSize ?? template?.affectsCupSize ?? true,
         options: [],
         typeOptions: typedOptions,
       });
@@ -913,6 +917,8 @@ async function buildMobileRecipeSlots(drinkId: number): Promise<any[]> {
         isRequired: slot.isRequired ?? false,
         slotStyle: "legacy",
         customerSortOrder: slot.customerSortOrder ?? 1,
+        isDynamic: slot.isDynamic ?? false,
+        affectsCupSize: slot.affectsCupSize ?? true,
         ingredientId: slot.ingredientId,
         options: ingredientOptionsForSlot.map((o) => ({
           optionId: o.id,
@@ -922,6 +928,7 @@ async function buildMobileRecipeSlots(drinkId: number): Promise<any[]> {
           isDefault: o.isDefault ?? false,
           isAvailable: true,
           processedQty: Number(o.processedQty ?? 0),
+          producedQty: Number(o.producedQty ?? 0),
         })),
         typeOptions: [],
       });
@@ -935,6 +942,8 @@ async function buildMobileRecipeSlots(drinkId: number): Promise<any[]> {
       isRequired: slot.isRequired ?? false,
       slotStyle: "legacy",
       customerSortOrder: slot.customerSortOrder ?? 1,
+      isDynamic: slot.isDynamic ?? false,
+      affectsCupSize: slot.affectsCupSize ?? true,
       options: [],
       typeOptions: [],
     });
