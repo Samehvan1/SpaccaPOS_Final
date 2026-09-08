@@ -10,8 +10,10 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Search, Plus, Edit, History, ArrowLeft, Loader2, User, Phone, Mail, Award, Landmark, Calendar, Ticket, Download, KeyRound, Sparkles, Copy, Check } from "lucide-react";
+import { Search, Plus, Edit, History, ArrowLeft, Loader2, User, Phone, Mail, Award, Landmark, Calendar, Ticket, Download, KeyRound, Sparkles, Copy, Check, Activity, Apple, Flame } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
+
 import { Link } from "wouter";
 import { fmt } from "@/lib/currency";
 import { format } from "date-fns";
@@ -98,6 +100,8 @@ export default function CustomersAdmin() {
   const [historyCustomer, setHistoryCustomer] = useState<Customer | null>(null);
   const [historyOrders, setHistoryOrders] = useState<OrderHistoryItem[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [nutritionCustomer, setNutritionCustomer] = useState<Customer | null>(null);
+
 
   const getInitials = (nameStr: string) => {
     if (!nameStr) return "U";
@@ -387,6 +391,9 @@ export default function CustomersAdmin() {
                           {c.visit_count}
                         </TableCell>
                         <TableCell className="text-right whitespace-nowrap">
+                          <Button variant="ghost" size="icon" title="Nutrition Tracker & Goals" onClick={() => setNutritionCustomer(c)} className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950">
+                            <Activity className="h-4 w-4" />
+                          </Button>
                           <Button variant="ghost" size="icon" title="Order History" onClick={() => openHistory(c)}>
                             <History className="h-4 w-4 text-muted-foreground" />
                           </Button>
@@ -394,6 +401,7 @@ export default function CustomersAdmin() {
                             <Edit className="h-4 w-4 text-muted-foreground" />
                           </Button>
                         </TableCell>
+
                       </TableRow>
                     ));
                   })()
@@ -717,6 +725,234 @@ export default function CustomersAdmin() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <CustomerNutritionModal
+        customer={nutritionCustomer}
+        open={nutritionCustomer !== null}
+        onOpenChange={(open) => { if (!open) setNutritionCustomer(null); }}
+      />
     </div>
   );
 }
+
+function CustomerNutritionModal({
+  customer,
+  open,
+  onOpenChange,
+}: {
+  customer: Customer | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
+  const [summary, setSummary] = useState<any>(null);
+  const [history, setHistory] = useState<any[]>([]);
+  const [showGoalForm, setShowGoalForm] = useState(false);
+
+  // Goal Form State
+  const [dailyCalorieGoal, setDailyCalorieGoal] = useState("2000");
+  const [dailyCaffeineLimit, setDailyCaffeineLimit] = useState("400");
+  const [dailySugarLimit, setDailySugarLimit] = useState("50");
+  const [dailyProteinGoal, setDailyProteinGoal] = useState("50");
+  const [savingGoals, setSavingGoals] = useState(false);
+
+  const loadData = useCallback(async () => {
+    if (!customer) return;
+    setLoading(true);
+    try {
+      const [sumData, histData] = await Promise.all([
+        api(`/api/customers/${customer.id}/nutrition/summary`),
+        api(`/api/customers/${customer.id}/nutrition/history`),
+      ]);
+      setSummary(sumData);
+      setHistory(histData || []);
+      if (sumData?.goals) {
+        setDailyCalorieGoal(String(sumData.goals.dailyCalorieGoal || 2000));
+        setDailyCaffeineLimit(String(sumData.goals.dailyCaffeineLimit || 400));
+        setDailySugarLimit(String(sumData.goals.dailySugarLimit || 50));
+        setDailyProteinGoal(String(sumData.goals.dailyProteinGoal || 50));
+      }
+    } catch {
+      toast({ variant: "destructive", title: "Failed to load customer nutrition data" });
+    } finally {
+      setLoading(false);
+    }
+  }, [customer, toast]);
+
+  useEffect(() => {
+    if (open && customer) {
+      loadData();
+    }
+  }, [open, customer, loadData]);
+
+  const handleSaveGoals = async () => {
+    if (!customer) return;
+    setSavingGoals(true);
+    try {
+      await api(`/api/customers/${customer.id}/nutrition/goals`, {
+        method: "PUT",
+        body: JSON.stringify({
+          dailyCalorieGoal,
+          dailyCaffeineLimit,
+          dailySugarLimit,
+          dailyProteinGoal,
+        }),
+      });
+      toast({ title: "Health Goals Updated!" });
+      setShowGoalForm(false);
+      loadData();
+    } catch {
+      toast({ variant: "destructive", title: "Failed to update health goals" });
+    } finally {
+      setSavingGoals(false);
+    }
+  };
+
+  const today = summary?.today || { calories: 0, caffeine: 0, totalSugars: 0, protein: 0 };
+  const goals = summary?.goals || { dailyCalorieGoal: 2000, dailyCaffeineLimit: 400, dailySugarLimit: 50, dailyProteinGoal: 50 };
+
+  const calPct = Math.min(100, Math.round((today.calories / (goals.dailyCalorieGoal || 2000)) * 100));
+  const caffPct = Math.min(100, Math.round((today.caffeine / (goals.dailyCaffeineLimit || 400)) * 100));
+  const sugPct = Math.min(100, Math.round((today.totalSugars / (goals.dailySugarLimit || 50)) * 100));
+  const protPct = Math.min(100, Math.round((today.protein / (goals.dailyProteinGoal || 50)) * 100));
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[700px] max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <div className="flex items-center justify-between">
+            <DialogTitle className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400">
+              <Activity className="h-5 w-5" /> Customer Nutrition Tracker: {customer?.name}
+            </DialogTitle>
+            <Button size="sm" variant="outline" className="gap-1.5 text-xs" onClick={() => setShowGoalForm(v => !v)}>
+              <Sparkles className="h-3.5 w-3.5 text-amber-500" /> {showGoalForm ? "Close Goals" : "Edit Goals"}
+            </Button>
+          </div>
+        </DialogHeader>
+
+        {showGoalForm ? (
+          <div className="p-4 rounded-lg border bg-amber-50/50 dark:bg-amber-950/20 space-y-4 my-2">
+            <div className="font-bold text-sm text-amber-900 dark:text-amber-200">Personalized Health Goals</div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label className="text-xs">Daily Calorie Target (kcal)</Label>
+                <Input type="number" className="h-8 text-sm mt-1" value={dailyCalorieGoal} onChange={e => setDailyCalorieGoal(e.target.value)} />
+              </div>
+              <div>
+                <Label className="text-xs">Daily Caffeine Limit (mg)</Label>
+                <Input type="number" className="h-8 text-sm mt-1" value={dailyCaffeineLimit} onChange={e => setDailyCaffeineLimit(e.target.value)} />
+              </div>
+              <div>
+                <Label className="text-xs">Daily Sugar Limit (g)</Label>
+                <Input type="number" className="h-8 text-sm mt-1" value={dailySugarLimit} onChange={e => setDailySugarLimit(e.target.value)} />
+              </div>
+              <div>
+                <Label className="text-xs">Daily Protein Target (g)</Label>
+                <Input type="number" className="h-8 text-sm mt-1" value={dailyProteinGoal} onChange={e => setDailyProteinGoal(e.target.value)} />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button size="sm" variant="ghost" onClick={() => setShowGoalForm(false)}>Cancel</Button>
+              <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white" onClick={handleSaveGoals} disabled={savingGoals}>
+                {savingGoals ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Save Goals"}
+              </Button>
+            </div>
+          </div>
+        ) : null}
+
+        {loading ? (
+          <div className="py-12 flex justify-center"><Loader2 className="h-8 w-8 animate-spin text-emerald-600" /></div>
+        ) : (
+          <div className="space-y-5 py-2">
+            <div className="grid grid-cols-4 gap-3">
+              <div className="p-3 rounded-lg border bg-amber-50/40 dark:bg-amber-950/20 space-y-1.5">
+                <div className="text-[11px] text-muted-foreground font-semibold flex items-center justify-between">
+                  <span>Calories</span>
+                  <span>{calPct}%</span>
+                </div>
+                <div className="text-lg font-black text-amber-800 dark:text-amber-300">{today.calories} <span className="text-xs font-normal">/ {goals.dailyCalorieGoal} kcal</span></div>
+                <Progress value={calPct} className="h-1.5 bg-amber-200 dark:bg-amber-900" />
+              </div>
+
+              <div className="p-3 rounded-lg border bg-stone-50 dark:bg-stone-900/40 space-y-1.5">
+                <div className="text-[11px] text-muted-foreground font-semibold flex items-center justify-between">
+                  <span>Caffeine</span>
+                  <span className={caffPct > 90 ? "text-destructive font-bold" : ""}>{caffPct}%</span>
+                </div>
+                <div className="text-lg font-black text-stone-900 dark:text-stone-100">{today.caffeine} <span className="text-xs font-normal">/ {goals.dailyCaffeineLimit} mg</span></div>
+                <Progress value={caffPct} className={`h-1.5 ${caffPct > 90 ? "bg-red-500" : "bg-stone-300 dark:bg-stone-700"}`} />
+              </div>
+
+              <div className="p-3 rounded-lg border bg-rose-50/40 dark:bg-rose-950/20 space-y-1.5">
+                <div className="text-[11px] text-muted-foreground font-semibold flex items-center justify-between">
+                  <span>Sugar</span>
+                  <span className={sugPct > 90 ? "text-destructive font-bold" : ""}>{sugPct}%</span>
+                </div>
+                <div className="text-lg font-black text-rose-700 dark:text-rose-300">{today.totalSugars} <span className="text-xs font-normal">/ {goals.dailySugarLimit} g</span></div>
+                <Progress value={sugPct} className={`h-1.5 ${sugPct > 90 ? "bg-red-500" : "bg-rose-200 dark:bg-rose-900"}`} />
+              </div>
+
+              <div className="p-3 rounded-lg border bg-blue-50/40 dark:bg-blue-950/20 space-y-1.5">
+                <div className="text-[11px] text-muted-foreground font-semibold flex items-center justify-between">
+                  <span>Protein</span>
+                  <span>{protPct}%</span>
+                </div>
+                <div className="text-lg font-black text-blue-700 dark:text-blue-300">{today.protein} <span className="text-xs font-normal">/ {goals.dailyProteinGoal} g</span></div>
+                <Progress value={protPct} className="h-1.5 bg-blue-200 dark:bg-blue-900" />
+              </div>
+            </div>
+
+            {summary?.weekly && (
+              <div className="flex items-center justify-between p-3 rounded-md bg-muted/40 text-xs text-muted-foreground border border-dashed">
+                <span><strong>7-Day Totals:</strong> {summary.weekly.itemsCount} Items Consumed</span>
+                <span><strong>Avg. Daily Calories:</strong> {summary.weekly.avgDailyCalories} kcal/day</span>
+                <span><strong>Avg. Daily Caffeine:</strong> {summary.weekly.avgDailyCaffeine} mg/day</span>
+              </div>
+            )}
+
+            <div>
+              <div className="font-bold text-xs mb-2 text-muted-foreground">Detailed Item Intake History</div>
+              {history.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground text-xs italic border rounded-md">No nutrition intake logged yet for this customer.</div>
+              ) : (
+                <div className="max-h-[300px] overflow-y-auto border rounded-md divide-y text-xs">
+                  {history.map((log: any) => (
+                    <div key={log.id} className="p-3 flex items-center justify-between bg-card hover:bg-muted/20 transition-colors">
+                      <div>
+                        <div className="font-bold text-sm">{log.drinkName} {log.quantity > 1 ? `(x${log.quantity})` : ""}</div>
+                        <div className="text-muted-foreground text-[11px] mt-0.5">
+                          {log.consumedAt ? format(new Date(log.consumedAt), "MMM dd, yyyy · HH:mm") : "—"}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="bg-amber-50 text-amber-900 border-amber-200">
+                          {Math.round(parseFloat(log.calories || 0))} kcal
+                        </Badge>
+                        {parseFloat(log.caffeine || 0) > 0 && (
+                          <Badge variant="outline" className="bg-stone-100 text-stone-800 border-stone-300 font-mono">
+                            ☕ {Math.round(parseFloat(log.caffeine || 0))} mg
+                          </Badge>
+                        )}
+                        {parseFloat(log.totalSugars || 0) > 0 && (
+                          <Badge variant="outline" className="bg-rose-50 text-rose-800 border-rose-200">
+                            🍬 {Math.round(parseFloat(log.totalSugars || 0))}g sugar
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+

@@ -1351,7 +1351,7 @@ router.post("/mobile/orders/:id/cancel", async (req, res): Promise<void> => {
     res.status(404).json({ error: "Order not found" });
     return;
   }
-  if (order.status !== "pending" && order.status !== "paid") {
+  if (order.status !== "pending") {
     res.status(400).json({ error: "Order can no longer be cancelled" });
     return;
   }

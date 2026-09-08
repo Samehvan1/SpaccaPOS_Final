@@ -69,6 +69,7 @@ import { broadcastEvent } from "../lib/sse";
 import { logActivity } from "../lib/activity-logger";
 import { requirePermission } from "../middleware/permissions";
 import { calculateDrinkData, resolveProductDiscount, calculateProductDiscountAmount } from "../lib/price-calculator";
+import { calculateCustomizationNutrition, logCustomerNutrition } from "../lib/nutrition-calculator";
 import {
   db,
   ordersTable,
@@ -623,6 +624,7 @@ router.post("/orders", async (req, res): Promise<void> => {
     drinkId: number; drinkName: string; kitchenStation: string; kitchenStationId: number | null; quantity: number;
     unitPrice: number; lineTotal: number; specialNotes: string | null;
     customizations: Customization[];
+    nutritionSummary: any;
   };
 
   let subtotal = 0;
@@ -650,6 +652,13 @@ router.post("/orders", async (req, res): Promise<void> => {
         customerSortOrder: c.customerSortOrder
       }));
 
+      // Compute nutrition per single drink unit
+      const singleItemCustomizations = calcData.customizations.map(c => ({
+        ingredientId: c.ingredientId,
+        consumedQty: c.consumedQty,
+      }));
+      const nutritionSummary = await calculateCustomizationNutrition(singleItemCustomizations);
+
       const unitPrice = calcData.totalPrice;
       const lineTotal = unitPrice * item.quantity;
       subtotal += lineTotal;
@@ -662,7 +671,8 @@ router.post("/orders", async (req, res): Promise<void> => {
         unitPrice, 
         lineTotal, 
         specialNotes: item.specialNotes ?? null, 
-        customizations 
+        customizations,
+        nutritionSummary,
       });
       console.log(`[KDS] Order Item: ${calcData.drink.name}, Assigned Station: ${calcData.drink.kitchenStation}`);
     } catch (e: any) {
@@ -1027,6 +1037,7 @@ router.post("/orders", async (req, res): Promise<void> => {
             specialNotes: item.specialNotes,
             kitchenStation: item.kitchenStation,
             kitchenStationId: item.kitchenStationId,
+            nutritionSummary: item.nutritionSummary,
           }).returning();
 
           if (item.customizations.length > 0) {
@@ -1048,7 +1059,12 @@ router.post("/orders", async (req, res): Promise<void> => {
             );
           }
 
-          currentSavedItems.push({ ...orderItem, customizations: item.customizations, kitchenStation: orderItem.kitchenStation });
+          currentSavedItems.push({
+            ...orderItem,
+            customizations: item.customizations,
+            kitchenStation: orderItem.kitchenStation,
+            nutritionSummary: item.nutritionSummary,
+          });
         }
 
         // ── Save Payments ──────────────────────────────────────────────────────
@@ -1081,7 +1097,33 @@ router.post("/orders", async (req, res): Promise<void> => {
 
       order = resTx.order;
       savedItems = resTx.savedItems;
+
+      // ── Customer Nutrition Intake Logging ─────────────────────────────────
+      if (parsed.data.customerPhone) {
+        try {
+          const [targetCust] = await db
+            .select({ id: customersTable.id })
+            .from(customersTable)
+            .where(eq(customersTable.phone, parsed.data.customerPhone.trim()))
+            .limit(1);
+
+          if (targetCust) {
+            const itemsToLog = savedItems.map(si => ({
+              orderItemId: si.id,
+              drinkId: si.drinkId,
+              drinkName: si.drinkName,
+              quantity: si.quantity,
+              nutritionSummary: si.nutritionSummary,
+            }));
+            await logCustomerNutrition(targetCust.id, order.id, itemsToLog);
+          }
+        } catch (nErr) {
+          console.error("[orders] Customer nutrition log error:", nErr);
+        }
+      }
+
       break; // Success!
+
     } catch (err: any) {
       if (err.message?.startsWith("INSUFFICIENT_POINTS:") || 
           err.message?.startsWith("CUSTOMER_NOT_FOUND:") || 

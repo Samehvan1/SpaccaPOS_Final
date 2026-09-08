@@ -1,4 +1,4 @@
-import { pgTable, serial, text, numeric, integer, timestamp, index } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, numeric, integer, timestamp, index, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { usersTable } from "./users";
@@ -68,8 +68,10 @@ export const orderItemsTable = pgTable("order_items", {
   refundedAt: timestamp("refunded_at", { withTimezone: true }),
   refundedAmount: numeric("refunded_amount", { precision: 8, scale: 2 }),
   readyAt: timestamp("ready_at", { withTimezone: true }),
+  nutritionSummary: jsonb("nutrition_summary").$type<Record<string, any>>(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
+
 }, (table) => {
   return {
     orderIdIdx: index("order_items_order_id_idx").on(table.orderId),

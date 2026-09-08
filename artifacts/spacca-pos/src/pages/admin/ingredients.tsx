@@ -15,7 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { ArrowLeft, Plus, AlertTriangle, Search, Edit, Trash2, Link2, Star, StarOff, ChevronRight, Package, Tag, Layers, FlaskConical, Check, X, Droplet, Droplets, RefreshCw, CheckCircle2, ChevronsUpDown, Loader2, Factory } from "lucide-react";
+import { ArrowLeft, Plus, AlertTriangle, Search, Edit, Trash2, Link2, Star, StarOff, ChevronRight, Package, Tag, Layers, FlaskConical, Check, X, Droplet, Droplets, RefreshCw, CheckCircle2, ChevronsUpDown, Loader2, Factory, Apple, Activity } from "lucide-react";
 
 const COMMON_UNITS = [
   "Kg", "Gram", "Liter", "ML", "Box", "Bag", "Bottle", "Cup", "Case", "Pack", "Gallon"
@@ -1163,6 +1163,9 @@ function InventoryTab() {
   const [modalLoading, setModalLoading] = useState(false);
   const [modalItems, setModalItems] = useState<{ name: string; kind: string }[]>([]);
 
+  // State for Nutrition Facts modal
+  const [nutritionTarget, setNutritionTarget] = useState<Ingredient | null>(null);
+
   const handleOpenLinks = async (ingredientId: number, name: string, type: "types" | "products") => {
     setModalTitle(`${type === "types" ? "Linked Types / Customization Options" : "Linked Drinks / Products"} for ${name}`);
     setModalItems([]);
@@ -1485,7 +1488,16 @@ function InventoryTab() {
                       <TableCell>
                         <Badge variant={ing.isActive ? "default" : "secondary"}>{ing.isActive ? "Active" : "Inactive"}</Badge>
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-right flex items-center justify-end gap-1">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          title="Nutrition Facts" 
+                          className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950" 
+                          onClick={() => setNutritionTarget(ing as Ingredient)}
+                        >
+                          <Apple className="h-4 w-4" />
+                        </Button>
                         <Button variant="ghost" size="icon" onClick={() => openEdit(ing as Ingredient)}><Edit className="h-4 w-4" /></Button>
                         <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDelete(ing.id)}><Trash2 className="h-4 w-4" /></Button>
                       </TableCell>
@@ -1806,9 +1818,16 @@ function InventoryTab() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <IngredientNutritionModal
+        open={nutritionTarget !== null}
+        onOpenChange={(open) => { if (!open) setNutritionTarget(null); }}
+        ingredient={nutritionTarget}
+      />
     </>
   );
 }
+
 
 // ── Root Page ─────────────────────────────────────────────────────────────
 
@@ -2615,6 +2634,321 @@ function SlotTemplatesTab() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+function IngredientNutritionModal({
+  open,
+  onOpenChange,
+  ingredient,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  ingredient: Ingredient | null;
+}) {
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const [servingSizeQty, setServingSizeQty] = useState("1");
+  const [servingSizeUnit, setServingSizeUnit] = useState("unit");
+  const [calories, setCalories] = useState("0");
+  const [protein, setProtein] = useState("0");
+  const [totalCarbs, setTotalCarbs] = useState("0");
+  const [dietaryFiber, setDietaryFiber] = useState("0");
+  const [totalSugars, setTotalSugars] = useState("0");
+  const [addedSugars, setAddedSugars] = useState("0");
+  const [totalFat, setTotalFat] = useState("0");
+  const [saturatedFat, setSaturatedFat] = useState("0");
+  const [transFat, setTransFat] = useState("0");
+  const [cholesterol, setCholesterol] = useState("0");
+  const [sodium, setSodium] = useState("0");
+  const [caffeine, setCaffeine] = useState("0");
+  const [allergens, setAllergens] = useState<string[]>([]);
+
+  const ALLERGEN_OPTIONS = [
+    { id: "dairy", label: "Milk / Dairy" },
+    { id: "gluten", label: "Gluten / Wheat" },
+    { id: "nuts", label: "Tree Nuts" },
+    { id: "peanuts", label: "Peanuts" },
+    { id: "soy", label: "Soy" },
+    { id: "egg", label: "Eggs" },
+    { id: "sesame", label: "Sesame" },
+    { id: "sulfites", label: "Sulfites" },
+  ];
+
+  useEffect(() => {
+    if (!open || !ingredient) return;
+    setLoading(true);
+    fetch(`/api/ingredients/${ingredient.id}/nutrition`)
+      .then((res) => res.json())
+      .then((data) => {
+        setServingSizeQty(data.servingSizeQty || "1");
+        setServingSizeUnit(data.servingSizeUnit || ingredient.unit || "unit");
+        setCalories(data.calories || "0");
+        setProtein(data.protein || "0");
+        setTotalCarbs(data.totalCarbs || "0");
+        setDietaryFiber(data.dietaryFiber || "0");
+        setTotalSugars(data.totalSugars || "0");
+        setAddedSugars(data.addedSugars || "0");
+        setTotalFat(data.totalFat || "0");
+        setSaturatedFat(data.saturatedFat || "0");
+        setTransFat(data.transFat || "0");
+        setCholesterol(data.cholesterol || "0");
+        setSodium(data.sodium || "0");
+        setCaffeine(data.caffeine || "0");
+        setAllergens(Array.isArray(data.allergens) ? data.allergens : []);
+      })
+      .catch(() => {
+        toast({ variant: "destructive", title: "Failed to load nutrition data" });
+      })
+      .finally(() => setLoading(false));
+  }, [open, ingredient]);
+
+  const handleSave = async () => {
+    if (!ingredient) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/ingredients/${ingredient.id}/nutrition`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          servingSizeQty,
+          servingSizeUnit,
+          calories,
+          protein,
+          totalCarbs,
+          dietaryFiber,
+          totalSugars,
+          addedSugars,
+          totalFat,
+          saturatedFat,
+          transFat,
+          cholesterol,
+          sodium,
+          caffeine,
+          allergens,
+        }),
+      });
+      if (!res.ok) throw new Error("Save failed");
+      toast({ title: "Nutrition Facts Updated!" });
+      onOpenChange(false);
+    } catch {
+      toast({ variant: "destructive", title: "Error saving nutrition facts" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const toggleAllergen = (id: string) => {
+    setAllergens((prev) =>
+      prev.includes(id) ? prev.filter((a) => a !== id) : [...prev, id]
+    );
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[620px] max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-emerald-700">
+            <Apple className="h-5 w-5" /> Nutrition Facts: {ingredient?.name}
+          </DialogTitle>
+        </DialogHeader>
+        {loading ? (
+          <div className="flex justify-center p-8">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : (
+          <div className="space-y-4 py-2">
+            <div className="bg-emerald-50/60 dark:bg-emerald-950/20 p-3 rounded-lg border border-emerald-200 dark:border-emerald-800 grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs font-semibold">Serving Qty</Label>
+                <Input
+                  className="h-8 text-sm mt-1"
+                  type="number"
+                  step="0.1"
+                  value={servingSizeQty}
+                  onChange={(e) => setServingSizeQty(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label className="text-xs font-semibold">Serving Unit</Label>
+                <Input
+                  className="h-8 text-sm mt-1"
+                  value={servingSizeUnit}
+                  onChange={(e) => setServingSizeUnit(e.target.value)}
+                  placeholder={ingredient?.unit || "ml"}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <Label className="text-xs font-medium text-amber-700">Calories (kcal)</Label>
+                <Input
+                  className="h-8 text-sm mt-1 border-amber-300 focus-visible:ring-amber-500"
+                  type="number"
+                  step="0.1"
+                  value={calories}
+                  onChange={(e) => setCalories(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label className="text-xs font-medium text-amber-900">Caffeine (mg)</Label>
+                <Input
+                  className="h-8 text-sm mt-1 border-amber-400"
+                  type="number"
+                  step="0.1"
+                  value={caffeine}
+                  onChange={(e) => setCaffeine(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label className="text-xs font-medium text-rose-600">Total Sugars (g)</Label>
+                <Input
+                  className="h-8 text-sm mt-1 border-rose-300"
+                  type="number"
+                  step="0.1"
+                  value={totalSugars}
+                  onChange={(e) => setTotalSugars(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label className="text-xs font-medium text-blue-600">Protein (g)</Label>
+                <Input
+                  className="h-8 text-sm mt-1 border-blue-300"
+                  type="number"
+                  step="0.1"
+                  value={protein}
+                  onChange={(e) => setProtein(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label className="text-xs font-medium text-indigo-600">Total Carbs (g)</Label>
+                <Input
+                  className="h-8 text-sm mt-1"
+                  type="number"
+                  step="0.1"
+                  value={totalCarbs}
+                  onChange={(e) => setTotalCarbs(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label className="text-xs font-medium text-purple-600">Total Fat (g)</Label>
+                <Input
+                  className="h-8 text-sm mt-1"
+                  type="number"
+                  step="0.1"
+                  value={totalFat}
+                  onChange={(e) => setTotalFat(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="border rounded-md p-3 space-y-3 bg-muted/20">
+              <div className="text-xs font-semibold text-muted-foreground">Detailed Nutrient Specs</div>
+              <div className="grid grid-cols-3 gap-3 text-xs">
+                <div>
+                  <Label className="text-[11px]">Saturated Fat (g)</Label>
+                  <Input
+                    className="h-7 text-xs mt-1"
+                    type="number"
+                    step="0.1"
+                    value={saturatedFat}
+                    onChange={(e) => setSaturatedFat(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label className="text-[11px]">Trans Fat (g)</Label>
+                  <Input
+                    className="h-7 text-xs mt-1"
+                    type="number"
+                    step="0.1"
+                    value={transFat}
+                    onChange={(e) => setTransFat(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label className="text-[11px]">Dietary Fiber (g)</Label>
+                  <Input
+                    className="h-7 text-xs mt-1"
+                    type="number"
+                    step="0.1"
+                    value={dietaryFiber}
+                    onChange={(e) => setDietaryFiber(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label className="text-[11px]">Added Sugars (g)</Label>
+                  <Input
+                    className="h-7 text-xs mt-1"
+                    type="number"
+                    step="0.1"
+                    value={addedSugars}
+                    onChange={(e) => setAddedSugars(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label className="text-[11px]">Cholesterol (mg)</Label>
+                  <Input
+                    className="h-7 text-xs mt-1"
+                    type="number"
+                    step="0.1"
+                    value={cholesterol}
+                    onChange={(e) => setCholesterol(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label className="text-[11px]">Sodium (mg)</Label>
+                  <Input
+                    className="h-7 text-xs mt-1"
+                    type="number"
+                    step="0.1"
+                    value={sodium}
+                    onChange={(e) => setSodium(e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <Label className="text-xs font-semibold text-destructive flex items-center gap-1">
+                <AlertTriangle className="h-3.5 w-3.5" /> Allergen Warnings
+              </Label>
+              <div className="grid grid-cols-4 gap-2 mt-2">
+                {ALLERGEN_OPTIONS.map((a) => {
+                  const checked = allergens.includes(a.id);
+                  return (
+                    <button
+                      type="button"
+                      key={a.id}
+                      onClick={() => toggleAllergen(a.id)}
+                      className={`text-xs px-2 py-1.5 rounded-md border flex items-center gap-1.5 transition-colors ${
+                        checked
+                          ? "bg-rose-100 text-rose-800 border-rose-300 dark:bg-rose-950 dark:text-rose-200 font-medium"
+                          : "bg-background hover:bg-muted text-muted-foreground"
+                      }`}
+                    >
+                      <Checkbox checked={checked} onCheckedChange={() => toggleAllergen(a.id)} className="h-3.5 w-3.5" />
+                      {a.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
+        <DialogFooter className="gap-2">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5" onClick={handleSave} disabled={saving}>
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />} Save Nutrition Facts
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

@@ -150,6 +150,7 @@ export declare const ListDrinksResponseItem: z.ZodObject<{
     defaultPrice: z.ZodOptional<z.ZodNumber>;
     imageUrl: z.ZodNullable<z.ZodString>;
     isActive: z.ZodBoolean;
+    isFeatured: z.ZodOptional<z.ZodBoolean>;
     prepTimeSeconds: z.ZodNumber;
     cupSizeMl: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
     cupIngredientId: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
@@ -171,6 +172,7 @@ export declare const ListDrinksResponseItem: z.ZodObject<{
     createdAt: string;
     updatedAt: string;
     defaultPrice?: number | undefined;
+    isFeatured?: boolean | undefined;
     cupSizeMl?: number | null | undefined;
     cupIngredientId?: number | null | undefined;
     isCustomizable?: boolean | undefined;
@@ -189,6 +191,7 @@ export declare const ListDrinksResponseItem: z.ZodObject<{
     createdAt: string;
     updatedAt: string;
     defaultPrice?: number | undefined;
+    isFeatured?: boolean | undefined;
     cupSizeMl?: number | null | undefined;
     cupIngredientId?: number | null | undefined;
     isCustomizable?: boolean | undefined;
@@ -206,6 +209,7 @@ export declare const ListDrinksResponse: z.ZodArray<z.ZodObject<{
     defaultPrice: z.ZodOptional<z.ZodNumber>;
     imageUrl: z.ZodNullable<z.ZodString>;
     isActive: z.ZodBoolean;
+    isFeatured: z.ZodOptional<z.ZodBoolean>;
     prepTimeSeconds: z.ZodNumber;
     cupSizeMl: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
     cupIngredientId: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
@@ -227,6 +231,7 @@ export declare const ListDrinksResponse: z.ZodArray<z.ZodObject<{
     createdAt: string;
     updatedAt: string;
     defaultPrice?: number | undefined;
+    isFeatured?: boolean | undefined;
     cupSizeMl?: number | null | undefined;
     cupIngredientId?: number | null | undefined;
     isCustomizable?: boolean | undefined;
@@ -245,6 +250,7 @@ export declare const ListDrinksResponse: z.ZodArray<z.ZodObject<{
     createdAt: string;
     updatedAt: string;
     defaultPrice?: number | undefined;
+    isFeatured?: boolean | undefined;
     cupSizeMl?: number | null | undefined;
     cupIngredientId?: number | null | undefined;
     isCustomizable?: boolean | undefined;
@@ -260,6 +266,7 @@ export declare const CreateDrinkBody: z.ZodObject<{
     basePrice: z.ZodNumber;
     imageUrl: z.ZodOptional<z.ZodString>;
     isActive: z.ZodOptional<z.ZodBoolean>;
+    isFeatured: z.ZodOptional<z.ZodBoolean>;
     prepTimeSeconds: z.ZodOptional<z.ZodNumber>;
     kitchenStation: z.ZodOptional<z.ZodString>;
     categoryId: z.ZodOptional<z.ZodNumber>;
@@ -306,6 +313,7 @@ export declare const CreateDrinkBody: z.ZodObject<{
     description?: string | undefined;
     imageUrl?: string | undefined;
     isActive?: boolean | undefined;
+    isFeatured?: boolean | undefined;
     prepTimeSeconds?: number | undefined;
     cupIngredientId?: number | undefined;
     isCustomizable?: boolean | undefined;
@@ -331,6 +339,7 @@ export declare const CreateDrinkBody: z.ZodObject<{
     description?: string | undefined;
     imageUrl?: string | undefined;
     isActive?: boolean | undefined;
+    isFeatured?: boolean | undefined;
     prepTimeSeconds?: number | undefined;
     cupIngredientId?: number | undefined;
     isCustomizable?: boolean | undefined;
@@ -368,6 +377,7 @@ export declare const GetDrinkResponse: z.ZodIntersection<z.ZodObject<{
     defaultPrice: z.ZodOptional<z.ZodNumber>;
     imageUrl: z.ZodNullable<z.ZodString>;
     isActive: z.ZodBoolean;
+    isFeatured: z.ZodOptional<z.ZodBoolean>;
     prepTimeSeconds: z.ZodNumber;
     cupSizeMl: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
     cupIngredientId: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
@@ -389,6 +399,7 @@ export declare const GetDrinkResponse: z.ZodIntersection<z.ZodObject<{
     createdAt: string;
     updatedAt: string;
     defaultPrice?: number | undefined;
+    isFeatured?: boolean | undefined;
     cupSizeMl?: number | null | undefined;
     cupIngredientId?: number | null | undefined;
     isCustomizable?: boolean | undefined;
@@ -407,6 +418,7 @@ export declare const GetDrinkResponse: z.ZodIntersection<z.ZodObject<{
     createdAt: string;
     updatedAt: string;
     defaultPrice?: number | undefined;
+    isFeatured?: boolean | undefined;
     cupSizeMl?: number | null | undefined;
     cupIngredientId?: number | null | undefined;
     isCustomizable?: boolean | undefined;
@@ -496,6 +508,7 @@ export declare const UpdateDrinkBody: z.ZodObject<{
     basePrice: z.ZodOptional<z.ZodNumber>;
     imageUrl: z.ZodOptional<z.ZodString>;
     isActive: z.ZodOptional<z.ZodBoolean>;
+    isFeatured: z.ZodOptional<z.ZodBoolean>;
     prepTimeSeconds: z.ZodOptional<z.ZodNumber>;
     kitchenStation: z.ZodOptional<z.ZodString>;
     categoryId: z.ZodOptional<z.ZodNumber>;
@@ -511,6 +524,7 @@ export declare const UpdateDrinkBody: z.ZodObject<{
     basePrice?: number | undefined;
     imageUrl?: string | undefined;
     isActive?: boolean | undefined;
+    isFeatured?: boolean | undefined;
     prepTimeSeconds?: number | undefined;
     cupIngredientId?: number | undefined;
     isCustomizable?: boolean | undefined;
@@ -525,6 +539,7 @@ export declare const UpdateDrinkBody: z.ZodObject<{
     basePrice?: number | undefined;
     imageUrl?: string | undefined;
     isActive?: boolean | undefined;
+    isFeatured?: boolean | undefined;
     prepTimeSeconds?: number | undefined;
     cupIngredientId?: number | undefined;
     isCustomizable?: boolean | undefined;
@@ -543,6 +558,7 @@ export declare const UpdateDrinkResponse: z.ZodObject<{
     defaultPrice: z.ZodOptional<z.ZodNumber>;
     imageUrl: z.ZodNullable<z.ZodString>;
     isActive: z.ZodBoolean;
+    isFeatured: z.ZodOptional<z.ZodBoolean>;
     prepTimeSeconds: z.ZodNumber;
     cupSizeMl: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
     cupIngredientId: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
@@ -564,6 +580,7 @@ export declare const UpdateDrinkResponse: z.ZodObject<{
     createdAt: string;
     updatedAt: string;
     defaultPrice?: number | undefined;
+    isFeatured?: boolean | undefined;
     cupSizeMl?: number | null | undefined;
     cupIngredientId?: number | null | undefined;
     isCustomizable?: boolean | undefined;
@@ -582,6 +599,7 @@ export declare const UpdateDrinkResponse: z.ZodObject<{
     createdAt: string;
     updatedAt: string;
     defaultPrice?: number | undefined;
+    isFeatured?: boolean | undefined;
     cupSizeMl?: number | null | undefined;
     cupIngredientId?: number | null | undefined;
     isCustomizable?: boolean | undefined;

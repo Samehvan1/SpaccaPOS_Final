@@ -632,14 +632,16 @@ export default function ReportsPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-6 mb-8 h-12 print:hidden">
+        <TabsList className="grid w-full grid-cols-7 mb-8 h-12 print:hidden">
           <TabsTrigger value="dashboard" className="text-base font-semibold">Dashboard</TabsTrigger>
           <TabsTrigger value="sales" className="text-base font-semibold">Sales Report</TabsTrigger>
           <TabsTrigger value="drinks" className="text-base font-semibold">Drinks Report</TabsTrigger>
           <TabsTrigger value="stats" className="text-base font-semibold">Order Statistics</TabsTrigger>
           <TabsTrigger value="performance" className="text-base font-semibold">Performance</TabsTrigger>
           <TabsTrigger value="customers" className="text-base font-semibold">Customers Report</TabsTrigger>
+          <TabsTrigger value="nutrition" className="text-base font-semibold text-emerald-700 dark:text-emerald-400">Nutrition</TabsTrigger>
         </TabsList>
+
 
 
         {activeTab !== "dashboard" && (
@@ -2221,7 +2223,12 @@ export default function ReportsPage() {
             </>
           )}
         </TabsContent>
+        <TabsContent value="nutrition" className="flex flex-col gap-6 animate-in fade-in duration-500">
+          <NutritionReportsTab />
+        </TabsContent>
       </Tabs>
+
+
 
       {/* Order Details Modal */}
       <Dialog open={!!selectedOrderDetails} onOpenChange={(open) => !open && setSelectedOrderDetails(null)}>
@@ -2451,3 +2458,126 @@ export default function ReportsPage() {
     </div>
   );
 }
+
+function NutritionReportsTab() {
+  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<any>(null);
+
+  useEffect(() => {
+    fetch("/api/nutrition/reports")
+      .then((res) => res.json())
+      .then((resData) => setData(resData))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) {
+    return <div className="py-16 flex justify-center"><Loader2 className="h-8 w-8 animate-spin text-emerald-600" /></div>;
+  }
+
+  const summary = data?.summary || {};
+  const topCaffeine = data?.topCaffeinatedDrinks || [];
+  const topSugars = data?.topSugaryDrinks || [];
+
+  return (
+    <div className="space-y-6 animate-in fade-in">
+      <div className="grid grid-cols-4 gap-4">
+        <Card className="bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200">
+          <CardContent className="p-4">
+            <div className="text-xs text-muted-foreground font-medium">Logged Item Servings</div>
+            <div className="text-2xl font-black text-emerald-800 dark:text-emerald-300 mt-1">{summary.totalItemsLogged || 0}</div>
+          </CardContent>
+        </Card>
+        <Card className="bg-amber-50/50 dark:bg-amber-950/20 border-amber-200">
+          <CardContent className="p-4">
+            <div className="text-xs text-muted-foreground font-medium">Total Calories Served</div>
+            <div className="text-2xl font-black text-amber-800 dark:text-amber-300 mt-1">{summary.totalCaloriesServed?.toLocaleString() || 0} <span className="text-xs font-normal">kcal</span></div>
+          </CardContent>
+        </Card>
+        <Card className="bg-stone-50 dark:bg-stone-900/40 border-stone-300">
+          <CardContent className="p-4">
+            <div className="text-xs text-muted-foreground font-medium">Total Caffeine Served</div>
+            <div className="text-2xl font-black text-stone-900 dark:text-stone-100 mt-1">☕ {summary.totalCaffeineGramsServed || 0} <span className="text-xs font-normal">grams</span></div>
+          </CardContent>
+        </Card>
+        <Card className="bg-rose-50/50 dark:bg-rose-950/20 border-rose-200">
+          <CardContent className="p-4">
+            <div className="text-xs text-muted-foreground font-medium">Total Sugar Served</div>
+            <div className="text-2xl font-black text-rose-700 dark:text-rose-300 mt-1">🍬 {summary.totalSugarKgServed || 0} <span className="text-xs font-normal">kg</span></div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-2 gap-6">
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-bold flex items-center gap-2 text-amber-900 dark:text-amber-200">
+              ☕ Top Caffeinated Drinks Sold
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Drink Name</TableHead>
+                  <TableHead className="text-center">Orders</TableHead>
+                  <TableHead className="text-right">Avg Caffeine</TableHead>
+                  <TableHead className="text-right">Avg Calories</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {topCaffeine.length === 0 ? (
+                  <TableRow><TableCell colSpan={4} className="text-center italic py-6 text-muted-foreground">No data logged yet.</TableCell></TableRow>
+                ) : (
+                  topCaffeine.map((item: any, idx: number) => (
+                    <TableRow key={idx}>
+                      <TableCell className="font-semibold text-xs">{item.drink_name}</TableCell>
+                      <TableCell className="text-center text-xs">{item.times_ordered}</TableCell>
+                      <TableCell className="text-right font-mono font-bold text-xs text-stone-800 dark:text-stone-200">{Math.round(parseFloat(item.avg_caffeine || 0))} mg</TableCell>
+                      <TableCell className="text-right text-xs text-amber-700">{Math.round(parseFloat(item.avg_calories || 0))} kcal</TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-bold flex items-center gap-2 text-rose-700 dark:text-rose-300">
+              🍬 Top Sugary Drinks Sold
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Drink Name</TableHead>
+                  <TableHead className="text-center">Orders</TableHead>
+                  <TableHead className="text-right">Avg Sugar</TableHead>
+                  <TableHead className="text-right">Avg Calories</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {topSugars.length === 0 ? (
+                  <TableRow><TableCell colSpan={4} className="text-center italic py-6 text-muted-foreground">No data logged yet.</TableCell></TableRow>
+                ) : (
+                  topSugars.map((item: any, idx: number) => (
+                    <TableRow key={idx}>
+                      <TableCell className="font-semibold text-xs">{item.drink_name}</TableCell>
+                      <TableCell className="text-center text-xs">{item.times_ordered}</TableCell>
+                      <TableCell className="text-right font-mono font-bold text-xs text-rose-700 dark:text-rose-300">{Math.round(parseFloat(item.avg_sugars || 0))} g</TableCell>
+                      <TableCell className="text-right text-xs text-amber-700">{Math.round(parseFloat(item.avg_calories || 0))} kcal</TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+

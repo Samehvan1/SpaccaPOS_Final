@@ -16,6 +16,7 @@ export interface Drink {
     /** @nullable */
     imageUrl: string | null;
     isActive: boolean;
+    isFeatured?: boolean;
     prepTimeSeconds: number;
     /** @nullable */
     cupSizeMl?: number | null;

@@ -6,8 +6,10 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { CupSimulator, type CupLayer } from "@/components/cup-simulator";
+import { NutritionFactsWidget } from "@/components/NutritionFactsWidget";
 import { fmt } from "@/lib/currency";
 import { Drink } from "@workspace/api-client-react";
+
 
 interface CustomizerDialogProps {
   isOpen: boolean;
@@ -122,12 +124,27 @@ export const CustomizerDialog: React.FC<CustomizerDialogProps> = ({
         </DialogHeader>
 
         <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4">
+          {/* Live Nutrition Facts Widget */}
+          {activeDrink && (
+            <div className="mb-4">
+              <NutritionFactsWidget
+                drinkId={activeDrink.id}
+                selections={Object.entries(selections).map(([slotIdStr, selectionVal]) => ({
+                  slotId: parseInt(slotIdStr, 10),
+                  ingredientTypeId: selectionVal,
+                  typeVolumeId: subSelections[parseInt(slotIdStr, 10)] || null,
+                }))}
+              />
+            </div>
+          )}
+
           {isLoadingDrinkDetail ? (
             <div className="space-y-4">
               <div className="h-20 bg-muted animate-pulse rounded-md" />
               <div className="h-20 bg-muted animate-pulse rounded-md" />
             </div>
           ) : (
+
             <div className="space-y-5">
               {(drinkDetail?.slots as any[])
                 ?.filter((s) => (s.customerSortOrder ?? s.sortOrder ?? 1) > 0)
