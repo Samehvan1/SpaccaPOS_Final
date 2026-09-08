@@ -130,7 +130,7 @@ rolesRouter.delete("/:key", requirePermission("roles:manage"), async (req, res):
 // GET /permissions
 rolesRouter.get("/permissions/list", requirePermission("roles:view"), async (req, res): Promise<void> => {
   try {
-    const all = await db.select().from(permissionsTable);
+    const all = await db.select().from(permissionsTable).orderBy(permissionsTable.key);
     res.json(all);
   } catch (error: any) {
     console.error("GET /permissions/list error:", error?.message || error);

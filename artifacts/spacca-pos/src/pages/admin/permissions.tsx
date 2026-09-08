@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
+
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { 
   Table,
@@ -73,6 +74,11 @@ export default function PermissionsAdmin() {
       return res.json();
     }
   });
+
+  const sortedPermissions = useMemo(() => {
+    return [...permissions].sort((a: any, b: any) => (a.key || "").localeCompare(b.key || ""));
+  }, [permissions]);
+
 
   const handleOpenRoleDialog = async (role?: any) => {
     if (role) {
@@ -331,7 +337,7 @@ export default function PermissionsAdmin() {
                 <TableRow>
                   <TableCell colSpan={3} className="text-center py-20 text-muted-foreground">No permissions registered.</TableCell>
                 </TableRow>
-              ) : permissions.map((perm: any) => (
+              ) : sortedPermissions.map((perm: any) => (
                 <TableRow key={perm.id || perm.key} className="hover:bg-muted/30 transition-colors">
                   <TableCell className="font-mono text-sm font-semibold">
                     <div className="flex items-center gap-2">
@@ -396,7 +402,7 @@ export default function PermissionsAdmin() {
               <Label>Permissions Mapped to Role</Label>
               <ScrollArea className="flex-1 border rounded-md p-4 bg-muted/5">
                 <div className="space-y-4">
-                  {permissions.map((perm: any) => (
+                  {sortedPermissions.map((perm: any) => (
                     <div key={perm.key} className="flex items-start space-x-3 space-y-0">
                       <Checkbox 
                         id={`perm-${perm.key}`} 

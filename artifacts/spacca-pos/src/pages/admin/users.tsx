@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { 
   useListUsers, 
@@ -90,6 +90,10 @@ export default function AdminUsers() {
       return res.json();
     }
   });
+
+  const sortedPermissionsList = useMemo(() => {
+    return [...permissionsList].sort((a: any, b: any) => (a.key || "").localeCompare(b.key || ""));
+  }, [permissionsList]);
 
   // Fetch branches
   const { data: branches = [] } = useQuery({
@@ -389,7 +393,7 @@ export default function AdminUsers() {
           <div className="flex-1 min-h-0 flex flex-col">
             <ScrollArea className="h-[400px] border rounded-md p-4 my-4 bg-muted/5">
               <div className="space-y-4">
-                {permissionsList.map((perm: any) => (
+                {sortedPermissionsList.map((perm: any) => (
                   <div key={perm.key} className="flex items-center justify-between group">
                     <div className="grid gap-1">
                       <Label className="text-sm font-medium">{perm.key}</Label>
