@@ -42,6 +42,7 @@ import {
   productDrinkDiscountsTable,
   customerNutritionLogsTable,
   customerNutritionGoalsTable,
+  ingredientNutritionTable,
 } from "@workspace/db";
 import { serializeDates } from "../lib/serialize";
 import { broadcastEvent } from "../lib/sse";
@@ -878,6 +879,7 @@ async function buildMobileRecipeSlots(drinkId: number): Promise<any[]> {
           return {
             typeOptionId: to.id,
             ingredientTypeId: to.ingredientTypeId,
+            inventoryIngredientId: ingType.inventoryIngredientId ?? null,
             typeName: ingType.name ?? "",
             extraCost: Number(to.extraCost ?? ingType.extraCost ?? 0),
             isDefault: to.isDefault ?? false,
@@ -915,6 +917,7 @@ async function buildMobileRecipeSlots(drinkId: number): Promise<any[]> {
         options: ingredientOptionsForSlot.map((o) => ({
           optionId: o.id,
           label: o.label,
+          linkedIngredientId: o.linkedIngredientId ?? null,
           extraCost: Number(o.extraCost ?? 0),
           isDefault: o.isDefault ?? false,
           isAvailable: true,
@@ -1538,6 +1541,101 @@ router.post("/mobile/nutrition/calculate", async (req, res): Promise<void> => {
 });
 
 // �� Nutrition: Summary (today + goals) ������������������������������������
+// ── Nutrition: Per-ingredient facts for a drink's recipe (customize page) ────
+// Returns a map ingredientId -> { servingSizeQty, servingSizeUnit, calories, ... }
+// for every ingredient referenced by the drink's customization recipe. The mobile
+// app fetches this ONCE per drink and computes drink nutrition locally on each
+// selection change (no per-selection network calls).
+router.get("/mobile/nutrition/ingredients", async (req, res): Promise<void> => {
+  const customerId = requireCustomer(req, res);
+  if (!customerId) return;
+
+  const drinkId = parseInt(req.query.drinkId as string, 10);
+  if (isNaN(drinkId)) {
+    res.status(400).json({ error: "drinkId is required" });
+    return;
+  }
+
+  try {
+    const [drink] = await db.select().from(drinksTable).where(eq(drinksTable.id, drinkId)).limit(1);
+    if (!drink) {
+      res.status(404).json({ error: "Drink not found" });
+      return;
+    }
+
+    const recipeSlots = await buildMobileRecipeSlots(drinkId);
+
+    // Collect every ingredient id referenced by the recipe.
+    const ingredientIds = new Set<number>();
+    if (drink.cupIngredientId) ingredientIds.add(drink.cupIngredientId);
+    for (const slot of recipeSlots) {
+      if (slot.ingredientId) ingredientIds.add(slot.ingredientId);
+      for (const to of slot.typeOptions ?? []) {
+        if (to.inventoryIngredientId) ingredientIds.add(to.inventoryIngredientId);
+      }
+      for (const opt of slot.options ?? []) {
+        if (opt.linkedIngredientId) ingredientIds.add(opt.linkedIngredientId);
+      }
+    }
+
+    const idList = Array.from(ingredientIds);
+    const nutritionRows = idList.length > 0
+      ? await db
+          .select({
+            ingredientId: ingredientNutritionTable.ingredientId,
+            servingSizeQty: ingredientNutritionTable.servingSizeQty,
+            servingSizeUnit: ingredientNutritionTable.servingSizeUnit,
+            calories: ingredientNutritionTable.calories,
+            protein: ingredientNutritionTable.protein,
+            totalCarbs: ingredientNutritionTable.totalCarbs,
+            dietaryFiber: ingredientNutritionTable.dietaryFiber,
+            totalSugars: ingredientNutritionTable.totalSugars,
+            addedSugars: ingredientNutritionTable.addedSugars,
+            totalFat: ingredientNutritionTable.totalFat,
+            saturatedFat: ingredientNutritionTable.saturatedFat,
+            transFat: ingredientNutritionTable.transFat,
+            cholesterol: ingredientNutritionTable.cholesterol,
+            sodium: ingredientNutritionTable.sodium,
+            caffeine: ingredientNutritionTable.caffeine,
+            allergens: ingredientNutritionTable.allergens,
+          })
+          .from(ingredientNutritionTable)
+          .where(inArray(ingredientNutritionTable.ingredientId, idList))
+      : [];
+
+    // Build map, defaulting missing ingredients to zero facts.
+    const map: Record<number, any> = {};
+    for (const id of idList) {
+      map[id] = {
+        ingredientId: id,
+        servingSizeQty: "1",
+        servingSizeUnit: "unit",
+        calories: "0",
+        protein: "0",
+        totalCarbs: "0",
+        dietaryFiber: "0",
+        totalSugars: "0",
+        addedSugars: "0",
+        totalFat: "0",
+        saturatedFat: "0",
+        transFat: "0",
+        cholesterol: "0",
+        sodium: "0",
+        caffeine: "0",
+        allergens: [],
+      };
+    }
+    for (const row of nutritionRows) {
+      map[row.ingredientId] = row;
+    }
+
+    res.json({ drinkId, ingredients: map });
+  } catch (e: any) {
+    console.error("[mobile] nutrition ingredients error:", e);
+    res.status(500).json({ error: "Failed to load ingredient nutrition" });
+  }
+});
+
 router.get("/mobile/nutrition/summary", async (req, res): Promise<void> => {
   const customerId = requireCustomer(req, res);
   if (!customerId) return;

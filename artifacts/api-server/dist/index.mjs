@@ -90523,6 +90523,7 @@ async function buildMobileRecipeSlots(drinkId) {
         return {
           typeOptionId: to.id,
           ingredientTypeId: to.ingredientTypeId,
+          inventoryIngredientId: ingType.inventoryIngredientId ?? null,
           typeName: ingType.name ?? "",
           extraCost: Number(to.extraCost ?? ingType.extraCost ?? 0),
           isDefault: to.isDefault ?? false,
@@ -90553,6 +90554,7 @@ async function buildMobileRecipeSlots(drinkId) {
         options: ingredientOptionsForSlot.map((o) => ({
           optionId: o.id,
           label: o.label,
+          linkedIngredientId: o.linkedIngredientId ?? null,
           extraCost: Number(o.extraCost ?? 0),
           isDefault: o.isDefault ?? false,
           isAvailable: true,
@@ -91039,6 +91041,81 @@ router17.post("/mobile/nutrition/calculate", async (req, res) => {
     }
     console.error("[mobile] nutrition calculate error:", e);
     res.status(500).json({ error: "Failed to calculate nutrition" });
+  }
+});
+router17.get("/mobile/nutrition/ingredients", async (req, res) => {
+  const customerId = requireCustomer(req, res);
+  if (!customerId) return;
+  const drinkId = parseInt(req.query.drinkId, 10);
+  if (isNaN(drinkId)) {
+    res.status(400).json({ error: "drinkId is required" });
+    return;
+  }
+  try {
+    const [drink] = await db.select().from(drinksTable).where(eq(drinksTable.id, drinkId)).limit(1);
+    if (!drink) {
+      res.status(404).json({ error: "Drink not found" });
+      return;
+    }
+    const recipeSlots = await buildMobileRecipeSlots(drinkId);
+    const ingredientIds = /* @__PURE__ */ new Set();
+    if (drink.cupIngredientId) ingredientIds.add(drink.cupIngredientId);
+    for (const slot of recipeSlots) {
+      if (slot.ingredientId) ingredientIds.add(slot.ingredientId);
+      for (const to of slot.typeOptions ?? []) {
+        if (to.inventoryIngredientId) ingredientIds.add(to.inventoryIngredientId);
+      }
+      for (const opt of slot.options ?? []) {
+        if (opt.linkedIngredientId) ingredientIds.add(opt.linkedIngredientId);
+      }
+    }
+    const idList = Array.from(ingredientIds);
+    const nutritionRows = idList.length > 0 ? await db.select({
+      ingredientId: ingredientNutritionTable.ingredientId,
+      servingSizeQty: ingredientNutritionTable.servingSizeQty,
+      servingSizeUnit: ingredientNutritionTable.servingSizeUnit,
+      calories: ingredientNutritionTable.calories,
+      protein: ingredientNutritionTable.protein,
+      totalCarbs: ingredientNutritionTable.totalCarbs,
+      dietaryFiber: ingredientNutritionTable.dietaryFiber,
+      totalSugars: ingredientNutritionTable.totalSugars,
+      addedSugars: ingredientNutritionTable.addedSugars,
+      totalFat: ingredientNutritionTable.totalFat,
+      saturatedFat: ingredientNutritionTable.saturatedFat,
+      transFat: ingredientNutritionTable.transFat,
+      cholesterol: ingredientNutritionTable.cholesterol,
+      sodium: ingredientNutritionTable.sodium,
+      caffeine: ingredientNutritionTable.caffeine,
+      allergens: ingredientNutritionTable.allergens
+    }).from(ingredientNutritionTable).where(inArray(ingredientNutritionTable.ingredientId, idList)) : [];
+    const map2 = {};
+    for (const id of idList) {
+      map2[id] = {
+        ingredientId: id,
+        servingSizeQty: "1",
+        servingSizeUnit: "unit",
+        calories: "0",
+        protein: "0",
+        totalCarbs: "0",
+        dietaryFiber: "0",
+        totalSugars: "0",
+        addedSugars: "0",
+        totalFat: "0",
+        saturatedFat: "0",
+        transFat: "0",
+        cholesterol: "0",
+        sodium: "0",
+        caffeine: "0",
+        allergens: []
+      };
+    }
+    for (const row of nutritionRows) {
+      map2[row.ingredientId] = row;
+    }
+    res.json({ drinkId, ingredients: map2 });
+  } catch (e) {
+    console.error("[mobile] nutrition ingredients error:", e);
+    res.status(500).json({ error: "Failed to load ingredient nutrition" });
   }
 });
 router17.get("/mobile/nutrition/summary", async (req, res) => {
