@@ -8,11 +8,16 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Search, Filter, Coffee, Package, Info, Download, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
+import { useAuth } from "@/hooks/use-auth";
+
 type InventorySortField = "name" | "type" | "status" | "alert" | "stock";
 type RecipeSortField = "usage" | "name" | "stock" | "type";
 type SortOrder = "asc" | "desc";
 
 export default function StockQuantitiesPage() {
+  const { selectedBranchId } = useAuth();
+  const branchParam = (selectedBranchId === null || selectedBranchId === undefined) ? 'all' : String(selectedBranchId);
+
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [selectedDrinkId, setSelectedDrinkId] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -37,10 +42,11 @@ export default function StockQuantitiesPage() {
 
   // Fetch Drinks (filtered by category if selected)
   const { data: drinks = [] } = useQuery({
-    queryKey: ["/api/drinks", categoryFilter],
+    queryKey: ["/api/drinks", categoryFilter, branchParam],
     queryFn: async () => {
       const url = new URL("/api/drinks", window.location.origin);
       if (categoryFilter !== "all") url.searchParams.append("category", categoryFilter);
+      if (branchParam) url.searchParams.append("branchId", branchParam);
       const res = await fetch(url.toString());
       if (!res.ok) throw new Error("Failed to fetch drinks");
       return res.json();
@@ -49,9 +55,9 @@ export default function StockQuantitiesPage() {
 
   // Fetch all ingredients for the search/list view
   const { data: ingredients = [] } = useQuery({
-    queryKey: ["/api/ingredients"],
+    queryKey: ["/api/ingredients", branchParam],
     queryFn: async () => {
-      const res = await fetch("/api/ingredients");
+      const res = await fetch(`/api/ingredients?branchId=${branchParam}`);
       if (!res.ok) throw new Error("Failed to fetch ingredients");
       return res.json();
     },
@@ -59,10 +65,10 @@ export default function StockQuantitiesPage() {
 
   // Fetch stock usage for selected drink
   const { data: drinkUsage = [], isLoading: isUsageLoading } = useQuery({
-    queryKey: ["/api/drinks", selectedDrinkId, "stock-usage"],
+    queryKey: ["/api/drinks", selectedDrinkId, "stock-usage", branchParam],
     queryFn: async () => {
       if (selectedDrinkId === "all") return [];
-      const res = await fetch(`/api/drinks/${selectedDrinkId}/stock-usage`);
+      const res = await fetch(`/api/drinks/${selectedDrinkId}/stock-usage?branchId=${branchParam}`);
       if (!res.ok) throw new Error("Failed to fetch drink usage");
       return res.json();
     },

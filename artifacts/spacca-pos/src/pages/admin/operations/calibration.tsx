@@ -38,7 +38,8 @@ type Ingredient = {
 };
 
 export default function CalibrationPage() {
-  const { user } = useAuth();
+  const { user, selectedBranchId } = useAuth();
+  const branchParam = (selectedBranchId === null || selectedBranchId === undefined) ? 'all' : String(selectedBranchId);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isAuthorized, setIsAuthorized] = useState(user?.role === "admin" || (user?.role as string) === "supervisor");
@@ -63,9 +64,9 @@ export default function CalibrationPage() {
 
   // Fetch all ingredients
   const { data: ingredients = [], isLoading: isIngredientsLoading } = useQuery({
-    queryKey: ["/api/ingredients"],
+    queryKey: ["/api/ingredients", branchParam],
     queryFn: async () => {
-      const res = await fetch("/api/ingredients");
+      const res = await fetch(`/api/ingredients?branchId=${branchParam}`);
       if (!res.ok) throw new Error("Failed to fetch ingredients");
       return res.json();
     },
@@ -73,9 +74,9 @@ export default function CalibrationPage() {
 
   // Fetch all drinks
   const { data: drinks = [], isLoading: isDrinksLoading } = useQuery<any[]>({
-    queryKey: ["/api/drinks"],
+    queryKey: ["/api/drinks", branchParam],
     queryFn: async () => {
-      const res = await fetch("/api/drinks");
+      const res = await fetch(`/api/drinks?branchId=${branchParam}`);
       if (!res.ok) throw new Error("Failed to fetch drinks");
       return res.json();
     },

@@ -48,7 +48,8 @@ const WASTE_REASONS = [
 ];
 
 export default function WastagePage() {
-  const { user } = useAuth();
+  const { user, selectedBranchId } = useAuth();
+  const branchParam = (selectedBranchId === null || selectedBranchId === undefined) ? 'all' : String(selectedBranchId);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isAuthorized, setIsAuthorized] = useState(user?.role === "admin" || (user?.role as string) === "supervisor");
@@ -66,9 +67,9 @@ export default function WastagePage() {
 
   // Fetch all ingredients
   const { data: ingredients = [], isLoading: isIngredientsLoading } = useQuery({
-    queryKey: ["/api/ingredients"],
+    queryKey: ["/api/ingredients", branchParam],
     queryFn: async () => {
-      const res = await fetch("/api/ingredients");
+      const res = await fetch(`/api/ingredients?branchId=${branchParam}`);
       if (!res.ok) throw new Error("Failed to fetch ingredients");
       return res.json();
     },

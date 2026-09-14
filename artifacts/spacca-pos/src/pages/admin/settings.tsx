@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Save, Settings, PackageX, Coins } from "lucide-react";
+import { ArrowLeft, Save, Settings, PackageX, Coins, Activity } from "lucide-react";
 import { Link } from "wouter";
 import { useSettings } from "@/hooks/use-settings";
 import { useToast } from "@/hooks/use-toast";
@@ -17,6 +17,8 @@ export default function SystemSettingsAdmin() {
     setAutoPrintCustomer,
     autoPrintAgent,
     setAutoPrintAgent,
+    showNutritionFacts,
+    setShowNutritionFacts,
     pointsConversionRate,
     setPointsConversionRate,
     pointsToEgpRate,
@@ -89,6 +91,38 @@ export default function SystemSettingsAdmin() {
                 id="allow-no-stock" 
                 checked={allowNoStockSell} 
                 onCheckedChange={setAllowNoStockSell} 
+                disabled={isLoading}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Display & Nutrition Settings */}
+        <Card className="border-2 hover:border-primary/20 transition-all">
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-purple-500/10">
+                <Activity className="h-6 w-6 text-purple-500" />
+              </div>
+              <div>
+                <CardTitle>Display & Nutrition</CardTitle>
+                <CardDescription>Control nutritional information visibility on POS and Kiosk.</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between gap-4 p-4 rounded-xl border bg-muted/30">
+              <div className="space-y-0.5">
+                <Label htmlFor="show-nutrition-facts" className="font-bold">Show Nutrition Facts on POS / Kiosk</Label>
+                <p className="text-xs text-muted-foreground">
+                  Display live calculated nutrition info (calories, carbs, protein, fat) when selecting or customizing drinks. 
+                  Disable if raw item nutrition data is incomplete.
+                </p>
+              </div>
+              <Switch 
+                id="show-nutrition-facts" 
+                checked={showNutritionFacts} 
+                onCheckedChange={setShowNutritionFacts}
                 disabled={isLoading}
               />
             </div>

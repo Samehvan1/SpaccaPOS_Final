@@ -6,11 +6,13 @@ interface SettingsContextValue {
   autoPrintCustomer: boolean;
   autoPrintAgent: boolean;
   allowNoStockSell: boolean;
+  showNutritionFacts: boolean;
   pointsConversionRate: number;
   pointsToEgpRate: number;
   setAutoPrintCustomer: (val: boolean) => void;
   setAutoPrintAgent: (val: boolean) => void;
   setAllowNoStockSell: (val: boolean) => void;
+  setShowNutritionFacts: (val: boolean) => void;
   setPointsConversionRate: (val: number) => void;
   setPointsToEgpRate: (val: number) => void;
   isLoading: boolean;
@@ -66,6 +68,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const autoPrintCustomer = getSettingValue("autoPrintCustomer");
   const autoPrintAgent = getSettingValue("autoPrintAgent");
   const allowNoStockSell = getSettingValue("allowNoStockSell", false);
+  const showNutritionFacts = getSettingValue("showNutritionFacts", true);
   const pointsConversionRate = getNumericSettingValue("pointsConversionRate", 10);
   const pointsToEgpRate = getNumericSettingValue("pointsToEgpRate", 10);
 
@@ -75,11 +78,13 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         autoPrintCustomer, 
         autoPrintAgent, 
         allowNoStockSell,
+        showNutritionFacts,
         pointsConversionRate,
         pointsToEgpRate,
         setAutoPrintCustomer: (val) => setSettingValue("autoPrintCustomer", val),
         setAutoPrintAgent: (val) => setSettingValue("autoPrintAgent", val),
         setAllowNoStockSell: (val) => setSettingValue("allowNoStockSell", val),
+        setShowNutritionFacts: (val) => setSettingValue("showNutritionFacts", val),
         setPointsConversionRate: (val) => setNumericSettingValue("pointsConversionRate", val),
         setPointsToEgpRate: (val) => setNumericSettingValue("pointsToEgpRate", val),
         isLoading

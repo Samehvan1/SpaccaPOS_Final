@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Activity, AlertTriangle, Apple, ChevronDown, Flame, Info, Loader2 } from "lucide-react";
 
+import { useSettings } from "@/hooks/use-settings";
+
 export type NutritionFacts = {
   calories: number;
   protein: number;
@@ -49,11 +51,12 @@ export const NutritionFactsWidget: React.FC<NutritionFactsWidgetProps> = ({
   className = "",
   compact = false,
 }) => {
+  const { showNutritionFacts } = useSettings();
   const [loading, setLoading] = useState(false);
   const [facts, setFacts] = useState<NutritionFacts | null>(null);
 
   useEffect(() => {
-    if (!drinkId) {
+    if (!drinkId || !showNutritionFacts) {
       setFacts(null);
       return;
     }
@@ -87,7 +90,7 @@ export const NutritionFactsWidget: React.FC<NutritionFactsWidgetProps> = ({
     };
   }, [drinkId, JSON.stringify(selections), branchId]);
 
-  if (!drinkId) return null;
+  if (!drinkId || !showNutritionFacts) return null;
 
   const qty = Math.max(1, quantity);
   const calories = facts ? Math.round(facts.calories * qty) : 0;

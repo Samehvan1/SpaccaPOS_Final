@@ -24,6 +24,8 @@ import { useOrderEvents } from "@/hooks/use-order-events";
 
 import { DrinkCard } from "@/components/drink-card";
 
+import { NutritionFactsWidget } from "@/components/NutritionFactsWidget";
+
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "/api";
 
 type DrinkCategory = {
@@ -891,6 +893,16 @@ export default function KioskPage() {
                </div>
             ) : (
               <div className="space-y-10">
+                {activeDrink && (
+                  <NutritionFactsWidget
+                    drinkId={activeDrink.id}
+                    selections={Object.entries(selections).map(([slotIdStr, selectionVal]) => ({
+                      slotId: parseInt(slotIdStr, 10),
+                      ingredientTypeId: selectionVal,
+                      typeVolumeId: subSelections[parseInt(slotIdStr, 10)] || null,
+                    }))}
+                  />
+                )}
                 {(drinkDetail?.slots as any[])
                   ?.filter(s => (s.customerSortOrder ?? s.sortOrder ?? 1) > 0)
                   ?.sort((a, b) => (a.customerSortOrder ?? a.sortOrder ?? 1) - (b.customerSortOrder ?? b.sortOrder ?? 1))
