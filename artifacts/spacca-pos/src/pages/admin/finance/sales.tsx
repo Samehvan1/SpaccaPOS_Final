@@ -374,6 +374,12 @@ export default function SalesAnalysisPage() {
           limit: "1000000",
         });
         if (selectedBranch !== "all") params.append("branchId", selectedBranch);
+        if (selectedChannel !== "all") {
+          if (selectedChannel === "store" || selectedChannel === "pos") params.append("partnerId", "store");
+          else if (selectedChannel === "kiosk") params.append("source", "kiosk");
+          else if (selectedChannel === "partners" || selectedChannel === "all_partners") params.append("partnerId", "all_partners");
+          else params.append("partnerId", selectedChannel);
+        }
 
         const allOrders = await api(`/api/orders?${params.toString()}`);
         if (!allOrders || allOrders.length === 0) return;
@@ -396,7 +402,7 @@ export default function SalesAnalysisPage() {
           return true;
         });
 
-        headers = ["OrderID", "Date", "Time", "Order Number", "Channel / Partner", "Items Count", "Total Price", "Before Tax", "Tax Value", "Discount Name", "Discount Value", "Discount Amount", "Offer Discount", "Final Price", "Status", "Payment Method"];
+        headers = ["OrderID", "Date", "Time", "Order Number", "Channel / Source", "Partner Name", "Items Count", "Total Price", "Before Tax", "Tax Value", "Discount Name", "Discount Value", "Discount Amount", "Offer Discount", "Final Price", "Status", "Payment Method"];
         
         let totalItemsCount = 0;
         let totalGrossPrice = 0;
@@ -423,14 +429,16 @@ export default function SalesAnalysisPage() {
           totalOfferDiscountAmount += offerDiscountAmount;
           totalFinalPrice += finalPrice;
 
-          const channelLabel = o.partnerName || (o.partnerId ? `Partner #${o.partnerId}` : (o.source === 'kiosk' ? 'Kiosk' : 'Store (POS)'));
+          const channelSource = o.partnerName ? 'Partner' : (o.partnerId ? 'Partner' : (o.source === 'kiosk' ? 'Kiosk' : 'Store (POS)'));
+          const partnerName = o.partnerName || (o.partnerId ? `Partner #${o.partnerId}` : '-');
 
           return [
             o.id,
             format(new Date(o.createdAt), "yyyy-MM-dd"),
             format(new Date(o.createdAt), "HH:mm"),
             `#${o.orderNumber}`,
-            channelLabel,
+            channelSource,
+            partnerName,
             itemsCount,
             grossPrice.toFixed(2),
             netPrice.toFixed(2),
@@ -451,6 +459,7 @@ export default function SalesAnalysisPage() {
           "",
           "",
           "",
+          "",
           "TOTAL ITEMS: " + totalItemsCount,
           totalGrossPrice.toFixed(2),
           totalNetPrice.toFixed(2),
@@ -460,6 +469,7 @@ export default function SalesAnalysisPage() {
           totalDiscountAmount.toFixed(2),
           totalOfferDiscountAmount.toFixed(2),
           totalFinalPrice.toFixed(2),
+          "",
           "",
           ""
         ]);
@@ -477,46 +487,58 @@ export default function SalesAnalysisPage() {
             g.orderCount
           ]);
         } else {
-          headers = ["Date", "Order NO", "Inv.NO", "Cashier", "Branch", "Item", "Quantity", "Standard/Customize", "Sale Price", "Total Price (Gross)", "Before Tax (Net)", "Tax Amount", "Discount Name", "Discount value", "Discount Amount", "SubTotal Price", "Final Price", "Payment Method", "Category"];
-          rows = filteredDrinkSales.map(i => [
-            format(new Date(i.date), "yyyy-MM-dd"),
-            i.orderNo,
-            i.invNo,
-            i.cashier,
-            i.branch,
-            i.item,
-            i.quantity,
-            i.isCustomized,
-            i.salePrice,
-            i.totalGross,
-            i.netBeforeTax,
-            i.taxAmount,
-            i.discountName,
-            i.discountValue,
-            i.discountAmount,
-            i.subtotalPrice,
-            i.finalPrice,
-            i.paymentMethod,
-            i.category
-          ]);
+          headers = ["Date", "Order NO", "Inv.NO", "Cashier", "Branch", "Channel / Source", "Partner Name", "Item", "Quantity", "Standard/Customize", "Sale Price", "Total Price (Gross)", "Before Tax (Net)", "Tax Amount", "Discount Name", "Discount value", "Discount Amount", "SubTotal Price", "Final Price", "Payment Method", "Category"];
+          rows = filteredDrinkSales.map(i => {
+            const channelSource = i.partnerName ? 'Partner' : (i.partnerId ? 'Partner' : (i.source === 'kiosk' ? 'Kiosk' : 'Store (POS)'));
+            const partnerName = i.partnerName || (i.partnerId ? `Partner #${i.partnerId}` : '-');
+            return [
+              format(new Date(i.date), "yyyy-MM-dd"),
+              i.orderNo,
+              i.invNo,
+              i.cashier,
+              i.branch,
+              channelSource,
+              partnerName,
+              i.item,
+              i.quantity,
+              i.isCustomized,
+              i.salePrice,
+              i.totalGross,
+              i.netBeforeTax,
+              i.taxAmount,
+              i.discountName,
+              i.discountValue,
+              i.discountAmount,
+              i.subtotalPrice,
+              i.finalPrice,
+              i.paymentMethod,
+              i.category
+            ];
+          });
         }
       } else if (activeTab === "customs") {
         filename = `customizations_${reportStartDate}_to_${reportEndDate}.csv`;
-        headers = ["Date", "Order NO", "Inv.NO", "Cashier", "Branch", "Item/Drink", "Standard Ing.", "Quantity", "Customized Ing.", "Quantity", "Unit", "Sales Price"];
-        rows = filteredCustomizations.map(c => [
-          format(new Date(c.date), "yyyy-MM-dd"),
-          c.orderNumber,
-          "-",
-          c.cashier || "System",
-          c.branch,
-          c.drinkName,
-          c.defaultLabel || "Standard", 
-          "-",
-          c.replacementLabel,
-          c.consumedQty,
-          c.unit || "unit",
-          c.addedCost
-        ]);
+        headers = ["Date", "Order NO", "Inv.NO", "Cashier", "Branch", "Channel / Source", "Partner Name", "Item/Drink", "Standard Ing.", "Quantity", "Customized Ing.", "Quantity", "Unit", "Sales Price"];
+        rows = filteredCustomizations.map(c => {
+          const channelSource = c.partnerName ? 'Partner' : (c.partnerId ? 'Partner' : (c.source === 'kiosk' ? 'Kiosk' : 'Store (POS)'));
+          const partnerName = c.partnerName || (c.partnerId ? `Partner #${c.partnerId}` : '-');
+          return [
+            format(new Date(c.date), "yyyy-MM-dd"),
+            c.orderNumber,
+            "-",
+            c.cashier || "System",
+            c.branch,
+            channelSource,
+            partnerName,
+            c.drinkName,
+            c.defaultLabel || "Standard", 
+            "-",
+            c.replacementLabel,
+            c.consumedQty,
+            c.unit || "unit",
+            c.addedCost
+          ];
+        });
       }
 
       const csvContent = [headers.join(","), ...rows.map(r => r.map(val => `"${String(val).replace(/"/g, '""')}"`).join(","))].join("\n");

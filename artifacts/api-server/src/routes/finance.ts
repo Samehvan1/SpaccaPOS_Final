@@ -20,7 +20,8 @@ import {
   ingredientVolumesTable,
   usersTable,
   branchesTable,
-  ingredientOptionsTable
+  ingredientOptionsTable,
+  partnersTable
 } from "@workspace/db";
 import { serializeDates } from "../lib/serialize";
 import { requirePermission } from "../middleware/permissions";
@@ -544,12 +545,16 @@ router.get("/finance/sales-items", requirePermission("reports:view"), async (req
       paymentMethod: ordersTable.paymentMethod,
       category: drinksTable.category,
       specialNotes: orderItemsTable.specialNotes,
+      partnerId: ordersTable.partnerId,
+      partnerName: partnersTable.name,
+      source: ordersTable.source,
     })
     .from(orderItemsTable)
     .innerJoin(ordersTable, eq(orderItemsTable.orderId, ordersTable.id))
     .innerJoin(drinksTable, eq(orderItemsTable.drinkId, drinksTable.id))
     .innerJoin(branchesTable, eq(ordersTable.branchId, branchesTable.id))
     .leftJoin(usersTable, eq(ordersTable.cashierId, usersTable.id))
+    .leftJoin(partnersTable, eq(ordersTable.partnerId, partnersTable.id))
     .where(and(
       gte(ordersTable.createdAt, start),
       lte(ordersTable.createdAt, end),
@@ -618,7 +623,10 @@ router.get("/finance/sales-items", requirePermission("reports:view"), async (req
       subtotalPrice: beforeTax,
       finalPrice: finalPrice,
       paymentMethod: item.paymentMethod,
-      category: (item as any).category || "Other"
+      category: (item as any).category || "Other",
+      partnerId: item.partnerId,
+      partnerName: item.partnerName || (item.partnerId ? `Partner #${item.partnerId}` : null),
+      source: item.source,
     };
   });
 
@@ -733,6 +741,9 @@ router.get("/finance/customizations-report", requirePermission("reports:view"), 
       ingredientId: orderItemCustomizationsTable.ingredientId,
       optionId: orderItemCustomizationsTable.optionId,
       typeVolumeId: orderItemCustomizationsTable.typeVolumeId,
+      partnerId: ordersTable.partnerId,
+      partnerName: partnersTable.name,
+      source: ordersTable.source,
     })
     .from(orderItemCustomizationsTable)
     .innerJoin(orderItemsTable, eq(orderItemCustomizationsTable.orderItemId, orderItemsTable.id))
@@ -740,6 +751,7 @@ router.get("/finance/customizations-report", requirePermission("reports:view"), 
     .innerJoin(branchesTable, eq(ordersTable.branchId, branchesTable.id))
     .leftJoin(usersTable, eq(ordersTable.cashierId, usersTable.id))
     .leftJoin(ingredientsTable, eq(orderItemCustomizationsTable.ingredientId, ingredientsTable.id))
+    .leftJoin(partnersTable, eq(ordersTable.partnerId, partnersTable.id))
     .where(and(
       gte(ordersTable.createdAt, start),
       lte(ordersTable.createdAt, end),
