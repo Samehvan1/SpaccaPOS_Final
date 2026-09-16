@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
-import { ChevronRight, ArrowLeft, CheckCircle2, XCircle, AlertTriangle, Edit3, Save, Info } from "lucide-react";
+import { ChevronRight, ArrowLeft, CheckCircle2, XCircle, AlertTriangle, Edit3, Save, Info, RotateCcw } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Link } from "wouter";
@@ -161,6 +161,27 @@ export default function StockAuditReviewPage() {
     }
   };
 
+  const handleRevert = async () => {
+    if (!detail) return;
+    if (!confirm("Are you sure you want to revert the approval of this audit? Stock quantities will be restored to pre-approval values.")) return;
+    setProcessing(true);
+    try {
+      const res = await fetch(`/api/stock-audits/${detail.id}/revert`, {
+        method: "POST",
+      });
+
+      if (!res.ok) throw new Error(await res.text());
+
+      toast({ title: "Audit approval reverted", description: "Quantities restored and audit set to pending." });
+      loadAudits();
+      loadDetail(detail.id);
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Failed to revert approval", description: err.message });
+    } finally {
+      setProcessing(false);
+    }
+  };
+
   if (selectedAuditId && detail) {
     return (
       <div className="flex flex-col h-full w-full overflow-hidden bg-background">
@@ -210,9 +231,22 @@ export default function StockAuditReviewPage() {
               </div>
             )}
             {detail.status !== "pending" && (
-               <Badge variant={detail.status === "approved" ? "default" : "destructive"} className="h-10 px-4 text-sm font-bold uppercase">
-                 {detail.status}
-               </Badge>
+              <div className="flex items-center gap-2">
+                <Badge variant={detail.status === "approved" ? "default" : "destructive"} className="h-10 px-4 text-sm font-bold uppercase">
+                  {detail.status}
+                </Badge>
+                {detail.status === "approved" && canApprove && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleRevert}
+                    disabled={processing}
+                    className="h-10 border-amber-500/30 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/30 font-bold gap-1.5"
+                  >
+                    <RotateCcw className="h-4 w-4" /> Revert Approval
+                  </Button>
+                )}
+              </div>
             )}
           </div>
         </header>

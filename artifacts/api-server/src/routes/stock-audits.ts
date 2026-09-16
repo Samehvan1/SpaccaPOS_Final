@@ -299,4 +299,106 @@ router.post("/stock-audits/:id/reject", requirePermission("inventory:audit_appro
   res.json({ success: true });
 });
 
+// Revert approved audit (Admin)
+router.post("/stock-audits/:id/revert", requirePermission("inventory:audit_approve"), async (req, res) => {
+  const auditId = parseInt(req.params.id as string);
+  const userId = (req.session as any).userId;
+
+  try {
+    await db.transaction(async (tx) => {
+      const [audit] = await tx.select().from(stockAuditsTable).where(eq(stockAuditsTable.id, auditId));
+      if (!audit) throw new Error("Audit not found");
+      if (audit.status !== "approved") throw new Error("Only approved audits can be reverted");
+
+      const items = await tx.select().from(stockAuditItemsTable).where(eq(stockAuditItemsTable.auditId, auditId));
+
+      const { addStockBatch, deductStockFromBatches } = await import("../lib/stock-utils");
+
+      for (const item of items) {
+        // Find movement applied during approval for this item
+        const approvalMovementNote = `Approved Audit #${auditId}`;
+        const [approvalMovement] = await tx
+          .select()
+          .from(stockMovementsTable)
+          .where(and(
+            eq(stockMovementsTable.branchId, audit.branchId),
+            eq(stockMovementsTable.ingredientId, item.ingredientId),
+            eq(stockMovementsTable.note, approvalMovementNote)
+          ))
+          .limit(1);
+
+        // Fallback: if movement row wasn't found, compute difference between final/actual and expected
+        const appliedDiff = approvalMovement
+          ? parseFloat(approvalMovement.quantity)
+          : (parseFloat(item.finalQuantity ?? item.actualQuantity) - parseFloat(item.expectedQuantity));
+
+        if (appliedDiff !== 0) {
+          // To revert: invert appliedDiff
+          if (appliedDiff > 0) {
+            // Approval added stock -> revert deducts appliedDiff
+            await deductStockFromBatches(tx, audit.branchId, item.ingredientId, appliedDiff);
+          } else {
+            // Approval deducted stock -> revert adds (-appliedDiff) back
+            await addStockBatch(tx, audit.branchId, item.ingredientId, -appliedDiff, null, "AUDIT-REVERT");
+          }
+
+          const [currentStockRow] = await tx
+            .select({ stock: branchStockTable.stockQuantity })
+            .from(branchStockTable)
+            .where(and(
+              eq(branchStockTable.ingredientId, item.ingredientId),
+              eq(branchStockTable.branchId, audit.branchId)
+            ))
+            .limit(1);
+
+          const currentQty = currentStockRow ? parseFloat(currentStockRow.stock) : 0;
+          const restoredQty = Math.max(0, currentQty - appliedDiff);
+
+          await tx.insert(stockMovementsTable).values({
+            branchId: audit.branchId,
+            ingredientId: item.ingredientId,
+            movementType: "adjustment",
+            quantity: String(-appliedDiff),
+            quantityAfter: String(restoredQty),
+            note: `Reverted Approval for Audit #${auditId}`,
+            createdBy: userId,
+          });
+
+          await tx
+            .insert(branchStockTable)
+            .values({
+              branchId: audit.branchId,
+              ingredientId: item.ingredientId,
+              stockQuantity: String(restoredQty),
+            })
+            .onConflictDoUpdate({
+              target: [branchStockTable.branchId, branchStockTable.ingredientId],
+              set: { stockQuantity: String(restoredQty) }
+            });
+        }
+      }
+
+      // Reset audit back to pending status
+      await tx
+        .update(stockAuditsTable)
+        .set({
+          status: "pending",
+          approvedBy: null,
+          approvedAt: null,
+        })
+        .where(eq(stockAuditsTable.id, auditId));
+    });
+
+    globalCache.clear();
+    const { broadcastEvent } = await import("../lib/sse");
+    broadcastEvent("inventory_updated", { type: "audit_reverted", auditId });
+
+    await logActivity(req, "REVERT_STOCK_AUDIT", "stock_audit", auditId);
+    res.json({ success: true });
+  } catch (err: any) {
+    console.error("[stock-audits] Revert failed:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 export default router;
