@@ -708,6 +708,43 @@ router.post("/stock/expiry/batches/:id/discard", async (req, res): Promise<void>
   }
 });
 
+router.post("/stock/expiry/batches/:id/dismiss", async (req, res): Promise<void> => {
+  const batchId = parseInt(req.params.id);
+
+  if (isNaN(batchId)) {
+    res.status(400).json({ error: "Invalid batch ID" });
+    return;
+  }
+
+  try {
+    const [batch] = await db
+      .select()
+      .from(branchInventoryBatchesTable)
+      .where(eq(branchInventoryBatchesTable.id, batchId))
+      .limit(1);
+
+    if (!batch) {
+      res.status(404).json({ error: "Batch not found" });
+      return;
+    }
+
+    await db
+      .update(branchInventoryBatchesTable)
+      .set({ quantity: "0", updatedAt: new Date() })
+      .where(eq(branchInventoryBatchesTable.id, batchId));
+
+    const { globalCache } = await import("../lib/cache");
+    globalCache.clear();
+    const { broadcastEvent } = await import("../lib/sse");
+    broadcastEvent("inventory_updated", {});
+
+    res.json({ success: true });
+  } catch (error: any) {
+    console.error("POST /stock/expiry/batches/:id/dismiss error:", error);
+    res.status(500).json({ error: error?.message || "Failed to clear batch record" });
+  }
+});
+
 router.put("/stock/expiry/batches/:id", async (req, res): Promise<void> => {
   const batchId = parseInt(req.params.id);
   const sessionUserId = ((req.session as any).userId as number) ?? 1;

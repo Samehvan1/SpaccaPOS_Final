@@ -719,8 +719,32 @@ export default function StockAdmin() {
                                 )}
                                 <Button 
                                   size="sm" 
+                                  variant="outline" 
+                                  className="h-7 text-xs border-amber-300 hover:bg-amber-50 text-amber-700 font-semibold dark:border-amber-900/40 dark:hover:bg-amber-900/10"
+                                  title="Dismiss batch record without deducting physical ingredient stock"
+                                  onClick={async () => {
+                                    if (confirm(`Are you sure you want to clear the batch record for ${batch.ingredientName}? This will remove the batch without deducting total ingredient stock.`)) {
+                                      try {
+                                        await api(`/api/stock/expiry/batches/${batch.id}/dismiss`, { method: "POST" });
+                                        toast({ title: "Batch record cleared", description: "Batch removed without modifying stock levels." });
+                                        refetchExpiryReports();
+                                        refetchExpiryAlerts();
+                                        refetchIngredients();
+                                        refetchMovements();
+                                        refetchLowStock();
+                                      } catch (err: any) {
+                                        toast({ variant: "destructive", title: "Failed to clear batch record", description: err.message });
+                                      }
+                                    }
+                                  }}
+                                >
+                                  Clear Batch
+                                </Button>
+                                <Button 
+                                  size="sm" 
                                   variant="destructive" 
                                   className="h-7 text-xs"
+                                  title="Discard batch and waste physical stock"
                                   onClick={async () => {
                                     if (confirm(`Are you sure you want to discard this batch of ${batch.ingredientName}? This will set remaining quantity to 0 and log a waste movement.`)) {
                                       try {
@@ -737,7 +761,7 @@ export default function StockAdmin() {
                                     }
                                   }}
                                 >
-                                  Discard
+                                  Discard (Waste)
                                 </Button>
                               </div>
                             </TableCell>
