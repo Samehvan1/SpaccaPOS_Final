@@ -7,6 +7,7 @@ import { serializeDates } from "../lib/serialize";
 import { globalCache } from "../lib/cache";
 import { logActivity } from "../lib/activity-logger";
 import { requirePermission } from "../middleware/permissions";
+import { getEffectiveStockMap } from "../lib/stock-helper";
 import {
   ListIngredientsQueryParams,
   ListIngredientsResponse,
@@ -309,11 +310,13 @@ router.get("/ingredients", requirePermission("inventory:view"), async (req, res)
       conversionMap.set(c.ingredientId, [...existing, { ...c, conversionFactor: parseFloat(String(c.conversionFactor)) }]);
     });
 
+    const effectiveStockMap = await getEffectiveStockMap(targetBranchId);
+
     const responseBody = ingredientRows.map((i) => {
       return {
         ...i,
         costPerUnit: parseFloat(String(i.costPerUnit || "0")) || 0,
-        stockQuantity: parseFloat(String(i.stockQuantity || "0")) || 0,
+        stockQuantity: effectiveStockMap.get(i.id) ?? (parseFloat(String(i.stockQuantity || "0")) || 0),
         startupQuantity: parseFloat(String((i as any).startupQuantity || "0")) || 0,
         lowStockThreshold: parseFloat(String(i.lowStockThreshold || "0")) || 0,
         linkedTypeCount: (typeCountMap.get(i.id) || 0) + (optionCountMap.get(i.id) || 0),

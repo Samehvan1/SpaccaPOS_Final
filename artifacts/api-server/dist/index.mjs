@@ -83227,6 +83227,66 @@ function calculateProductDiscountAmount(itemBasePrice, discount) {
   return Number(amount.toFixed(2));
 }
 
+// src/lib/stock-helper.ts
+init_src();
+init_drizzle_orm();
+async function getEffectiveStockMap(branchId) {
+  let physicalStockRows;
+  if (branchId) {
+    physicalStockRows = await db.select({
+      ingredientId: branchStockTable.ingredientId,
+      stock: branchStockTable.stockQuantity
+    }).from(branchStockTable).where(eq(branchStockTable.branchId, branchId));
+  } else {
+    physicalStockRows = await db.select({
+      ingredientId: branchStockTable.ingredientId,
+      stock: sql`SUM(${branchStockTable.stockQuantity})::text`
+    }).from(branchStockTable).groupBy(branchStockTable.ingredientId);
+  }
+  const stockMap = /* @__PURE__ */ new Map();
+  physicalStockRows.forEach((r) => {
+    stockMap.set(r.ingredientId, parseFloat(r.stock || "0"));
+  });
+  const liveBoms = await db.select({
+    id: bomsTable.id,
+    targetIngredientId: bomsTable.targetIngredientId,
+    yieldQuantity: bomsTable.yieldQuantity
+  }).from(bomsTable).where(and(eq(bomsTable.isActive, true), eq(bomsTable.isLivePrepare, true)));
+  if (liveBoms.length === 0) {
+    return stockMap;
+  }
+  const bomIds = liveBoms.map((b) => b.id);
+  const bomItems = await db.select().from(bomItemsTable).where(inArray(bomItemsTable.bomId, bomIds));
+  const bomItemsMap = /* @__PURE__ */ new Map();
+  bomItems.forEach((item) => {
+    const list = bomItemsMap.get(item.bomId) ?? [];
+    list.push(item);
+    bomItemsMap.set(item.bomId, list);
+  });
+  for (const bom of liveBoms) {
+    const targetId = bom.targetIngredientId;
+    const items = bomItemsMap.get(bom.id) ?? [];
+    if (items.length === 0) continue;
+    const yieldQty = parseFloat(bom.yieldQuantity || "1") || 1;
+    let maxYield = Infinity;
+    for (const item of items) {
+      const compReq = parseFloat(item.quantity || "0");
+      if (compReq <= 0) continue;
+      const compStock = stockMap.get(item.ingredientId) ?? 0;
+      const possibleYield = compStock / compReq * yieldQty;
+      if (possibleYield < maxYield) {
+        maxYield = possibleYield;
+      }
+    }
+    if (maxYield === Infinity) {
+      maxYield = 0;
+    }
+    const existingPhysical = stockMap.get(targetId) ?? 0;
+    stockMap.set(targetId, existingPhysical + Math.max(0, maxYield));
+  }
+  return stockMap;
+}
+
 // src/routes/drinks.ts
 var uploadsDir = process.env.UPLOADS_DIR ? path2.resolve(process.env.UPLOADS_DIR) : path2.resolve(process.cwd(), "uploads");
 if (!fs3.existsSync(uploadsDir)) fs3.mkdirSync(uploadsDir, { recursive: true });
@@ -83261,6 +83321,7 @@ async function buildDrinkDetail(drinkId, branchId) {
   if (cached2) return cached2;
   const [drink] = await db.select().from(drinksTable).where(eq(drinksTable.id, drinkId));
   if (!drink) return null;
+  const effectiveStockMap = await getEffectiveStockMap(branchId);
   const slots = await db.select().from(drinkIngredientSlotsTable).where(eq(drinkIngredientSlotsTable.drinkId, drinkId)).orderBy(drinkIngredientSlotsTable.sortOrder);
   async function buildTypeVolumes(typeId, slotId) {
     const [[typeDef], typeVolumes] = await Promise.all([
@@ -83354,16 +83415,7 @@ async function buildDrinkDetail(drinkId, branchId) {
             const [category] = ingType ? await db.select().from(ingredientCategoriesTable).where(eq(ingredientCategoriesTable.id, ingType.categoryId)) : [null];
             let stockQuantity = 999999;
             if (ingType?.inventoryIngredientId) {
-              if (branchId) {
-                const [inv] = await db.select({ stock: branchStockTable.stockQuantity }).from(branchStockTable).where(and(
-                  eq(branchStockTable.ingredientId, ingType.inventoryIngredientId),
-                  eq(branchStockTable.branchId, branchId)
-                )).limit(1);
-                stockQuantity = inv ? Number(inv.stock) : 0;
-              } else {
-                const [result2] = await db.select({ totalStock: sql`SUM(${branchStockTable.stockQuantity})` }).from(branchStockTable).where(eq(branchStockTable.ingredientId, ingType.inventoryIngredientId));
-                stockQuantity = result2?.totalStock ? Number(result2.totalStock) : 0;
-              }
+              stockQuantity = effectiveStockMap.get(ingType.inventoryIngredientId) ?? 0;
             } else if (!ingType) {
               stockQuantity = 0;
             }
@@ -83460,16 +83512,7 @@ async function buildDrinkDetail(drinkId, branchId) {
         const options = await db.select().from(ingredientOptionsTable).where(eq(ingredientOptionsTable.ingredientId, slot.ingredientId)).orderBy(ingredientOptionsTable.sortOrder);
         let stockQuantity = 0;
         if (ingredient) {
-          if (branchId) {
-            const [stockRow] = await db.select({ stock: branchStockTable.stockQuantity }).from(branchStockTable).where(and(
-              eq(branchStockTable.ingredientId, ingredient.id),
-              eq(branchStockTable.branchId, branchId)
-            )).limit(1);
-            stockQuantity = stockRow ? Number(stockRow.stock) : 0;
-          } else {
-            const [result2] = await db.select({ totalStock: sql`SUM(${branchStockTable.stockQuantity})` }).from(branchStockTable).where(eq(branchStockTable.ingredientId, ingredient.id));
-            stockQuantity = result2?.totalStock ? Number(result2.totalStock) : 0;
-          }
+          stockQuantity = effectiveStockMap.get(ingredient.id) ?? 0;
         }
         const enrichedOptions = (await Promise.all(
           options.map(async (o) => {
@@ -83545,16 +83588,8 @@ async function buildDrinkDetail(drinkId, branchId) {
   const unavailableReasons = slotsWithDetails.filter((s) => !s.isAvailable && s.unavailableReason).map((s) => s.unavailableReason);
   let isCupAvailable = true;
   if (drink.cupIngredientId) {
-    if (branchId) {
-      const [cupInv] = await db.select({ stock: branchStockTable.stockQuantity }).from(branchStockTable).where(and(
-        eq(branchStockTable.ingredientId, drink.cupIngredientId),
-        eq(branchStockTable.branchId, branchId)
-      )).limit(1);
-      isCupAvailable = cupInv ? Number(cupInv.stock) >= 1 : false;
-    } else {
-      const [result2] = await db.select({ totalStock: sql`SUM(${branchStockTable.stockQuantity})` }).from(branchStockTable).where(eq(branchStockTable.ingredientId, drink.cupIngredientId));
-      isCupAvailable = result2?.totalStock ? Number(result2.totalStock) >= 1 : false;
-    }
+    const cupStock = effectiveStockMap.get(drink.cupIngredientId) ?? 0;
+    isCupAvailable = cupStock >= 1;
     if (!isCupAvailable) {
       unavailableReasons.push("Out of stock: Required Cup/Glass");
     }
@@ -84632,11 +84667,12 @@ router4.get("/ingredients", requirePermission("inventory:view"), async (req, res
       const existing = conversionMap.get(c.ingredientId) || [];
       conversionMap.set(c.ingredientId, [...existing, { ...c, conversionFactor: parseFloat(String(c.conversionFactor)) }]);
     });
+    const effectiveStockMap = await getEffectiveStockMap(targetBranchId);
     const responseBody = ingredientRows.map((i) => {
       return {
         ...i,
         costPerUnit: parseFloat(String(i.costPerUnit || "0")) || 0,
-        stockQuantity: parseFloat(String(i.stockQuantity || "0")) || 0,
+        stockQuantity: effectiveStockMap.get(i.id) ?? (parseFloat(String(i.stockQuantity || "0")) || 0),
         startupQuantity: parseFloat(String(i.startupQuantity || "0")) || 0,
         lowStockThreshold: parseFloat(String(i.lowStockThreshold || "0")) || 0,
         linkedTypeCount: (typeCountMap.get(i.id) || 0) + (optionCountMap.get(i.id) || 0),
@@ -90517,7 +90553,8 @@ async function buildMobileRecipeSlots(drinkId) {
             extraCost: Number(override?.extraCost ?? templateDef?.extraCost ?? tv.extraCost ?? 0),
             isDefault: override?.isDefault ?? templateDef?.isDefault ?? tv.isDefault ?? false,
             isAvailable: true,
-            processedQty: Number(override?.processedQty ?? templateDef?.processedQty ?? tv.processedQty ?? vol?.processedQty ?? 0)
+            processedQty: Number(override?.processedQty ?? templateDef?.processedQty ?? tv.processedQty ?? vol?.processedQty ?? 0),
+            producedQty: Number(override?.producedQty ?? templateDef?.producedQty ?? tv.producedQty ?? vol?.producedQty ?? 0)
           };
         }).filter((v) => v !== null).sort((a, b) => (a.typeVolumeId ?? 0) - (b.typeVolumeId ?? 0));
         return {
@@ -90528,6 +90565,7 @@ async function buildMobileRecipeSlots(drinkId) {
           extraCost: Number(to.extraCost ?? ingType.extraCost ?? 0),
           isDefault: to.isDefault ?? false,
           processedQty: Number(to.processedQty ?? ingType.processedQty ?? 0),
+          producedQty: Number(to.producedQty ?? ingType.producedQty ?? 0),
           volumes: volumesForType
         };
       }).filter((o) => o !== null && o.typeName !== "");
@@ -90537,6 +90575,8 @@ async function buildMobileRecipeSlots(drinkId) {
         isRequired: slot.isRequired ?? template?.isRequired ?? false,
         slotStyle: "typed",
         customerSortOrder: slot.customerSortOrder ?? 1,
+        isDynamic: slot.isDynamic ?? template?.isDynamic ?? false,
+        affectsCupSize: slot.affectsCupSize ?? template?.affectsCupSize ?? true,
         options: [],
         typeOptions: typedOptions
       });
@@ -90550,6 +90590,8 @@ async function buildMobileRecipeSlots(drinkId) {
         isRequired: slot.isRequired ?? false,
         slotStyle: "legacy",
         customerSortOrder: slot.customerSortOrder ?? 1,
+        isDynamic: slot.isDynamic ?? false,
+        affectsCupSize: slot.affectsCupSize ?? true,
         ingredientId: slot.ingredientId,
         options: ingredientOptionsForSlot.map((o) => ({
           optionId: o.id,
@@ -90558,7 +90600,8 @@ async function buildMobileRecipeSlots(drinkId) {
           extraCost: Number(o.extraCost ?? 0),
           isDefault: o.isDefault ?? false,
           isAvailable: true,
-          processedQty: Number(o.processedQty ?? 0)
+          processedQty: Number(o.processedQty ?? 0),
+          producedQty: Number(o.producedQty ?? 0)
         })),
         typeOptions: []
       });
@@ -90570,6 +90613,8 @@ async function buildMobileRecipeSlots(drinkId) {
       isRequired: slot.isRequired ?? false,
       slotStyle: "legacy",
       customerSortOrder: slot.customerSortOrder ?? 1,
+      isDynamic: slot.isDynamic ?? false,
+      affectsCupSize: slot.affectsCupSize ?? true,
       options: [],
       typeOptions: []
     });
@@ -93702,8 +93747,11 @@ router23.get("/finance/sales-items", requirePermission("reports:view"), async (r
     total: ordersTable.total,
     paymentMethod: ordersTable.paymentMethod,
     category: drinksTable.category,
-    specialNotes: orderItemsTable.specialNotes
-  }).from(orderItemsTable).innerJoin(ordersTable, eq(orderItemsTable.orderId, ordersTable.id)).innerJoin(drinksTable, eq(orderItemsTable.drinkId, drinksTable.id)).innerJoin(branchesTable, eq(ordersTable.branchId, branchesTable.id)).leftJoin(usersTable, eq(ordersTable.cashierId, usersTable.id)).where(and(
+    specialNotes: orderItemsTable.specialNotes,
+    partnerId: ordersTable.partnerId,
+    partnerName: partnersTable.name,
+    source: ordersTable.source
+  }).from(orderItemsTable).innerJoin(ordersTable, eq(orderItemsTable.orderId, ordersTable.id)).innerJoin(drinksTable, eq(orderItemsTable.drinkId, drinksTable.id)).innerJoin(branchesTable, eq(ordersTable.branchId, branchesTable.id)).leftJoin(usersTable, eq(ordersTable.cashierId, usersTable.id)).leftJoin(partnersTable, eq(ordersTable.partnerId, partnersTable.id)).where(and(
     gte(ordersTable.createdAt, start),
     lte(ordersTable.createdAt, end),
     inArray(ordersTable.status, ["paid", "ready", "completed"]),
@@ -93756,7 +93804,10 @@ router23.get("/finance/sales-items", requirePermission("reports:view"), async (r
       subtotalPrice: beforeTax,
       finalPrice,
       paymentMethod: item.paymentMethod,
-      category: item.category || "Other"
+      category: item.category || "Other",
+      partnerId: item.partnerId,
+      partnerName: item.partnerName || (item.partnerId ? `Partner #${item.partnerId}` : null),
+      source: item.source
     };
   });
   res.json(serializeDates(report));
@@ -93847,8 +93898,11 @@ router23.get("/finance/customizations-report", requirePermission("reports:view")
     ingredientName: ingredientsTable.name,
     ingredientId: orderItemCustomizationsTable.ingredientId,
     optionId: orderItemCustomizationsTable.optionId,
-    typeVolumeId: orderItemCustomizationsTable.typeVolumeId
-  }).from(orderItemCustomizationsTable).innerJoin(orderItemsTable, eq(orderItemCustomizationsTable.orderItemId, orderItemsTable.id)).innerJoin(ordersTable, eq(orderItemsTable.orderId, ordersTable.id)).innerJoin(branchesTable, eq(ordersTable.branchId, branchesTable.id)).leftJoin(usersTable, eq(ordersTable.cashierId, usersTable.id)).leftJoin(ingredientsTable, eq(orderItemCustomizationsTable.ingredientId, ingredientsTable.id)).where(and(
+    typeVolumeId: orderItemCustomizationsTable.typeVolumeId,
+    partnerId: ordersTable.partnerId,
+    partnerName: partnersTable.name,
+    source: ordersTable.source
+  }).from(orderItemCustomizationsTable).innerJoin(orderItemsTable, eq(orderItemCustomizationsTable.orderItemId, orderItemsTable.id)).innerJoin(ordersTable, eq(orderItemsTable.orderId, ordersTable.id)).innerJoin(branchesTable, eq(ordersTable.branchId, branchesTable.id)).leftJoin(usersTable, eq(ordersTable.cashierId, usersTable.id)).leftJoin(ingredientsTable, eq(orderItemCustomizationsTable.ingredientId, ingredientsTable.id)).leftJoin(partnersTable, eq(ordersTable.partnerId, partnersTable.id)).where(and(
     gte(ordersTable.createdAt, start),
     lte(ordersTable.createdAt, end),
     inArray(ordersTable.status, ["paid", "ready", "completed"]),
@@ -95178,8 +95232,8 @@ async function seedIfEmpty() {
     { name: "Matcha Powder", slug: "matcha-powder", ingredientType: "base", unit: "g", costPerUnit: "1.8" },
     { name: "Milk Type", slug: "milk-type", ingredientType: "milk", unit: "", costPerUnit: "0" }
   ]).returning();
-  const { branchStockTable: branchStockTable2 } = await Promise.resolve().then(() => (init_src(), src_exports));
-  await db.insert(branchStockTable2).values([
+  const { branchStockTable: branchStockTable3 } = await Promise.resolve().then(() => (init_src(), src_exports));
+  await db.insert(branchStockTable3).values([
     { branchId: mainBranch.id, ingredientId: espresso.id, stockQuantity: "2000", lowStockThreshold: "500" },
     { branchId: mainBranch.id, ingredientId: wholeMilk.id, stockQuantity: "4000", lowStockThreshold: "1000" },
     { branchId: mainBranch.id, ingredientId: oatMilk.id, stockQuantity: "3000", lowStockThreshold: "800" },

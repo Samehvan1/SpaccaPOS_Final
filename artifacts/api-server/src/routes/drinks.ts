@@ -36,6 +36,7 @@ import { serializeDates } from "../lib/serialize";
 import { globalCache } from "../lib/cache";
 import { requirePermission } from "../middleware/permissions";
 import { calculateDrinkData, getProductCost, getStandardProductPrice, resolveProductDiscount } from "../lib/price-calculator";
+import { getEffectiveStockMap } from "../lib/stock-helper";
 
 // ── Image upload: store in <cwd>/uploads/ ────────────────────────────────────
 const uploadsDir = process.env.UPLOADS_DIR
@@ -93,6 +94,8 @@ async function buildDrinkDetail(drinkId: number, branchId?: number) {
 
   const [drink] = await db.select().from(drinksTable).where(eq(drinksTable.id, drinkId));
   if (!drink) return null;
+
+  const effectiveStockMap = await getEffectiveStockMap(branchId);
 
   const slots = await db
     .select()
@@ -217,25 +220,10 @@ async function buildDrinkDetail(drinkId: number, branchId?: number) {
                   .where(eq(ingredientCategoriesTable.id, ingType.categoryId))
               : [null];
 
-            // Fetch current stock from linked inventory item for specific branch
+            // Fetch current stock from linked inventory item (including Live Prepare BOM calculations)
             let stockQuantity = 999999;
             if (ingType?.inventoryIngredientId) {
-              if (branchId) {
-                const [inv] = await db.select({ stock: branchStockTable.stockQuantity })
-                  .from(branchStockTable)
-                  .where(and(
-                    eq(branchStockTable.ingredientId, ingType.inventoryIngredientId),
-                    eq(branchStockTable.branchId, branchId)
-                  ))
-                  .limit(1);
-                stockQuantity = inv ? Number(inv.stock) : 0;
-              } else {
-                // Global view: sum across all branches
-                const [result] = await db.select({ totalStock: sql<string>`SUM(${branchStockTable.stockQuantity})` })
-                  .from(branchStockTable)
-                  .where(eq(branchStockTable.ingredientId, ingType.inventoryIngredientId));
-                stockQuantity = result?.totalStock ? Number(result.totalStock) : 0;
-              }
+              stockQuantity = effectiveStockMap.get(ingType.inventoryIngredientId) ?? 0;
             } else if (!ingType) {
               stockQuantity = 0;
             }
@@ -355,21 +343,7 @@ async function buildDrinkDetail(drinkId: number, branchId?: number) {
 
         let stockQuantity = 0;
         if (ingredient) {
-          if (branchId) {
-            const [stockRow] = await db.select({ stock: branchStockTable.stockQuantity })
-              .from(branchStockTable)
-              .where(and(
-                eq(branchStockTable.ingredientId, ingredient.id),
-                eq(branchStockTable.branchId, branchId)
-              ))
-              .limit(1);
-            stockQuantity = stockRow ? Number(stockRow.stock) : 0;
-          } else {
-            const [result] = await db.select({ totalStock: sql<string>`SUM(${branchStockTable.stockQuantity})` })
-              .from(branchStockTable)
-              .where(eq(branchStockTable.ingredientId, ingredient.id));
-            stockQuantity = result?.totalStock ? Number(result.totalStock) : 0;
-          }
+          stockQuantity = effectiveStockMap.get(ingredient.id) ?? 0;
         }
 
         const enrichedOptions = (await Promise.all(
@@ -458,21 +432,8 @@ async function buildDrinkDetail(drinkId: number, branchId?: number) {
 
   let isCupAvailable = true;
   if (drink.cupIngredientId) {
-    if (branchId) {
-      const [cupInv] = await db.select({ stock: branchStockTable.stockQuantity })
-        .from(branchStockTable)
-        .where(and(
-          eq(branchStockTable.ingredientId, drink.cupIngredientId),
-          eq(branchStockTable.branchId, branchId)
-        ))
-        .limit(1);
-      isCupAvailable = cupInv ? Number(cupInv.stock) >= 1 : false;
-    } else {
-      const [result] = await db.select({ totalStock: sql<string>`SUM(${branchStockTable.stockQuantity})` })
-        .from(branchStockTable)
-        .where(eq(branchStockTable.ingredientId, drink.cupIngredientId));
-      isCupAvailable = result?.totalStock ? Number(result.totalStock) >= 1 : false;
-    }
+    const cupStock = effectiveStockMap.get(drink.cupIngredientId) ?? 0;
+    isCupAvailable = cupStock >= 1;
     if (!isCupAvailable) {
       unavailableReasons.push("Out of stock: Required Cup/Glass");
     }

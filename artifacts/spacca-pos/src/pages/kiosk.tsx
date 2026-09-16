@@ -866,17 +866,39 @@ export default function KioskPage() {
                  </button>
                </div>
                
-               {/* Cup Simulator & Description */}
+               {/* Cup Simulator or Product Image & Description */}
                <div className="w-full flex flex-col items-center gap-6">
-                 {drinkDetail && activeDrink?.cupIngredientId && (
-                   <div className="w-48 h-64">
-                     <CupSimulator 
-                       cupSizeMl={drinkDetail.cupSizeMl || 0}
-                       layers={simulatorLayers}
-                       className="drop-shadow-2xl"
-                     />
-                   </div>
-                 )}
+                 {drinkDetail && (() => {
+                   const kioskImageUrl = (activeDrink as any)?.imageUrl || drinkDetail?.imageUrl;
+                   const kioskRawCupSize = drinkDetail?.cupSizeMl ?? (activeDrink as any)?.cupSizeMl;
+                   const kioskCupSize = typeof kioskRawCupSize === "number" ? kioskRawCupSize : (kioskRawCupSize ? parseInt(String(kioskRawCupSize), 10) : 0);
+                   const kioskHasCup = (kioskCupSize > 0) || Boolean(activeDrink?.cupIngredientId || drinkDetail?.cupIngredientId);
+
+                   if (kioskHasCup) {
+                     return (
+                       <div className="w-48 h-64">
+                         <CupSimulator 
+                           cupSizeMl={kioskCupSize || 350}
+                           layers={simulatorLayers}
+                           className="drop-shadow-2xl"
+                         />
+                       </div>
+                     );
+                   }
+                   if (kioskImageUrl) {
+                     return (
+                       <div className="w-48 h-48 flex items-center justify-center overflow-hidden rounded-2xl bg-muted/20 border p-2">
+                         <img
+                           src={kioskImageUrl}
+                           alt={activeDrink?.name}
+                           className="max-w-full max-h-full object-contain drop-shadow-md"
+                           onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                         />
+                       </div>
+                     );
+                   }
+                   return null;
+                 })()}
                  {drinkDetail?.description && (
                    <p className="text-sm text-muted-foreground font-medium max-w-sm">
                      {drinkDetail.description}

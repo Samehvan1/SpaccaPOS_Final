@@ -1,5 +1,5 @@
 import React from "react";
-import { RotateCcw, Plus, Droplets } from "lucide-react";
+import { RotateCcw, Plus, Droplets, Coffee } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -82,6 +82,11 @@ export const CustomizerDialog: React.FC<CustomizerDialogProps> = ({
   onClose,
   onAddToCart,
 }) => {
+  const imageUrl = (activeDrink as any)?.imageUrl || drinkDetail?.imageUrl;
+  const rawCupSize = drinkDetail?.cupSizeMl ?? (activeDrink as any)?.cupSizeMl;
+  const cupSize = typeof rawCupSize === "number" ? rawCupSize : (rawCupSize ? parseInt(String(rawCupSize), 10) : 0);
+  const hasCup = (cupSize > 0) || Boolean(activeDrink?.cupIngredientId || drinkDetail?.cupIngredientId);
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent className="sm:max-w-[550px] max-h-[85vh] flex flex-col p-0 gap-0">
@@ -111,14 +116,25 @@ export const CustomizerDialog: React.FC<CustomizerDialogProps> = ({
             </div>
           </div>
           {drinkDetail && (
-            <div className="w-24 h-32 shrink-0 pr-6 mr-2">
-              <CupSimulatorErrorBoundary>
-                <CupSimulator
-                  cupSizeMl={drinkDetail.cupSizeMl || 350}
-                  layers={simulatorLayers || []}
-                  className="mb-2"
+            <div className="w-24 h-32 shrink-0 flex items-center justify-center">
+              {hasCup ? (
+                <CupSimulatorErrorBoundary>
+                  <CupSimulator
+                    cupSizeMl={cupSize || 350}
+                    layers={simulatorLayers || []}
+                    className="mb-2"
+                  />
+                </CupSimulatorErrorBoundary>
+              ) : imageUrl ? (
+                <img
+                  src={imageUrl}
+                  alt={activeDrink?.name}
+                  className="max-h-28 max-w-full object-contain rounded-xl shadow-sm"
+                  onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
                 />
-              </CupSimulatorErrorBoundary>
+              ) : (
+                <Coffee className="h-10 w-10 text-primary/40" />
+              )}
             </div>
           )}
         </DialogHeader>
