@@ -18,6 +18,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import PosTerminal from "./pos";
 import { useOrderEvents } from "@/hooks/use-order-events";
+import { formatPaymentMethod } from "@/lib/utils";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "/api";
 
@@ -1168,15 +1169,15 @@ export default function CashierPage() {
                       next[idx].method = v;
                       setMultiPaymentEntries(next);
                     }}>
-                      <SelectTrigger className="bg-white/5 border-white/10 h-12 rounded-xl">
+                      <SelectTrigger className="bg-white/5 border-white/10 h-12 rounded-xl text-white">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent className="bg-[#0A0A0B] border-white/10">
-                        <SelectItem value="cash">Cash</SelectItem>
-                        <SelectItem value="card">Card</SelectItem>
-                        <SelectItem value="partner_card">Partner Card</SelectItem>
-                        <SelectItem value="wallet">Wallet</SelectItem>
-                        <SelectItem value="hospitality">Hospitality</SelectItem>
+                      <SelectContent className="bg-[#0A0A0B] border-white/10 text-white">
+                        <SelectItem value="cash" className="text-white focus:bg-white/10 focus:text-white cursor-pointer">Cash</SelectItem>
+                        <SelectItem value="card" className="text-white focus:bg-white/10 focus:text-white cursor-pointer">Card</SelectItem>
+                        <SelectItem value="partner_card" className="text-white focus:bg-white/10 focus:text-white cursor-pointer">Partner Card</SelectItem>
+                        <SelectItem value="wallet" className="text-white focus:bg-white/10 focus:text-white cursor-pointer">Wallet</SelectItem>
+                        <SelectItem value="hospitality" className="text-white focus:bg-white/10 focus:text-white cursor-pointer">Hospitality</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
