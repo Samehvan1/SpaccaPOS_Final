@@ -907,7 +907,16 @@ export const UpdateOrderStatusBody = zod.object({
     "refunded",
   ]),
   paymentMethod: zod
-    .enum(["cash", "card", "wallet", "hospitality", "split", "refund"])
+    .enum([
+      "cash",
+      "card",
+      "partner_card",
+      "wallet",
+      "hospitality",
+      "split",
+      "refund",
+      "points",
+    ])
     .optional(),
   cashierId: zod
     .number()

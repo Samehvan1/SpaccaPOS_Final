@@ -2453,17 +2453,17 @@ export declare const UpdateOrderStatusQueryParams: zod.ZodObject<{
 }>;
 export declare const UpdateOrderStatusBody: zod.ZodObject<{
     status: zod.ZodEnum<["pending", "paid", "in_progress", "ready", "completed", "cancelled", "refunded"]>;
-    paymentMethod: zod.ZodOptional<zod.ZodEnum<["cash", "card", "wallet", "hospitality", "split", "refund"]>>;
+    paymentMethod: zod.ZodOptional<zod.ZodEnum<["cash", "card", "partner_card", "wallet", "hospitality", "split", "refund", "points"]>>;
     cashierId: zod.ZodOptional<zod.ZodNumber>;
     adminPin: zod.ZodOptional<zod.ZodString>;
 }, "strip", zod.ZodTypeAny, {
     status: "pending" | "paid" | "in_progress" | "ready" | "completed" | "cancelled" | "refunded";
-    paymentMethod?: "cash" | "card" | "wallet" | "hospitality" | "split" | "refund" | undefined;
+    paymentMethod?: "cash" | "card" | "wallet" | "hospitality" | "split" | "refund" | "partner_card" | "points" | undefined;
     adminPin?: string | undefined;
     cashierId?: number | undefined;
 }, {
     status: "pending" | "paid" | "in_progress" | "ready" | "completed" | "cancelled" | "refunded";
-    paymentMethod?: "cash" | "card" | "wallet" | "hospitality" | "split" | "refund" | undefined;
+    paymentMethod?: "cash" | "card" | "wallet" | "hospitality" | "split" | "refund" | "partner_card" | "points" | undefined;
     adminPin?: string | undefined;
     cashierId?: number | undefined;
 }>;
@@ -4649,8 +4649,8 @@ export declare const MobileVerifyOtpResponse: zod.ZodObject<{
         name?: string | undefined;
         isActive?: boolean | undefined;
         createdAt?: Date | undefined;
-        phone?: string | undefined;
         points?: number | undefined;
+        phone?: string | undefined;
         email?: string | null | undefined;
         birthdate?: Date | null | undefined;
         gender?: "other" | "male" | "female" | "prefer_not_to_say" | null | undefined;
@@ -4666,8 +4666,8 @@ export declare const MobileVerifyOtpResponse: zod.ZodObject<{
         name?: string | undefined;
         isActive?: boolean | undefined;
         createdAt?: Date | undefined;
-        phone?: string | undefined;
         points?: number | undefined;
+        phone?: string | undefined;
         email?: string | null | undefined;
         birthdate?: Date | null | undefined;
         gender?: "other" | "male" | "female" | "prefer_not_to_say" | null | undefined;
@@ -4686,8 +4686,8 @@ export declare const MobileVerifyOtpResponse: zod.ZodObject<{
         name?: string | undefined;
         isActive?: boolean | undefined;
         createdAt?: Date | undefined;
-        phone?: string | undefined;
         points?: number | undefined;
+        phone?: string | undefined;
         email?: string | null | undefined;
         birthdate?: Date | null | undefined;
         gender?: "other" | "male" | "female" | "prefer_not_to_say" | null | undefined;
@@ -4706,8 +4706,8 @@ export declare const MobileVerifyOtpResponse: zod.ZodObject<{
         name?: string | undefined;
         isActive?: boolean | undefined;
         createdAt?: Date | undefined;
-        phone?: string | undefined;
         points?: number | undefined;
+        phone?: string | undefined;
         email?: string | null | undefined;
         birthdate?: Date | null | undefined;
         gender?: "other" | "male" | "female" | "prefer_not_to_say" | null | undefined;
@@ -4755,8 +4755,8 @@ export declare const MobileCreatePinResponse: zod.ZodObject<{
         name?: string | undefined;
         isActive?: boolean | undefined;
         createdAt?: Date | undefined;
-        phone?: string | undefined;
         points?: number | undefined;
+        phone?: string | undefined;
         email?: string | null | undefined;
         birthdate?: Date | null | undefined;
         gender?: "other" | "male" | "female" | "prefer_not_to_say" | null | undefined;
@@ -4772,8 +4772,8 @@ export declare const MobileCreatePinResponse: zod.ZodObject<{
         name?: string | undefined;
         isActive?: boolean | undefined;
         createdAt?: Date | undefined;
-        phone?: string | undefined;
         points?: number | undefined;
+        phone?: string | undefined;
         email?: string | null | undefined;
         birthdate?: Date | null | undefined;
         gender?: "other" | "male" | "female" | "prefer_not_to_say" | null | undefined;
@@ -4792,8 +4792,8 @@ export declare const MobileCreatePinResponse: zod.ZodObject<{
         name?: string | undefined;
         isActive?: boolean | undefined;
         createdAt?: Date | undefined;
-        phone?: string | undefined;
         points?: number | undefined;
+        phone?: string | undefined;
         email?: string | null | undefined;
         birthdate?: Date | null | undefined;
         gender?: "other" | "male" | "female" | "prefer_not_to_say" | null | undefined;
@@ -4812,8 +4812,8 @@ export declare const MobileCreatePinResponse: zod.ZodObject<{
         name?: string | undefined;
         isActive?: boolean | undefined;
         createdAt?: Date | undefined;
-        phone?: string | undefined;
         points?: number | undefined;
+        phone?: string | undefined;
         email?: string | null | undefined;
         birthdate?: Date | null | undefined;
         gender?: "other" | "male" | "female" | "prefer_not_to_say" | null | undefined;
@@ -4862,8 +4862,8 @@ export declare const MobileLoginResponse: zod.ZodObject<{
         name?: string | undefined;
         isActive?: boolean | undefined;
         createdAt?: Date | undefined;
-        phone?: string | undefined;
         points?: number | undefined;
+        phone?: string | undefined;
         email?: string | null | undefined;
         birthdate?: Date | null | undefined;
         gender?: "other" | "male" | "female" | "prefer_not_to_say" | null | undefined;
@@ -4879,8 +4879,8 @@ export declare const MobileLoginResponse: zod.ZodObject<{
         name?: string | undefined;
         isActive?: boolean | undefined;
         createdAt?: Date | undefined;
-        phone?: string | undefined;
         points?: number | undefined;
+        phone?: string | undefined;
         email?: string | null | undefined;
         birthdate?: Date | null | undefined;
         gender?: "other" | "male" | "female" | "prefer_not_to_say" | null | undefined;
@@ -4898,8 +4898,8 @@ export declare const MobileLoginResponse: zod.ZodObject<{
         name?: string | undefined;
         isActive?: boolean | undefined;
         createdAt?: Date | undefined;
-        phone?: string | undefined;
         points?: number | undefined;
+        phone?: string | undefined;
         email?: string | null | undefined;
         birthdate?: Date | null | undefined;
         gender?: "other" | "male" | "female" | "prefer_not_to_say" | null | undefined;
@@ -4917,8 +4917,8 @@ export declare const MobileLoginResponse: zod.ZodObject<{
         name?: string | undefined;
         isActive?: boolean | undefined;
         createdAt?: Date | undefined;
-        phone?: string | undefined;
         points?: number | undefined;
+        phone?: string | undefined;
         email?: string | null | undefined;
         birthdate?: Date | null | undefined;
         gender?: "other" | "male" | "female" | "prefer_not_to_say" | null | undefined;
@@ -4957,8 +4957,8 @@ export declare const MobileMeResponse: zod.ZodObject<{
         name?: string | undefined;
         isActive?: boolean | undefined;
         createdAt?: Date | undefined;
-        phone?: string | undefined;
         points?: number | undefined;
+        phone?: string | undefined;
         email?: string | null | undefined;
         birthdate?: Date | null | undefined;
         gender?: "other" | "male" | "female" | "prefer_not_to_say" | null | undefined;
@@ -4974,8 +4974,8 @@ export declare const MobileMeResponse: zod.ZodObject<{
         name?: string | undefined;
         isActive?: boolean | undefined;
         createdAt?: Date | undefined;
-        phone?: string | undefined;
         points?: number | undefined;
+        phone?: string | undefined;
         email?: string | null | undefined;
         birthdate?: Date | null | undefined;
         gender?: "other" | "male" | "female" | "prefer_not_to_say" | null | undefined;
@@ -4993,8 +4993,8 @@ export declare const MobileMeResponse: zod.ZodObject<{
         name?: string | undefined;
         isActive?: boolean | undefined;
         createdAt?: Date | undefined;
-        phone?: string | undefined;
         points?: number | undefined;
+        phone?: string | undefined;
         email?: string | null | undefined;
         birthdate?: Date | null | undefined;
         gender?: "other" | "male" | "female" | "prefer_not_to_say" | null | undefined;
@@ -5012,8 +5012,8 @@ export declare const MobileMeResponse: zod.ZodObject<{
         name?: string | undefined;
         isActive?: boolean | undefined;
         createdAt?: Date | undefined;
-        phone?: string | undefined;
         points?: number | undefined;
+        phone?: string | undefined;
         email?: string | null | undefined;
         birthdate?: Date | null | undefined;
         gender?: "other" | "male" | "female" | "prefer_not_to_say" | null | undefined;
@@ -5080,8 +5080,8 @@ export declare const MobileUpdateProfileResponse: zod.ZodObject<{
         name?: string | undefined;
         isActive?: boolean | undefined;
         createdAt?: Date | undefined;
-        phone?: string | undefined;
         points?: number | undefined;
+        phone?: string | undefined;
         email?: string | null | undefined;
         birthdate?: Date | null | undefined;
         gender?: "other" | "male" | "female" | "prefer_not_to_say" | null | undefined;
@@ -5097,8 +5097,8 @@ export declare const MobileUpdateProfileResponse: zod.ZodObject<{
         name?: string | undefined;
         isActive?: boolean | undefined;
         createdAt?: Date | undefined;
-        phone?: string | undefined;
         points?: number | undefined;
+        phone?: string | undefined;
         email?: string | null | undefined;
         birthdate?: Date | null | undefined;
         gender?: "other" | "male" | "female" | "prefer_not_to_say" | null | undefined;
@@ -5116,8 +5116,8 @@ export declare const MobileUpdateProfileResponse: zod.ZodObject<{
         name?: string | undefined;
         isActive?: boolean | undefined;
         createdAt?: Date | undefined;
-        phone?: string | undefined;
         points?: number | undefined;
+        phone?: string | undefined;
         email?: string | null | undefined;
         birthdate?: Date | null | undefined;
         gender?: "other" | "male" | "female" | "prefer_not_to_say" | null | undefined;
@@ -5135,8 +5135,8 @@ export declare const MobileUpdateProfileResponse: zod.ZodObject<{
         name?: string | undefined;
         isActive?: boolean | undefined;
         createdAt?: Date | undefined;
-        phone?: string | undefined;
         points?: number | undefined;
+        phone?: string | undefined;
         email?: string | null | undefined;
         birthdate?: Date | null | undefined;
         gender?: "other" | "male" | "female" | "prefer_not_to_say" | null | undefined;
@@ -5182,8 +5182,8 @@ export declare const MobileChangePhoneResponse: zod.ZodObject<{
         name?: string | undefined;
         isActive?: boolean | undefined;
         createdAt?: Date | undefined;
-        phone?: string | undefined;
         points?: number | undefined;
+        phone?: string | undefined;
         email?: string | null | undefined;
         birthdate?: Date | null | undefined;
         gender?: "other" | "male" | "female" | "prefer_not_to_say" | null | undefined;
@@ -5199,8 +5199,8 @@ export declare const MobileChangePhoneResponse: zod.ZodObject<{
         name?: string | undefined;
         isActive?: boolean | undefined;
         createdAt?: Date | undefined;
-        phone?: string | undefined;
         points?: number | undefined;
+        phone?: string | undefined;
         email?: string | null | undefined;
         birthdate?: Date | null | undefined;
         gender?: "other" | "male" | "female" | "prefer_not_to_say" | null | undefined;
@@ -5218,8 +5218,8 @@ export declare const MobileChangePhoneResponse: zod.ZodObject<{
         name?: string | undefined;
         isActive?: boolean | undefined;
         createdAt?: Date | undefined;
-        phone?: string | undefined;
         points?: number | undefined;
+        phone?: string | undefined;
         email?: string | null | undefined;
         birthdate?: Date | null | undefined;
         gender?: "other" | "male" | "female" | "prefer_not_to_say" | null | undefined;
@@ -5237,8 +5237,8 @@ export declare const MobileChangePhoneResponse: zod.ZodObject<{
         name?: string | undefined;
         isActive?: boolean | undefined;
         createdAt?: Date | undefined;
-        phone?: string | undefined;
         points?: number | undefined;
+        phone?: string | undefined;
         email?: string | null | undefined;
         birthdate?: Date | null | undefined;
         gender?: "other" | "male" | "female" | "prefer_not_to_say" | null | undefined;

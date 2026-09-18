@@ -238,9 +238,11 @@ export const GetOrderResponse = (
     paymentMethod: z.enum([
       "cash",
       "card",
+      "partner_card",
       "wallet",
       "hospitality",
       "split",
+      "refund",
       "points",
     ]),
     offer: z.any().nullish().optional(),
@@ -272,9 +274,11 @@ export const UpdateOrderStatusBody = api.UpdateOrderStatusBody.extend({
         paymentMethod: z.enum([
           "cash",
           "card",
+          "partner_card",
           "wallet",
           "hospitality",
           "refund",
+          "points",
         ]),
         amount: z.number(),
         transactionId: z.string().optional(),
@@ -282,7 +286,16 @@ export const UpdateOrderStatusBody = api.UpdateOrderStatusBody.extend({
     )
     .optional(),
   paymentMethod: z
-    .enum(["cash", "card", "wallet", "hospitality", "split", "refund"])
+    .enum([
+      "cash",
+      "card",
+      "partner_card",
+      "wallet",
+      "hospitality",
+      "split",
+      "refund",
+      "points",
+    ])
     .optional(),
   adminPin: z.string().optional(),
 });
