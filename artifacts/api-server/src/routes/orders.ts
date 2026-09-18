@@ -986,6 +986,8 @@ router.post("/orders", async (req, res): Promise<void> => {
           }
         }
 
+        const initialPaymentMethod = parsed.data.paymentMethod || "cash";
+
         const [newOrder] = await tx.insert(ordersTable).values({
           branchId: targetBranchId,
           orderNumber,
@@ -1002,7 +1004,7 @@ router.post("/orders", async (req, res): Promise<void> => {
           offerId: offerIdToSave,
           offerDiscount: String(offerDiscountAmount),
           total: String(total),
-          paymentMethod: parsed.data.paymentMethod,
+          paymentMethod: initialPaymentMethod as any,
 
           source: (parsed.data as any).source || "pos",
           amountTendered: amountTendered != null ? String(amountTendered) : null,
@@ -1082,12 +1084,12 @@ router.post("/orders", async (req, res): Promise<void> => {
           await tx.update(ordersTable).set({ 
             paymentMethod: (orderPayments.length > 1 ? "split" : orderPayments[0].paymentMethod) as any
           }).where(eq(ordersTable.id, newOrder.id));
-        } else if (parsed.data.paymentMethod) {
+        } else if (initialPaymentMethod) {
           // Fallback for backward compatibility if payments array is missing
-          const isHospitality = parsed.data.paymentMethod === "hospitality";
+          const isHospitality = initialPaymentMethod === "hospitality";
           await tx.insert(orderPaymentsTable).values({
             orderId: newOrder.id,
-            paymentMethod: parsed.data.paymentMethod as any,
+            paymentMethod: initialPaymentMethod as any,
             amount: String(isHospitality ? subtotal : total),
           });
         }

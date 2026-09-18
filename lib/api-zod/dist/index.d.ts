@@ -1486,7 +1486,7 @@ export declare const ListOrdersResponseItem: z.ZodIntersection<z.ZodObject<{
     discountCode: z.ZodOptional<z.ZodNullable<z.ZodString>>;
     branchName: z.ZodOptional<z.ZodString>;
     source: z.ZodOptional<z.ZodEnum<["pos", "kiosk", "web", "mobile"]>>;
-    paymentMethod: z.ZodEnum<["cash", "card", "wallet", "hospitality", "split", "refund", "points"]>;
+    paymentMethod: z.ZodEnum<["cash", "card", "partner_card", "wallet", "hospitality", "split", "refund", "points"]>;
     offer: z.ZodOptional<z.ZodOptional<z.ZodNullable<z.ZodAny>>>;
 }, z.UnknownKeysParam, z.ZodTypeAny, {
     [x: string]: any;
@@ -1541,7 +1541,7 @@ export declare const ListOrdersResponse: z.ZodArray<z.ZodIntersection<z.ZodObjec
     discountCode: z.ZodOptional<z.ZodNullable<z.ZodString>>;
     branchName: z.ZodOptional<z.ZodString>;
     source: z.ZodOptional<z.ZodEnum<["pos", "kiosk", "web", "mobile"]>>;
-    paymentMethod: z.ZodEnum<["cash", "card", "wallet", "hospitality", "split", "refund", "points"]>;
+    paymentMethod: z.ZodEnum<["cash", "card", "partner_card", "wallet", "hospitality", "split", "refund", "points"]>;
     offer: z.ZodOptional<z.ZodOptional<z.ZodNullable<z.ZodAny>>>;
 }, z.UnknownKeysParam, z.ZodTypeAny, {
     [x: string]: any;
@@ -1600,7 +1600,7 @@ export declare const CreateOrderBody: z.ZodObject<{
     adminPin: z.ZodOptional<z.ZodString>;
 } & {
     branchId: z.ZodEffects<z.ZodOptional<z.ZodNullable<z.ZodUnion<[z.ZodNumber, z.ZodString]>>>, number | undefined, string | number | null | undefined>;
-    paymentMethod: z.ZodEnum<["cash", "card", "wallet", "hospitality", "split", "refund", "points"]>;
+    paymentMethod: z.ZodEnum<["cash", "card", "partner_card", "wallet", "hospitality", "split", "refund", "points"]>;
     payments: z.ZodOptional<z.ZodArray<z.ZodObject<{
         paymentMethod: z.ZodString;
         amount: z.ZodNumber;
@@ -1668,7 +1668,7 @@ export declare const CreateOrderBody: z.ZodObject<{
         specialNotes?: string | null | undefined;
     }>, "many">;
 }, "strip", z.ZodTypeAny, {
-    paymentMethod: "cash" | "card" | "wallet" | "hospitality" | "split" | "refund" | "points";
+    paymentMethod: "cash" | "card" | "wallet" | "hospitality" | "split" | "refund" | "partner_card" | "points";
     items: {
         drinkId: number;
         selections: {
@@ -1698,7 +1698,7 @@ export declare const CreateOrderBody: z.ZodObject<{
     }[] | undefined;
     adminPin?: string | undefined;
 }, {
-    paymentMethod: "cash" | "card" | "wallet" | "hospitality" | "split" | "refund" | "points";
+    paymentMethod: "cash" | "card" | "wallet" | "hospitality" | "split" | "refund" | "partner_card" | "points";
     items: {
         drinkId: number;
         quantity: number;
@@ -1809,11 +1809,11 @@ export declare const UpdateOrderStatusBody: z.ZodObject<{
         amount: z.ZodNumber;
         transactionId: z.ZodOptional<z.ZodString>;
     }, "strip", z.ZodTypeAny, {
-        paymentMethod: "cash" | "card" | "wallet" | "hospitality" | "refund" | "points" | "partner_card";
+        paymentMethod: "cash" | "card" | "wallet" | "hospitality" | "refund" | "partner_card" | "points";
         amount: number;
         transactionId?: string | undefined;
     }, {
-        paymentMethod: "cash" | "card" | "wallet" | "hospitality" | "refund" | "points" | "partner_card";
+        paymentMethod: "cash" | "card" | "wallet" | "hospitality" | "refund" | "partner_card" | "points";
         amount: number;
         transactionId?: string | undefined;
     }>, "many">>;
@@ -1821,9 +1821,9 @@ export declare const UpdateOrderStatusBody: z.ZodObject<{
     adminPin: z.ZodOptional<z.ZodString>;
 }, "strip", z.ZodTypeAny, {
     status: "pending" | "paid" | "in_progress" | "ready" | "completed" | "cancelled" | "refunded";
-    paymentMethod?: "cash" | "card" | "wallet" | "hospitality" | "split" | "refund" | "points" | "partner_card" | undefined;
+    paymentMethod?: "cash" | "card" | "wallet" | "hospitality" | "split" | "refund" | "partner_card" | "points" | undefined;
     payments?: {
-        paymentMethod: "cash" | "card" | "wallet" | "hospitality" | "refund" | "points" | "partner_card";
+        paymentMethod: "cash" | "card" | "wallet" | "hospitality" | "refund" | "partner_card" | "points";
         amount: number;
         transactionId?: string | undefined;
     }[] | undefined;
@@ -1831,9 +1831,9 @@ export declare const UpdateOrderStatusBody: z.ZodObject<{
     cashierId?: number | undefined;
 }, {
     status: "pending" | "paid" | "in_progress" | "ready" | "completed" | "cancelled" | "refunded";
-    paymentMethod?: "cash" | "card" | "wallet" | "hospitality" | "split" | "refund" | "points" | "partner_card" | undefined;
+    paymentMethod?: "cash" | "card" | "wallet" | "hospitality" | "split" | "refund" | "partner_card" | "points" | undefined;
     payments?: {
-        paymentMethod: "cash" | "card" | "wallet" | "hospitality" | "refund" | "points" | "partner_card";
+        paymentMethod: "cash" | "card" | "wallet" | "hospitality" | "refund" | "partner_card" | "points";
         amount: number;
         transactionId?: string | undefined;
     }[] | undefined;

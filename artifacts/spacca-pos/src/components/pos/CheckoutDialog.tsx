@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { fmt } from "@/lib/currency";
 import { useSettings } from "@/hooks/use-settings";
+import { formatPaymentMethod } from "@/lib/utils";
 
 interface CheckoutDialogProps {
   isOpen: boolean;
@@ -18,8 +19,8 @@ interface CheckoutDialogProps {
   customerPhone: string;
   setCustomerPhone: (val: string) => void;
   customerInfo?: { name: string; points: number } | null;
-  paymentMethod: "cash" | "card" | "wallet" | "hospitality" | "points";
-  setPaymentMethod: (val: "cash" | "card" | "wallet" | "hospitality" | "points") => void;
+  paymentMethod: "cash" | "card" | "partner_card" | "wallet" | "hospitality" | "points";
+  setPaymentMethod: (val: "cash" | "card" | "partner_card" | "wallet" | "hospitality" | "points") => void;
   adminPin: string;
   setAdminPin: (val: string) => void;
   amountTendered: string;
@@ -151,7 +152,7 @@ export const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
                   }}
                   className="capitalize font-bold"
                 >
-                  {method}
+                  {formatPaymentMethod(method)}
                 </Button>
               ))}
             </div>

@@ -143,6 +143,7 @@ export const ListOrdersResponseItem = (
     paymentMethod: z.enum([
       "cash",
       "card",
+      "partner_card",
       "wallet",
       "hospitality",
       "split",
@@ -181,6 +182,7 @@ export const CreateOrderBody = api.CreateOrderBody.extend({
   paymentMethod: z.enum([
     "cash",
     "card",
+    "partner_card",
     "wallet",
     "hospitality",
     "split",
