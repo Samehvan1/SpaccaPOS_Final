@@ -345,6 +345,10 @@ export const GetActiveOrdersResponseItem = api.GetActiveOrdersResponseItem.and(
   z.object({
     items: z.array(z.any()), // Allow extra fields in items like kitchenStationId
     discountCode: z.string().nullish(),
+    partnerId: z.number().nullish(),
+    partnerName: z.string().nullish(),
+    source: z.string().nullish(),
+    payments: z.array(z.any()).nullish(),
   }),
 );
 export type GetActiveOrdersResponseItem = Infer<

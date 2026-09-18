@@ -11,6 +11,8 @@ import {
   orderItemCustomizationsTable,
   drinksTable,
   branchStockTable,
+  partnersTable,
+  orderPaymentsTable,
 } from "@workspace/db";
 import {
   GetDashboardSummaryResponse,
@@ -145,11 +147,13 @@ router.get("/dashboard/active-orders", async (req, res): Promise<void> => {
 
   const orderIds = activeOrders.map(o => o.id);
   
-  // Batch fetch items and customizations
-  const allItems = await db
-    .select()
-    .from(orderItemsTable)
-    .where(inArray(orderItemsTable.orderId, orderIds));
+  // Batch fetch items, customizations, users, partners, payments
+  const [allItems, allUsers, allPartners, allPayments] = await Promise.all([
+    db.select().from(orderItemsTable).where(inArray(orderItemsTable.orderId, orderIds)),
+    db.select().from(usersTable),
+    db.select().from(partnersTable),
+    db.select().from(orderPaymentsTable).where(inArray(orderPaymentsTable.orderId, orderIds)),
+  ]);
     
   const itemIds = allItems.map(i => i.id);
   const allCustomizations = itemIds.length > 0
@@ -159,8 +163,14 @@ router.get("/dashboard/active-orders", async (req, res): Promise<void> => {
         .where(inArray(orderItemCustomizationsTable.orderItemId, itemIds))
     : [];
 
-  const allUsers = await db.select().from(usersTable);
   const userMap = Object.fromEntries(allUsers.map((u) => [u.id, u.name]));
+  const partnerMap = Object.fromEntries(allPartners.map((p) => [p.id, p.name]));
+
+  const paymentsByOrderId = allPayments.reduce((acc, p) => {
+    if (!acc[p.orderId]) acc[p.orderId] = [];
+    acc[p.orderId].push({ ...p, amount: parseFloat(p.amount) });
+    return acc;
+  }, {} as Record<number, any[]>);
 
   // Group items and customizations by parent ID
   const customizationsByItemId = allCustomizations.reduce((acc, c) => {
@@ -188,21 +198,34 @@ router.get("/dashboard/active-orders", async (req, res): Promise<void> => {
     return acc;
   }, {} as Record<number, any[]>);
 
-  const ordersWithDetails = activeOrders.map(order => ({
-    ...order,
-    baristaName: userMap[order.baristaId] ?? "Unknown",
-    subtotal: parseFloat(order.subtotal),
-    discount: parseFloat(order.discount),
-    discountValue: order.discountValue ? parseFloat(order.discountValue) : null,
-    discountType: order.discountType as "percentage" | "fixed" | "fixed_per_item" | null,
-    offerId: order.offerId,
-    offerDiscount: order.offerDiscount ? parseFloat(order.offerDiscount) : 0,
-    total: parseFloat(order.total),
+  const ordersWithDetails = activeOrders.map(order => {
+    const orderPaymentsList = paymentsByOrderId[order.id] ?? [];
+    const effectivePaymentMethod = orderPaymentsList.length > 1
+      ? "split"
+      : (orderPaymentsList.length === 1 ? orderPaymentsList[0].paymentMethod : order.paymentMethod);
 
-    amountTendered: order.amountTendered ? parseFloat(order.amountTendered) : null,
-    changeDue: order.changeDue ? parseFloat(order.changeDue) : null,
-    items: itemsByOrderId[order.id] ?? [],
-  }));
+    return {
+      ...order,
+      paymentMethod: effectivePaymentMethod,
+      baristaName: userMap[order.baristaId] ?? "Unknown",
+      subtotal: parseFloat(order.subtotal),
+      discount: parseFloat(order.discount),
+      discountValue: order.discountValue ? parseFloat(order.discountValue) : null,
+      discountType: order.discountType as "percentage" | "fixed" | "fixed_per_item" | null,
+      offerId: order.offerId,
+      offerDiscount: order.offerDiscount ? parseFloat(order.offerDiscount) : 0,
+      total: parseFloat(order.total),
+
+      partnerId: order.partnerId,
+      partnerName: order.partnerId ? (partnerMap[order.partnerId] ?? `Partner #${order.partnerId}`) : null,
+      source: order.source,
+      payments: orderPaymentsList,
+
+      amountTendered: order.amountTendered ? parseFloat(order.amountTendered) : null,
+      changeDue: order.changeDue ? parseFloat(order.changeDue) : null,
+      items: itemsByOrderId[order.id] ?? [],
+    };
+  });
 
   res.json(GetActiveOrdersResponse.parse(serializeDates(ordersWithDetails)));
 });

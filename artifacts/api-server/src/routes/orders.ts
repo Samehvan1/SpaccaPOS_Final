@@ -514,29 +514,37 @@ router.get("/orders", requirePermission("cashier:view"), async (req, res): Promi
 
   res.json(
     ListOrdersResponse.parse(
-      serializeDates(orders.map((o) => ({
-        ...o,
-        baristaName: baristaMap[o.baristaId] ?? "Unknown",
-        branchName: branchMap[o.branchId] ?? "Unknown",
-        subtotal: parseFloat(o.subtotal),
-        discount: parseFloat(o.discount),
-        discountId: o.discountId,
-        discountCode: o.discountCode,
-        discountValue: o.discountValue ? parseFloat(o.discountValue) : null,
-        discountType: o.discountType as "percentage" | "fixed" | "fixed_per_item" | null,
-        offerId: o.offerId,
-        offerDiscount: o.offerDiscount ? parseFloat(o.offerDiscount) : 0,
-        offer: o.offerId ? (offerMap.get(o.offerId) ?? null) : null,
-        total: parseFloat(o.total),
+      serializeDates(orders.map((o) => {
+        const orderPaymentsList = paymentsByOrder.get(o.id) ?? [];
+        const effectivePaymentMethod = orderPaymentsList.length > 1
+          ? "split"
+          : (orderPaymentsList.length === 1 ? orderPaymentsList[0].paymentMethod : o.paymentMethod);
 
-        amountTendered: o.amountTendered ? parseFloat(o.amountTendered) : null,
-        changeDue: o.changeDue ? parseFloat(o.changeDue) : null,
-        partnerId: o.partnerId,
-        partnerName: o.partnerId ? (partnerMap[o.partnerId] ?? `Partner #${o.partnerId}`) : null,
-        source: o.source,
-        payments: paymentsByOrder.get(o.id) ?? [],
-        items: itemsByOrder.get(o.id) ?? [],
-      })))
+        return {
+          ...o,
+          paymentMethod: effectivePaymentMethod,
+          baristaName: baristaMap[o.baristaId] ?? "Unknown",
+          branchName: branchMap[o.branchId] ?? "Unknown",
+          subtotal: parseFloat(o.subtotal),
+          discount: parseFloat(o.discount),
+          discountId: o.discountId,
+          discountCode: o.discountCode,
+          discountValue: o.discountValue ? parseFloat(o.discountValue) : null,
+          discountType: o.discountType as "percentage" | "fixed" | "fixed_per_item" | null,
+          offerId: o.offerId,
+          offerDiscount: o.offerDiscount ? parseFloat(o.offerDiscount) : 0,
+          offer: o.offerId ? (offerMap.get(o.offerId) ?? null) : null,
+          total: parseFloat(o.total),
+
+          amountTendered: o.amountTendered ? parseFloat(o.amountTendered) : null,
+          changeDue: o.changeDue ? parseFloat(o.changeDue) : null,
+          partnerId: o.partnerId,
+          partnerName: o.partnerId ? (partnerMap[o.partnerId] ?? `Partner #${o.partnerId}`) : null,
+          source: o.source,
+          payments: orderPaymentsList,
+          items: itemsByOrder.get(o.id) ?? [],
+        };
+      }))
     )
   );
 });

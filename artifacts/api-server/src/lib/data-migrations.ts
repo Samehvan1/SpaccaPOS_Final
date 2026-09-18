@@ -69,6 +69,15 @@ export async function runDataMigrations() {
       WHERE "order_number" IN ('1-221001', '1-221002') AND "cashier_id" = 24;
     `);
 
+    logger.info("[migration] Syncing orders.payment_method for partner_card payments from order_payments table...");
+    await db.execute(sql`
+      UPDATE "orders"
+      SET "payment_method" = 'partner_card'
+      WHERE "id" IN (
+        SELECT "order_id" FROM "order_payments" WHERE "payment_method" = 'partner_card'
+      ) AND "payment_method" != 'partner_card';
+    `);
+
     logger.info("[migration] Checking for legacy hospitality order payments...");
     const hospitalityOrders = await db
       .select({

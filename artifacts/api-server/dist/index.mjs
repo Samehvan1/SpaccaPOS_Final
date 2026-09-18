@@ -79210,7 +79210,16 @@ var UpdateOrderStatusBody = objectType({
     "cancelled",
     "refunded"
   ]),
-  paymentMethod: enumType(["cash", "card", "wallet", "hospitality", "split", "refund"]).optional(),
+  paymentMethod: enumType([
+    "cash",
+    "card",
+    "partner_card",
+    "wallet",
+    "hospitality",
+    "split",
+    "refund",
+    "points"
+  ]).optional(),
   cashierId: numberType().optional().describe("The ID of the cashier approving the order"),
   adminPin: stringType().optional().describe("Required if changing paymentMethod to hospitality")
 });
@@ -80245,6 +80254,7 @@ var ListOrdersResponseItem2 = ListOrdersResponseItem._def.left.extend({
   paymentMethod: external_exports2.enum([
     "cash",
     "card",
+    "partner_card",
     "wallet",
     "hospitality",
     "split",
@@ -80275,6 +80285,7 @@ var CreateOrderBody2 = CreateOrderBody.extend({
   paymentMethod: external_exports2.enum([
     "cash",
     "card",
+    "partner_card",
     "wallet",
     "hospitality",
     "split",
@@ -80318,9 +80329,11 @@ var GetOrderResponse2 = GetOrderResponse._def.left.extend({
   paymentMethod: external_exports2.enum([
     "cash",
     "card",
+    "partner_card",
     "wallet",
     "hospitality",
     "split",
+    "refund",
     "points"
   ]),
   offer: external_exports2.any().nullish().optional(),
@@ -80346,15 +80359,26 @@ var UpdateOrderStatusBody2 = UpdateOrderStatusBody.extend({
       paymentMethod: external_exports2.enum([
         "cash",
         "card",
+        "partner_card",
         "wallet",
         "hospitality",
-        "refund"
+        "refund",
+        "points"
       ]),
       amount: external_exports2.number(),
       transactionId: external_exports2.string().optional()
     })
   ).optional(),
-  paymentMethod: external_exports2.enum(["cash", "card", "wallet", "hospitality", "split", "refund"]).optional(),
+  paymentMethod: external_exports2.enum([
+    "cash",
+    "card",
+    "partner_card",
+    "wallet",
+    "hospitality",
+    "split",
+    "refund",
+    "points"
+  ]).optional(),
   adminPin: external_exports2.string().optional()
 });
 var UpdateOrderStatusResponse2 = GetOrderResponse2;
@@ -86003,6 +86027,7 @@ router5.post("/orders", async (req, res) => {
             netAmount = (total - parseFloat(commissionAmount)).toFixed(2);
           }
         }
+        const initialPaymentMethod = parsed.data.paymentMethod || "cash";
         const [newOrder] = await tx.insert(ordersTable).values({
           branchId: targetBranchId,
           orderNumber,
@@ -86019,7 +86044,7 @@ router5.post("/orders", async (req, res) => {
           offerId: offerIdToSave,
           offerDiscount: String(offerDiscountAmount),
           total: String(total),
-          paymentMethod: parsed.data.paymentMethod,
+          paymentMethod: initialPaymentMethod,
           source: parsed.data.source || "pos",
           amountTendered: amountTendered != null ? String(amountTendered) : null,
           changeDue: changeDue != null ? String(changeDue) : null,
@@ -86086,11 +86111,11 @@ router5.post("/orders", async (req, res) => {
           await tx.update(ordersTable).set({
             paymentMethod: orderPayments.length > 1 ? "split" : orderPayments[0].paymentMethod
           }).where(eq(ordersTable.id, newOrder.id));
-        } else if (parsed.data.paymentMethod) {
-          const isHospitality = parsed.data.paymentMethod === "hospitality";
+        } else if (initialPaymentMethod) {
+          const isHospitality = initialPaymentMethod === "hospitality";
           await tx.insert(orderPaymentsTable).values({
             orderId: newOrder.id,
-            paymentMethod: parsed.data.paymentMethod,
+            paymentMethod: initialPaymentMethod,
             amount: String(isHospitality ? subtotal : total)
           });
         }
@@ -87206,6 +87231,29 @@ router6.post("/stock/expiry/batches/:id/discard", async (req, res) => {
   } catch (error40) {
     console.error("POST /stock/expiry/batches/:id/discard error:", error40);
     res.status(500).json({ error: error40?.message || "Failed to discard batch" });
+  }
+});
+router6.post("/stock/expiry/batches/:id/dismiss", async (req, res) => {
+  const batchId = parseInt(req.params.id);
+  if (isNaN(batchId)) {
+    res.status(400).json({ error: "Invalid batch ID" });
+    return;
+  }
+  try {
+    const [batch] = await db.select().from(branchInventoryBatchesTable).where(eq(branchInventoryBatchesTable.id, batchId)).limit(1);
+    if (!batch) {
+      res.status(404).json({ error: "Batch not found" });
+      return;
+    }
+    await db.update(branchInventoryBatchesTable).set({ quantity: "0", updatedAt: /* @__PURE__ */ new Date() }).where(eq(branchInventoryBatchesTable.id, batchId));
+    const { globalCache: globalCache2 } = await Promise.resolve().then(() => (init_cache2(), cache_exports));
+    globalCache2.clear();
+    const { broadcastEvent: broadcastEvent2 } = await Promise.resolve().then(() => (init_sse(), sse_exports));
+    broadcastEvent2("inventory_updated", {});
+    res.json({ success: true });
+  } catch (error40) {
+    console.error("POST /stock/expiry/batches/:id/dismiss error:", error40);
+    res.status(500).json({ error: error40?.message || "Failed to clear batch record" });
   }
 });
 router6.put("/stock/expiry/batches/:id", async (req, res) => {
@@ -93024,6 +93072,71 @@ router21.post("/stock-audits/:id/reject", requirePermission("inventory:audit_app
   broadcastEvent2("inventory_updated", { type: "audit_rejected", auditId });
   await logActivity(req, "REJECT_STOCK_AUDIT", "stock_audit", auditId);
   res.json({ success: true });
+});
+router21.post("/stock-audits/:id/revert", requirePermission("inventory:audit_approve"), async (req, res) => {
+  const auditId = parseInt(req.params.id);
+  const userId = req.session.userId;
+  try {
+    await db.transaction(async (tx) => {
+      const [audit] = await tx.select().from(stockAuditsTable).where(eq(stockAuditsTable.id, auditId));
+      if (!audit) throw new Error("Audit not found");
+      if (audit.status !== "approved") throw new Error("Only approved audits can be reverted");
+      const items = await tx.select().from(stockAuditItemsTable).where(eq(stockAuditItemsTable.auditId, auditId));
+      const { addStockBatch: addStockBatch2, deductStockFromBatches: deductStockFromBatches2 } = await Promise.resolve().then(() => (init_stock_utils(), stock_utils_exports));
+      for (const item of items) {
+        const approvalMovementNote = `Approved Audit #${auditId}`;
+        const [approvalMovement] = await tx.select().from(stockMovementsTable).where(and(
+          eq(stockMovementsTable.branchId, audit.branchId),
+          eq(stockMovementsTable.ingredientId, item.ingredientId),
+          eq(stockMovementsTable.note, approvalMovementNote)
+        )).limit(1);
+        const appliedDiff = approvalMovement ? parseFloat(approvalMovement.quantity) : parseFloat(item.finalQuantity ?? item.actualQuantity) - parseFloat(item.expectedQuantity);
+        if (appliedDiff !== 0) {
+          if (appliedDiff > 0) {
+            await deductStockFromBatches2(tx, audit.branchId, item.ingredientId, appliedDiff);
+          } else {
+            await addStockBatch2(tx, audit.branchId, item.ingredientId, -appliedDiff, null, "AUDIT-REVERT");
+          }
+          const [currentStockRow] = await tx.select({ stock: branchStockTable.stockQuantity }).from(branchStockTable).where(and(
+            eq(branchStockTable.ingredientId, item.ingredientId),
+            eq(branchStockTable.branchId, audit.branchId)
+          )).limit(1);
+          const currentQty = currentStockRow ? parseFloat(currentStockRow.stock) : 0;
+          const restoredQty = Math.max(0, currentQty - appliedDiff);
+          await tx.insert(stockMovementsTable).values({
+            branchId: audit.branchId,
+            ingredientId: item.ingredientId,
+            movementType: "adjustment",
+            quantity: String(-appliedDiff),
+            quantityAfter: String(restoredQty),
+            note: `Reverted Approval for Audit #${auditId}`,
+            createdBy: userId
+          });
+          await tx.insert(branchStockTable).values({
+            branchId: audit.branchId,
+            ingredientId: item.ingredientId,
+            stockQuantity: String(restoredQty)
+          }).onConflictDoUpdate({
+            target: [branchStockTable.branchId, branchStockTable.ingredientId],
+            set: { stockQuantity: String(restoredQty) }
+          });
+        }
+      }
+      await tx.update(stockAuditsTable).set({
+        status: "pending",
+        approvedBy: null,
+        approvedAt: null
+      }).where(eq(stockAuditsTable.id, auditId));
+    });
+    globalCache.clear();
+    const { broadcastEvent: broadcastEvent2 } = await Promise.resolve().then(() => (init_sse(), sse_exports));
+    broadcastEvent2("inventory_updated", { type: "audit_reverted", auditId });
+    await logActivity(req, "REVERT_STOCK_AUDIT", "stock_audit", auditId);
+    res.json({ success: true });
+  } catch (err) {
+    console.error("[stock-audits] Revert failed:", err);
+    res.status(500).json({ error: err.message });
+  }
 });
 var stock_audits_default = router21;
 

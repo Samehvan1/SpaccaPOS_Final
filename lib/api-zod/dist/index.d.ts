@@ -2303,12 +2303,24 @@ export declare const GetActiveOrdersResponseItem: z.ZodIntersection<z.ZodInterse
 }>>, z.ZodObject<{
     items: z.ZodArray<z.ZodAny, "many">;
     discountCode: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    partnerId: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
+    partnerName: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    source: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    payments: z.ZodOptional<z.ZodNullable<z.ZodArray<z.ZodAny, "many">>>;
 }, "strip", z.ZodTypeAny, {
     items: any[];
+    partnerId?: number | null | undefined;
+    source?: string | null | undefined;
+    partnerName?: string | null | undefined;
     discountCode?: string | null | undefined;
+    payments?: any[] | null | undefined;
 }, {
     items: any[];
+    partnerId?: number | null | undefined;
+    source?: string | null | undefined;
+    partnerName?: string | null | undefined;
     discountCode?: string | null | undefined;
+    payments?: any[] | null | undefined;
 }>>;
 export type GetActiveOrdersResponseItem = Infer<typeof GetActiveOrdersResponseItem>;
 export declare const GetActiveOrdersResponse: z.ZodArray<z.ZodIntersection<z.ZodIntersection<z.ZodObject<{
@@ -2551,12 +2563,24 @@ export declare const GetActiveOrdersResponse: z.ZodArray<z.ZodIntersection<z.Zod
 }>>, z.ZodObject<{
     items: z.ZodArray<z.ZodAny, "many">;
     discountCode: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    partnerId: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
+    partnerName: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    source: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    payments: z.ZodOptional<z.ZodNullable<z.ZodArray<z.ZodAny, "many">>>;
 }, "strip", z.ZodTypeAny, {
     items: any[];
+    partnerId?: number | null | undefined;
+    source?: string | null | undefined;
+    partnerName?: string | null | undefined;
     discountCode?: string | null | undefined;
+    payments?: any[] | null | undefined;
 }, {
     items: any[];
+    partnerId?: number | null | undefined;
+    source?: string | null | undefined;
+    partnerName?: string | null | undefined;
     discountCode?: string | null | undefined;
+    payments?: any[] | null | undefined;
 }>>, "many">;
 export type GetActiveOrdersResponse = Infer<typeof GetActiveOrdersResponse>;
 export declare const GetLowStockIngredientsResponseItem: z.ZodObject<{
