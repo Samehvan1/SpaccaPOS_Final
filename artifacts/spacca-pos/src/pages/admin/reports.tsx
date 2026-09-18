@@ -28,6 +28,7 @@ import { format, subDays, startOfDay, endOfDay, parseISO, differenceInSeconds } 
 import { fmt, pure, CURRENCY } from "@/lib/currency";
 import { isActuallyCustomized as checkCustomization, buildDrinkDefaultsMap } from "@/lib/recipe-utils";
 import { computeFreeQtyMap } from "@/components/receipt-printer";
+import { formatPaymentMethod } from "@/lib/utils";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend,
@@ -1127,7 +1128,7 @@ export default function ReportsPage() {
                             {order.createdAt ? format(new Date(order.createdAt), "MMM d, h:mm a") : "—"}
                           </TableCell>
                           <TableCell>{order.baristaName}</TableCell>
-                          <TableCell className="capitalize">{order.paymentMethod}</TableCell>
+                          <TableCell>{formatPaymentMethod(order.paymentMethod)}</TableCell>
                           <TableCell>
                             <span className={`text-xs px-2 py-1 rounded-full font-medium capitalize ${STATUS_COLORS[order.status] ?? "bg-muted text-muted-foreground"}`}>
                               {order.status}
@@ -1359,7 +1360,7 @@ export default function ReportsPage() {
                                   {order.status}
                                 </span>
                               </TableCell>
-                              <TableCell className="capitalize font-medium">{order.paymentMethod}</TableCell>
+                              <TableCell className="font-medium">{formatPaymentMethod(order.paymentMethod)}</TableCell>
                             </TableRow>
                           );
                         })
@@ -2247,11 +2248,11 @@ export default function ReportsPage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="bg-muted/30 p-3 rounded-lg border">
                 <p className="text-[10px] uppercase font-bold text-muted-foreground mb-1">Status & Payment</p>
-                 <div className="flex flex-wrap items-center gap-2">
-                    <Badge variant="outline" className="capitalize">{selectedOrderDetails?.status}</Badge>
-                    <Badge variant="outline" className="capitalize bg-primary/5">{selectedOrderDetails?.paymentMethod}</Badge>
-                    <Badge variant="outline" className="capitalize border-primary/20 text-primary">{selectedOrderDetails?.source || "POS"}</Badge>
-                 </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge variant="outline" className="capitalize">{selectedOrderDetails?.status}</Badge>
+                  <Badge variant="outline" className="bg-primary/5">{formatPaymentMethod(selectedOrderDetails?.paymentMethod)}</Badge>
+                  <Badge variant="outline" className="capitalize border-primary/20 text-primary">{selectedOrderDetails?.source || "POS"}</Badge>
+                </div>
               </div>
               <div className="bg-muted/30 p-3 rounded-lg border">
                 <p className="text-[10px] uppercase font-bold text-muted-foreground mb-1">Customer</p>
@@ -2348,13 +2349,13 @@ export default function ReportsPage() {
                 {selectedOrderDetails?.payments && selectedOrderDetails.payments.length > 0 ? (
                   selectedOrderDetails.payments.map((p: any) => (
                     <div key={p.id} className="flex justify-between items-center text-xs">
-                      <span className="capitalize font-bold text-muted-foreground">{p.paymentMethod}</span>
+                      <span className="font-bold text-muted-foreground">{formatPaymentMethod(p.paymentMethod)}</span>
                       <span className="font-black text-foreground">{fmt(p.amount)}</span>
                     </div>
                   ))
                 ) : (
                   <div className="flex justify-between items-center text-xs">
-                    <span className="capitalize font-bold text-muted-foreground">{selectedOrderDetails?.paymentMethod}</span>
+                    <span className="font-bold text-muted-foreground">{formatPaymentMethod(selectedOrderDetails?.paymentMethod)}</span>
                     <span className="font-black text-foreground">{fmt(selectedOrderDetails?.total)}</span>
                   </div>
                 )}

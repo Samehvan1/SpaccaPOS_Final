@@ -655,7 +655,7 @@ export default function CashierPage() {
                                           }`}
                                         >
                                           <m.icon className={`h-4 w-4 ${m.color}`} />
-                                          <span className="text-[10px] font-black uppercase tracking-tight">{m.id === 'hospitality' && rawLocal?.startsWith('hospitality:') ? '✓ ' : ''}{m.id}</span>
+                                          <span className="text-[10px] font-black uppercase tracking-tight">{m.id === 'hospitality' && rawLocal?.startsWith('hospitality:') ? '✓ ' : ''}{formatPaymentMethod(m.id)}</span>
                                         </button>
                                       );
                                     })}
@@ -771,7 +771,7 @@ export default function CashierPage() {
                                               : "border-white/10 bg-white/5 text-muted-foreground opacity-40 hover:opacity-100"
                                           }`}
                                         >
-                                          {m === 'hospitality' && rawLocal?.startsWith('hospitality:') ? '✓ ' : ''}{m}
+                                          {m === 'hospitality' && rawLocal?.startsWith('hospitality:') ? '✓ ' : ''}{formatPaymentMethod(m)}
                                         </button>
                                       );
                                     })}
@@ -879,7 +879,7 @@ export default function CashierPage() {
                         </div>
                         <div className="text-[10px] text-muted-foreground uppercase tracking-widest mt-1 flex items-center gap-1.5">
                           <Clock className="h-3 w-3 text-neon-cyan" />
-                          <span>{formatReceivedTime(order.createdAt)} · {order.paymentMethod}</span>
+                          <span>{formatReceivedTime(order.createdAt)} · {formatPaymentMethod(order.paymentMethod)}</span>
                         </div>
                       </div>
                     </div>

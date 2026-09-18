@@ -27,6 +27,7 @@ import { useToast } from "@/hooks/use-toast";
 import { format, subDays } from "date-fns";
 import { fmt, pure } from "@/lib/currency";
 import { handleApiResponse, parseApiError } from "@/lib/api-error";
+import { formatPaymentMethod } from "@/lib/utils";
 
 const api = async (path: string, opts?: RequestInit) => {
   const res = await fetch(path, { headers: { "Content-Type": "application/json" }, ...opts });
@@ -449,7 +450,7 @@ export default function SalesAnalysisPage() {
             offerDiscountAmount.toFixed(2),
             finalPrice.toFixed(2),
             o.status,
-            o.paymentMethod
+            formatPaymentMethod(o.paymentMethod)
           ];
         });
 
@@ -511,7 +512,7 @@ export default function SalesAnalysisPage() {
               i.discountAmount,
               i.subtotalPrice,
               i.finalPrice,
-              i.paymentMethod,
+              formatPaymentMethod(i.paymentMethod),
               i.category
             ];
           });
@@ -805,7 +806,7 @@ export default function SalesAnalysisPage() {
                         )}
                       </TableCell>
                       <TableCell className="font-bold">{fmt(order.total)}</TableCell>
-                      <TableCell className="capitalize">{order.paymentMethod}</TableCell>
+                      <TableCell>{formatPaymentMethod(order.paymentMethod)}</TableCell>
                       <TableCell>
                         <Badge variant={order.status === "completed" ? "default" : "secondary"} className="capitalize">
                           {order.status}
@@ -1035,7 +1036,7 @@ export default function SalesAnalysisPage() {
                 </div>
                 <div className="space-y-1">
                   <span className="text-xs text-muted-foreground flex items-center gap-1"><Banknote className="h-3 w-3" /> Payment</span>
-                  <p className="font-medium capitalize">{selectedOrderDetails.paymentMethod}</p>
+                  <p className="font-medium">{formatPaymentMethod(selectedOrderDetails.paymentMethod)}</p>
                 </div>
                 <div className="space-y-1">
                   <span className="text-xs text-muted-foreground flex items-center gap-1"><CheckCircle2 className="h-3 w-3" /> Status</span>
@@ -1121,14 +1122,14 @@ export default function SalesAnalysisPage() {
                     {selectedOrderDetails.payments && selectedOrderDetails.payments.length > 0 ? (
                       selectedOrderDetails.payments.map((p: any) => (
                         <div key={p.id} className="flex justify-between text-[11px] font-bold">
-                          <span className="capitalize text-muted-foreground">{p.paymentMethod}</span>
+                          <span className="text-muted-foreground">{formatPaymentMethod(p.paymentMethod)}</span>
                           <span>{fmt(p.amount)}</span>
                         </div>
                       ))
                     ) : (
                       <div className="flex justify-between text-[11px] font-bold">
-                        <span className="capitalize text-muted-foreground">Payment Method</span>
-                        <span>{selectedOrderDetails.paymentMethod}</span>
+                        <span className="text-muted-foreground">Payment Method</span>
+                        <span>{formatPaymentMethod(selectedOrderDetails.paymentMethod)}</span>
                       </div>
                     )}
                   </div>
