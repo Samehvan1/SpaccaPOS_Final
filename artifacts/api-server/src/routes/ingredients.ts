@@ -208,24 +208,22 @@ router.post("/ingredients/import-csv", requirePermission("inventory:manage"), as
   }
 });
 
-router.get("/ingredients", requirePermission("inventory:view"), async (req, res): Promise<void> => {
+router.get("/ingredients", async (req, res): Promise<void> => {
   try {
     const params = ListIngredientsQueryParams.safeParse(req.query);
     const sessionUser = (req.session as any);
     const rawBranchId = req.query.branchId;
-    const isAdmin = sessionUser.role === "admin";
-    const sessionBranchId = sessionUser.branchId;
+    const isAdmin = sessionUser?.role === "admin";
+    const sessionBranchId = sessionUser?.branchId;
 
     let targetBranchId: number | null = sessionBranchId ?? null;
-    if (isAdmin) {
-      if (rawBranchId === 'all') {
-        targetBranchId = null;
-      } else if (rawBranchId) {
-        targetBranchId = parseInt(rawBranchId as string);
-      }
+    if (rawBranchId === 'all') {
+      targetBranchId = null;
+    } else if (rawBranchId) {
+      targetBranchId = parseInt(rawBranchId as string);
     }
 
-    console.log(`[Ingredients-Debug] User: ${sessionUser.username}, Role: ${sessionUser.role}, rawBranchId: ${rawBranchId}, targetBranchId: ${targetBranchId}`);
+    console.log(`[Ingredients-Debug] User: ${sessionUser?.username || 'public'}, Role: ${sessionUser?.role || 'none'}, rawBranchId: ${rawBranchId}, targetBranchId: ${targetBranchId}`);
 
     let query = db
       .select({

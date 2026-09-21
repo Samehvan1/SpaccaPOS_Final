@@ -70,7 +70,7 @@ const checkCartStock = (
   for (const [ingIdStr, reqQty] of Object.entries(requiredQty)) {
     const ingId = parseInt(ingIdStr);
     const ing = ingredientsList?.find(i => i.id === ingId);
-    const stock = ing ? ing.stockQuantity : 0;
+    const stock = ing ? parseFloat(ing.stockQuantity || "0") : 0;
     if (reqQty > stock) {
       const name = ing ? ing.name : (ingredientNames[ingId] || `Ingredient #${ingId}`);
       insufficient.push(`${name} (Required: ${reqQty.toFixed(1)}, Available: ${stock.toFixed(1)})`);
@@ -142,7 +142,6 @@ export default function KioskPage() {
       if (!res.ok) throw new Error("Failed to fetch ingredients");
       return res.json();
     },
-    enabled: !!selectedBranchId,
   });
 
   const [orderNumber, setOrderNumber] = useState<string | null>(null);
