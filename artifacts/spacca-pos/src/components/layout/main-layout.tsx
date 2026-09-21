@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useTheme } from "@/hooks/use-theme";
 import { useSettings } from "@/hooks/use-settings";
 import { useOrderEvents } from "@/hooks/use-order-events";
-import { Coffee, ChefHat, LayoutDashboard, LogOut, Sun, Moon, Printer, Wifi, WifiOff, Download, RefreshCw, ClipboardCheck, History, TrendingUp, ChevronDown, ChevronRight, User, Settings, PieChart, BarChart3, PackageSearch, Lock, Factory } from "lucide-react";
+import { Coffee, ChefHat, LayoutDashboard, LogOut, Sun, Moon, Printer, Wifi, WifiOff, Download, RefreshCw, ClipboardCheck, History, TrendingUp, ChevronDown, ChevronRight, User, Settings, PieChart, BarChart3, PackageSearch, Lock, Factory, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -47,7 +47,7 @@ export function MainLayout({ children }: MainLayoutProps) {
   const { theme, toggleTheme } = useTheme();
   const { autoPrintCustomer, setAutoPrintCustomer, autoPrintAgent, setAutoPrintAgent } = useSettings();
   const isOnline = useOnlineStatus();
-  const { isInstallable, installApp } = usePWAInstall();
+  const { isInstallable, isInstalling, installApp } = usePWAInstall();
   const { toast } = useToast();
   useOrderEvents(!!user);
   const [location, setLocation] = useLocation();
@@ -235,10 +235,11 @@ export function MainLayout({ children }: MainLayoutProps) {
                  variant="outline" 
                  size="sm" 
                  onClick={installApp}
+                 disabled={isInstalling}
                  className="h-8 gap-2 bg-primary/10 border-primary/30 text-primary hover:bg-primary hover:text-primary-foreground text-[10px] font-black uppercase tracking-tight"
                >
-                 <Download className="h-3.5 w-3.5" />
-                 Install App
+                 {isInstalling ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+                 {isInstalling ? "Installing..." : "Install App"}
                </Button>
              )}
 
