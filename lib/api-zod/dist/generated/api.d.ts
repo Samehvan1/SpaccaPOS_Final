@@ -1608,7 +1608,7 @@ export declare const ListOrdersResponseItem: zod.ZodIntersection<zod.ZodObject<{
     offerId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
     offerDiscount: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
     total: zod.ZodNumber;
-    paymentMethod: zod.ZodEnum<["cash", "card", "wallet", "hospitality", "split", "refund"]>;
+    paymentMethod: zod.ZodEnum<["cash", "card", "partner_card", "wallet", "hospitality", "split", "refund", "points"]>;
     amountTendered: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
     changeDue: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
     notes: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
@@ -1630,7 +1630,7 @@ export declare const ListOrdersResponseItem: zod.ZodIntersection<zod.ZodObject<{
     baristaName: string;
     subtotal: number;
     discount: number;
-    paymentMethod: "cash" | "card" | "wallet" | "hospitality" | "split" | "refund";
+    paymentMethod: "cash" | "card" | "partner_card" | "wallet" | "hospitality" | "split" | "refund" | "points";
     createdAt?: string | null | undefined;
     updatedAt?: string | null | undefined;
     partnerId?: number | null | undefined;
@@ -1659,7 +1659,7 @@ export declare const ListOrdersResponseItem: zod.ZodIntersection<zod.ZodObject<{
     baristaName: string;
     subtotal: number;
     discount: number;
-    paymentMethod: "cash" | "card" | "wallet" | "hospitality" | "split" | "refund";
+    paymentMethod: "cash" | "card" | "partner_card" | "wallet" | "hospitality" | "split" | "refund" | "points";
     createdAt?: string | null | undefined;
     updatedAt?: string | null | undefined;
     partnerId?: number | null | undefined;
@@ -1846,7 +1846,7 @@ export declare const ListOrdersResponse: zod.ZodArray<zod.ZodIntersection<zod.Zo
     offerId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
     offerDiscount: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
     total: zod.ZodNumber;
-    paymentMethod: zod.ZodEnum<["cash", "card", "wallet", "hospitality", "split", "refund"]>;
+    paymentMethod: zod.ZodEnum<["cash", "card", "partner_card", "wallet", "hospitality", "split", "refund", "points"]>;
     amountTendered: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
     changeDue: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
     notes: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
@@ -1868,7 +1868,7 @@ export declare const ListOrdersResponse: zod.ZodArray<zod.ZodIntersection<zod.Zo
     baristaName: string;
     subtotal: number;
     discount: number;
-    paymentMethod: "cash" | "card" | "wallet" | "hospitality" | "split" | "refund";
+    paymentMethod: "cash" | "card" | "partner_card" | "wallet" | "hospitality" | "split" | "refund" | "points";
     createdAt?: string | null | undefined;
     updatedAt?: string | null | undefined;
     partnerId?: number | null | undefined;
@@ -1897,7 +1897,7 @@ export declare const ListOrdersResponse: zod.ZodArray<zod.ZodIntersection<zod.Zo
     baristaName: string;
     subtotal: number;
     discount: number;
-    paymentMethod: "cash" | "card" | "wallet" | "hospitality" | "split" | "refund";
+    paymentMethod: "cash" | "card" | "partner_card" | "wallet" | "hospitality" | "split" | "refund" | "points";
     createdAt?: string | null | undefined;
     updatedAt?: string | null | undefined;
     partnerId?: number | null | undefined;
@@ -2075,7 +2075,7 @@ export declare const CreateOrderBody: zod.ZodObject<{
     branchId: zod.ZodOptional<zod.ZodNumber>;
     customerName: zod.ZodOptional<zod.ZodString>;
     customerPhone: zod.ZodOptional<zod.ZodString>;
-    paymentMethod: zod.ZodEnum<["cash", "card", "wallet", "hospitality", "split", "refund"]>;
+    paymentMethod: zod.ZodEnum<["cash", "card", "partner_card", "wallet", "hospitality", "split", "refund", "points"]>;
     amountTendered: zod.ZodOptional<zod.ZodNumber>;
     notes: zod.ZodOptional<zod.ZodString>;
     discount: zod.ZodOptional<zod.ZodNumber>;
@@ -2133,7 +2133,7 @@ export declare const CreateOrderBody: zod.ZodObject<{
         specialNotes?: string | undefined;
     }>, "many">;
 }, "strip", zod.ZodTypeAny, {
-    paymentMethod: "cash" | "card" | "wallet" | "hospitality" | "split" | "refund";
+    paymentMethod: "cash" | "card" | "partner_card" | "wallet" | "hospitality" | "split" | "refund" | "points";
     items: {
         drinkId: number;
         selections: {
@@ -2156,7 +2156,7 @@ export declare const CreateOrderBody: zod.ZodObject<{
     discountCode?: string | undefined;
     adminPin?: string | undefined;
 }, {
-    paymentMethod: "cash" | "card" | "wallet" | "hospitality" | "split" | "refund";
+    paymentMethod: "cash" | "card" | "partner_card" | "wallet" | "hospitality" | "split" | "refund" | "points";
     items: {
         drinkId: number;
         selections: {
@@ -2212,7 +2212,7 @@ export declare const GetOrderResponse: zod.ZodIntersection<zod.ZodObject<{
     offerId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
     offerDiscount: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
     total: zod.ZodNumber;
-    paymentMethod: zod.ZodEnum<["cash", "card", "wallet", "hospitality", "split", "refund"]>;
+    paymentMethod: zod.ZodEnum<["cash", "card", "partner_card", "wallet", "hospitality", "split", "refund", "points"]>;
     amountTendered: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
     changeDue: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
     notes: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
@@ -2234,7 +2234,7 @@ export declare const GetOrderResponse: zod.ZodIntersection<zod.ZodObject<{
     baristaName: string;
     subtotal: number;
     discount: number;
-    paymentMethod: "cash" | "card" | "wallet" | "hospitality" | "split" | "refund";
+    paymentMethod: "cash" | "card" | "partner_card" | "wallet" | "hospitality" | "split" | "refund" | "points";
     createdAt?: string | null | undefined;
     updatedAt?: string | null | undefined;
     partnerId?: number | null | undefined;
@@ -2263,7 +2263,7 @@ export declare const GetOrderResponse: zod.ZodIntersection<zod.ZodObject<{
     baristaName: string;
     subtotal: number;
     discount: number;
-    paymentMethod: "cash" | "card" | "wallet" | "hospitality" | "split" | "refund";
+    paymentMethod: "cash" | "card" | "partner_card" | "wallet" | "hospitality" | "split" | "refund" | "points";
     createdAt?: string | null | undefined;
     updatedAt?: string | null | undefined;
     partnerId?: number | null | undefined;
@@ -2458,12 +2458,12 @@ export declare const UpdateOrderStatusBody: zod.ZodObject<{
     adminPin: zod.ZodOptional<zod.ZodString>;
 }, "strip", zod.ZodTypeAny, {
     status: "pending" | "paid" | "in_progress" | "ready" | "completed" | "cancelled" | "refunded";
-    paymentMethod?: "cash" | "card" | "wallet" | "hospitality" | "split" | "refund" | "partner_card" | "points" | undefined;
+    paymentMethod?: "cash" | "card" | "partner_card" | "wallet" | "hospitality" | "split" | "refund" | "points" | undefined;
     adminPin?: string | undefined;
     cashierId?: number | undefined;
 }, {
     status: "pending" | "paid" | "in_progress" | "ready" | "completed" | "cancelled" | "refunded";
-    paymentMethod?: "cash" | "card" | "wallet" | "hospitality" | "split" | "refund" | "partner_card" | "points" | undefined;
+    paymentMethod?: "cash" | "card" | "partner_card" | "wallet" | "hospitality" | "split" | "refund" | "points" | undefined;
     adminPin?: string | undefined;
     cashierId?: number | undefined;
 }>;
@@ -2483,7 +2483,7 @@ export declare const UpdateOrderStatusResponse: zod.ZodObject<{
     offerId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
     offerDiscount: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
     total: zod.ZodNumber;
-    paymentMethod: zod.ZodEnum<["cash", "card", "wallet", "hospitality", "split", "refund"]>;
+    paymentMethod: zod.ZodEnum<["cash", "card", "partner_card", "wallet", "hospitality", "split", "refund", "points"]>;
     amountTendered: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
     changeDue: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
     notes: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
@@ -2505,7 +2505,7 @@ export declare const UpdateOrderStatusResponse: zod.ZodObject<{
     baristaName: string;
     subtotal: number;
     discount: number;
-    paymentMethod: "cash" | "card" | "wallet" | "hospitality" | "split" | "refund";
+    paymentMethod: "cash" | "card" | "partner_card" | "wallet" | "hospitality" | "split" | "refund" | "points";
     createdAt?: string | null | undefined;
     updatedAt?: string | null | undefined;
     partnerId?: number | null | undefined;
@@ -2534,7 +2534,7 @@ export declare const UpdateOrderStatusResponse: zod.ZodObject<{
     baristaName: string;
     subtotal: number;
     discount: number;
-    paymentMethod: "cash" | "card" | "wallet" | "hospitality" | "split" | "refund";
+    paymentMethod: "cash" | "card" | "partner_card" | "wallet" | "hospitality" | "split" | "refund" | "points";
     createdAt?: string | null | undefined;
     updatedAt?: string | null | undefined;
     partnerId?: number | null | undefined;
@@ -2605,7 +2605,7 @@ export declare const MarkOrderItemReadyResponse: zod.ZodObject<{
     offerId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
     offerDiscount: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
     total: zod.ZodNumber;
-    paymentMethod: zod.ZodEnum<["cash", "card", "wallet", "hospitality", "split", "refund"]>;
+    paymentMethod: zod.ZodEnum<["cash", "card", "partner_card", "wallet", "hospitality", "split", "refund", "points"]>;
     amountTendered: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
     changeDue: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
     notes: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
@@ -2627,7 +2627,7 @@ export declare const MarkOrderItemReadyResponse: zod.ZodObject<{
     baristaName: string;
     subtotal: number;
     discount: number;
-    paymentMethod: "cash" | "card" | "wallet" | "hospitality" | "split" | "refund";
+    paymentMethod: "cash" | "card" | "partner_card" | "wallet" | "hospitality" | "split" | "refund" | "points";
     createdAt?: string | null | undefined;
     updatedAt?: string | null | undefined;
     partnerId?: number | null | undefined;
@@ -2656,7 +2656,7 @@ export declare const MarkOrderItemReadyResponse: zod.ZodObject<{
     baristaName: string;
     subtotal: number;
     discount: number;
-    paymentMethod: "cash" | "card" | "wallet" | "hospitality" | "split" | "refund";
+    paymentMethod: "cash" | "card" | "partner_card" | "wallet" | "hospitality" | "split" | "refund" | "points";
     createdAt?: string | null | undefined;
     updatedAt?: string | null | undefined;
     partnerId?: number | null | undefined;
@@ -2871,7 +2871,7 @@ export declare const GetActiveOrdersResponseItem: zod.ZodIntersection<zod.ZodObj
     offerId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
     offerDiscount: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
     total: zod.ZodNumber;
-    paymentMethod: zod.ZodEnum<["cash", "card", "wallet", "hospitality", "split", "refund"]>;
+    paymentMethod: zod.ZodEnum<["cash", "card", "partner_card", "wallet", "hospitality", "split", "refund", "points"]>;
     amountTendered: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
     changeDue: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
     notes: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
@@ -2893,7 +2893,7 @@ export declare const GetActiveOrdersResponseItem: zod.ZodIntersection<zod.ZodObj
     baristaName: string;
     subtotal: number;
     discount: number;
-    paymentMethod: "cash" | "card" | "wallet" | "hospitality" | "split" | "refund";
+    paymentMethod: "cash" | "card" | "partner_card" | "wallet" | "hospitality" | "split" | "refund" | "points";
     createdAt?: string | null | undefined;
     updatedAt?: string | null | undefined;
     partnerId?: number | null | undefined;
@@ -2922,7 +2922,7 @@ export declare const GetActiveOrdersResponseItem: zod.ZodIntersection<zod.ZodObj
     baristaName: string;
     subtotal: number;
     discount: number;
-    paymentMethod: "cash" | "card" | "wallet" | "hospitality" | "split" | "refund";
+    paymentMethod: "cash" | "card" | "partner_card" | "wallet" | "hospitality" | "split" | "refund" | "points";
     createdAt?: string | null | undefined;
     updatedAt?: string | null | undefined;
     partnerId?: number | null | undefined;
@@ -3109,7 +3109,7 @@ export declare const GetActiveOrdersResponse: zod.ZodArray<zod.ZodIntersection<z
     offerId: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
     offerDiscount: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
     total: zod.ZodNumber;
-    paymentMethod: zod.ZodEnum<["cash", "card", "wallet", "hospitality", "split", "refund"]>;
+    paymentMethod: zod.ZodEnum<["cash", "card", "partner_card", "wallet", "hospitality", "split", "refund", "points"]>;
     amountTendered: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
     changeDue: zod.ZodOptional<zod.ZodNullable<zod.ZodNumber>>;
     notes: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
@@ -3131,7 +3131,7 @@ export declare const GetActiveOrdersResponse: zod.ZodArray<zod.ZodIntersection<z
     baristaName: string;
     subtotal: number;
     discount: number;
-    paymentMethod: "cash" | "card" | "wallet" | "hospitality" | "split" | "refund";
+    paymentMethod: "cash" | "card" | "partner_card" | "wallet" | "hospitality" | "split" | "refund" | "points";
     createdAt?: string | null | undefined;
     updatedAt?: string | null | undefined;
     partnerId?: number | null | undefined;
@@ -3160,7 +3160,7 @@ export declare const GetActiveOrdersResponse: zod.ZodArray<zod.ZodIntersection<z
     baristaName: string;
     subtotal: number;
     discount: number;
-    paymentMethod: "cash" | "card" | "wallet" | "hospitality" | "split" | "refund";
+    paymentMethod: "cash" | "card" | "partner_card" | "wallet" | "hospitality" | "split" | "refund" | "points";
     createdAt?: string | null | undefined;
     updatedAt?: string | null | undefined;
     partnerId?: number | null | undefined;
@@ -5741,7 +5741,7 @@ export declare const MobilePlaceOrderBody: zod.ZodObject<{
         quantity?: number | undefined;
         specialNotes?: string | null | undefined;
     }>, "many">;
-    paymentMethod: zod.ZodOptional<zod.ZodEnum<["cash", "card", "wallet"]>>;
+    paymentMethod: zod.ZodOptional<zod.ZodEnum<["cash", "card", "partner_card", "wallet", "hospitality", "split", "refund", "points"]>>;
     notes: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
     discountCode: zod.ZodOptional<zod.ZodNullable<zod.ZodString>>;
 }, "strip", zod.ZodTypeAny, {
@@ -5752,7 +5752,7 @@ export declare const MobilePlaceOrderBody: zod.ZodObject<{
         quantity?: number | undefined;
         specialNotes?: string | null | undefined;
     }[];
-    paymentMethod?: "cash" | "card" | "wallet" | undefined;
+    paymentMethod?: "cash" | "card" | "partner_card" | "wallet" | "hospitality" | "split" | "refund" | "points" | undefined;
     notes?: string | null | undefined;
     discountCode?: string | null | undefined;
 }, {
@@ -5763,7 +5763,7 @@ export declare const MobilePlaceOrderBody: zod.ZodObject<{
         quantity?: number | undefined;
         specialNotes?: string | null | undefined;
     }[];
-    paymentMethod?: "cash" | "card" | "wallet" | undefined;
+    paymentMethod?: "cash" | "card" | "partner_card" | "wallet" | "hospitality" | "split" | "refund" | "points" | undefined;
     notes?: string | null | undefined;
     discountCode?: string | null | undefined;
 }>;

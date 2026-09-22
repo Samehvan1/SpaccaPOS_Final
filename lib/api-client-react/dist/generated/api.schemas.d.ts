@@ -250,6 +250,7 @@ export interface Drink {
     /** @nullable */
     imageUrl: string | null;
     isActive: boolean;
+    isFeatured?: boolean;
     prepTimeSeconds: number;
     /** @nullable */
     cupSizeMl?: number | null;
@@ -285,6 +286,7 @@ export interface CreateDrinkBody {
     basePrice: number;
     imageUrl?: string;
     isActive?: boolean;
+    isFeatured?: boolean;
     prepTimeSeconds?: number;
     kitchenStation?: string;
     categoryId?: number;
@@ -300,6 +302,7 @@ export interface UpdateDrinkBody {
     basePrice?: number;
     imageUrl?: string;
     isActive?: boolean;
+    isFeatured?: boolean;
     prepTimeSeconds?: number;
     kitchenStation?: string;
     categoryId?: number;
@@ -400,10 +403,12 @@ export type OrderPaymentMethod = (typeof OrderPaymentMethod)[keyof typeof OrderP
 export declare const OrderPaymentMethod: {
     readonly cash: "cash";
     readonly card: "card";
+    readonly partner_card: "partner_card";
     readonly wallet: "wallet";
     readonly hospitality: "hospitality";
     readonly split: "split";
     readonly refund: "refund";
+    readonly points: "points";
 };
 export interface Order {
     id: number;
@@ -461,10 +466,12 @@ export type CreateOrderBodyPaymentMethod = (typeof CreateOrderBodyPaymentMethod)
 export declare const CreateOrderBodyPaymentMethod: {
     readonly cash: "cash";
     readonly card: "card";
+    readonly partner_card: "partner_card";
     readonly wallet: "wallet";
     readonly hospitality: "hospitality";
     readonly split: "split";
     readonly refund: "refund";
+    readonly points: "points";
 };
 export type CreateOrderBodyItemsItemSelectionsItem = {
     ingredientId?: number;
@@ -507,10 +514,12 @@ export type UpdateOrderStatusBodyPaymentMethod = (typeof UpdateOrderStatusBodyPa
 export declare const UpdateOrderStatusBodyPaymentMethod: {
     readonly cash: "cash";
     readonly card: "card";
+    readonly partner_card: "partner_card";
     readonly wallet: "wallet";
     readonly hospitality: "hospitality";
     readonly split: "split";
     readonly refund: "refund";
+    readonly points: "points";
 };
 export interface UpdateOrderStatusBody {
     status: UpdateOrderStatusBodyStatus;
@@ -941,7 +950,12 @@ export type MobilePlaceOrderBodyPaymentMethod = (typeof MobilePlaceOrderBodyPaym
 export declare const MobilePlaceOrderBodyPaymentMethod: {
     readonly cash: "cash";
     readonly card: "card";
+    readonly partner_card: "partner_card";
     readonly wallet: "wallet";
+    readonly hospitality: "hospitality";
+    readonly split: "split";
+    readonly refund: "refund";
+    readonly points: "points";
 };
 export interface MobilePlaceOrderBody {
     branchId: number;

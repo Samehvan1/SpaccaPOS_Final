@@ -9,9 +9,11 @@ export type OrderPaymentMethod = (typeof OrderPaymentMethod)[keyof typeof OrderP
 export declare const OrderPaymentMethod: {
     readonly cash: "cash";
     readonly card: "card";
+    readonly partner_card: "partner_card";
     readonly wallet: "wallet";
     readonly hospitality: "hospitality";
     readonly split: "split";
     readonly refund: "refund";
+    readonly points: "points";
 };
 //# sourceMappingURL=orderPaymentMethod.d.ts.map

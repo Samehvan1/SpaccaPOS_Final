@@ -287,6 +287,7 @@ export interface Drink {
   /** @nullable */
   imageUrl: string | null;
   isActive: boolean;
+  isFeatured?: boolean;
   prepTimeSeconds: number;
   /** @nullable */
   cupSizeMl?: number | null;
@@ -325,6 +326,7 @@ export interface CreateDrinkBody {
   basePrice: number;
   imageUrl?: string;
   isActive?: boolean;
+  isFeatured?: boolean;
   prepTimeSeconds?: number;
   kitchenStation?: string;
   categoryId?: number;
@@ -341,6 +343,7 @@ export interface UpdateDrinkBody {
   basePrice?: number;
   imageUrl?: string;
   isActive?: boolean;
+  isFeatured?: boolean;
   prepTimeSeconds?: number;
   kitchenStation?: string;
   categoryId?: number;
@@ -460,10 +463,12 @@ export type OrderPaymentMethod =
 export const OrderPaymentMethod = {
   cash: "cash",
   card: "card",
+  partner_card: "partner_card",
   wallet: "wallet",
   hospitality: "hospitality",
   split: "split",
   refund: "refund",
+  points: "points",
 } as const;
 
 export interface Order {
@@ -526,10 +531,12 @@ export type CreateOrderBodyPaymentMethod =
 export const CreateOrderBodyPaymentMethod = {
   cash: "cash",
   card: "card",
+  partner_card: "partner_card",
   wallet: "wallet",
   hospitality: "hospitality",
   split: "split",
   refund: "refund",
+  points: "points",
 } as const;
 
 export type CreateOrderBodyItemsItemSelectionsItem = {
@@ -581,10 +588,12 @@ export type UpdateOrderStatusBodyPaymentMethod =
 export const UpdateOrderStatusBodyPaymentMethod = {
   cash: "cash",
   card: "card",
+  partner_card: "partner_card",
   wallet: "wallet",
   hospitality: "hospitality",
   split: "split",
   refund: "refund",
+  points: "points",
 } as const;
 
 export interface UpdateOrderStatusBody {
@@ -1097,7 +1106,12 @@ export type MobilePlaceOrderBodyPaymentMethod =
 export const MobilePlaceOrderBodyPaymentMethod = {
   cash: "cash",
   card: "card",
+  partner_card: "partner_card",
   wallet: "wallet",
+  hospitality: "hospitality",
+  split: "split",
+  refund: "refund",
+  points: "points",
 } as const;
 
 export interface MobilePlaceOrderBody {

@@ -2497,7 +2497,7 @@ components:
           type: number
         paymentMethod:
           type: string
-          enum: [cash, card, wallet, hospitality, split, refund]
+          enum: [cash, card, partner_card, wallet, hospitality, split, refund, points]
         amountTendered:
           type: ["number", "null"]
         changeDue:
@@ -2556,7 +2556,7 @@ components:
           type: string
         paymentMethod:
           type: string
-          enum: [cash, card, wallet, hospitality, split, refund]
+          enum: [cash, card, partner_card, wallet, hospitality, split, refund, points]
         amountTendered:
           type: number
         notes:
@@ -2613,7 +2613,7 @@ components:
           enum: [pending, paid, in_progress, ready, completed, cancelled, refunded]
         paymentMethod:
           type: string
-          enum: [cash, card, wallet, hospitality, split, refund]
+          enum: [cash, card, partner_card, wallet, hospitality, split, refund, points]
         cashierId:
           type: integer
           description: The ID of the cashier approving the order
@@ -3446,7 +3446,7 @@ components:
                 nullable: true
         paymentMethod:
           type: string
-          enum: [cash, card, wallet]
+          enum: [cash, card, partner_card, wallet, hospitality, split, refund, points]
         notes:
           type: string
           nullable: true

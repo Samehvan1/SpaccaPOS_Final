@@ -9,9 +9,11 @@ export type CreateOrderBodyPaymentMethod = (typeof CreateOrderBodyPaymentMethod)
 export declare const CreateOrderBodyPaymentMethod: {
     readonly cash: "cash";
     readonly card: "card";
+    readonly partner_card: "partner_card";
     readonly wallet: "wallet";
     readonly hospitality: "hospitality";
     readonly split: "split";
     readonly refund: "refund";
+    readonly points: "points";
 };
 //# sourceMappingURL=createOrderBodyPaymentMethod.d.ts.map

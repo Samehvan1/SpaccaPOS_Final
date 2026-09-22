@@ -79025,10 +79025,12 @@ var ListOrdersResponseItem = objectType({
   paymentMethod: enumType([
     "cash",
     "card",
+    "partner_card",
     "wallet",
     "hospitality",
     "split",
-    "refund"
+    "refund",
+    "points"
   ]),
   amountTendered: numberType().nullish(),
   changeDue: numberType().nullish(),
@@ -79083,10 +79085,12 @@ var CreateOrderBody = objectType({
   paymentMethod: enumType([
     "cash",
     "card",
+    "partner_card",
     "wallet",
     "hospitality",
     "split",
-    "refund"
+    "refund",
+    "points"
   ]),
   amountTendered: numberType().optional(),
   notes: stringType().optional(),
@@ -79144,10 +79148,12 @@ var GetOrderResponse = objectType({
   paymentMethod: enumType([
     "cash",
     "card",
+    "partner_card",
     "wallet",
     "hospitality",
     "split",
-    "refund"
+    "refund",
+    "points"
   ]),
   amountTendered: numberType().nullish(),
   changeDue: numberType().nullish(),
@@ -79250,10 +79256,12 @@ var UpdateOrderStatusResponse = objectType({
   paymentMethod: enumType([
     "cash",
     "card",
+    "partner_card",
     "wallet",
     "hospitality",
     "split",
-    "refund"
+    "refund",
+    "points"
   ]),
   amountTendered: numberType().nullish(),
   changeDue: numberType().nullish(),
@@ -79307,10 +79315,12 @@ var MarkOrderItemReadyResponse = objectType({
   paymentMethod: enumType([
     "cash",
     "card",
+    "partner_card",
     "wallet",
     "hospitality",
     "split",
-    "refund"
+    "refund",
+    "points"
   ]),
   amountTendered: numberType().nullish(),
   changeDue: numberType().nullish(),
@@ -79416,10 +79426,12 @@ var GetActiveOrdersResponseItem = objectType({
   paymentMethod: enumType([
     "cash",
     "card",
+    "partner_card",
     "wallet",
     "hospitality",
     "split",
-    "refund"
+    "refund",
+    "points"
   ]),
   amountTendered: numberType().nullish(),
   changeDue: numberType().nullish(),
@@ -80121,7 +80133,16 @@ var MobilePlaceOrderBody = objectType({
       specialNotes: stringType().nullish()
     })
   ),
-  paymentMethod: enumType(["cash", "card", "wallet"]).optional(),
+  paymentMethod: enumType([
+    "cash",
+    "card",
+    "partner_card",
+    "wallet",
+    "hospitality",
+    "split",
+    "refund",
+    "points"
+  ]).optional(),
   notes: stringType().nullish(),
   discountCode: stringType().nullish()
 });

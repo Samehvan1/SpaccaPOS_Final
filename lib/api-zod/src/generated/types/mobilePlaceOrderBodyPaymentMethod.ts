@@ -12,5 +12,10 @@ export type MobilePlaceOrderBodyPaymentMethod =
 export const MobilePlaceOrderBodyPaymentMethod = {
   cash: "cash",
   card: "card",
+  partner_card: "partner_card",
   wallet: "wallet",
+  hospitality: "hospitality",
+  split: "split",
+  refund: "refund",
+  points: "points",
 } as const;
