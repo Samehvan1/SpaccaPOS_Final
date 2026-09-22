@@ -80401,7 +80401,11 @@ var GetActiveOrdersResponseItem2 = GetActiveOrdersResponseItem.and(
   external_exports2.object({
     items: external_exports2.array(external_exports2.any()),
     // Allow extra fields in items like kitchenStationId
-    discountCode: external_exports2.string().nullish()
+    discountCode: external_exports2.string().nullish(),
+    partnerId: external_exports2.number().nullish(),
+    partnerName: external_exports2.string().nullish(),
+    source: external_exports2.string().nullish(),
+    payments: external_exports2.array(external_exports2.any()).nullish()
   })
 );
 var GetActiveOrdersResponse2 = external_exports2.array(GetActiveOrdersResponseItem2);
@@ -84612,22 +84616,20 @@ router4.post("/ingredients/import-csv", requirePermission("inventory:manage"), a
     res.status(500).json({ error: err.message });
   }
 });
-router4.get("/ingredients", requirePermission("inventory:view"), async (req, res) => {
+router4.get("/ingredients", async (req, res) => {
   try {
     const params = ListIngredientsQueryParams2.safeParse(req.query);
     const sessionUser = req.session;
     const rawBranchId = req.query.branchId;
-    const isAdmin = sessionUser.role === "admin";
-    const sessionBranchId = sessionUser.branchId;
+    const isAdmin = sessionUser?.role === "admin";
+    const sessionBranchId = sessionUser?.branchId;
     let targetBranchId = sessionBranchId ?? null;
-    if (isAdmin) {
-      if (rawBranchId === "all") {
-        targetBranchId = null;
-      } else if (rawBranchId) {
-        targetBranchId = parseInt(rawBranchId);
-      }
+    if (rawBranchId === "all") {
+      targetBranchId = null;
+    } else if (rawBranchId) {
+      targetBranchId = parseInt(rawBranchId);
     }
-    console.log(`[Ingredients-Debug] User: ${sessionUser.username}, Role: ${sessionUser.role}, rawBranchId: ${rawBranchId}, targetBranchId: ${targetBranchId}`);
+    console.log(`[Ingredients-Debug] User: ${sessionUser?.username || "public"}, Role: ${sessionUser?.role || "none"}, rawBranchId: ${rawBranchId}, targetBranchId: ${targetBranchId}`);
     let query = db.select({
       id: ingredientsTable.id,
       name: ingredientsTable.name,
@@ -85685,28 +85687,33 @@ router5.get("/orders", requirePermission("cashier:view"), async (req, res) => {
   }
   res.json(
     ListOrdersResponse2.parse(
-      serializeDates(orders.map((o) => ({
-        ...o,
-        baristaName: baristaMap[o.baristaId] ?? "Unknown",
-        branchName: branchMap[o.branchId] ?? "Unknown",
-        subtotal: parseFloat(o.subtotal),
-        discount: parseFloat(o.discount),
-        discountId: o.discountId,
-        discountCode: o.discountCode,
-        discountValue: o.discountValue ? parseFloat(o.discountValue) : null,
-        discountType: o.discountType,
-        offerId: o.offerId,
-        offerDiscount: o.offerDiscount ? parseFloat(o.offerDiscount) : 0,
-        offer: o.offerId ? offerMap.get(o.offerId) ?? null : null,
-        total: parseFloat(o.total),
-        amountTendered: o.amountTendered ? parseFloat(o.amountTendered) : null,
-        changeDue: o.changeDue ? parseFloat(o.changeDue) : null,
-        partnerId: o.partnerId,
-        partnerName: o.partnerId ? partnerMap[o.partnerId] ?? `Partner #${o.partnerId}` : null,
-        source: o.source,
-        payments: paymentsByOrder.get(o.id) ?? [],
-        items: itemsByOrder.get(o.id) ?? []
-      })))
+      serializeDates(orders.map((o) => {
+        const orderPaymentsList = paymentsByOrder.get(o.id) ?? [];
+        const effectivePaymentMethod = orderPaymentsList.length > 1 ? "split" : orderPaymentsList.length === 1 ? orderPaymentsList[0].paymentMethod : o.paymentMethod;
+        return {
+          ...o,
+          paymentMethod: effectivePaymentMethod,
+          baristaName: baristaMap[o.baristaId] ?? "Unknown",
+          branchName: branchMap[o.branchId] ?? "Unknown",
+          subtotal: parseFloat(o.subtotal),
+          discount: parseFloat(o.discount),
+          discountId: o.discountId,
+          discountCode: o.discountCode,
+          discountValue: o.discountValue ? parseFloat(o.discountValue) : null,
+          discountType: o.discountType,
+          offerId: o.offerId,
+          offerDiscount: o.offerDiscount ? parseFloat(o.offerDiscount) : 0,
+          offer: o.offerId ? offerMap.get(o.offerId) ?? null : null,
+          total: parseFloat(o.total),
+          amountTendered: o.amountTendered ? parseFloat(o.amountTendered) : null,
+          changeDue: o.changeDue ? parseFloat(o.changeDue) : null,
+          partnerId: o.partnerId,
+          partnerName: o.partnerId ? partnerMap[o.partnerId] ?? `Partner #${o.partnerId}` : null,
+          source: o.source,
+          payments: orderPaymentsList,
+          items: itemsByOrder.get(o.id) ?? []
+        };
+      }))
     )
   );
 });
@@ -87644,12 +87651,18 @@ router7.get("/dashboard/summary", async (req, res) => {
   );
 });
 router7.get("/dashboard/active-orders", async (req, res) => {
-  const sessionUser = req.session;
+  const sessionUser = req.session ?? {};
   const isAdmin = sessionUser.role === "admin";
   const sessionBranchId = sessionUser.branchId;
-  const targetBranchId = req.query.branchId && req.query.branchId !== "all" ? parseInt(req.query.branchId) : isAdmin && (req.query.branchId === "all" || !req.query.branchId) ? null : sessionBranchId;
+  let targetBranchId = null;
+  if (req.query.branchId && req.query.branchId !== "all") {
+    const parsedId = parseInt(req.query.branchId, 10);
+    if (!isNaN(parsedId)) targetBranchId = parsedId;
+  } else if (!isAdmin && sessionBranchId) {
+    targetBranchId = sessionBranchId;
+  }
   const { status } = req.query;
-  const statusList = status ? [status] : ["pending", "paid", "in_progress", "ready"];
+  const statusList = status ? typeof status === "string" ? status.split(",") : [status] : ["pending", "paid", "in_progress", "ready"];
   const conditions = [inArray(ordersTable.status, statusList)];
   if (targetBranchId) {
     conditions.push(eq(ordersTable.branchId, targetBranchId));
@@ -87660,11 +87673,21 @@ router7.get("/dashboard/active-orders", async (req, res) => {
     return;
   }
   const orderIds = activeOrders.map((o) => o.id);
-  const allItems = await db.select().from(orderItemsTable).where(inArray(orderItemsTable.orderId, orderIds));
+  const [allItems, allUsers, allPartners, allPayments] = await Promise.all([
+    db.select().from(orderItemsTable).where(inArray(orderItemsTable.orderId, orderIds)),
+    db.select().from(usersTable),
+    db.select().from(partnersTable),
+    db.select().from(orderPaymentsTable).where(inArray(orderPaymentsTable.orderId, orderIds))
+  ]);
   const itemIds = allItems.map((i) => i.id);
   const allCustomizations = itemIds.length > 0 ? await db.select().from(orderItemCustomizationsTable).where(inArray(orderItemCustomizationsTable.orderItemId, itemIds)) : [];
-  const allUsers = await db.select().from(usersTable);
   const userMap = Object.fromEntries(allUsers.map((u) => [u.id, u.name]));
+  const partnerMap = Object.fromEntries(allPartners.map((p) => [p.id, p.name]));
+  const paymentsByOrderId = allPayments.reduce((acc, p) => {
+    if (!acc[p.orderId]) acc[p.orderId] = [];
+    acc[p.orderId].push({ ...p, amount: parseFloat(p.amount) });
+    return acc;
+  }, {});
   const customizationsByItemId = allCustomizations.reduce((acc, c) => {
     if (!acc[c.orderItemId]) acc[c.orderItemId] = [];
     acc[c.orderItemId].push({
@@ -87688,20 +87711,29 @@ router7.get("/dashboard/active-orders", async (req, res) => {
     });
     return acc;
   }, {});
-  const ordersWithDetails = activeOrders.map((order) => ({
-    ...order,
-    baristaName: userMap[order.baristaId] ?? "Unknown",
-    subtotal: parseFloat(order.subtotal),
-    discount: parseFloat(order.discount),
-    discountValue: order.discountValue ? parseFloat(order.discountValue) : null,
-    discountType: order.discountType,
-    offerId: order.offerId,
-    offerDiscount: order.offerDiscount ? parseFloat(order.offerDiscount) : 0,
-    total: parseFloat(order.total),
-    amountTendered: order.amountTendered ? parseFloat(order.amountTendered) : null,
-    changeDue: order.changeDue ? parseFloat(order.changeDue) : null,
-    items: itemsByOrderId[order.id] ?? []
-  }));
+  const ordersWithDetails = activeOrders.map((order) => {
+    const orderPaymentsList = paymentsByOrderId[order.id] ?? [];
+    const effectivePaymentMethod = orderPaymentsList.length > 1 ? "split" : orderPaymentsList.length === 1 ? orderPaymentsList[0].paymentMethod : order.paymentMethod;
+    return {
+      ...order,
+      paymentMethod: effectivePaymentMethod,
+      baristaName: userMap[order.baristaId] ?? "Unknown",
+      subtotal: parseFloat(order.subtotal),
+      discount: parseFloat(order.discount),
+      discountValue: order.discountValue ? parseFloat(order.discountValue) : null,
+      discountType: order.discountType,
+      offerId: order.offerId,
+      offerDiscount: order.offerDiscount ? parseFloat(order.offerDiscount) : 0,
+      total: parseFloat(order.total),
+      partnerId: order.partnerId,
+      partnerName: order.partnerId ? partnerMap[order.partnerId] ?? `Partner #${order.partnerId}` : null,
+      source: order.source,
+      payments: orderPaymentsList,
+      amountTendered: order.amountTendered ? parseFloat(order.amountTendered) : null,
+      changeDue: order.changeDue ? parseFloat(order.changeDue) : null,
+      items: itemsByOrderId[order.id] ?? []
+    };
+  });
   res.json(GetActiveOrdersResponse2.parse(serializeDates(ordersWithDetails)));
 });
 router7.get("/dashboard/low-stock", async (req, res) => {
@@ -95771,6 +95803,14 @@ async function runDataMigrations() {
       UPDATE "orders"
       SET "cashier_id" = 25
       WHERE "order_number" IN ('1-221001', '1-221002') AND "cashier_id" = 24;
+    `);
+    logger.info("[migration] Syncing orders.payment_method for partner_card payments from order_payments table...");
+    await db.execute(sql`
+      UPDATE "orders"
+      SET "payment_method" = 'partner_card'
+      WHERE "id" IN (
+        SELECT "order_id" FROM "order_payments" WHERE "payment_method" = 'partner_card'
+      ) AND "payment_method" != 'partner_card';
     `);
     logger.info("[migration] Checking for legacy hospitality order payments...");
     const hospitalityOrders = await db.select({

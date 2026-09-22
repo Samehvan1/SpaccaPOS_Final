@@ -116,17 +116,21 @@ router.get("/dashboard/summary", async (req, res): Promise<void> => {
 });
 
 router.get("/dashboard/active-orders", async (req, res): Promise<void> => {
-  const sessionUser = (req.session as any);
+  const sessionUser = (req.session as any) ?? {};
   const isAdmin = sessionUser.role === "admin";
   const sessionBranchId = sessionUser.branchId;
 
-  const targetBranchId = req.query.branchId && req.query.branchId !== 'all'
-    ? parseInt(req.query.branchId as string)
-    : (isAdmin && (req.query.branchId === 'all' || !req.query.branchId)) ? null : sessionBranchId;
+  let targetBranchId: number | null = null;
+  if (req.query.branchId && req.query.branchId !== 'all') {
+    const parsedId = parseInt(req.query.branchId as string, 10);
+    if (!isNaN(parsedId)) targetBranchId = parsedId;
+  } else if (!isAdmin && sessionBranchId) {
+    targetBranchId = sessionBranchId;
+  }
 
   const { status } = req.query;
   const statusList = status 
-    ? [status] 
+    ? (typeof status === 'string' ? status.split(',') : [status]) 
     : ["pending", "paid", "in_progress", "ready"];
 
   const conditions = [inArray(ordersTable.status, statusList as any)];

@@ -58,7 +58,7 @@ export default function KitchenDisplay() {
     { branchId: selectedBranchId || undefined },
     { 
       query: { 
-        // No polling needed, using SSE
+        refetchInterval: 5000,
       } as any
     } as any
   );
@@ -89,7 +89,7 @@ export default function KitchenDisplay() {
 
   const knownStationValues = new Set(allStations.map(s => s.value).filter(v => v !== "all"));
 
-  // Improved station matching with robust name/ID fallback and debug logging
+  // Improved station matching with robust name/ID fallback
   const stationMatches = (item: any, targetValue: string) => {
     if (targetValue === "all") return true;
     if (!item) return false;
@@ -97,41 +97,36 @@ export default function KitchenDisplay() {
     const itemId = item.kitchenStationId?.toString();
     const itemSlug = slugifyStation(item.kitchenStation);
     
-    // 1. Try exact ID matching (modern robust way)
+    // 1. Try exact ID matching if kitchenStationId is defined
     if (itemId) {
-      const matched = String(itemId) === String(targetValue);
-      // If we have an ID, we should be VERY strict. 
-      // If the ID doesn't match the target, it shouldn't match at all.
-      return matched;
+      return String(itemId) === String(targetValue);
     }
     
-    // 2. Resolve target station name from ID for legacy fallback
+    // 2. Resolve target station name from ID for legacy string slug matching
     const targetStation = stations.find(s => s.id.toString() === targetValue);
     if (!targetStation) return false;
     
     const targetSlug = slugifyStation(targetStation.name);
 
-    // 3. Exact slug match
-    if (itemSlug === targetSlug) return true;
+    // 3. Exact slug match (e.g. food-pastry === food-pastry)
+    if (itemSlug && itemSlug === targetSlug) return true;
 
-    // 4. Default fallback: 'main' or empty items go to 'Hot Bar', 'Main Bar', or 'Barista'
-    // only if they don't have a specific station ID assigned.
+    // 4. Default fallback: 'main' or empty items go to primary station, 'hot-bar', 'main-bar', or 'barista'
     const isDefaultItem = !itemSlug || itemSlug === "main";
-    const isDefaultStation = targetSlug === "hot-bar" || targetSlug === "main-bar" || targetSlug === "barista" || targetValue === stations[0]?.id.toString();
+    const isDefaultStation = targetSlug === "hot-bar" || targetSlug === "main-bar" || targetSlug === "barista" || targetSlug === "main" || targetValue === stations[0]?.id.toString();
     
-    const isMatched = isDefaultItem && isDefaultStation;
-    return isMatched;
+    return isDefaultItem && isDefaultStation;
   };
 
   // Filter orders by station
   const filteredOrders = (activeOrders as any[])?.filter(order => {
     if (order.status === "ready" || order.status === "completed" || order.status === "cancelled") return false;
+    if (order.status === "pending") return false;
 
-    if (activeStation === "all") return order.status !== "pending";
+    if (activeStation === "all") return true;
     
     const hasItemsForThisStation = order.items.some((item: any) => {
-      if (stationMatches(item, activeStation)) return true;
-      return false;
+      return stationMatches(item, activeStation);
     });
 
     return (order.status === "paid" || order.status === "in_progress") && hasItemsForThisStation;

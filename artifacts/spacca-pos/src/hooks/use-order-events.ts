@@ -24,6 +24,7 @@ export function useOrderEvents(enabled = true) {
         queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
       };
 
+      es.addEventListener("connected", invalidateOrders);
       es.addEventListener("order_created", invalidateOrders);
       es.addEventListener("order_updated", invalidateOrders);
       es.addEventListener("inventory_updated", () => {
